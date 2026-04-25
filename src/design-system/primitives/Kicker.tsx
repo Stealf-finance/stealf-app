@@ -1,9 +1,10 @@
 import { Text, TextProps } from 'react-native';
+import { T } from '@/src/design-system/tokens';
 import { sansationBold } from '@/src/design-system/typography';
 
 type Props = TextProps & { color?: string };
 
-export function Kicker({ children, color = 'rgba(241,236,225,0.4)', style, ...rest }: Props) {
+export function Kicker({ children, color = T.inkFaint, style, ...rest }: Props) {
   return (
     <Text
       style={[

@@ -1,5 +1,6 @@
 import '../global.css';
 import { useFonts } from 'expo-font';
+import { T } from '@/src/design-system/tokens';
 import { CormorantGaramond_500Medium_Italic } from '@expo-google-fonts/cormorant-garamond';
 import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 import { Stack } from 'expo-router';
@@ -33,7 +34,7 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#0a0a0a' },
+          contentStyle: { backgroundColor: T.bg },
         }}
       >
         <Stack.Screen name="(auth)" />

@@ -70,7 +70,7 @@ export function TabBar({ active, onTab, onMoove }: Props) {
               borderColor: 'rgba(10,10,10,0.8)',
             }}
           >
-            <Icons.moove size={22} color="#0a0a0a" />
+            <Icons.moove size={22} color={T.bg} />
           </View>
           <Text style={[serif, { fontSize: 12, color: T.gold }]}>Moove</Text>
         </Pressable>
