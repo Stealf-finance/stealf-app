@@ -1,13 +1,17 @@
-import { Text, View } from 'react-native';
-import { Icons } from '@/src/design-system/icons';
+import { Text } from 'react-native';
+import { Frame } from '@/src/design-system/primitives/Frame';
+import { Em } from '@/src/design-system/primitives/Em';
+import { sansationLight } from '@/src/design-system/typography';
 
 export default function Index() {
   return (
-    <View className="flex-1 items-center justify-center bg-bg gap-3">
-      <Icons.shield size={32} color="#c9a86a" />
-      <Icons.bank size={28} color="#f1ece1" />
-      <Icons.arrUpRight size={20} color="#7ea688" />
-      <Text className="text-ink font-sans">Icons render</Text>
-    </View>
+    <Frame>
+      <Text
+        style={[sansationLight, { fontSize: 36, color: '#f1ece1' }]}
+        className="mt-[200px] mx-auto text-center"
+      >
+        a world where <Em style={{ fontSize: 36 }}>everything</Em>{'\n'}is watched.
+      </Text>
+    </Frame>
   );
 }
