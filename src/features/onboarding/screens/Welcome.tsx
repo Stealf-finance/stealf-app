@@ -1,8 +1,7 @@
-import { DimensionValue, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
-import { Frame } from '@/src/design-system/primitives/Frame';
+import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import {
   sansation,
   sansationBold,
@@ -13,67 +12,11 @@ import { txPalette } from '@/src/design-system/palettes';
 
 const S = txPalette('silver');
 
-function Halo({
-  top,
-  bottom,
-  leftPct,
-  rightPct,
-  height,
-  alpha,
-  id,
-}: {
-  top?: number;
-  bottom?: number;
-  leftPct: DimensionValue;
-  rightPct: DimensionValue;
-  height: number;
-  alpha: number;
-  id: string;
-}) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        top,
-        bottom,
-        left: leftPct,
-        right: rightPct,
-        height,
-        zIndex: 0,
-      }}
-    >
-      <Svg width="100%" height="100%" preserveAspectRatio="none">
-        <Defs>
-          <RadialGradient
-            id={id}
-            cx="50%"
-            cy="50%"
-            rx="80%"
-            ry="80%"
-            gradientUnits="objectBoundingBox"
-          >
-            <Stop offset="0" stopColor="#dcdcdd" stopOpacity={alpha} />
-            <Stop offset="0.25" stopColor="#dcdcdd" stopOpacity={alpha * 0.72} />
-            <Stop offset="0.5" stopColor="#dcdcdd" stopOpacity={alpha * 0.32} />
-            <Stop offset="0.75" stopColor="#dcdcdd" stopOpacity={alpha * 0.1} />
-            <Stop offset="1" stopColor="#dcdcdd" stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill={`url(#${id})`} />
-      </Svg>
-    </View>
-  );
-}
-
 export function Welcome() {
   const router = useRouter();
 
   return (
-    <Frame>
-      <Halo id="halo-top" top={-100} leftPct="0%" rightPct="0%" height={340} alpha={0.16} />
-      <Halo id="halo-bottom" bottom={-200} leftPct="0%" rightPct="0%" height={400} alpha={0.12} />
-
+    <TonalBackground tone="silver">
       <View
         style={{
           position: 'absolute',
@@ -84,7 +27,6 @@ export function Welcome() {
           alignItems: 'center',
           justifyContent: 'center',
           paddingHorizontal: 32,
-          zIndex: 2,
         }}
       >
         <Text
@@ -160,7 +102,6 @@ export function Welcome() {
           bottom: 96,
           paddingHorizontal: 28,
           gap: 10,
-          zIndex: 2,
         }}
       >
         <Pressable
@@ -231,6 +172,6 @@ export function Welcome() {
           </Text>
         </Pressable>
       </View>
-    </Frame>
+    </TonalBackground>
   );
 }
