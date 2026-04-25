@@ -1,12 +1,5 @@
-import { Text, View } from 'react-native';
-import { Frame } from '@/src/design-system/primitives/Frame';
+import { Welcome } from '@/src/features/onboarding/screens/Welcome';
 
-export default function WelcomePlaceholder() {
-  return (
-    <Frame>
-      <View className="flex-1 items-center justify-center">
-        <Text className="text-ink-faint font-sans">welcome — TODO</Text>
-      </View>
-    </Frame>
-  );
+export default function WelcomeRoute() {
+  return <Welcome />;
 }
