@@ -49,12 +49,15 @@ function Halo({
             id={id}
             cx="50%"
             cy="50%"
-            rx="50%"
-            ry="50%"
+            rx="80%"
+            ry="80%"
             gradientUnits="objectBoundingBox"
           >
             <Stop offset="0" stopColor="#dcdcdd" stopOpacity={alpha} />
-            <Stop offset="0.65" stopColor="#dcdcdd" stopOpacity={0} />
+            <Stop offset="0.25" stopColor="#dcdcdd" stopOpacity={alpha * 0.72} />
+            <Stop offset="0.5" stopColor="#dcdcdd" stopOpacity={alpha * 0.32} />
+            <Stop offset="0.75" stopColor="#dcdcdd" stopOpacity={alpha * 0.1} />
+            <Stop offset="1" stopColor="#dcdcdd" stopOpacity={0} />
           </RadialGradient>
         </Defs>
         <Rect width="100%" height="100%" fill={`url(#${id})`} />
@@ -68,8 +71,8 @@ export function Welcome() {
 
   return (
     <Frame>
-      <Halo id="halo-top" top={-80} leftPct="8%" rightPct="8%" height={260} alpha={0.14} />
-      <Halo id="halo-bottom" bottom={-120} leftPct="15%" rightPct="15%" height={260} alpha={0.09} />
+      <Halo id="halo-top" top={-100} leftPct="0%" rightPct="0%" height={340} alpha={0.16} />
+      <Halo id="halo-bottom" bottom={-200} leftPct="0%" rightPct="0%" height={400} alpha={0.12} />
 
       <View
         style={{
