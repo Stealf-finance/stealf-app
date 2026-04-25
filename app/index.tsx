@@ -1,15 +1,20 @@
-import { View } from 'react-native';
+import { useState } from 'react';
+import { Text, View, Alert } from 'react-native';
 import { Frame } from '@/src/design-system/primitives/Frame';
-import { TxRow } from '@/src/design-system/primitives/TxRow';
+import { TabBar, TabId } from '@/src/design-system/primitives/TabBar';
 
 export default function Index() {
+  const [tab, setTab] = useState<TabId>('bank');
   return (
     <Frame>
-      <View className="flex-1 justify-center" style={{ paddingHorizontal: 24 }}>
-        <TxRow type="received" title="Received" meta="21 Apr · 04:41 am" amount="+$176.76" />
-        <TxRow type="sent" title="Carrefour" meta="21 Apr · 11:20 am" amount="−$34.50" />
-        <TxRow type="sent" title="Spotify" meta="15 Apr · 09:00 am" amount="−$9.99" last />
+      <View className="flex-1 items-center justify-center">
+        <Text className="text-ink text-2xl font-sans-light">Active: {tab}</Text>
       </View>
+      <TabBar
+        active={tab}
+        onTab={setTab}
+        onMoove={() => Alert.alert('Open Moove')}
+      />
     </Frame>
   );
 }
