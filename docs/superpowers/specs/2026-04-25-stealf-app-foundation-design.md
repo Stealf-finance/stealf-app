@@ -51,7 +51,7 @@ Cette dualité doit traverser tout le code : un même flow (ex : Tx) a deux vari
 
 Reproduites depuis `screens-shared.jsx` de la maquette :
 
-`Frame`, `Kicker`, `Em`, `ActionBtn` (circular, accent variant), `TabBar` (4 onglets + slot central Moove FAB), `TopNav`, `Dots`, `BalanceLarge`, `TxRow`, `CarouselBar`, `Icons` (set ~40 SVG).
+`Frame`, `Kicker`, `Em`, `ActionBtn` (circular, accent variant), `TabBar` (4 onglets + slot central Moove FAB), `TopNav`, `Dots`, `BalanceLarge`, `TxRow`, `CarouselBar`, `Icons` (set 43 SVG).
 
 **Volontairement non implémentés** (le système d'exploitation s'en charge) : `StatusBar` (utilise `expo-status-bar`), `HomeIndicator` (rendu par iOS).
 

@@ -34,6 +34,11 @@ export const Icons = {
   arrDownLeft: make(<Path d="M17 7L7 17M17 17H7V7" />),
   plus: make(<Path d="M12 5v14M5 12h14" />),
   minus: make(<Path d="M5 12h14" />),
+  // NOTE: `more` and `dots` use hardcoded fill="currentColor" on inner Circles.
+  // react-native-svg does NOT inherit currentColor from the parent <Svg stroke>
+  // prop, so on iOS/Android these dots render with the SVG default fill rather
+  // than the component's `color` prop. Tracked for post-Phase-0 fix (replace
+  // with fill={color} via a small refactor of `make`).
   more: make(
     <>
       <Circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
@@ -59,6 +64,9 @@ export const Icons = {
   ),
   eyeOff: make(
     <Path d="M3 3l18 18M10.58 10.58a2 2 0 002.83 2.83M9.9 5.1A10 10 0 0112 5c6.5 0 10 7 10 7a13.16 13.16 0 01-2.4 3.17M6.61 6.61A13.53 13.53 0 002 12s3.5 7 10 7a9.74 9.74 0 005.39-1.6" />,
+  ),
+  hideEye: make(
+    <Path d="M3 3l18 18M10 10a2 2 0 002 2M9 4a10 10 0 0113 10M6 6a13 13 0 00-4 6s3.5 7 10 7a10 10 0 005.4-1.5" />,
   ),
   lock: make(
     <>

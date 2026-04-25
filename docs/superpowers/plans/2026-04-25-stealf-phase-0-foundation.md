@@ -627,7 +627,7 @@ git commit -m "feat(ds): add tokens, typography, palettes modules"
 **Files:**
 - Create: `src/design-system/icons/index.tsx`
 
-Port the 40 SVG icons from the maquette (`screens-shared.jsx` lines 715-759) using `react-native-svg`. Each icon takes `size` and `strokeWidth` props; `color` comes from the parent via `currentColor` analog (we pass `stroke` directly).
+Port the 43 SVG icons from the maquette (`screens-shared.jsx` lines 715-759) using `react-native-svg`. Each icon takes `size` and `strokeWidth` props; `color` comes from the parent via `currentColor` analog (we pass `stroke` directly).
 
 - [ ] **Step 1: Create `src/design-system/icons/index.tsx`**
 
@@ -714,6 +714,9 @@ export const Icons = {
   ),
   eyeOff: make(
     <Path d="M3 3l18 18M10.58 10.58a2 2 0 002.83 2.83M9.9 5.1A10 10 0 0112 5c6.5 0 10 7 10 7a13.16 13.16 0 01-2.4 3.17M6.61 6.61A13.53 13.53 0 002 12s3.5 7 10 7a9.74 9.74 0 005.39-1.6" />,
+  ),
+  hideEye: make(
+    <Path d="M3 3l18 18M10 10a2 2 0 002 2M9 4a10 10 0 0113 10M6 6a13 13 0 00-4 6s3.5 7 10 7a10 10 0 005.4-1.5" />,
   ),
   lock: make(
     <>
@@ -877,7 +880,7 @@ Expected: three icons + text visible, dark background, no warnings about SVG.
 
 ```bash
 git add src/design-system/icons/index.tsx app/index.tsx
-git commit -m "feat(ds): add Icons module (40 SVG icons)"
+git commit -m "feat(ds): add Icons module (43 SVG icons)"
 ```
 
 ---
@@ -2219,7 +2222,7 @@ After Task 15 the repo has:
 - NativeWind wired with the full Stealf token palette
 - All three font families loaded and validated
 - 10 design system primitives (`Frame`, `Em`, `Kicker`, `ActionBtn`, `BalanceLarge`, `Dots`, `CarouselBar`, `TxRow`, `TabBar`, `TopNav`)
-- 40 SVG icons via `Icons` map
+- 43 SVG icons via `Icons` map
 - Navigation skeleton: auth stack, tabs (4 tabs + Moove FAB modal), modal routes for Moove/Shield/Unshield/Add-funds/Card/Lock/Send/Tx detail
 - One real screen rendered (`Welcome`) confirming the chain works
 
