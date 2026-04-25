@@ -20,6 +20,7 @@ function Halo({
   rightPct,
   height,
   alpha,
+  id,
 }: {
   top?: number;
   bottom?: number;
@@ -27,6 +28,7 @@ function Halo({
   rightPct: DimensionValue;
   height: number;
   alpha: number;
+  id: string;
 }) {
   return (
     <View
@@ -41,14 +43,21 @@ function Halo({
         zIndex: 0,
       }}
     >
-      <Svg width="100%" height="100%">
+      <Svg width="100%" height="100%" preserveAspectRatio="none">
         <Defs>
-          <RadialGradient id="halo" cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor={`rgba(220,220,225,${alpha})`} />
-            <Stop offset="65%" stopColor="rgba(220,220,225,0)" />
+          <RadialGradient
+            id={id}
+            cx="50%"
+            cy="50%"
+            rx="50%"
+            ry="50%"
+            gradientUnits="objectBoundingBox"
+          >
+            <Stop offset="0" stopColor="#dcdcdd" stopOpacity={alpha} />
+            <Stop offset="0.65" stopColor="#dcdcdd" stopOpacity={0} />
           </RadialGradient>
         </Defs>
-        <Rect width="100%" height="100%" fill="url(#halo)" />
+        <Rect width="100%" height="100%" fill={`url(#${id})`} />
       </Svg>
     </View>
   );
@@ -59,8 +68,8 @@ export function Welcome() {
 
   return (
     <Frame>
-      <Halo top={-80} leftPct="8%" rightPct="8%" height={260} alpha={0.14} />
-      <Halo bottom={-120} leftPct="15%" rightPct="15%" height={260} alpha={0.09} />
+      <Halo id="halo-top" top={-80} leftPct="8%" rightPct="8%" height={260} alpha={0.14} />
+      <Halo id="halo-bottom" bottom={-120} leftPct="15%" rightPct="15%" height={260} alpha={0.09} />
 
       <View
         style={{
