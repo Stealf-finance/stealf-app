@@ -49,7 +49,7 @@ Cette dualité doit traverser tout le code : un même flow (ex : Tx) a deux vari
 
 Reproduites depuis `screens-shared.jsx` de la maquette :
 
-`Frame`, `StatusBar`, `HomeIndicator`, `Kicker`, `Em`, `ActionBtn` (circular, accent variant), `TabBar` (5 tabs), `TopNav`, `Dots`, `BalanceLarge`, `TxRow`, `CarouselBar`, `Icons` (set ~40 SVG).
+`Frame`, `StatusBar`, `HomeIndicator`, `Kicker`, `Em`, `ActionBtn` (circular, accent variant), `TabBar` (4 onglets + slot central Moove FAB), `TopNav`, `Dots`, `BalanceLarge`, `TxRow`, `CarouselBar`, `Icons` (set ~40 SVG).
 
 ### 2.4 Effets web → équivalents RN
 
@@ -105,10 +105,9 @@ app/                              # Expo Router routes (navigation)
     login.tsx
     loading.tsx
   (tabs)/                         # main app après login
-    _layout.tsx                   # TabBar (Bank · Stealth · Moove · Invest · Profile)
+    _layout.tsx                   # TabBar : 4 onglets + bouton central Moove (CTA, ouvre modal)
     bank.tsx
     stealth.tsx
-    moove.tsx
     invest.tsx
     profile.tsx
   send/                           # transaction flow — modal stack (silver/gold via param)
@@ -118,9 +117,10 @@ app/                              # Expo Router routes (navigation)
     amount.tsx
     confirm.tsx
     success.tsx
+  moove.tsx                       # MooveScreenC bridge (modal, ouvert depuis TabBar central)
   shield.tsx                      # bank → stealth (modal)
   unshield.tsx                    # stealth → bank (modal)
-  add-funds.tsx                   # modal
+  add-funds.tsx                   # modal (tone silver|gold via param)
   card.tsx                        # modal détail card
   tx/[id].tsx                     # tx detail (modal)
   lock.tsx                        # passcode / face id (full-screen modal)
@@ -193,15 +193,19 @@ Root Stack
 ├─ (auth)               # initialRoute si non loggé
 │  └─ Stack: welcome → invite → handle → email → inbox → loading
 │  └─ login (alt entry)
-└─ (tabs)               # initialRoute si loggé
+└─ (tabs)               # initialRoute si loggé — 4 onglets
    ├─ bank
    ├─ stealth
-   ├─ moove (presentation: bottom sheet ou modal full)
    ├─ invest
    └─ profile
 
+TabBar custom (5 emplacements) :
+├─ Bank · Stealth · [Moove FAB central, doré] · Invest · Profile
+└─ Tap Moove → router.push('/moove')  (modal, pas un changement d'onglet)
+
 Modals (presentation: modal):
-├─ send/* (5 steps stack interne, tonalité passée en route param)
+├─ moove                 # MooveScreenC bridge
+├─ send/*                # 5 steps stack interne, tonalité passée en route param
 ├─ shield, unshield, add-funds
 ├─ card, tx/[id]
 └─ lock (full-screen, sans header)
@@ -231,7 +235,7 @@ Marqueurs : ✅ approuvé, 🔄 implémentation à venir, ⏸ après validation 
 - `BankHubD_Silver` (variante silver finale)
 - `StealthHubD` (variante finale)
 - `Profile` (default)
-- `TabBar` fonctionnel (5 tabs) + `TopNav` (Bank/Stealth toggle)
+- `TabBar` fonctionnel (4 onglets + Moove FAB central qui ouvre la modal Moove) + `TopNav` (Bank/Stealth toggle)
 
 ### Phase 3 — Flows transactionnels ⏸
 - Tx flow 5 écrans × 2 tones : SelectAsset, Recipient, Amount, Confirm (swipe-to-send), Success
