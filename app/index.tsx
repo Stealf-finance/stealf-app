@@ -1,13 +1,13 @@
 import { Text, View } from 'react-native';
+import { Icons } from '@/src/design-system/icons';
 
 export default function Index() {
   return (
-    <View className="flex-1 items-center justify-center bg-bg gap-2">
-      <Text className="text-ink font-sans-light text-2xl">Sansation Light</Text>
-      <Text className="text-ink font-sans text-2xl">Sansation Regular</Text>
-      <Text className="text-ink font-sans-bold text-2xl">Sansation Bold</Text>
-      <Text className="text-gold font-serif text-3xl">Cormorant italic</Text>
-      <Text className="text-ink font-mono text-base">JetBrains Mono · 0.0142 SOL</Text>
+    <View className="flex-1 items-center justify-center bg-bg gap-3">
+      <Icons.shield size={32} color="#c9a86a" />
+      <Icons.bank size={28} color="#f1ece1" />
+      <Icons.arrUpRight size={20} color="#7ea688" />
+      <Text className="text-ink font-sans">Icons render</Text>
     </View>
   );
 }
