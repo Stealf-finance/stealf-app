@@ -4,7 +4,7 @@
 
 **Goal:** Set up the design system foundation (tokens, typography, primitives, navigation skeleton) so the upcoming phases can render every screen of the Stealf v2 maquette without revisiting infrastructure.
 
-**Architecture:** Feature-based folder structure under `src/`, file-based routing under `app/` (Expo Router). NativeWind is the styling layer; design tokens live in `src/design-system/tokens.ts` and are mirrored in `tailwind.config.js`. Atomic primitives (Frame, StatusBar, ActionBtn, TabBar, etc.) port the maquette's `screens-shared.jsx` 1:1 to React Native using `react-native-svg`, `expo-blur`, `expo-linear-gradient`. Phase 0 ends with a single fully-rendered screen (Onboarding Welcome) used to validate the chain end-to-end.
+**Architecture:** Feature-based folder structure under `src/`, file-based routing under `app/` (Expo Router). NativeWind is the styling layer; design tokens live in `src/design-system/tokens.ts` and are mirrored in `tailwind.config.js`. Atomic primitives (Frame, ActionBtn, TabBar, etc.) port the maquette's `screens-shared.jsx` to React Native using `react-native-svg`, `expo-blur`, `expo-linear-gradient`. Mock-only chrome from the maquette (`StatusBar`, `HomeIndicator`) is intentionally NOT ported — the OS handles those on real devices via `expo-status-bar`. Phase 0 ends with a single fully-rendered screen (Onboarding Welcome) used to validate the chain end-to-end.
 
 **Tech Stack:** Expo SDK 54, React Native 0.81, React 19, Expo Router 6, TypeScript strict, NativeWind 4 + Tailwind, Reanimated 4, react-native-svg, expo-blur, expo-linear-gradient, expo-font.
 
@@ -26,8 +26,6 @@
 - `src/design-system/palettes.ts`
 - `src/design-system/icons/index.tsx`
 - `src/design-system/primitives/Frame.tsx`
-- `src/design-system/primitives/StatusBar.tsx`
-- `src/design-system/primitives/HomeIndicator.tsx`
 - `src/design-system/primitives/Em.tsx`
 - `src/design-system/primitives/Kicker.tsx`
 - `src/design-system/primitives/ActionBtn.tsx`
@@ -884,16 +882,16 @@ git commit -m "feat(ds): add Icons module (40 SVG icons)"
 
 ---
 
-## Task 7: Page chrome primitives
+## Task 7: Frame + Em primitives
 
 **Files:**
-- Create: `src/design-system/primitives/Frame.tsx`, `StatusBar.tsx`, `HomeIndicator.tsx`, `Em.tsx`
+- Create: `src/design-system/primitives/Frame.tsx`, `src/design-system/primitives/Em.tsx`
 
-`Frame` wraps every screen with the device-shape (rounded corners, fixed bg) on web/canvas. On a real device the rounded corners and hardcoded width belong to the OS, so on native we render a full-bleed View and apply only the bg + safe-area handling. The `Frame` here represents an in-app screen container with the right background and font defaults — not a device chrome.
+`Frame` is the screen-level container: it sets the dark Stealf background and stretches to fill the safe area. Every screen will be wrapped in `<Frame>`. (The maquette also defines a fixed-width 375×812 device-chrome wrapper with rounded corners and shadow — that's a canvas/web concern and is dropped on native; the OS draws the device.)
 
-`StatusBar` here is the in-frame visual status bar from the maquette (time + signal + battery icons drawn for reproducing the design canvas). On a real device this is the OS status bar; we keep this primitive only for parity with the maquette but **default it to invisible on real devices** via a `mock` prop (default `false`). When the user runs in a future "design preview" mode, set `mock={true}`.
+`Em` is the gold italic text accent (Cormorant Garamond) used to highlight a single word in headlines, like "a world where _everything_ is watched."
 
-For Phase 0 we ship `mock={false}` as default — the OS status bar handles itself.
+> **Decision:** the maquette's `StatusBar` and `HomeIndicator` mock components are **not ported**. On native, `expo-status-bar` (already configured in `app/_layout.tsx`) plus the OS-drawn home indicator handle both natively. Keeping them as code-only mocks would just be dead weight.
 
 - [ ] **Step 1: Create `src/design-system/primitives/Frame.tsx`**
 
@@ -917,98 +915,7 @@ export function Frame({ children, variant = 'dark' }: Props) {
 }
 ```
 
-- [ ] **Step 2: Create `src/design-system/primitives/StatusBar.tsx`**
-
-This is the in-canvas mock status bar. On a real device we never render it; the OS has its own. Kept for design fidelity in screenshots.
-
-```tsx
-import Svg, { G, Path, Rect } from 'react-native-svg';
-import { Text, View } from 'react-native';
-import { sansationBold } from '@/src/design-system/typography';
-
-type Props = { time?: string; mock?: boolean; dark?: boolean };
-
-export function StatusBar({ time = '9:41', mock = false, dark = true }: Props) {
-  if (!mock) return null;
-
-  const c = dark ? '#f1ece1' : '#000';
-
-  return (
-    <View
-      style={{
-        height: 54,
-        paddingHorizontal: 28,
-        paddingTop: 20,
-        paddingBottom: 8,
-      }}
-      className="flex-row items-center justify-between"
-    >
-      <Text style={[sansationBold, { fontSize: 16, color: c, letterSpacing: -0.2 }]}>
-        {time}
-      </Text>
-
-      <View className="flex-row items-center" style={{ gap: 6 }}>
-        <Svg width={16} height={10} viewBox="0 0 16 10">
-          <G fill={c}>
-            <Rect x={0} y={6} width={2.5} height={4} rx={0.5} />
-            <Rect x={4} y={4} width={2.5} height={6} rx={0.5} />
-            <Rect x={8} y={2} width={2.5} height={8} rx={0.5} />
-            <Rect x={12} y={0} width={2.5} height={10} rx={0.5} />
-          </G>
-        </Svg>
-        <Svg width={24} height={11} viewBox="0 0 24 11">
-          <Rect
-            x={0.5}
-            y={0.5}
-            width={21}
-            height={10}
-            rx={2.5}
-            fill="none"
-            stroke={c}
-            strokeOpacity={0.4}
-          />
-          <Rect x={2} y={2} width={16} height={7} rx={1.2} fill={c} />
-          <Path
-            d="M22.5 3.5v4c.6-.25 1-.9 1-2s-.4-1.75-1-2z"
-            fill={c}
-            fillOpacity={0.5}
-          />
-        </Svg>
-      </View>
-    </View>
-  );
-}
-```
-
-- [ ] **Step 3: Create `src/design-system/primitives/HomeIndicator.tsx`**
-
-```tsx
-import { View } from 'react-native';
-
-type Props = { mock?: boolean; dark?: boolean };
-
-export function HomeIndicator({ mock = false, dark = true }: Props) {
-  if (!mock) return null;
-
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        bottom: 8,
-        left: '50%',
-        marginLeft: -67,
-        width: 134,
-        height: 5,
-        borderRadius: 3,
-        backgroundColor: dark ? 'rgba(241,236,225,0.5)' : 'rgba(0,0,0,0.3)',
-      }}
-    />
-  );
-}
-```
-
-- [ ] **Step 4: Create `src/design-system/primitives/Em.tsx`**
+- [ ] **Step 2: Create `src/design-system/primitives/Em.tsx`**
 
 ```tsx
 import { Text, TextProps } from 'react-native';
@@ -1024,12 +931,12 @@ export function Em({ children, style, ...rest }: TextProps) {
 }
 ```
 
-- [ ] **Step 5: Type-check**
+- [ ] **Step 3: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 6: Smoke render**
+- [ ] **Step 4: Smoke render**
 
 Replace `app/index.tsx`:
 
@@ -1053,14 +960,17 @@ export default function Index() {
 }
 ```
 
-Run: `npx expo start --clear`
-Expected: dark Frame, light Sansation text, gold italic "everything" via `Em`.
+Then bundler smoke:
+```bash
+timeout 30s npx expo export --platform web --output-dir /tmp/expo-export-task7 2>&1 | tail -20 || true
+rm -rf /tmp/expo-export-task7
+```
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/design-system/primitives/ app/index.tsx
-git commit -m "feat(ds): add Frame, StatusBar, HomeIndicator, Em primitives"
+git commit -m "feat(ds): add Frame and Em primitives"
 ```
 
 ---
@@ -2308,7 +2218,7 @@ After Task 15 the repo has:
 - A clean Expo / Expo Router project free of demo code
 - NativeWind wired with the full Stealf token palette
 - All three font families loaded and validated
-- 12 design system primitives (`Frame`, `StatusBar`, `HomeIndicator`, `Em`, `Kicker`, `ActionBtn`, `BalanceLarge`, `Dots`, `CarouselBar`, `TxRow`, `TabBar`, `TopNav`)
+- 10 design system primitives (`Frame`, `Em`, `Kicker`, `ActionBtn`, `BalanceLarge`, `Dots`, `CarouselBar`, `TxRow`, `TabBar`, `TopNav`)
 - 40 SVG icons via `Icons` map
 - Navigation skeleton: auth stack, tabs (4 tabs + Moove FAB modal), modal routes for Moove/Shield/Unshield/Add-funds/Card/Lock/Send/Tx detail
 - One real screen rendered (`Welcome`) confirming the chain works
