@@ -1,17 +1,15 @@
-import { Text } from 'react-native';
+import { View } from 'react-native';
 import { Frame } from '@/src/design-system/primitives/Frame';
-import { Em } from '@/src/design-system/primitives/Em';
-import { sansationLight } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 
 export default function Index() {
   return (
     <Frame>
-      <Text
-        style={[sansationLight, { fontSize: 36, color: '#f1ece1' }]}
-        className="mt-[200px] mx-auto text-center"
-      >
-        a world where <Em style={{ fontSize: 36 }}>everything</Em>{'\n'}is watched.
-      </Text>
+      <View className="flex-1 items-center justify-center gap-3">
+        <Kicker>— a new bank for —</Kicker>
+        <Kicker color="#c9a86a">step 1 of 4</Kicker>
+        <Kicker>— stealf · virtual —</Kicker>
+      </View>
     </Frame>
   );
 }
