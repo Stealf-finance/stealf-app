@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pick6.test-claude-design"
     },
     "android": {
       "adaptiveIcon": {
@@ -34,7 +35,9 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#0a0a0a",
-          "dark": { "backgroundColor": "#0a0a0a" }
+          "dark": {
+            "backgroundColor": "#0a0a0a"
+          }
         }
       ],
       [

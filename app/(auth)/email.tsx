@@ -1,12 +1,5 @@
-import { Text, View } from 'react-native';
-import { Frame } from '@/src/design-system/primitives/Frame';
+import { Email } from '@/src/features/onboarding/screens/Email';
 
-export default function EmailScreen() {
-  return (
-    <Frame>
-      <View className="flex-1 items-center justify-center">
-        <Text className="text-ink-faint font-sans">email — TODO</Text>
-      </View>
-    </Frame>
-  );
+export default function EmailRoute() {
+  return <Email />;
 }

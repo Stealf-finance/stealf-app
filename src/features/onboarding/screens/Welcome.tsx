@@ -1,9 +1,8 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
+import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import {
-  sansation,
   sansationBold,
   sansationLight,
   serif,
@@ -104,73 +103,17 @@ export function Welcome() {
           gap: 10,
         }}
       >
-        <Pressable
+        <PillBtn
+          variant="primary"
+          tone="silver"
+          label="Create account"
           onPress={() => router.push('/(auth)/invite')}
-          style={{
-            borderRadius: 100,
-            overflow: 'hidden',
-            shadowColor: '#000',
-            shadowOpacity: 0.5,
-            shadowRadius: 30,
-            shadowOffset: { width: 0, height: 10 },
-            elevation: 12,
-          }}
-        >
-          <LinearGradient
-            colors={['#e8e8ea', '#9a9a9f']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0.6, y: 1 }}
-            style={{
-              paddingVertical: 16,
-              paddingHorizontal: 22,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={[
-                sansationBold,
-                {
-                  fontSize: 11,
-                  letterSpacing: 2.64,
-                  textTransform: 'uppercase',
-                  color: '#0a0a0a',
-                },
-              ]}
-            >
-              Create account
-            </Text>
-          </LinearGradient>
-        </Pressable>
-
-        <Pressable
+        />
+        <PillBtn
+          variant="secondary"
+          label="I already have an account"
           onPress={() => router.push('/(auth)/login')}
-          style={{
-            paddingVertical: 16,
-            paddingHorizontal: 22,
-            borderRadius: 100,
-            backgroundColor: 'rgba(255,255,255,0.035)',
-            borderWidth: 1,
-            borderColor: S.hairline,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 11,
-                letterSpacing: 2.64,
-                textTransform: 'uppercase',
-                color: S.ink,
-                fontWeight: '700',
-              },
-            ]}
-          >
-            I already have an account
-          </Text>
-        </Pressable>
+        />
       </View>
     </TonalBackground>
   );

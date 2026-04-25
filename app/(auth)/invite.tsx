@@ -1,12 +1,5 @@
-import { Text, View } from 'react-native';
-import { Frame } from '@/src/design-system/primitives/Frame';
+import { InviteCode } from '@/src/features/onboarding/screens/InviteCode';
 
-export default function InviteScreen() {
-  return (
-    <Frame>
-      <View className="flex-1 items-center justify-center">
-        <Text className="text-ink-faint font-sans">invite — TODO</Text>
-      </View>
-    </Frame>
-  );
+export default function InviteRoute() {
+  return <InviteCode />;
 }
