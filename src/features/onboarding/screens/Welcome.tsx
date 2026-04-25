@@ -84,34 +84,22 @@ export function Welcome() {
           zIndex: 2,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 10 }}>
-          <Text
-            style={[
-              serif,
-              {
-                fontSize: 72,
-                lineHeight: 72,
-                color: S.ink,
-                letterSpacing: -2.88,
-              },
-            ]}
-          >
-            stealf
-          </Text>
-          <Text
-            style={[
-              serif,
-              {
-                fontSize: 72,
-                lineHeight: 72,
-                color: S.accent,
-                letterSpacing: -2.88,
-              },
-            ]}
-          >
-            .
-          </Text>
-        </View>
+        <Text
+          style={[
+            serif,
+            {
+              fontSize: 72,
+              lineHeight: 92,
+              color: S.ink,
+              letterSpacing: -2.88,
+              marginBottom: 10,
+              textAlign: 'center',
+              includeFontPadding: false,
+            },
+          ]}
+        >
+          stealf<Text style={{ color: S.accent }}>.</Text>
+        </Text>
 
         <Text
           style={[
