@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-25
 **Status:** Approved (high-level), pending spec review
-**Source:** `Maquette.html` at repo root (web React prototype, single-file)
+**Source:** `docs/designs/Maquette.html` (web React prototype, single-file)
 
 ## 1. Goal & scope
 
@@ -41,9 +41,11 @@ Cette dualité doit traverser tout le code : un même flow (ex : Tx) a deux vari
 
 ### 2.2 Typographie
 
-- **Sansation** (300/400/700 + italic) — primaire. Fallback **Manrope** (Google Fonts) en attendant les `.ttf`.
-- **Cormorant Garamond** italic — accents éditoriaux (montants, kickers décoratifs, mots dorés).
-- **JetBrains Mono** — chiffres techniques, hashes, addresses.
+- **Sansation** (Light 300, Regular 400, Bold 700, + Italic / LightItalic / BoldItalic) — primaire. Fichiers `.ttf` fournis dans `assets/fonts/Sansation/` (licence OFL).
+- **Cormorant Garamond** italic — accents éditoriaux (montants, kickers décoratifs, mots dorés). Via `@expo-google-fonts/cormorant-garamond`.
+- **JetBrains Mono** — chiffres techniques, hashes, addresses. Via `@expo-google-fonts/jetbrains-mono`.
+
+**Langue :** anglais uniquement, pas de i18n. Les textes sont hardcodés dans les composants (extraits depuis la maquette).
 
 ### 2.3 Primitives partagées
 
@@ -79,11 +81,12 @@ tailwindcss
 react-native-svg
 expo-blur
 expo-linear-gradient
-@expo-google-fonts/manrope          # fallback Sansation
 @expo-google-fonts/cormorant-garamond
 @expo-google-fonts/jetbrains-mono
 react-native-reusables               # composants accessibles base shadcn-style
 ```
+
+Sansation est chargée localement depuis `assets/fonts/Sansation/` via `expo-font` (déjà installé).
 
 NativeWind est configuré avec un `tailwind.config.js` qui réplique l'objet `T` en tokens Tailwind (`colors`, `fontFamily`, `fontSize`). Le but : la majorité des composants est écrite en classes utilitaires, les rares cas exotiques (radial-gradient, boxShadow complexe) restent en `style={}`.
 
@@ -274,10 +277,8 @@ Marqueurs : ✅ approuvé, 🔄 implémentation à venir, ⏸ après validation 
 
 ## 9. Open questions
 
-- **Sansation `.ttf`** : à fournir par toi quand possible. Impact visuel modéré ; Manrope est très proche.
 - **Logo `stealf.`** en `Cormorant Garamond italic gold` : OK pour rester typo-only ou tu veux un asset SVG dédié ?
 - **Animations** précises (durées, easings) : la maquette utilise des transitions CSS basiques ; pour le côté "0 friction", on calibrera au moment de la phase 4 avec des timings Apple-style (ex : `withSpring({damping: 18, stiffness: 200})` pour le swipe).
-- **Localisation** : tous les textes de la maquette sont en EN. On reste EN, ou on prévoit `i18n` (FR + EN) dès la phase 0 ? Important si à statuer tôt car ça structure les textes.
 
 ## 10. Suite
 
