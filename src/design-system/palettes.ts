@@ -25,7 +25,7 @@ export const txPalette = (tone: Tone): Palette =>
         ink: '#e8e8ea',
         inkDim: '#8a8a8f',
         inkFaint: '#6a6a70',
-        hairline: 'rgba(201,168,106,0.15)',
+        hairline: T.goldFaint,
       }
     : {
         bg: '#0c0c0e',

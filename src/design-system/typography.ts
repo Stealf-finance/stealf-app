@@ -9,7 +9,6 @@ export const sansationItalic: TextStyle = {
 
 export const serif: TextStyle = {
   fontFamily: 'CormorantGaramond_500Medium_Italic',
-  fontStyle: 'italic',
 };
 
 export const mono: TextStyle = { fontFamily: 'JetBrainsMono_400Regular' };
