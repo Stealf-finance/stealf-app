@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { TonalBackground } from './TonalBackground';
 import { BackBtn } from './BackBtn';
 import { StepBar } from './StepBar';
 import { sansation, sansationLight, serif } from '@/src/design-system/typography';
@@ -38,7 +37,7 @@ export function StepFrame({
   const handleBack = onBack ?? (() => router.back());
 
   return (
-    <TonalBackground tone={tone}>
+    <View style={{ flex: 1 }}>
       {/* Top bar: back + step indicator + spacer */}
       <View
         style={{
@@ -151,6 +150,6 @@ export function StepFrame({
           {bottom}
         </View>
       ) : null}
-    </TonalBackground>
+    </View>
   );
 }

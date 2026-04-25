@@ -1,6 +1,4 @@
 import { Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
-import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import {
   sansationBold,
@@ -11,11 +9,14 @@ import { txPalette } from '@/src/design-system/palettes';
 
 const S = txPalette('silver');
 
-export function Welcome() {
-  const router = useRouter();
+type Props = {
+  onStart: () => void;
+  onLogin: () => void;
+};
 
+export function Welcome({ onStart, onLogin }: Props) {
   return (
-    <TonalBackground tone="silver">
+    <View style={{ flex: 1 }}>
       <View
         style={{
           position: 'absolute',
@@ -107,14 +108,14 @@ export function Welcome() {
           variant="primary"
           tone="silver"
           label="Create account"
-          onPress={() => router.push('/(auth)/invite')}
+          onPress={onStart}
         />
         <PillBtn
           variant="secondary"
           label="I already have an account"
-          onPress={() => router.push('/(auth)/login')}
+          onPress={onLogin}
         />
       </View>
-    </TonalBackground>
+    </View>
   );
 }

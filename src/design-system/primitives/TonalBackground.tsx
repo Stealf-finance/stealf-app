@@ -22,20 +22,14 @@ const GLOW: Record<Tone, string> = {
 const tinted = (rgb: string, a: number) =>
   rgb.replace('rgb(', 'rgba(').replace(')', `,${a})`);
 
-// Bell-curve alpha distribution: strong peak at top + bottom, near-zero
-// trough through the middle. Stops are non-linearly spaced for a smooth
-// perceptual fall-off (denser stops where alpha changes fastest).
-//
-// Vertical-only gradient (no radial) so there is no inherent edge between
-// the bloom and the middle: every pixel transitions linearly from its
-// neighbour. The whole screen is a single continuous tint, and the eye
-// reads it as "atmospheric lighting" rather than "two glowing patches on
-// dark bg".
-const STOPS_LOCATIONS = [0, 0.08, 0.18, 0.28, 0.4, 0.6, 0.72, 0.82, 0.92, 1];
+// Top-only halo: peak alpha at the top, smooth fall-off, then zero across
+// the bottom half. Vertical gradient with non-linearly spaced stops so the
+// fall-off reads as atmospheric lighting rather than a hard edge.
+const STOPS_LOCATIONS = [0, 0.08, 0.18, 0.28, 0.4, 1];
 
 const ALPHAS: Record<Tone, readonly number[]> = {
-  silver: [0.18, 0.14, 0.08, 0.04, 0.018, 0.018, 0.04, 0.08, 0.12, 0.16],
-  gold: [0.2, 0.16, 0.1, 0.05, 0.022, 0.022, 0.05, 0.1, 0.14, 0.18],
+  silver: [0.18, 0.14, 0.08, 0.04, 0.018, 0],
+  gold: [0.2, 0.16, 0.1, 0.05, 0.022, 0],
 };
 
 export function TonalBackground({

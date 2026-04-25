@@ -1,5 +1,5 @@
-import { Welcome } from '@/src/features/onboarding/screens/Welcome';
+import { AuthFlow } from '@/src/features/onboarding/AuthFlow';
 
 export default function WelcomeRoute() {
-  return <Welcome />;
+  return <AuthFlow />;
 }
