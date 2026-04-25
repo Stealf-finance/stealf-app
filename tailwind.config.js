@@ -1,0 +1,45 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./app/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
+  presets: [require('nativewind/preset')],
+  theme: {
+    extend: {
+      colors: {
+        bg: '#0a0a0a',
+        'bg-raised': '#151513',
+        'bg-raised-2': '#1e1d1a',
+        'bg-card': 'rgba(255,255,255,0.03)',
+        'bg-card-strong': 'rgba(255,255,255,0.06)',
+        'bg-light': '#e8e0d0',
+        'bg-light-ink': '#0a0a0a',
+        ink: '#f1ece1',
+        'ink-dim': 'rgba(241,236,225,0.65)',
+        'ink-faint': 'rgba(241,236,225,0.4)',
+        'ink-mute': 'rgba(241,236,225,0.25)',
+        hairline: 'rgba(241,236,225,0.09)',
+        'hairline-strong': 'rgba(241,236,225,0.18)',
+        trace: 'rgba(241,236,225,0.04)',
+        gold: '#c9a86a',
+        'gold-dim': 'rgba(201,168,106,0.5)',
+        'gold-faint': 'rgba(201,168,106,0.15)',
+        'gold-glow': 'rgba(201,168,106,0.28)',
+        green: '#7ea688',
+        red: '#d1604a',
+      },
+      fontFamily: {
+        sans: ['Sansation_400Regular'],
+        'sans-light': ['Sansation_300Light'],
+        'sans-bold': ['Sansation_700Bold'],
+        'sans-italic': ['Sansation_400Regular_Italic'],
+        serif: ['CormorantGaramond_500Medium_Italic'],
+        mono: ['JetBrainsMono_400Regular'],
+      },
+      letterSpacing: {
+        kicker: '0.28em',
+        'kicker-tight': '0.22em',
+        'kicker-loose': '0.32em',
+      },
+    },
+  },
+  plugins: [],
+};
