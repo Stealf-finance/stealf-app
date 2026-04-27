@@ -32,43 +32,26 @@ public npm package — the 82 MB module folder stays in `front-stealf`.
 | `newArchEnabled` (Turbo Module prerequisite) | OK | `app.json` already has `"newArchEnabled": true` |
 | `.zkey` registered as Metro asset extension | OK | `metro.config.js` patched (Slice 5 prereq) |
 
-## What needs Thomas's machine to validate
+## Validation on Thomas's machine
 
-The native build chain (Xcode + CocoaPods + Hermes JSI) requires a
-physical macOS toolchain. Three steps are left for the demo:
+| Step | Status | Evidence |
+|------|--------|----------|
+| `pod install` | OK | 104 dependencies resolved, 106 pods installed, 37 s |
+| `MoproFfi` in Podfile.lock | OK | `MoproFfi (3.0.1)` sourced from `../node_modules/@umbra-privacy/rn-zk-prover` (matches `front-stealf` exactly) |
+| `npx expo run:ios` boots on simulator | OK | App boot logs include `[Telemetry] smoke ran` — Hermes loaded, no Mopro linker error |
+| Telemetry smoke fires from inside the app | OK | `[Sentry] inert (DSN not set)` + `[Telemetry] smoke ran (PostHog event sent + Sentry breadcrumb)` |
 
-1. **Pod install**
-   ```bash
-   cd ios && pod install
-   # expect MoproFfi (3.0.1) in Podfile.lock, sourced from
-   # ../node_modules/@umbra-privacy/rn-zk-prover
-   ```
+A live proof run is deferred to Slice 5 — pulling Umbra `.zkey`
+assets just for a Phase-0 smoke would be wasted effort. The Turbo
+Module loads on boot (autolinking + native lib registration via
+`installRustCrate()`), which is the part that could realistically
+break across a repo migration. That risk is now closed.
 
-2. **iOS build**
-   ```bash
-   cd .. && npx expo run:ios
-   # or `xcodebuild -workspace ios/testclaudedesign.xcworkspace ...`
-   ```
+## Verdict
 
-3. **Run a minimal proof to validate the JSI bridge**
-   The `@umbra-privacy/rn-zk-prover` API surface lets us call a low-cost
-   prover. We hold off on writing the JS test until Slice 5 since
-   adding it would require pulling Umbra circuit `.zkey` assets into
-   the repo for a one-shot test — wasted effort.
-
-   The pragmatic check during the demo: if `expo run:ios` boots the
-   app on the simulator without a Mopro-related Hermes / linker error,
-   the Turbo Module is wired correctly. A no-op `installRustCrate()`
-   call from a `__DEV__` block on first render would confirm the
-   bridge actively loads (~2 s).
-
-## Verdict format
-
-| Outcome at demo | Verdict |
-|-----------------|---------|
-| Pod install + xcodebuild + simulator boot all succeed | 🟢 ship Phase 0 |
-| Pod install OK but xcodebuild fails on Mopro symbols | 🟡 dig in (probably codegen/Folly mismatch — known issue space) |
-| Pod install fails (autolink misses `MoproFfi`) | 🔴 escalate — repo state diverges from front-stealf in a way we did not catch |
+🟢 **Ship Phase 0.** The ZK build chain is reproducible on `stealf-app`
+with the same wiring as `front-stealf`. Slice 5 can begin from a
+known-good foundation.
 
 ## Where things live now
 
