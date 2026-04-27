@@ -1,0 +1,8 @@
+export { LAMPORTS_PER_SOL, solToLamports, lamportsToSol } from '@/src/services/solana/kit';
+
+export const SOL_MINT = 'So11111111111111111111111111111111111111112';
+
+export const USDC_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+export const USDC_DECIMALS = 6;
+
+export const STEALF_JITO_VAULT = '7pb2n3AqzY6QQfz7Q7gZ6J9wHuryu6tmcBu8fFPPT4U7';
