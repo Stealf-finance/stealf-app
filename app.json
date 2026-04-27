@@ -52,7 +52,10 @@
             "./assets/fonts/Sansation/Sansation-BoldItalic.ttf"
           ]
         }
-      ]
+      ],
+      "expo-secure-store",
+      "@sentry/react-native",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
