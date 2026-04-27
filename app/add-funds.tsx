@@ -1,12 +1,9 @@
-import { Text, View } from 'react-native';
-import { Frame } from '@/src/design-system/primitives/Frame';
+import { useLocalSearchParams } from 'expo-router';
+import { AddFundsScreen } from '@/src/features/add-funds/AddFundsScreen';
+import { Tone } from '@/src/design-system/palettes';
 
 export default function AddFundsModal() {
-  return (
-    <Frame>
-      <View className="flex-1 items-center justify-center">
-        <Text className="text-ink-faint font-sans">add-funds — TODO</Text>
-      </View>
-    </Frame>
-  );
+  const { tone } = useLocalSearchParams<{ tone?: string }>();
+  const resolvedTone: Tone = tone === 'silver' ? 'silver' : 'gold';
+  return <AddFundsScreen tone={resolvedTone} />;
 }

@@ -1,12 +1,5 @@
-import { Text, View } from 'react-native';
-import { Frame } from '@/src/design-system/primitives/Frame';
+import { ShieldFlow } from '@/src/features/shield/ShieldFlow';
 
 export default function UnshieldModal() {
-  return (
-    <Frame>
-      <View className="flex-1 items-center justify-center">
-        <Text className="text-ink-faint font-sans">unshield — TODO</Text>
-      </View>
-    </Frame>
-  );
+  return <ShieldFlow direction="unshield" />;
 }

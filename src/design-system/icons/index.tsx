@@ -8,7 +8,11 @@ type Props = {
 };
 
 const make =
-  (children: ReactNode, vbW = 24, vbH = 24) =>
+  (
+    children: ReactNode | ((color: string) => ReactNode),
+    vbW = 24,
+    vbH = 24,
+  ) =>
   ({ size = 18, color = 'currentColor', strokeWidth = 1.5 }: Props) =>
     (
       <Svg
@@ -21,7 +25,7 @@ const make =
         strokeLinecap="round"
         strokeLinejoin="round"
       >
-        {children}
+        {typeof children === 'function' ? children(color) : children}
       </Svg>
     );
 
@@ -30,22 +34,24 @@ export const Icons = {
   arrDown: make(<Path d="M12 5v14M5 12l7 7 7-7" />),
   arrRight: make(<Path d="M5 12h14M13 6l6 6-6 6" />),
   arrLeft: make(<Path d="M19 12H5M11 6l-6 6 6 6" />),
-  arrUpRight: make(<Path d="M7 17L17 7M7 7h10v10" />),
-  arrDownLeft: make(<Path d="M17 7L7 17M17 17H7V7" />),
-  plus: make(<Path d="M12 5v14M5 12h14" />),
-  minus: make(<Path d="M5 12h14" />),
-  // NOTE: `more` and `dots` use hardcoded fill="currentColor" on inner Circles.
-  // react-native-svg does NOT inherit currentColor from the parent <Svg stroke>
-  // prop, so on iOS/Android these dots render with the SVG default fill rather
-  // than the component's `color` prop. Tracked for post-Phase-0 fix (replace
-  // with fill={color} via a small refactor of `make`).
-  more: make(
+  backspace: make(
     <>
-      <Circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <Circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <Circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <Path d="M22 5H9l-6 7 6 7h13a1 1 0 001-1V6a1 1 0 00-1-1z" />
+      <Path d="M13 9l6 6M19 9l-6 6" />
     </>,
   ),
+  arrUpRight: make(<Path d="M7 17L17 7M7 7h10v10" />),
+  arrDownLeft: make(<Path d="M17 7L7 17M17 17H7V7" />),
+  arrDownRight: make(<Path d="M7 7L17 17M17 7v10H7" />),
+  plus: make(<Path d="M12 5v14M5 12h14" />),
+  minus: make(<Path d="M5 12h14" />),
+  more: make((color) => (
+    <>
+      <Circle cx="5" cy="12" r="1.5" fill={color} stroke="none" />
+      <Circle cx="12" cy="12" r="1.5" fill={color} stroke="none" />
+      <Circle cx="19" cy="12" r="1.5" fill={color} stroke="none" />
+    </>
+  )),
   moove: make(
     <Path d="M7 7h11M18 7l-3-3M18 7l-3 3M17 17H6M6 17l3-3M6 17l3 3" />,
   ),
@@ -141,13 +147,13 @@ export const Icons = {
   scan: make(
     <Path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2M7 12h10" />,
   ),
-  dots: make(
+  dots: make((color) => (
     <>
-      <Circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none" />
-      <Circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <Circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none" />
-    </>,
-  ),
+      <Circle cx="12" cy="5" r="1.5" fill={color} stroke="none" />
+      <Circle cx="12" cy="12" r="1.5" fill={color} stroke="none" />
+      <Circle cx="12" cy="19" r="1.5" fill={color} stroke="none" />
+    </>
+  )),
   trend: make(<Path d="M3 17l5-5 4 4 9-9M15 7h6v6" />),
   gold: make(
     <>
@@ -173,9 +179,8 @@ export const Icons = {
   ),
   shieldOff: make(
     <>
+      <Path d="M12 2L3 6v6c0 5 4 9.5 9 10 5-.5 9-5 9-10V6l-9-4z" />
       <Path d="M3 3l18 18" />
-      <Path d="M20 13c0 5-8 9-8 9a12.6 12.6 0 01-4.1-3M4.7 4.7L4 5v7c0 1 .1 2 .3 2.9" />
-      <Path d="M12 2L3 6" />
     </>,
   ),
   gift: make(
