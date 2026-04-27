@@ -1,20 +1,15 @@
 import { useEffect } from 'react';
-import { usePostHog } from 'posthog-react-native';
 import { Sentry } from '@/src/services/observability/sentry';
+import { getPostHog } from '@/src/services/observability/posthog';
 
-/**
- * Dev-only one-shot smoke for the Phase-0 DoD: fire a PostHog event,
- * fetch a feature flag, capture a Sentry breadcrumb. Runs once on mount.
- */
 export function TelemetrySmokeTest() {
-  const posthog = usePostHog();
-
   useEffect(() => {
     if (!__DEV__) return;
     let cancelled = false;
 
     const run = async () => {
       try {
+        const posthog = getPostHog();
         if (posthog) {
           posthog.capture('phase_0_telemetry_smoke', { ts: Date.now() });
           const flag = await posthog.getFeatureFlag('slice-stealth-enabled');
@@ -34,7 +29,7 @@ export function TelemetrySmokeTest() {
     return () => {
       cancelled = true;
     };
-  }, [posthog]);
+  }, []);
 
   return null;
 }
