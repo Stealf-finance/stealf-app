@@ -2,14 +2,11 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { View } from 'react-native';
 import { T } from '@/src/design-system/tokens';
 import { TabBar, TabId } from '@/src/design-system/primitives/TabBar';
-import {
-  PrivacyModeProvider,
-  usePrivacyMode,
-} from '@/src/features/stealth/PrivacyModeContext';
+import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 
 const TAB_IDS: TabId[] = ['bank', 'stealth', 'grow', 'profile'];
 
-function TabsContent() {
+export default function TabsLayout() {
   const router = useRouter();
   const segments = useSegments();
   const { tone } = usePrivacyMode();
@@ -42,13 +39,5 @@ function TabsContent() {
       <Slot />
       <TabBar active={active} tone={tabBarTone} onTab={handleTab} />
     </View>
-  );
-}
-
-export default function TabsLayout() {
-  return (
-    <PrivacyModeProvider initial="private">
-      <TabsContent />
-    </PrivacyModeProvider>
   );
 }

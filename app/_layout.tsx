@@ -18,6 +18,7 @@ import { initSentry, Sentry } from '@/src/services/observability/sentry';
 import { queryClient } from '@/src/services/queryClient';
 import { getTurnkeyConfig, TURNKEY_CALLBACKS } from '@/src/services/turnkey/config';
 import { AuthProvider } from '@/src/features/onboarding/context/AuthContext';
+import { PrivacyModeProvider } from '@/src/features/stealth/PrivacyModeContext';
 import { SocketProvider } from '@/src/components/SocketProvider';
 import { DataBootstrap } from '@/src/components/DataBootstrap';
 import { AuthGuard } from '@/src/components/AuthGuard';
@@ -56,10 +57,11 @@ function RootLayout() {
           <TurnkeyProvider config={getTurnkeyConfig()} callbacks={TURNKEY_CALLBACKS}>
             <AuthProvider>
               <SocketProvider>
-                <DataBootstrap />
-                <AuthGuard />
-                <TelemetrySmokeTest />
-                <Stack
+                <PrivacyModeProvider initial="private">
+                  <DataBootstrap />
+                  <AuthGuard />
+                  <TelemetrySmokeTest />
+                  <Stack
                   screenOptions={{
                     headerShown: false,
                     contentStyle: { backgroundColor: T.bg },
@@ -78,8 +80,9 @@ function RootLayout() {
                   <Stack.Screen name="receive" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="claim-pending" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="tx/[id]" options={{ presentation: 'modal' }} />
-                </Stack>
-                <StatusBar style="light" />
+                  </Stack>
+                  <StatusBar style="light" />
+                </PrivacyModeProvider>
               </SocketProvider>
             </AuthProvider>
           </TurnkeyProvider>
