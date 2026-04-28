@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { checkVerificationStatus } from '../api/onboarding';
 import type { VerificationStatus } from '../types';
@@ -17,7 +17,10 @@ export function useEmailVerificationPolling({
   onVerified,
 }: UseEmailVerificationPollingParams) {
   const queryClient = useQueryClient();
-  const queryKey = ['onboarding', 'verification', preAuthToken] as const;
+  const queryKey = useMemo(
+    () => ['onboarding', 'verification', preAuthToken] as const,
+    [preAuthToken],
+  );
 
   const query = useQuery<VerificationStatus | null>({
     queryKey,

@@ -3,6 +3,7 @@ const TURNKEY_ASYNC_STORAGE_PREFIX = '@turnkey/';
 
 export async function purgeTurnkeyKeychain(): Promise<void> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Keychain = require('react-native-keychain');
     const services: string[] = await Keychain.getAllGenericPasswordServices();
     const orphans = services.filter((s) => s.startsWith(TURNKEY_KEYCHAIN_PREFIX));
@@ -18,6 +19,7 @@ export async function purgeTurnkeyKeychain(): Promise<void> {
 
 export async function purgeTurnkeyAsyncStorage(): Promise<void> {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const AsyncStorage = require('@react-native-async-storage/async-storage').default;
     const allKeys: string[] = await AsyncStorage.getAllKeys();
     const turnkeyKeys = allKeys.filter((k) => k.startsWith(TURNKEY_ASYNC_STORAGE_PREFIX));

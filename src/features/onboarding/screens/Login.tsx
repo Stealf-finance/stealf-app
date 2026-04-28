@@ -13,6 +13,7 @@ import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { sansationLight, serif } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { useSignIn } from '../hooks/useSignIn';
 
 const S = txPalette('silver');
 const G = txPalette('gold');
@@ -20,10 +21,21 @@ const G = txPalette('gold');
 type Props = {
   handle?: string;
   onBack: () => void;
-  onSuccess: () => void;
+  /** Called once the auth state is settled. Routing is handled by AuthGuard. */
+  onSuccess?: () => void;
 };
 
 export function Login({ handle = '@thomas', onBack, onSuccess }: Props) {
+  const { signInAsync, isLoading, isClientReady, error } = useSignIn();
+
+  const handleSignIn = async () => {
+    try {
+      await signInAsync();
+      onSuccess?.();
+    } catch (err) {
+      if (__DEV__) console.warn('[Login] sign-in failed:', err);
+    }
+  };
   const insets = useSafeAreaInsets();
   const pulse = useSharedValue(0);
 
@@ -123,9 +135,11 @@ export function Login({ handle = '@thomas', onBack, onSuccess }: Props) {
             ]}
           />
           <Pressable
-            onPress={onSuccess}
+            onPress={handleSignIn}
+            disabled={isLoading || !isClientReady}
             accessibilityRole="button"
             accessibilityLabel="Sign in with Face ID"
+            accessibilityState={{ disabled: isLoading || !isClientReady, busy: isLoading }}
             style={{
               width: 110,
               height: 110,
@@ -135,6 +149,7 @@ export function Login({ handle = '@thomas', onBack, onSuccess }: Props) {
               backgroundColor: 'rgba(201,168,106,0.06)',
               alignItems: 'center',
               justifyContent: 'center',
+              opacity: isLoading || !isClientReady ? 0.5 : 1,
             }}
           >
             <Svg width={50} height={50} viewBox="0 0 50 50" fill="none">
@@ -173,8 +188,26 @@ export function Login({ handle = '@thomas', onBack, onSuccess }: Props) {
             textAlign: 'center',
           }}
         >
-          Look at your phone to sign in
+          {isLoading
+            ? 'Authenticating…'
+            : !isClientReady
+              ? 'Initializing…'
+              : 'Look at your phone to sign in'}
         </Text>
+
+        {error ? (
+          <Text
+            style={{
+              marginTop: 14,
+              fontSize: 12,
+              color: '#E5484D',
+              textAlign: 'center',
+              paddingHorizontal: 24,
+            }}
+          >
+            {error}
+          </Text>
+        ) : null}
       </View>
     </View>
   );

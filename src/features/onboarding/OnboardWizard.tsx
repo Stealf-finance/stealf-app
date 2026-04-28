@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   runOnJS,
@@ -22,6 +21,9 @@ import {
 } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { useSignUp } from './hooks/useSignUp';
+import { useEmailVerificationPolling } from './hooks/useEmailVerificationPolling';
+import type { SignUpStep } from './lib/signUpReducer';
 
 const S = txPalette('silver');
 const G = txPalette('gold');
@@ -36,59 +38,102 @@ const isValidEmail = (v: string) =>
 const FADE_OUT = 160;
 const FADE_IN = 220;
 
+const STEP_INDEX: Record<SignUpStep, number> = {
+  invite: 0,
+  handle: 1,
+  email: 2,
+  verifying: 3,
+  passkey: 4,
+  done: 4,
+};
+
+const STEP_BACK: Record<SignUpStep, SignUpStep | null> = {
+  invite: null,
+  handle: 'invite',
+  email: 'handle',
+  verifying: 'email',
+  passkey: 'verifying',
+  done: 'passkey',
+};
+
 type Props = {
   onExitBack: () => void;
 };
 
 export function OnboardWizard({ onExitBack }: Props) {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const signUp = useSignUp();
+  const { state, setInvite, setHandle, setEmail, setTermsAccepted, goto } = signUp;
 
-  const [step, setStep] = useState(0);
-  const [invite, setInvite] = useState('');
-  const [handle, setHandle] = useState('');
-  const [email, setEmail] = useState('');
-  const [accepted, setAccepted] = useState(false);
+  const visualStep = STEP_INDEX[state.step];
+  const [renderedStep, setRenderedStep] = useState(visualStep);
 
   const opacity = useSharedValue(1);
   const translate = useSharedValue(0);
-
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translate.value }],
   }));
 
-  const transitionTo = (next: number, direction: 'forward' | 'back') => {
-    const sign = direction === 'forward' ? -1 : 1;
-    opacity.value = withTiming(0, { duration: FADE_OUT });
-    translate.value = withTiming(8 * sign, { duration: FADE_OUT }, (done) => {
-      if (!done) return;
-      runOnJS(setStep)(next);
-      translate.value = -8 * sign;
-      opacity.value = withTiming(1, { duration: FADE_IN });
-      translate.value = withTiming(0, { duration: FADE_IN });
-    });
-  };
+  const animateTo = useCallback(
+    (next: number, direction: 'forward' | 'back') => {
+      if (next === renderedStep) return;
+      const sign = direction === 'forward' ? -1 : 1;
+      opacity.value = withTiming(0, { duration: FADE_OUT });
+      translate.value = withTiming(8 * sign, { duration: FADE_OUT }, (done) => {
+        if (!done) return;
+        runOnJS(setRenderedStep)(next);
+        translate.value = -8 * sign;
+        opacity.value = withTiming(1, { duration: FADE_IN });
+        translate.value = withTiming(0, { duration: FADE_IN });
+      });
+    },
+    [renderedStep, opacity, translate],
+  );
+
+  // Sync visual step with reducer step. Direction is inferred from delta.
+  const lastStepRef = useRef(visualStep);
+  useEffect(() => {
+    if (visualStep === lastStepRef.current) return;
+    const direction = visualStep > lastStepRef.current ? 'forward' : 'back';
+    lastStepRef.current = visualStep;
+    animateTo(visualStep, direction);
+  }, [visualStep, animateTo]);
 
   const handleBack = () => {
-    if (step === 0) {
+    const prev = STEP_BACK[state.step];
+    if (!prev) {
       onExitBack();
       return;
     }
-    transitionTo(step - 1, 'back');
+    goto(prev);
   };
 
-  const inviteValid = useMemo(() => isValidInvite(invite), [invite]);
-  const handleValid = useMemo(() => isValidHandle(handle), [handle]);
-  const emailValid = useMemo(() => isValidEmail(email), [email]);
+  useEmailVerificationPolling({
+    preAuthToken: state.preAuthToken,
+    enabled: state.step === 'verifying',
+    onVerified: signUp.onEmailVerified,
+  });
 
-  const finishOnboarding = () => router.replace('/(tabs)/bank');
+  const inviteValid = useMemo(() => isValidInvite(state.invite), [state.invite]);
+  const handleValid = useMemo(() => isValidHandle(state.handle), [state.handle]);
+  const emailValid = useMemo(() => isValidEmail(state.email), [state.email]);
 
   const openMail = () => {
     Linking.openURL('message://').catch(() => {
       Linking.openURL('mailto:').catch(() => {});
     });
-    transitionTo(4, 'forward');
+  };
+
+  const onSendMagicLink = async () => {
+    const result = await signUp.startVerification();
+    if (!result.ok && __DEV__) console.warn('[OnboardWizard] verification failed:', result.message);
+  };
+
+  const onEnablePasskey = async () => {
+    const result = await signUp.createPasskey();
+    if (!result.ok && __DEV__) console.warn('[OnboardWizard] passkey failed:', result.message);
+    // On success, AuthGuard redirects automatically; nothing to do here.
   };
 
   type Cta = {
@@ -100,31 +145,31 @@ export function OnboardWizard({ onExitBack }: Props) {
   };
 
   const cta: Cta =
-    step === 0
+    state.step === 'invite'
       ? {
           label: 'Continue',
           variant: 'primary',
           tone: 'silver',
           disabled: !inviteValid,
-          onPress: () => transitionTo(1, 'forward'),
+          onPress: () => goto('handle'),
         }
-      : step === 1
+      : state.step === 'handle'
         ? {
             label: 'Continue',
             variant: 'primary',
             tone: 'silver',
             disabled: !handleValid,
-            onPress: () => transitionTo(2, 'forward'),
+            onPress: () => goto('email'),
           }
-        : step === 2
+        : state.step === 'email'
           ? {
-              label: 'Send magic link',
+              label: state.loading ? 'Sending…' : 'Send magic link',
               variant: 'primary',
               tone: 'silver',
-              disabled: !emailValid,
-              onPress: () => transitionTo(3, 'forward'),
+              disabled: !emailValid || state.loading,
+              onPress: onSendMagicLink,
             }
-          : step === 3
+          : state.step === 'verifying'
             ? {
                 label: 'Open email app',
                 variant: 'secondary',
@@ -133,11 +178,11 @@ export function OnboardWizard({ onExitBack }: Props) {
                 onPress: openMail,
               }
             : {
-                label: 'Enable Passkey',
+                label: state.loading ? 'Activating…' : 'Enable Passkey',
                 variant: 'primary',
                 tone: 'gold',
-                disabled: !accepted,
-                onPress: finishOnboarding,
+                disabled: !state.termsAccepted || state.loading || !signUp.isClientReady,
+                onPress: onEnablePasskey,
               };
 
   return (
@@ -154,7 +199,7 @@ export function OnboardWizard({ onExitBack }: Props) {
         }}
       >
         <BackBtn onPress={handleBack} />
-        <StepBar current={step} total={TOTAL_STEPS} />
+        <StepBar current={renderedStep} total={TOTAL_STEPS} />
         <View style={{ width: 36 }} />
       </View>
 
@@ -172,14 +217,14 @@ export function OnboardWizard({ onExitBack }: Props) {
           animatedStyle,
         ]}
       >
-        {step === 0 && (
+        {renderedStep === 0 && (
           <StepBlock
             kicker="Invite only"
             title="Enter your code"
             subtitle="Stealf is invitation-based for now."
           >
             <UnderlineField
-              value={invite}
+              value={state.invite}
               onChangeText={(v) => setInvite(v.toUpperCase())}
               placeholder="your invite code"
               autoCapitalize="characters"
@@ -209,14 +254,14 @@ export function OnboardWizard({ onExitBack }: Props) {
           </StepBlock>
         )}
 
-        {step === 1 && (
+        {renderedStep === 1 && (
           <StepBlock
             kicker="Choose your handle"
             title="Pick a name"
             subtitle="This is how people find you on Stealf."
           >
             <UnderlineField
-              value={handle}
+              value={state.handle}
               onChangeText={(v) => setHandle(v.replace(/\s/g, ''))}
               placeholder="username"
               prefix="@"
@@ -241,14 +286,14 @@ export function OnboardWizard({ onExitBack }: Props) {
           </StepBlock>
         )}
 
-        {step === 2 && (
+        {renderedStep === 2 && (
           <StepBlock
             kicker="Verify your email"
             title="Your email"
             subtitle="We'll send a magic link to sign you in."
           >
             <UnderlineField
-              value={email}
+              value={state.email}
               onChangeText={(v) => setEmail(v.trim())}
               placeholder="you@example.com"
               keyboardType="email-address"
@@ -273,11 +318,11 @@ export function OnboardWizard({ onExitBack }: Props) {
           </StepBlock>
         )}
 
-        {step === 3 && (
+        {renderedStep === 3 && (
           <StepBlock
             kicker="Almost there"
             title="Check your inbox"
-            subtitle={`We just sent a magic link to ${email}`}
+            subtitle={`We just sent a magic link to ${state.email}`}
           >
             <View
               style={{
@@ -305,7 +350,9 @@ export function OnboardWizard({ onExitBack }: Props) {
                     color: S.accent,
                     textDecorationLine: 'underline',
                   }}
-                  onPress={() => {}}
+                  onPress={() => {
+                    void signUp.resendMagicLink();
+                  }}
                 >
                   Resend
                 </Text>
@@ -314,7 +361,7 @@ export function OnboardWizard({ onExitBack }: Props) {
           </StepBlock>
         )}
 
-        {step === 4 && (
+        {renderedStep === 4 && (
           <StepBlock
             kicker="Secure your account"
             title="Set up Passkey"
@@ -347,11 +394,24 @@ export function OnboardWizard({ onExitBack }: Props) {
           animatedStyle,
         ]}
       >
-        {step === 4 ? (
+        {renderedStep === 4 ? (
           <TermsCheckbox
-            checked={accepted}
-            onToggle={() => setAccepted((v) => !v)}
+            checked={state.termsAccepted}
+            onToggle={() => setTermsAccepted(!state.termsAccepted)}
           />
+        ) : null}
+        {state.error ? (
+          <Text
+            style={{
+              fontSize: 12,
+              color: '#E5484D',
+              textAlign: 'center',
+              marginBottom: 12,
+              paddingHorizontal: 8,
+            }}
+          >
+            {state.error}
+          </Text>
         ) : null}
         <PillBtn
           variant={cta.variant}
