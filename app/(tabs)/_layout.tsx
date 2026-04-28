@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { View } from 'react-native';
 import { T } from '@/src/design-system/tokens';
@@ -10,10 +11,19 @@ export default function TabsLayout() {
   const router = useRouter();
   const segments = useSegments();
   const { tone } = usePrivacyMode();
-  const last = segments[segments.length - 1];
-  const active: TabId = TAB_IDS.includes(last as TabId)
-    ? (last as TabId)
-    : 'bank';
+
+  // When a root-level modal (claim-pending, send, send-money, …) is pushed
+  // from inside (tabs), useSegments() no longer points at a tab id. Keep
+  // showing the last-known tab as active so the bar doesn't snap to 'bank'
+  // during the modal transition.
+  const tabSegment = segments.find((s) => TAB_IDS.includes(s as TabId)) as
+    | TabId
+    | undefined;
+  const [lastTab, setLastTab] = useState<TabId>(tabSegment ?? 'bank');
+  useEffect(() => {
+    if (tabSegment && tabSegment !== lastTab) setLastTab(tabSegment);
+  }, [tabSegment, lastTab]);
+  const active = tabSegment ?? lastTab;
   const tabBarTone = active === 'stealth' ? tone : 'silver';
 
   const handleTab = (id: TabId) => {
