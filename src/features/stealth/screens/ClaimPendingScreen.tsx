@@ -73,7 +73,7 @@ export function ClaimPendingScreen() {
     <TonalBackground tone="gold">
       <View
         style={{
-          paddingTop: 12,
+          paddingTop: insets.top + 16,
           paddingBottom: 18,
           paddingHorizontal: 20,
           flexDirection: 'row',

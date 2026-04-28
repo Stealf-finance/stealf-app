@@ -54,7 +54,7 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
     <TonalBackground tone={tone}>
       <View
         style={{
-          paddingTop: insets.top + 12,
+          paddingTop: insets.top + 16,
           paddingHorizontal: 24,
           paddingBottom: 18,
           flexDirection: 'row',

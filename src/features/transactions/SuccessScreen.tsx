@@ -91,7 +91,7 @@ export function SuccessScreen({
     <TonalBackground tone={tone}>
       <View
         style={{
-          paddingTop: insets.top + 12,
+          paddingTop: insets.top + 16,
           paddingHorizontal: 24,
           paddingBottom: 0,
           flexDirection: 'row',

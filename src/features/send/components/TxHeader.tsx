@@ -25,7 +25,7 @@ export function TxHeader({
   return (
     <View
       style={{
-        paddingTop: insets.top + 12,
+        paddingTop: insets.top + 16,
         paddingHorizontal: 24,
         paddingBottom: 20,
         flexDirection: 'row',

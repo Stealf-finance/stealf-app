@@ -28,7 +28,7 @@ export function SendMenu() {
     <TonalBackground tone="silver">
       <View
         style={{
-          paddingTop: 12,
+          paddingTop: insets.top + 16,
           paddingBottom: 22,
           paddingHorizontal: 16,
           flexDirection: 'row',

@@ -75,7 +75,7 @@ export function MooveScreen() {
     <TonalBackground tone="gold">
       <View
         style={{
-          paddingTop: insets.top + 4,
+          paddingTop: insets.top + 16,
           paddingHorizontal: 20,
           paddingBottom: 18,
           flexDirection: 'row',
