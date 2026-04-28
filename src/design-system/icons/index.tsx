@@ -198,6 +198,12 @@ export const Icons = {
       <Path d="M12 7v5l3 2" />
     </>,
   ),
+  clock: make(
+    <>
+      <Circle cx="12" cy="12" r="9" />
+      <Path d="M12 7v5l3 2" />
+    </>,
+  ),
 } as const;
 
 export type IconName = keyof typeof Icons;

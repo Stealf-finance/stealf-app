@@ -76,6 +76,7 @@ function RootLayout() {
                   <Stack.Screen name="send" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="send-money" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="receive" options={{ presentation: 'modal' }} />
+                  <Stack.Screen name="claim-pending" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="tx/[id]" options={{ presentation: 'modal' }} />
                 </Stack>
                 <StatusBar style="light" />

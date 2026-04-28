@@ -326,7 +326,11 @@ export function StealthHub() {
                 label="Send"
                 onPress={() => router.push('/send?tone=gold')}
               />
-              <SquareActionTile iconKey="gift" label="Claim" />
+              <SquareActionTile
+                iconKey="gift"
+                label="Claim"
+                onPress={() => router.push('/claim-pending')}
+              />
             </>
           ) : (
             <>
