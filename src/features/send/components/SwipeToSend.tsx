@@ -17,7 +17,7 @@ type Props = {
   label?: string;
 };
 
-const THUMB = 54;
+const THUMB = 48;
 const TRACK_PAD = 5;
 
 export function SwipeToSend({ onSend, tone = 'silver', label = 'Swipe to send' }: Props) {

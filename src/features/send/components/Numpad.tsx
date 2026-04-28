@@ -44,10 +44,10 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                 start={{ x: 0.2, y: 0 }}
                 end={{ x: 0.8, y: 1 }}
                 style={{
-                  paddingVertical: 16,
+                  paddingVertical: 12,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minHeight: 56,
+                  minHeight: 50,
                 }}
               >
                 {k === '⌫' ? (
