@@ -53,6 +53,21 @@ break across a repo migration. That risk is now closed.
 with the same wiring as `front-stealf`. Slice 5 can begin from a
 known-good foundation.
 
+## Accepted risk — deferred to Slice 5
+
+**Phase 0 stopped at autolink + boot. First live `prove()` call deferred
+to Slice 5.** The original CEO directive asked for a "minimal end-to-end
+proof run". What was validated kills the most likely failure mode (native
+build / linker / Turbo Module registration broken after repo migration),
+not the ZK runtime itself.
+
+**Risk accepted by CEO at Phase 0 close**: ZK runtime (`.zkey` loading,
+witness generation, snark prove) is **not validated** on `stealf-app`
+yet. If Slice 5 hits ZK-runtime weirdness, the cost of the late discovery
+is on this deferral decision — pivot trigger is config-level (zkey path,
+asset bundling, runtime params), not architectural. Anchored here for
+memory.
+
 ## Where things live now
 
 - `package.json` — `"@umbra-privacy/rn-zk-prover": "^3.0.1"` (Phase 0)
