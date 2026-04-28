@@ -74,6 +74,7 @@ function RootLayout() {
                   <Stack.Screen name="card" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="lock" options={{ presentation: 'fullScreenModal' }} />
                   <Stack.Screen name="send" options={{ presentation: 'modal' }} />
+                  <Stack.Screen name="receive" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="tx/[id]" options={{ presentation: 'modal' }} />
                 </Stack>
                 <StatusBar style="light" />
