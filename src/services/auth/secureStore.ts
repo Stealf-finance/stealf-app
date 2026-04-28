@@ -10,6 +10,7 @@ export const SECURE_STORE_KEYS = {
   STEALF_MNEMONIC: 'stealf_mnemonic',
   USER_DATA: 'user_data',
   SUB_ORG_ID: 'sub_org_id',
+  ONBOARDING_DRAFT: 'onboarding_draft',
 } as const;
 
 export async function setSecure(key: string, value: string): Promise<void> {

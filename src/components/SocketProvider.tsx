@@ -7,7 +7,7 @@ export function SocketProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!isAuthenticated || !session) return;
-    socketService.connect(session.token);
+    socketService.connect(session.sessionToken);
     return () => socketService.disconnect();
   }, [isAuthenticated, session]);
 

@@ -1,41 +1,45 @@
-import { createContext, useContext, useMemo, type PropsWithChildren } from 'react';
-
-export interface AuthSession {
-  token: string;
-  expiresAt: number;
-}
-
-export interface AuthUser {
-  userId: string;
-  email: string | null;
-  bankWalletAddress: string | null;
-  subOrgId: string | null;
-}
+import { createContext, useCallback, useContext, useMemo, useState, type PropsWithChildren } from 'react';
+import type { Session, User } from '../types';
 
 export interface AuthContextValue {
-  user: AuthUser | null;
-  session: AuthSession | null;
+  user: User | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  logout: () => Promise<void>;
+  setSession: (session: Session | null) => void;
+  setUser: (user: User | null) => void;
+  reset: () => void;
 }
 
-const DEFAULT_VALUE: AuthContextValue = {
-  user: null,
-  session: null,
-  isAuthenticated: false,
-  isLoading: false,
-  logout: async () => {},
-};
-
-const AuthContext = createContext<AuthContextValue>(DEFAULT_VALUE);
+const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  // Slice 1 will replace this with real Turnkey-driven state.
-  const value = useMemo<AuthContextValue>(() => DEFAULT_VALUE, []);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+
+  const reset = useCallback(() => {
+    setUser(null);
+    setSession(null);
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      session,
+      isAuthenticated: !!session && !!user,
+      isLoading: false,
+      setSession,
+      setUser,
+      reset,
+    }),
+    [user, session, reset],
+  );
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {
-  return useContext(AuthContext);
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');
+  return ctx;
 }

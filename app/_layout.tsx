@@ -20,6 +20,7 @@ import { getTurnkeyConfig, TURNKEY_CALLBACKS } from '@/src/services/turnkey/conf
 import { AuthProvider } from '@/src/features/onboarding/context/AuthContext';
 import { SocketProvider } from '@/src/components/SocketProvider';
 import { DataBootstrap } from '@/src/components/DataBootstrap';
+import { AuthGuard } from '@/src/components/AuthGuard';
 import { TelemetrySmokeTest } from '@/src/components/TelemetrySmokeTest';
 
 SplashScreen.preventAutoHideAsync();
@@ -56,6 +57,7 @@ function RootLayout() {
             <AuthProvider>
               <SocketProvider>
                 <DataBootstrap />
+                <AuthGuard />
                 <TelemetrySmokeTest />
                 <Stack
                   screenOptions={{

@@ -3,11 +3,10 @@ import { parseApiError } from './errors';
 
 type Json = Record<string, unknown> | unknown[];
 
-function authHeaders(token: string): HeadersInit {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  };
+function buildHeaders(token: string | null): HeadersInit {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
 }
 
 async function request<T = unknown>(
@@ -25,34 +24,34 @@ async function request<T = unknown>(
   return (result.data ?? (result as unknown)) as T;
 }
 
-export function apiGet<T = unknown>(endpoint: string, token: string): Promise<T> {
-  return request<T>(endpoint, { method: 'GET', headers: authHeaders(token) });
+export function apiGet<T = unknown>(endpoint: string, token: string | null): Promise<T> {
+  return request<T>(endpoint, { method: 'GET', headers: buildHeaders(token) });
 }
 
 export function apiPost<T = unknown>(
   endpoint: string,
-  token: string,
+  token: string | null,
   body?: Json,
 ): Promise<T> {
   return request<T>(endpoint, {
     method: 'POST',
-    headers: authHeaders(token),
+    headers: buildHeaders(token),
     body: body ? JSON.stringify(body) : undefined,
   });
 }
 
 export function apiPut<T = unknown>(
   endpoint: string,
-  token: string,
+  token: string | null,
   body?: Json,
 ): Promise<T> {
   return request<T>(endpoint, {
     method: 'PUT',
-    headers: authHeaders(token),
+    headers: buildHeaders(token),
     body: body ? JSON.stringify(body) : undefined,
   });
 }
 
-export function apiDelete<T = unknown>(endpoint: string, token: string): Promise<T> {
-  return request<T>(endpoint, { method: 'DELETE', headers: authHeaders(token) });
+export function apiDelete<T = unknown>(endpoint: string, token: string | null): Promise<T> {
+  return request<T>(endpoint, { method: 'DELETE', headers: buildHeaders(token) });
 }
