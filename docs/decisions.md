@@ -234,8 +234,8 @@ migrate to `app.config.js` then — it's a 5-minute change.
 
 ---
 
-## ADR-007 — `/api/users/check-availability` shape (proposed split)
-2026-04-28 · Proposed (under CEO review)
+## ADR-007 — `/api/users/check-availability` shape (split rejected)
+2026-04-28 · Rejected by CEO 2026-04-28
 
 ### Context
 
@@ -283,8 +283,35 @@ preAuthToken/polling flow downstream. Only the upstream UX changes.
 - **Con**: 3 backend endpoints to ship + tests instead of 1.
 - **Con**: `start-onboarding` silently masks email collisions →
   needs a server-side audit log + a support escalation path.
-- **Decision deferred**: not in Slice 1 scope. CEO is reviewing
-  whether to ship now (with backend lift) or treat it as a Slice 1.5
-  follow-up after the auth flow is functional. Slice 1 ships against
-  the current backend shape.
+### CEO verdict (2026-04-28) — Rejected
+
+Splitting introduces real costs the proposal underweighted:
+
+- A `onboardingStep: 1|2|3` state machine in Redis to enforce
+  in-order validation.
+- Race conditions: invite code revoked between step 1 and step 3.
+- JWT plumbing between the three endpoints (the invite token
+  threaded through pseudo/email steps).
+- Validation logic duplicated across endpoints.
+
+The current `/check-availability` endpoint already takes optional
+fields and validates them in isolation. Per-step UX is achievable
+**from the front-end** by calling the same endpoint with one field
+at a time (e.g. live pseudo check by posting only `{ pseudo }`).
+
+**Decision**: keep one endpoint. Granularity lives in the front.
+If a real UX need emerges later that the single endpoint cannot
+serve, revisit as a stateful Redis session with mandatory in-order
+validation — but start simple.
+
+### Slice 1 impact
+
+None. The current `features/onboarding/api/onboarding.ts`
+implementation already calls `/check-availability` once at the
+email step. No code change required.
+
+A future micro-improvement (out of scope for Slice 1): add a
+debounced live pseudo check to step 1 by posting
+`{ pseudo: handle }` and surfacing "✓ available" / "✗ taken"
+inline. Frontend-only, ~30 min.
 
