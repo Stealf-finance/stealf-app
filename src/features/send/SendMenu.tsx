@@ -1,8 +1,9 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
+import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { Icons } from '@/src/design-system/icons';
 import {
   sansation,
@@ -34,24 +35,7 @@ export function SendMenu() {
           alignItems: 'center',
         }}
       >
-        <Pressable
-          onPress={close}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          hitSlop={8}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: T.bgCardStrong,
-            borderWidth: 1,
-            borderColor: T.hairline,
-          }}
-        >
-          <Icons.arrLeft size={14} color={T.ink} />
-        </Pressable>
+        <BackBtn onPress={close} />
         <Text
           style={[
             serif,

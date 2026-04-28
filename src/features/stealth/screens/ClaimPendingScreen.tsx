@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
+import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { Icons } from '@/src/design-system/icons';
 import {
   mono,
@@ -80,24 +81,7 @@ export function ClaimPendingScreen() {
           gap: 14,
         }}
       >
-        <Pressable
-          onPress={close}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          hitSlop={8}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: T.bgCardStrong,
-            borderWidth: 1,
-            borderColor: T.hairline,
-          }}
-        >
-          <Icons.arrLeft size={14} color={T.ink} />
-        </Pressable>
+        <BackBtn onPress={close} />
         <Text
           style={[
             serif,
