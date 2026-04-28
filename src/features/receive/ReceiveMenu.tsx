@@ -29,7 +29,7 @@ export function ReceiveMenu() {
     <TonalBackground tone="silver">
       <View
         style={{
-          paddingTop: insets.top + 4,
+          paddingTop: 12,
           paddingBottom: 22,
           paddingHorizontal: 16,
           flexDirection: 'row',
