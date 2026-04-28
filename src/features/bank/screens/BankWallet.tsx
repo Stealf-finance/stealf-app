@@ -12,12 +12,63 @@ import {
   serif,
 } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { useHistory } from '@/src/features/bank/hooks/useHistory';
+import type { Transaction } from '@/src/features/bank/types';
 
 const S = txPalette('silver');
+
+// Mock fallback used when no auth/data is available — preserves the
+// designer's reference. Replaced by live data once the user is signed in.
+const MOCK_TRANSACTIONS = [
+  { type: 'received' as const, title: 'Received · SOL', meta: '21 Apr · 04:41 am', amount: '+$176.76' },
+  { type: 'sent' as const, title: 'Card · Carrefour', meta: '21 Apr · 11:20 am', amount: '−$34.50' },
+  { type: 'received' as const, title: 'SEPA · Louis', meta: '20 Apr · 09:01 am', amount: '+$51.94' },
+  { type: 'received' as const, title: 'Received · SOL', meta: '20 Apr · 08:51 am', amount: '+$176.76' },
+];
+
+const MOCK_BALANCE_DOLLARS = '405';
+const MOCK_BALANCE_CENTS = '.46';
+
+function splitBalance(usd: number): { dollars: string; cents: string } {
+  const fixed = Math.max(0, usd).toFixed(2);
+  const [dollars, cents] = fixed.split('.');
+  return { dollars, cents: `.${cents}` };
+}
+
+function formatTxRow(tx: Transaction): {
+  type: 'sent' | 'received';
+  title: string;
+  meta: string;
+  amount: string;
+} {
+  const direction = tx.type === 'sent' ? 'Sent' : 'Received';
+  const sign = tx.type === 'sent' ? '−' : '+';
+  const amountStr = `${sign}$${Math.abs(tx.amountUSD).toFixed(2)}`;
+  return {
+    type: tx.type === 'sent' ? 'sent' : 'received',
+    title: `${direction} · ${tx.tokenSymbol}`,
+    meta: tx.dateFormatted,
+    amount: amountStr,
+  };
+}
 
 export function BankWallet() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const { data: balance } = useBalance(user?.bankWallet);
+  const { data: history } = useHistory(user?.bankWallet, 4);
+
+  const greeting = user?.username ?? 'Thomas';
+  const { dollars, cents } = balance
+    ? splitBalance(balance.totalUSD)
+    : { dollars: MOCK_BALANCE_DOLLARS, cents: MOCK_BALANCE_CENTS };
+
+  const txRows = history?.transactions.length
+    ? history.transactions.slice(0, 4).map(formatTxRow)
+    : MOCK_TRANSACTIONS;
 
   return (
     <View style={{ flex: 1 }}>
@@ -33,7 +84,7 @@ export function BankWallet() {
         }}
       >
         <Text style={{ fontSize: 13, color: S.inkDim, fontWeight: '300' }}>
-          Good morning, <Text style={{ color: S.ink }}>Thomas</Text>
+          Good morning, <Text style={{ color: S.ink }}>{greeting}</Text>
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <CircleIconBtn iconKey="card" onPress={() => router.push('/card')} />
@@ -113,7 +164,7 @@ export function BankWallet() {
                 },
               ]}
             >
-              405
+              {dollars}
             </Text>
             <Text
               style={[
@@ -127,7 +178,7 @@ export function BankWallet() {
                 },
               ]}
             >
-              .46
+              {cents}
             </Text>
           </View>
         </View>
@@ -148,7 +199,11 @@ export function BankWallet() {
             paddingBottom: 28,
           }}
         >
-          <SquareActionTile iconKey="arrDown" label="Receive" />
+          <SquareActionTile
+            iconKey="arrDown"
+            label="Receive"
+            onPress={() => router.push('/receive')}
+          />
           <SquareActionTile iconKey="arrUp" label="Send" />
           <SquareActionTile
             iconKey="moove"
@@ -200,31 +255,16 @@ export function BankWallet() {
         </View>
 
         <View style={{ paddingTop: 6 }}>
-          <TxRow
-            type="received"
-            title="Received · SOL"
-            meta="21 Apr · 04:41 am"
-            amount="+$176.76"
-          />
-          <TxRow
-            type="sent"
-            title="Card · Carrefour"
-            meta="21 Apr · 11:20 am"
-            amount="−$34.50"
-          />
-          <TxRow
-            type="received"
-            title="SEPA · Louis"
-            meta="20 Apr · 09:01 am"
-            amount="+$51.94"
-          />
-          <TxRow
-            type="received"
-            title="Received · SOL"
-            meta="20 Apr · 08:51 am"
-            amount="+$176.76"
-            last
-          />
+          {txRows.map((row, i) => (
+            <TxRow
+              key={`${row.title}-${row.meta}-${i}`}
+              type={row.type}
+              title={row.title}
+              meta={row.meta}
+              amount={row.amount}
+              last={i === txRows.length - 1}
+            />
+          ))}
         </View>
       </ScrollView>
     </View>

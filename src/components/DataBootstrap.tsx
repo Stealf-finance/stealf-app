@@ -6,11 +6,11 @@ import {
   fetchUserProfile,
   userProfileQueries,
 } from '@/src/features/onboarding/api/userProfile';
+import { subscribeToWalletUpdates } from '@/src/features/bank/api/subscriptions';
 
 /**
  * Orchestrates per-feature subscriptions (sockets, prefetches) once the user
- * is authenticated. Each slice appends its `subscribeXxx()` here behind a
- * feature flag.
+ * is authenticated. Each slice appends its `subscribeXxx()` here.
  */
 export function DataBootstrap() {
   const { isAuthenticated, user, session } = useAuth();
@@ -27,8 +27,13 @@ export function DataBootstrap() {
       staleTime: 60_000,
     });
 
+    const cleanups: (() => void)[] = [];
+    if (user.bankWallet) {
+      cleanups.push(subscribeToWalletUpdates(queryClient, user.bankWallet));
+    }
+
     return () => {
-      // Slice 2+ subscriptions will register their cleanups here.
+      cleanups.forEach((fn) => fn());
     };
   }, [isAuthenticated, user, session, queryClient]);
 
