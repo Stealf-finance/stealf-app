@@ -204,7 +204,11 @@ export function BankWallet() {
             label="Receive"
             onPress={() => router.push('/receive')}
           />
-          <SquareActionTile iconKey="arrUp" label="Send" />
+          <SquareActionTile
+            iconKey="arrUp"
+            label="Send"
+            onPress={() => router.push('/send-money')}
+          />
           <SquareActionTile
             iconKey="moove"
             label="Moove"
