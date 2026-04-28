@@ -131,7 +131,9 @@ export function OnboardWizard({ onExitBack }: Props) {
   };
 
   const onEnablePasskey = async () => {
-    const result = await signUp.createPasskey();
+    // If a previous attempt failed retryably, purge orphan Turnkey state first.
+    const purgeFirst = state.errorRetryable && !!state.error;
+    const result = await signUp.createPasskey({ purgeFirst });
     if (!result.ok && __DEV__) console.warn('[OnboardWizard] passkey failed:', result.message);
     // On success, AuthGuard redirects automatically; nothing to do here.
   };
