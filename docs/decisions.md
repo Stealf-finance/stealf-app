@@ -232,3 +232,59 @@ migrate to `app.config.js` then — it's a 5-minute change.
 - **Con**: build-time secrets must come from `eas.json` env or shell
   env, not `process.env` in JS config.
 
+---
+
+## ADR-007 — `/api/users/check-availability` shape (proposed split)
+2026-04-28 · Proposed (under CEO review)
+
+### Context
+
+Current backend exposes one endpoint that validates `{ email, pseudo,
+inviteCode }` atomically and returns `{ canProceed, unavailable[],
+errors[], preAuthToken }`. The client today posts it once at the email
+step and reads `unavailable` (where `1 = email taken`, `2 = pseudo
+taken`).
+
+Two UX problems with the atomic shape:
+
+1. **Pseudo collisions surface late.** The user picks a handle on
+   step 1, types an email on step 2, and only then learns the handle
+   was taken — they have to back-step and re-pick.
+2. **No live availability feedback.** Most modern signups validate
+   handles as you type ("✓ available" / "✗ taken"). The atomic
+   endpoint cannot serve that without re-running the email check on
+   every keystroke.
+
+A naïve fix ("split into `/check-email` + `/check-pseudo`") misses
+the third concern: **probing email existence is an enumeration
+attack vector**. If a public endpoint returns "email taken", anyone
+can build a list of registered users.
+
+### Decision (proposed)
+
+Split into three endpoints with distinct semantics:
+
+| Endpoint | When called | Auth | Notes |
+|---|---|---|---|
+| `POST /api/users/check-invite` | Step 0 submit | none (rate-limited) | Validate the invite code is real and consumable. No availability info. |
+| `GET /api/users/check-pseudo?v=X` | Step 1, debounced 300ms | none (rate-limited) | Live "available / taken" only. Rate-limit per IP and per session token. |
+| `POST /api/users/start-onboarding` | Step 2 submit | none (rate-limited + invite token) | Atomic: validate `{ email, pseudo, inviteCode }` together, send magic link, return `preAuthToken`. **Email taken** is treated as a generic "unable to start" with no enumeration leak — magic link is sent silently as if the request succeeded, server-side flags the conflict for support to reach out. |
+
+The `start-onboarding` endpoint preserves the current
+preAuthToken/polling flow downstream. Only the upstream UX changes.
+
+### Consequences
+
+- **Pro**: pseudo collisions caught live → no back-stepping.
+- **Pro**: email enumeration attack surface eliminated (no
+  endpoint distinguishes "email taken" from "email available").
+- **Pro**: `check-pseudo` is the only endpoint hit live → easy to
+  isolate and rate-limit per-IP without affecting other flows.
+- **Con**: 3 backend endpoints to ship + tests instead of 1.
+- **Con**: `start-onboarding` silently masks email collisions →
+  needs a server-side audit log + a support escalation path.
+- **Decision deferred**: not in Slice 1 scope. CEO is reviewing
+  whether to ship now (with backend lift) or treat it as a Slice 1.5
+  follow-up after the auth flow is functional. Slice 1 ships against
+  the current backend shape.
+
