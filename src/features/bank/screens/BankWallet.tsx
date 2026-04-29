@@ -19,17 +19,7 @@ import type { Transaction } from '@/src/features/bank/types';
 
 const S = txPalette('silver');
 
-// Mock fallback used when no auth/data is available — preserves the
-// designer's reference. Replaced by live data once the user is signed in.
-const MOCK_TRANSACTIONS = [
-  { type: 'received' as const, title: 'Received · SOL', meta: '21 Apr · 04:41 am', amount: '+$176.76' },
-  { type: 'sent' as const, title: 'Card · Carrefour', meta: '21 Apr · 11:20 am', amount: '−$34.50' },
-  { type: 'received' as const, title: 'SEPA · Louis', meta: '20 Apr · 09:01 am', amount: '+$51.94' },
-  { type: 'received' as const, title: 'Received · SOL', meta: '20 Apr · 08:51 am', amount: '+$176.76' },
-];
-
-const MOCK_BALANCE_DOLLARS = '405';
-const MOCK_BALANCE_CENTS = '.46';
+const HISTORY_LIMIT = 4;
 
 function splitBalance(usd: number): { dollars: string; cents: string } {
   const fixed = Math.max(0, usd).toFixed(2);
@@ -59,16 +49,12 @@ export function BankWallet() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { data: balance } = useBalance(user?.bankWallet);
-  const { data: history } = useHistory(user?.bankWallet, 4);
+  const { data: history } = useHistory(user?.bankWallet, HISTORY_LIMIT);
 
-  const greeting = user?.username ?? 'Thomas';
-  const { dollars, cents } = balance
-    ? splitBalance(balance.totalUSD)
-    : { dollars: MOCK_BALANCE_DOLLARS, cents: MOCK_BALANCE_CENTS };
-
-  const txRows = history?.transactions.length
-    ? history.transactions.slice(0, 4).map(formatTxRow)
-    : MOCK_TRANSACTIONS;
+  const greeting = user?.username ?? '';
+  const { dollars, cents } = splitBalance(balance?.totalUSD ?? 0);
+  const txRows =
+    history?.transactions.slice(0, HISTORY_LIMIT).map(formatTxRow) ?? [];
 
   return (
     <View style={{ flex: 1 }}>
@@ -259,16 +245,33 @@ export function BankWallet() {
         </View>
 
         <View style={{ paddingTop: 6 }}>
-          {txRows.map((row, i) => (
-            <TxRow
-              key={`${row.title}-${row.meta}-${i}`}
-              type={row.type}
-              title={row.title}
-              meta={row.meta}
-              amount={row.amount}
-              last={i === txRows.length - 1}
-            />
-          ))}
+          {txRows.length === 0 ? (
+            <Text
+              style={[
+                serif,
+                {
+                  fontSize: 13,
+                  fontStyle: 'italic',
+                  color: S.inkFaint,
+                  textAlign: 'center',
+                  paddingVertical: 28,
+                },
+              ]}
+            >
+              No transactions yet
+            </Text>
+          ) : (
+            txRows.map((row, i) => (
+              <TxRow
+                key={`${row.title}-${row.meta}-${i}`}
+                type={row.type}
+                title={row.title}
+                meta={row.meta}
+                amount={row.amount}
+                last={i === txRows.length - 1}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
     </View>

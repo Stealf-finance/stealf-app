@@ -19,6 +19,9 @@ import {
   sanitizePasskeyDisplayName,
 } from '../lib/passkeyHelpers';
 import { userProfileQueries } from '../api/userProfile';
+import { balanceQueries } from '@/src/features/bank/api/balance';
+import { historyQueries } from '@/src/features/bank/api/history';
+import type { BalanceResponse, HistoryResponse } from '@/src/features/bank/types';
 import {
   initialSignUpState,
   signUpReducer,
@@ -279,6 +282,30 @@ export function useSignUp(): UseSignUpReturn {
           userProfileQueries.byBankWallet(bankWallet),
           profile,
         );
+
+        // A freshly created account has nothing on-chain yet. Seed the bank
+        // queries with empty payloads so the Bank tab renders $0.00 + no
+        // transactions immediately, without an unnecessary first fetch that
+        // would just confirm what we already know.
+        const emptyBalance: BalanceResponse = {
+          address: bankWallet,
+          tokens: [],
+          totalUSD: 0,
+        };
+        const emptyHistory: HistoryResponse = {
+          address: bankWallet,
+          count: 0,
+          transactions: [],
+        };
+        queryClient.setQueryData(
+          balanceQueries.byAddress(bankWallet),
+          emptyBalance,
+        );
+        queryClient.setQueryData(
+          historyQueries.byAddress(bankWallet, 4),
+          emptyHistory,
+        );
+
         await walletKeyCache.warmup();
 
         setSession({ sessionToken });
