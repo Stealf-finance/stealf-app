@@ -174,6 +174,18 @@ export async function submitEmail(input: {
   );
 }
 
+/** Re-issue a fresh 6-digit code for the current session (same email). */
+export async function resendCode(input: { sessionId: string }): Promise<void> {
+  await request(
+    '/api/users/onboarding/resend-code',
+    {
+      method: 'POST',
+      sessionId: input.sessionId,
+    },
+    EmptyOkSchema,
+  );
+}
+
 /** Step 4 — submit the 6-digit code received by email. */
 export async function submitVerifyCode(input: {
   sessionId: string;

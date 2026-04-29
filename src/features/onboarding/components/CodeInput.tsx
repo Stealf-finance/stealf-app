@@ -1,11 +1,20 @@
 import { useEffect, useRef } from 'react';
-import { Pressable, TextInput, View, Text } from 'react-native';
+import {
+  InputAccessoryView,
+  Keyboard,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { sansation, sansationLight } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 
 const S = txPalette('silver');
 
 const CELL = 6;
+const ACCESSORY_ID = 'code-input-accessory';
 
 type Props = {
   value: string;
@@ -22,7 +31,8 @@ type Props = {
  * keystrokes (paste-friendly, native keyboard, autofill from email/SMS).
  * Tapping any cell focuses the hidden input.
  *
- * Caller is responsible for triggering submit when value reaches 6 digits.
+ * iOS number-pad has no return key, so we attach a Done accessory bar that
+ * dismisses the keyboard explicitly. Android shows a system back arrow.
  */
 export function CodeInput({
   value,
@@ -33,7 +43,6 @@ export function CodeInput({
 }: Props) {
   const inputRef = useRef<TextInput>(null);
 
-  // Auto-focus on mount, refocus when error clears.
   useEffect(() => {
     if (disabled) return;
     const t = setTimeout(() => inputRef.current?.focus(), 80);
@@ -99,7 +108,6 @@ export function CodeInput({
         })}
       </Pressable>
 
-      {/* Hidden capture input. */}
       <TextInput
         ref={inputRef}
         value={value}
@@ -111,6 +119,7 @@ export function CodeInput({
         inputMode="numeric"
         editable={!disabled}
         maxLength={CELL}
+        inputAccessoryViewID={Platform.OS === 'ios' ? ACCESSORY_ID : undefined}
         style={{
           position: 'absolute',
           opacity: 0,
@@ -132,6 +141,43 @@ export function CodeInput({
       >
         Tap any cell to edit
       </Text>
+
+      {Platform.OS === 'ios' ? (
+        <InputAccessoryView nativeID={ACCESSORY_ID}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'flex-end',
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              backgroundColor: 'rgba(28,28,30,0.95)',
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(255,255,255,0.06)',
+            }}
+          >
+            <Pressable
+              onPress={Keyboard.dismiss}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss keyboard"
+              hitSlop={8}
+              style={{ paddingHorizontal: 12, paddingVertical: 6 }}
+            >
+              <Text
+                style={[
+                  sansation,
+                  {
+                    fontSize: 15,
+                    color: S.accent,
+                    fontWeight: '600',
+                  },
+                ]}
+              >
+                Done
+              </Text>
+            </Pressable>
+          </View>
+        </InputAccessoryView>
+      ) : null}
     </View>
   );
 }

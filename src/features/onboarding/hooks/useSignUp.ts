@@ -6,6 +6,7 @@ import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import {
   finalizeAuth,
   OnboardingError,
+  resendCode as resendCodeApi,
   submitEmail,
   submitInviteCode,
   submitName,
@@ -211,11 +212,10 @@ export function useSignUp(): UseSignUpReturn {
       return { ok: false, message: 'Please wait before requesting a new code.' };
     }
     const sessionId = stateRef.current.sessionId;
-    const email = stateRef.current.email.trim();
     if (!sessionId) return { ok: false, message: 'Onboarding session missing.' };
     dispatch({ type: 'set/loading', value: true });
     try {
-      await submitEmail({ sessionId, email });
+      await resendCodeApi({ sessionId });
       dispatch({ type: 'code/clear' });
       dispatch({ type: 'resend/cooldown', seconds: RESEND_COOLDOWN_DEFAULT_S });
       return { ok: true };
