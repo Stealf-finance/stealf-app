@@ -10,8 +10,8 @@ interface UtxoLike {
 
 interface ClaimBatchLike {
   status?: string;
-  failureReason?: string;
-  utxoIds?: string[];
+  failureReason?: string | null;
+  utxoIds?: readonly string[];
 }
 
 interface ClaimResultLike {
@@ -104,7 +104,7 @@ export async function handleClaimResult(
   if (batches instanceof Map) {
     for (const [, batch] of batches) {
       const status = batch?.status;
-      const utxoIds: string[] = batch?.utxoIds ?? [];
+      const utxoIds: readonly string[] = batch?.utxoIds ?? [];
 
       if (status === 'completed') {
         anySuccess = true;
