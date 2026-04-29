@@ -49,6 +49,7 @@ export function GlassListRow({
           gap: 14,
           paddingVertical,
           paddingHorizontal: 16,
+          minHeight: 64,
         }}
       >
         {/* top inset highlight */}

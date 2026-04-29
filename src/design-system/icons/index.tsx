@@ -55,6 +55,12 @@ export const Icons = {
   moove: make(
     <Path d="M7 7h11M18 7l-3-3M18 7l-3 3M17 17H6M6 17l3-3M6 17l3 3" />,
   ),
+  move: make(
+    <>
+      <Path d="M3 7h3l12 10h3M18 14l3 3-3 3" />
+      <Path d="M3 17h3l4-3.3M14 10.3l4-3.3h3M18 4l3 3-3 3" />
+    </>,
+  ),
   shield: make(<Path d="M12 2L3 6v6c0 5 4 9.5 9 10 5-.5 9-5 9-10V6l-9-4z" />),
   shieldCheck: make(
     <>
