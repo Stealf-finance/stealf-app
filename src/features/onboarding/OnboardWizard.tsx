@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   runOnJS,
@@ -7,8 +7,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, Path, Rect, Text as SvgText } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StepBar } from '@/src/design-system/primitives/StepBar';
 import { UnderlineField } from '@/src/design-system/primitives/UnderlineField';
@@ -22,7 +21,7 @@ import {
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useSignUp } from './hooks/useSignUp';
-import { useEmailVerificationPolling } from './hooks/useEmailVerificationPolling';
+import { CodeInput } from './components/CodeInput';
 import type { SignUpStep } from './lib/signUpReducer';
 
 const S = txPalette('silver');
@@ -109,25 +108,25 @@ export function OnboardWizard({ onExitBack }: Props) {
     goto(prev);
   };
 
-  useEmailVerificationPolling({
-    preAuthToken: state.preAuthToken,
-    enabled: state.step === 'verifying',
-    onVerified: signUp.onEmailVerified,
-  });
-
   const inviteValid = useMemo(() => isValidInvite(state.invite), [state.invite]);
   const handleValid = useMemo(() => isValidHandle(state.handle), [state.handle]);
   const emailValid = useMemo(() => isValidEmail(state.email), [state.email]);
 
-  const openMail = () => {
-    Linking.openURL('message://').catch(() => {
-      Linking.openURL('mailto:').catch(() => {});
-    });
+  const onSubmitInvite = async () => {
+    const r = await signUp.submitInvite();
+    if (!r.ok && __DEV__) console.warn('[OnboardWizard] invite failed:', r.message);
   };
-
-  const onSendMagicLink = async () => {
-    const result = await signUp.startVerification();
-    if (!result.ok && __DEV__) console.warn('[OnboardWizard] verification failed:', result.message);
+  const onSubmitHandle = async () => {
+    const r = await signUp.submitHandle();
+    if (!r.ok && __DEV__) console.warn('[OnboardWizard] handle failed:', r.message);
+  };
+  const onSubmitEmail = async () => {
+    const r = await signUp.submitEmail();
+    if (!r.ok && __DEV__) console.warn('[OnboardWizard] email failed:', r.message);
+  };
+  const onSubmitCode = async () => {
+    const r = await signUp.submitCode();
+    if (!r.ok && __DEV__) console.warn('[OnboardWizard] code failed:', r.message);
   };
 
   const onEnablePasskey = async () => {
@@ -149,35 +148,35 @@ export function OnboardWizard({ onExitBack }: Props) {
   const cta: Cta =
     state.step === 'invite'
       ? {
-          label: 'Continue',
+          label: state.loading ? 'Checking…' : 'Continue',
           variant: 'primary',
           tone: 'silver',
-          disabled: !inviteValid,
-          onPress: () => goto('handle'),
+          disabled: !inviteValid || state.loading,
+          onPress: onSubmitInvite,
         }
       : state.step === 'handle'
         ? {
-            label: 'Continue',
+            label: state.loading ? 'Saving…' : 'Continue',
             variant: 'primary',
             tone: 'silver',
-            disabled: !handleValid,
-            onPress: () => goto('email'),
+            disabled: !handleValid || state.loading,
+            onPress: onSubmitHandle,
           }
         : state.step === 'email'
           ? {
-              label: state.loading ? 'Sending…' : 'Send magic link',
+              label: state.loading ? 'Sending…' : 'Send code',
               variant: 'primary',
               tone: 'silver',
               disabled: !emailValid || state.loading,
-              onPress: onSendMagicLink,
+              onPress: onSubmitEmail,
             }
           : state.step === 'verifying'
             ? {
-                label: 'Open email app',
-                variant: 'secondary',
+                label: state.loading ? 'Verifying…' : 'Verify',
+                variant: 'primary',
                 tone: 'silver',
-                disabled: false,
-                onPress: openMail,
+                disabled: state.codeDigits.length !== 6 || state.loading,
+                onPress: onSubmitCode,
               }
             : {
                 label: state.loading ? 'Activating…' : 'Enable Passkey',
@@ -323,41 +322,53 @@ export function OnboardWizard({ onExitBack }: Props) {
         {renderedStep === 3 && (
           <StepBlock
             kicker="Almost there"
-            title="Check your inbox"
-            subtitle={`We just sent a magic link to ${state.email}`}
+            title="Enter your code"
+            subtitle={`We just sent a 6-digit code to ${state.email}`}
           >
             <View
               style={{
                 flex: 1,
                 alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 8,
+                justifyContent: 'flex-start',
+                paddingTop: 12,
               }}
             >
-              <EnvelopeSeal />
+              <CodeInput
+                value={state.codeDigits}
+                onChange={signUp.setCodeDigits}
+                onSubmit={onSubmitCode}
+                disabled={state.loading}
+                errored={state.codeError != null}
+              />
               <Text
                 style={{
-                  marginTop: 36,
+                  marginTop: 28,
                   fontSize: 12,
                   color: S.inkFaint,
                   textAlign: 'center',
                   lineHeight: 19,
                 }}
               >
-                The link expires in{' '}
+                The code expires in{' '}
                 <Text style={{ color: S.ink }}>10 minutes</Text>.{'\n'}
                 Didn&apos;t get it?{' '}
-                <Text
-                  style={{
-                    color: S.accent,
-                    textDecorationLine: 'underline',
-                  }}
-                  onPress={() => {
-                    void signUp.resendMagicLink();
-                  }}
-                >
-                  Resend
-                </Text>
+                {state.resendCooldown > 0 ? (
+                  <Text style={{ color: S.inkDim }}>
+                    Resend in {state.resendCooldown}s
+                  </Text>
+                ) : (
+                  <Text
+                    style={{
+                      color: S.accent,
+                      textDecorationLine: 'underline',
+                    }}
+                    onPress={() => {
+                      void signUp.resendCode();
+                    }}
+                  >
+                    Resend
+                  </Text>
+                )}
               </Text>
             </View>
           </StepBlock>
@@ -497,97 +508,6 @@ function StepBlock({ kicker, title, subtitle, children }: StepBlockProps) {
 
       <View style={{ flex: 1, marginTop: 8 }}>{children}</View>
     </>
-  );
-}
-
-function EnvelopeSeal() {
-  return (
-    <View
-      style={{
-        width: 180,
-        height: 180,
-        borderRadius: 90,
-        borderWidth: 1,
-        borderColor: S.hairline,
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-        shadowColor: '#dcdcdf',
-        shadowOpacity: 0.18,
-        shadowRadius: 30,
-        shadowOffset: { width: 0, height: 0 },
-      }}
-    >
-      <LinearGradient
-        colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.01)']}
-        start={{ x: 0.3, y: 0.3 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
-      />
-      <View
-        pointerEvents="none"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 1,
-          backgroundColor: 'rgba(255,255,255,0.1)',
-        }}
-      />
-      <Svg width={80} height={80} viewBox="0 0 80 80" fill="none">
-        {/* envelope */}
-        <Rect
-          x={10}
-          y={22}
-          width={60}
-          height={42}
-          rx={4}
-          stroke={S.accent}
-          strokeWidth={1.2}
-          fill="rgba(255,255,255,0.03)"
-        />
-        <Path
-          d="M10 26 L40 46 L70 26"
-          stroke={S.accent}
-          strokeWidth={1.2}
-          fill="none"
-        />
-        {/* wax seal */}
-        <Circle cx={40} cy={44} r={10} fill={T.gold} opacity={0.9} />
-        <Circle
-          cx={40}
-          cy={44}
-          r={10}
-          fill="none"
-          stroke="rgba(255,255,255,0.3)"
-          strokeWidth={0.8}
-        />
-        <SvgText
-          x={40}
-          y={48}
-          textAnchor="middle"
-          fill="#1a1a1a"
-          fontSize={12}
-          fontWeight="700"
-          fontFamily="Cormorant Garamond"
-          fontStyle="italic"
-        >
-          s
-        </SvgText>
-        {/* sparkles */}
-        <Circle cx={22} cy={12} r={1.5} fill={S.accent} />
-        <Circle cx={62} cy={10} r={1} fill={S.accent} opacity={0.6} />
-        <Circle cx={70} cy={68} r={1} fill={S.accent} opacity={0.5} />
-        <Circle cx={14} cy={70} r={1.5} fill={S.accent} opacity={0.7} />
-      </Svg>
-    </View>
   );
 }
 

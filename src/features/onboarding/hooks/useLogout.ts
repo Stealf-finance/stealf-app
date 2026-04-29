@@ -5,7 +5,6 @@ import { socketService } from '@/src/services/real-time/socket';
 import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
 import { umbraClearSeed } from '@/src/services/umbra/seed';
 import { useAuth } from '../context/AuthContext';
-import { clearOnboardingDraft } from '../lib/onboardingDraft';
 import { purgeTurnkeyState } from '../lib/passkeyHelpers';
 
 export function useLogout() {
@@ -19,7 +18,6 @@ export function useLogout() {
       clearStealthState();
       await umbraClearSeed();
       await walletKeyCache.clearAll();
-      await clearOnboardingDraft();
       try {
         await turnkeyLogout();
       } catch {

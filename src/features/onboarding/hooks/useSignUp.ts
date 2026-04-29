@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useReducer } from 'react';
+import { useCallback, useEffect, useReducer, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTurnkey, ClientState } from '@turnkey/react-native-wallet-kit';
 import { BANK_WALLET_CONFIG } from '@/src/services/turnkey/config';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
-import { checkAvailability, finalizeAuth, sendMagicLink } from '../api/onboarding';
-import { useAuth } from '../context/AuthContext';
 import {
-  clearOnboardingDraft,
-  loadOnboardingDraft,
-  saveOnboardingDraft,
-} from '../lib/onboardingDraft';
+  finalizeAuth,
+  OnboardingError,
+  submitEmail,
+  submitInviteCode,
+  submitName,
+  submitVerifyCode,
+} from '../api/onboarding';
+import { useAuth } from '../context/AuthContext';
 import {
   classifyPasskeyError,
   purgeTurnkeyState,
@@ -19,26 +21,45 @@ import { userProfileQueries } from '../api/userProfile';
 import {
   initialSignUpState,
   signUpReducer,
+  type CodeError,
   type SignUpState,
 } from '../lib/signUpReducer';
+
+const RESEND_COOLDOWN_DEFAULT_S = 30;
+const ANTI_ENUMERATION_HOLD_MS = 600;
+
+interface ActionResult {
+  ok: boolean;
+  message?: string;
+}
 
 export interface UseSignUpReturn {
   state: SignUpState;
   setInvite: (v: string) => void;
   setHandle: (v: string) => void;
   setEmail: (v: string) => void;
+  setCodeDigits: (v: string) => void;
   setTermsAccepted: (v: boolean) => void;
   goto: (step: SignUpState['step']) => void;
 
-  startVerification: () => Promise<{ ok: boolean; message?: string }>;
-  resendMagicLink: () => Promise<{ ok: boolean; message?: string }>;
-  onEmailVerified: (data: { email: string; pseudo: string }) => void;
-  createPasskey: (opts?: { purgeFirst?: boolean }) => Promise<{ ok: boolean; message?: string }>;
+  submitInvite: () => Promise<ActionResult>;
+  submitHandle: () => Promise<ActionResult>;
+  submitEmail: () => Promise<ActionResult>;
+  submitCode: () => Promise<ActionResult>;
+  resendCode: () => Promise<ActionResult>;
+  createPasskey: (opts?: { purgeFirst?: boolean }) => Promise<ActionResult>;
 
   clearError: () => void;
   reset: () => void;
   isClientReady: boolean;
 }
+
+const CODE_ERROR_FROM_API: Partial<Record<string, CodeError>> = {
+  INVALID_CODE: 'INVALID_CODE',
+  CODE_EXPIRED: 'CODE_EXPIRED',
+  CODE_ALREADY_USED: 'CODE_ALREADY_USED',
+  TOO_MANY_ATTEMPTS: 'TOO_MANY_ATTEMPTS',
+};
 
 export function useSignUp(): UseSignUpReturn {
   const [state, dispatch] = useReducer(signUpReducer, initialSignUpState);
@@ -47,26 +68,30 @@ export function useSignUp(): UseSignUpReturn {
   const queryClient = useQueryClient();
   const isClientReady = clientState === ClientState.Ready;
 
+  // Drive the resend cooldown countdown.
+  const cooldown = state.resendCooldown;
   useEffect(() => {
-    let cancelled = false;
-    loadOnboardingDraft().then((draft) => {
-      if (cancelled || !draft) return;
-      dispatch({
-        type: 'hydrate',
-        invite: draft.invite,
-        handle: draft.handle,
-        email: draft.email,
-        preAuthToken: draft.preAuthToken,
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    if (cooldown <= 0) return;
+    const t = setInterval(() => dispatch({ type: 'resend/tick' }), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
-  const setInvite = useCallback((value: string) => dispatch({ type: 'set/invite', value }), []);
-  const setHandle = useCallback((value: string) => dispatch({ type: 'set/handle', value }), []);
-  const setEmail = useCallback((value: string) => dispatch({ type: 'set/email', value }), []);
+  const setInvite = useCallback(
+    (value: string) => dispatch({ type: 'set/invite', value }),
+    [],
+  );
+  const setHandle = useCallback(
+    (value: string) => dispatch({ type: 'set/handle', value }),
+    [],
+  );
+  const setEmail = useCallback(
+    (value: string) => dispatch({ type: 'set/email', value }),
+    [],
+  );
+  const setCodeDigits = useCallback(
+    (value: string) => dispatch({ type: 'code/digit', value }),
+    [],
+  );
   const setTermsAccepted = useCallback(
     (value: boolean) => dispatch({ type: 'set/terms', value }),
     [],
@@ -76,93 +101,147 @@ export function useSignUp(): UseSignUpReturn {
     [],
   );
   const clearError = useCallback(() => dispatch({ type: 'error/clear' }), []);
-  const reset = useCallback(() => {
-    dispatch({ type: 'reset' });
-    void clearOnboardingDraft();
+  const reset = useCallback(() => dispatch({ type: 'reset' }), []);
+
+  // Stable refs so action callbacks don't re-create on every keystroke.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  const submitInvite = useCallback(async (): Promise<ActionResult> => {
+    const invite = stateRef.current.invite.trim();
+    if (!invite) {
+      const message = 'Please enter your invite code.';
+      dispatch({ type: 'error', message, retryable: true });
+      return { ok: false, message };
+    }
+    dispatch({ type: 'set/loading', value: true });
+    try {
+      const { sessionId } = await submitInviteCode({ inviteCode: invite });
+      dispatch({ type: 'session/started', sessionId });
+      return { ok: true };
+    } catch (err: unknown) {
+      const message = errorToUserMessage(err, 'Could not validate invite code.');
+      dispatch({ type: 'error', message, retryable: true });
+      return { ok: false, message };
+    } finally {
+      dispatch({ type: 'set/loading', value: false });
+    }
   }, []);
 
-  const startVerification = useCallback(async (): Promise<{ ok: boolean; message?: string }> => {
+  const submitHandle = useCallback(async (): Promise<ActionResult> => {
+    const sessionId = stateRef.current.sessionId;
+    const pseudo = stateRef.current.handle.trim();
+    if (!sessionId) {
+      return { ok: false, message: 'Onboarding session missing.' };
+    }
     dispatch({ type: 'set/loading', value: true });
     try {
-      const result = await checkAvailability({
-        email: state.email,
-        pseudo: state.handle,
-        inviteCode: state.invite || undefined,
-      });
-
-      if (!result.canProceed) {
-        const messages: string[] = [];
-        const unavailable = result.unavailable ?? [];
-        if (unavailable.includes(1)) messages.push('This email is already taken.');
-        if (unavailable.includes(2)) messages.push('This username is already taken.');
-        for (const e of result.errors ?? []) messages.push(e.message);
-        if (messages.length === 0) messages.push('Unable to create account.');
-        const message = messages.join('\n');
-        dispatch({ type: 'error', message, retryable: true });
-        return { ok: false, message };
-      }
-
-      if (!result.preAuthToken) {
-        const message = 'Backend did not return a verification token.';
-        dispatch({ type: 'error', message, retryable: false });
-        return { ok: false, message };
-      }
-
-      await saveOnboardingDraft({
-        invite: state.invite,
-        handle: state.handle,
-        email: state.email,
-        preAuthToken: result.preAuthToken,
-      });
-
-      dispatch({ type: 'availability/ok', preAuthToken: result.preAuthToken });
+      await submitName({ sessionId, pseudo });
+      dispatch({ type: 'name/ok' });
       return { ok: true };
-    } catch (err: any) {
-      const message = err?.message ?? 'Failed to start verification';
+    } catch (err: unknown) {
+      const message = errorToUserMessage(err, 'Could not save your handle.');
       dispatch({ type: 'error', message, retryable: true });
       return { ok: false, message };
     } finally {
       dispatch({ type: 'set/loading', value: false });
     }
-  }, [state.email, state.handle, state.invite]);
+  }, []);
 
-  const resendMagicLink = useCallback(async (): Promise<{ ok: boolean; message?: string }> => {
-    if (!state.email || !state.handle) {
-      return { ok: false, message: 'Missing email or handle' };
+  const submitEmailStep = useCallback(async (): Promise<ActionResult> => {
+    const sessionId = stateRef.current.sessionId;
+    const email = stateRef.current.email.trim();
+    if (!sessionId) return { ok: false, message: 'Onboarding session missing.' };
+
+    dispatch({ type: 'set/loading', value: true });
+    const start = Date.now();
+    try {
+      await submitEmail({ sessionId, email });
+      // Defense-in-depth against local-clock timing analysis: hold for at
+      // least ANTI_ENUMERATION_HOLD_MS regardless of backend latency.
+      const elapsed = Date.now() - start;
+      if (elapsed < ANTI_ENUMERATION_HOLD_MS) {
+        await new Promise((r) => setTimeout(r, ANTI_ENUMERATION_HOLD_MS - elapsed));
+      }
+      dispatch({ type: 'email/ok' });
+      dispatch({ type: 'resend/cooldown', seconds: RESEND_COOLDOWN_DEFAULT_S });
+      return { ok: true };
+    } catch (err: unknown) {
+      // Even on error, keep the hold so timing is constant.
+      const elapsed = Date.now() - start;
+      if (elapsed < ANTI_ENUMERATION_HOLD_MS) {
+        await new Promise((r) => setTimeout(r, ANTI_ENUMERATION_HOLD_MS - elapsed));
+      }
+      const message = errorToUserMessage(err, 'Could not send the verification code.');
+      dispatch({ type: 'error', message, retryable: true });
+      return { ok: false, message };
+    } finally {
+      dispatch({ type: 'set/loading', value: false });
+    }
+  }, []);
+
+  const submitCode = useCallback(async (): Promise<ActionResult> => {
+    const sessionId = stateRef.current.sessionId;
+    const code = stateRef.current.codeDigits;
+    if (!sessionId) return { ok: false, message: 'Onboarding session missing.' };
+    if (code.length !== 6) {
+      return { ok: false, message: 'Enter the 6-digit code.' };
     }
     dispatch({ type: 'set/loading', value: true });
     try {
-      await sendMagicLink({
-        email: state.email,
-        pseudo: state.handle,
-        preAuthToken: state.preAuthToken ?? undefined,
-      });
-      return { ok: true, message: 'Magic link sent.' };
-    } catch (err: any) {
-      const message = err?.message ?? 'Failed to resend magic link';
+      await submitVerifyCode({ sessionId, code });
+      dispatch({ type: 'verification/done' });
+      return { ok: true };
+    } catch (err: unknown) {
+      const codeErr = codeErrorFrom(err);
+      if (codeErr) {
+        dispatch({ type: 'code/error', code: codeErr });
+        return { ok: false, message: codeErrorMessage(codeErr) };
+      }
+      const message = errorToUserMessage(err, 'Could not verify the code.');
       dispatch({ type: 'error', message, retryable: true });
       return { ok: false, message };
     } finally {
       dispatch({ type: 'set/loading', value: false });
     }
-  }, [state.email, state.handle, state.preAuthToken]);
+  }, []);
 
-  const onEmailVerified = useCallback(
-    (data: { email: string; pseudo: string }) => {
-      if (data.email !== state.email || data.pseudo !== state.handle) {
-        dispatch({ type: 'set/email', value: data.email });
-        dispatch({ type: 'set/handle', value: data.pseudo });
+  const resendCode = useCallback(async (): Promise<ActionResult> => {
+    if (stateRef.current.resendCooldown > 0) {
+      return { ok: false, message: 'Please wait before requesting a new code.' };
+    }
+    const sessionId = stateRef.current.sessionId;
+    const email = stateRef.current.email.trim();
+    if (!sessionId) return { ok: false, message: 'Onboarding session missing.' };
+    dispatch({ type: 'set/loading', value: true });
+    try {
+      await submitEmail({ sessionId, email });
+      dispatch({ type: 'code/clear' });
+      dispatch({ type: 'resend/cooldown', seconds: RESEND_COOLDOWN_DEFAULT_S });
+      return { ok: true };
+    } catch (err: unknown) {
+      if (err instanceof OnboardingError && err.retryAfterSeconds) {
+        dispatch({ type: 'resend/cooldown', seconds: err.retryAfterSeconds });
       }
-      dispatch({ type: 'verification/done' });
-    },
-    [state.email, state.handle],
-  );
+      const message = errorToUserMessage(err, 'Could not resend the code.');
+      dispatch({ type: 'error', message, retryable: true });
+      return { ok: false, message };
+    } finally {
+      dispatch({ type: 'set/loading', value: false });
+    }
+  }, []);
 
   const createPasskey = useCallback(
-    async (opts?: { purgeFirst?: boolean }): Promise<{ ok: boolean; message?: string }> => {
+    async (opts?: { purgeFirst?: boolean }): Promise<ActionResult> => {
       if (!isClientReady) {
         const message = 'App is still starting up. Please try again in a moment.';
         dispatch({ type: 'error', message, retryable: true });
+        return { ok: false, message };
+      }
+      const sessionId = stateRef.current.sessionId;
+      if (!sessionId) {
+        const message = 'Onboarding session missing.';
+        dispatch({ type: 'error', message, retryable: false });
         return { ok: false, message };
       }
 
@@ -172,11 +251,11 @@ export function useSignUp(): UseSignUpReturn {
       try {
         if (opts?.purgeFirst) await purgeTurnkeyState();
 
-        const passkeyDisplayName = `Stealf - ${sanitizePasskeyDisplayName(state.handle)}`;
+        const passkeyDisplayName = `Stealf - ${sanitizePasskeyDisplayName(stateRef.current.handle)}`;
         const authResult = await signUpWithPasskey({
           passkeyDisplayName,
           createSubOrgParams: {
-            subOrgName: `User ${state.email}`,
+            subOrgName: `User ${stateRef.current.email}`,
             customWallet: BANK_WALLET_CONFIG,
           },
         });
@@ -190,18 +269,20 @@ export function useSignUp(): UseSignUpReturn {
 
         const profile = await finalizeAuth({
           sessionToken,
-          preAuthToken: state.preAuthToken ?? undefined,
-          email: state.email,
-          pseudo: state.handle,
+          sessionId,
+          email: stateRef.current.email,
+          pseudo: stateRef.current.handle,
           bankWallet,
         });
 
-        queryClient.setQueryData(userProfileQueries.byBankWallet(bankWallet), profile);
+        queryClient.setQueryData(
+          userProfileQueries.byBankWallet(bankWallet),
+          profile,
+        );
         await walletKeyCache.warmup();
 
         setSession({ sessionToken });
         setUser(profile);
-        await clearOnboardingDraft();
 
         dispatch({ type: 'goto', step: 'done' });
         return { ok: true };
@@ -218,9 +299,6 @@ export function useSignUp(): UseSignUpReturn {
       isClientReady,
       signUpWithPasskey,
       refreshWallets,
-      state.handle,
-      state.email,
-      state.preAuthToken,
       setSession,
       setUser,
       queryClient,
@@ -232,14 +310,64 @@ export function useSignUp(): UseSignUpReturn {
     setInvite,
     setHandle,
     setEmail,
+    setCodeDigits,
     setTermsAccepted,
     goto,
-    startVerification,
-    resendMagicLink,
-    onEmailVerified,
+    submitInvite,
+    submitHandle,
+    submitEmail: submitEmailStep,
+    submitCode,
+    resendCode,
     createPasskey,
     clearError,
     reset,
     isClientReady,
   };
+}
+
+function codeErrorFrom(err: unknown): CodeError | null {
+  if (err instanceof OnboardingError) {
+    return CODE_ERROR_FROM_API[err.code] ?? null;
+  }
+  return null;
+}
+
+function codeErrorMessage(code: CodeError): string {
+  switch (code) {
+    case 'INVALID_CODE':
+      return 'That code is incorrect. Try again.';
+    case 'CODE_EXPIRED':
+      return 'That code expired. Tap "Resend" to get a new one.';
+    case 'CODE_ALREADY_USED':
+      return 'That code has already been used. Resend to get a new one.';
+    case 'TOO_MANY_ATTEMPTS':
+      return 'Too many attempts. Please wait before trying again.';
+  }
+}
+
+function errorToUserMessage(err: unknown, fallback: string): string {
+  if (err instanceof OnboardingError) {
+    switch (err.code) {
+      case 'INVALID_INVITE':
+        return 'That invite code is not recognised.';
+      case 'INVITE_ALREADY_USED':
+        return 'This invite has already been used.';
+      case 'PSEUDO_TAKEN':
+        return 'That username is already taken.';
+      case 'PSEUDO_INVALID':
+        return 'Username must be 3–20 letters, numbers, or underscores.';
+      case 'EMAIL_INVALID':
+        return 'That email address is not valid.';
+      case 'ONBOARDING_SESSION_MISSING':
+      case 'ONBOARDING_SESSION_EXPIRED':
+        return 'Your onboarding session expired. Please start again.';
+      case 'STEP_OUT_OF_ORDER':
+        return 'Something went wrong with this step. Please start again.';
+      default:
+        break;
+    }
+    return err.message || fallback;
+  }
+  if (err instanceof Error) return err.message || fallback;
+  return fallback;
 }
