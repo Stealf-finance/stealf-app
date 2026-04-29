@@ -26,12 +26,12 @@ function mockFetch(response: Partial<Response>) {
 }
 
 describe('submitInviteCode', () => {
-  it('parses the sessionId from data envelope', async () => {
+  it('maps backend `onboardingSessionId` to `sessionId`', async () => {
     mockFetch({
       ok: true,
       status: 200,
       headers: new Headers(),
-      json: async () => ({ data: { sessionId: 'sid_abc' } }),
+      json: async () => ({ success: true, onboardingSessionId: 'sid_abc' }),
     });
     const out = await submitInviteCode({ inviteCode: 'STEALF' });
     expect(out.sessionId).toBe('sid_abc');
@@ -68,15 +68,16 @@ describe('submitVerifyCode', () => {
     }
   });
 
-  it('parses the verified=true success body', async () => {
+  it('resolves on success without inspecting the body shape', async () => {
     mockFetch({
       ok: true,
       status: 200,
       headers: new Headers(),
-      json: async () => ({ data: { verified: true } }),
+      json: async () => ({ success: true }),
     });
-    const out = await submitVerifyCode({ sessionId: 'sid_x', code: '123456' });
-    expect(out.verified).toBe(true);
+    await expect(
+      submitVerifyCode({ sessionId: 'sid_x', code: '123456' }),
+    ).resolves.toBeUndefined();
   });
 
   it('falls through unknown error codes to ApiError-style failure', async () => {

@@ -125,14 +125,10 @@ async function request<T extends object>(
 }
 
 const InviteOkSchema = z.object({
-  sessionId: z.string().min(1),
+  onboardingSessionId: z.string().min(1),
 });
 
 const EmptyOkSchema = z.object({}).passthrough();
-
-const VerifiedSchema = z.object({
-  verified: z.literal(true),
-});
 
 /** Step 1 — submit invite code, receive a fresh onboarding session. */
 export async function submitInviteCode(input: {
@@ -143,7 +139,7 @@ export async function submitInviteCode(input: {
     { method: 'POST', body: { inviteCode: input.inviteCode } },
     InviteOkSchema,
   );
-  return { sessionId: data.sessionId };
+  return { sessionId: data.onboardingSessionId };
 }
 
 /** Step 2 — register the desired pseudo against the session. */
@@ -182,15 +178,15 @@ export async function submitEmail(input: {
 export async function submitVerifyCode(input: {
   sessionId: string;
   code: string;
-}): Promise<{ verified: true }> {
-  return request(
+}): Promise<void> {
+  await request(
     '/api/users/onboarding/verify-code',
     {
       method: 'POST',
       body: { code: input.code },
       sessionId: input.sessionId,
     },
-    VerifiedSchema,
+    EmptyOkSchema,
   );
 }
 
