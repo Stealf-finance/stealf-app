@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -33,6 +33,11 @@ import {
 } from '@/src/features/send/components/RecipientRow';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { useSolPrice } from './hooks/useSolPrice';
+import { useSendSimple } from './hooks/useSendSimple';
+import { mapTokensToAssets } from './lib/mapTokenToAsset';
 
 const FADE_OUT = 160;
 const FADE_IN = 220;
@@ -104,9 +109,20 @@ export function SendFlow({ tone = 'silver' }: Props) {
   const insets = useSafeAreaInsets();
   const S = txPalette(tone);
   const maxGradient = MAX_GRADIENTS[tone];
+  const { user, isAuthenticated } = useAuth();
+  const bankWallet = user?.bankWallet ?? '';
+  const { data: balance } = useBalance(bankWallet);
+  const { data: solPrice } = useSolPrice();
+  const sendMutation = useSendSimple();
+
+  // Real assets when authenticated; mock list keeps the design intact in bypass mode.
+  const realAssets = useMemo(() => mapTokensToAssets(balance?.tokens ?? []), [balance]);
+  const assets = isAuthenticated && realAssets.length > 0 ? realAssets : ASSETS;
+  const recents = RECENTS; // Recent recipients endpoint is not in scope for Slice 3.
+
   const [step, setStep] = useState(0);
-  const [asset, setAsset] = useState<Asset>(ASSETS[0]);
-  const [recipient, setRecipient] = useState<Recipient>(RECENTS[0]);
+  const [asset, setAsset] = useState<Asset>(assets[0]);
+  const [recipient, setRecipient] = useState<Recipient>(recents[0]);
   const [amount, setAmount] = useState('0');
   const [inToken, setInToken] = useState(true);
   const [recipientQuery, setRecipientQuery] = useState('');
@@ -147,8 +163,32 @@ export function SendFlow({ tone = 'silver' }: Props) {
     }
   };
 
-  const fiatValue = (Number(amount) * RATE).toFixed(2);
+  // Use the live SOL price for SOL; for other tokens, fall back to the asset's
+  // own fiat hint or the legacy mock RATE so the design remains demoable.
+  const rate =
+    asset.symbol === 'SOL' && typeof solPrice === 'number' && solPrice > 0
+      ? solPrice
+      : RATE;
+  const fiatValue = (Number(amount) * rate).toFixed(2);
   const amountValid = Number(amount) > 0;
+
+  const onSwipeSend = async () => {
+    // In bypass / unauthenticated mode, just close — the design is the contract.
+    if (!isAuthenticated || !user) {
+      close();
+      return;
+    }
+    try {
+      await sendMutation.mutateAsync({
+        fromAddress: user.bankWallet,
+        toAddress: recipient.name,
+        amountSol: Number(amount),
+      });
+      close();
+    } catch (err) {
+      if (__DEV__) console.warn('[SendFlow] send failed:', err);
+    }
+  };
 
   return (
     <TonalBackground tone={tone}>
@@ -203,7 +243,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
               }}
               showsVerticalScrollIndicator={false}
             >
-              {ASSETS.filter(
+              {assets.filter(
                 (a) =>
                   !assetQuery ||
                   a.name.toLowerCase().includes(assetQuery.toLowerCase()) ||
@@ -325,7 +365,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
               }}
               showsVerticalScrollIndicator={false}
             >
-              {RECENTS.map((r) => (
+              {recents.map((r) => (
                 <RecipientRow
                   key={r.name}
                   {...r}
@@ -706,7 +746,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
                 paddingBottom: insets.bottom + 24,
               }}
             >
-              <SwipeToSend tone={tone} onSend={close} />
+              <SwipeToSend tone={tone} onSend={onSwipeSend} />
             </View>
           </>
         )}

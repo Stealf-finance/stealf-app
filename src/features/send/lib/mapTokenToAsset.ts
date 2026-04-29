@@ -1,0 +1,48 @@
+import type { Asset } from '@/src/features/send/components/AssetPill';
+import type { TokenBalance } from '@/src/features/bank/types';
+
+const GRADIENTS: Record<string, [string, string]> = {
+  SOL: ['#9945FF', '#14F195'],
+  USDC: ['#2775CA', '#1a5390'],
+  jitoSOL: ['#c9c9cc', '#5a5a5e'],
+  BTC: ['#F7931A', '#a65e06'],
+  ETH: ['#627EEA', '#3b4fa8'],
+  EURC: ['#1a2c6b', '#0a1840'],
+};
+
+const FALLBACK_GRADIENT: [string, string] = ['#9a9a9f', '#5a5a5e'];
+
+const DISPLAY_NAMES: Record<string, string> = {
+  SOL: 'Solana',
+  USDC: 'USD Coin',
+  jitoSOL: 'Jito staked SOL',
+  BTC: 'Bitcoin',
+  ETH: 'Ethereum',
+  EURC: 'Euro Coin',
+};
+
+function formatBalance(balance: number, decimals: number): string {
+  if (balance === 0) return '0';
+  const truncTo = Math.min(decimals, 6);
+  const fixed = balance.toFixed(truncTo);
+  return fixed.replace(/\.?0+$/, '');
+}
+
+function formatFiat(usd: number): string {
+  if (usd >= 1000) return `$${Math.round(usd).toLocaleString('en-US')}`;
+  return `$${usd.toFixed(2)}`;
+}
+
+export function mapTokenToAsset(token: TokenBalance): Asset {
+  return {
+    symbol: token.tokenSymbol,
+    name: DISPLAY_NAMES[token.tokenSymbol] ?? token.tokenSymbol,
+    balance: formatBalance(token.balance, token.tokenDecimals),
+    fiat: formatFiat(token.balanceUSD),
+    gradient: GRADIENTS[token.tokenSymbol] ?? FALLBACK_GRADIENT,
+  };
+}
+
+export function mapTokensToAssets(tokens: TokenBalance[]): Asset[] {
+  return tokens.map(mapTokenToAsset);
+}
