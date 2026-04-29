@@ -31,6 +31,9 @@ export function DataBootstrap() {
     if (user.bankWallet) {
       cleanups.push(subscribeToWalletUpdates(queryClient, user.bankWallet));
     }
+    if (user.stealfWallet) {
+      cleanups.push(subscribeToWalletUpdates(queryClient, user.stealfWallet));
+    }
 
     return () => {
       cleanups.forEach((fn) => fn());

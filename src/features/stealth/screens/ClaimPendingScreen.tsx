@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,25 +19,35 @@ import {
 } from '@/src/design-system/typography';
 import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
+import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
+import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 
 type Tab = 'coming' | 'incoming';
 type Asset = 'USDC' | 'SOL';
-type Item = { amount: string; asset: Asset; ago: string };
+type Item = { amount: string; asset: Asset; ago: string; utxo?: unknown };
 
-const INCOMING: Item[] = [
+// Mock fallbacks when no real data is loaded (DEV bypass / first paint).
+const MOCK_INCOMING: Item[] = [
   { amount: '420.00', asset: 'USDC', ago: '2 min ago' },
   { amount: '0.4212', asset: 'SOL', ago: '18 min ago' },
   { amount: '124.50', asset: 'USDC', ago: '1 h ago' },
   { amount: '12.0000', asset: 'USDC', ago: '4 h ago' },
 ];
 
-const COMING: Item[] = [
+const MOCK_COMING: Item[] = [
   { amount: '1,200.00', asset: 'USDC', ago: 'in ~3 min' },
   { amount: '0.8500', asset: 'SOL', ago: 'in ~12 min' },
 ];
 
-const TOTAL_INCOMING = '544.50';
-const TOTAL_COMING = '1,343.50';
+function utxoToItem(utxo: any): Item {
+  return {
+    amount: '— —',
+    asset: 'USDC',
+    ago: 'Encrypted',
+    utxo,
+  };
+}
 
 const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
 
@@ -62,12 +72,45 @@ export function ClaimPendingScreen() {
 
   const close = () => router.back();
 
-  const list = tab === 'incoming' ? INCOMING : COMING;
-  const total = tab === 'incoming' ? TOTAL_INCOMING : TOTAL_COMING;
+  const { data: incomingUtxos } = usePendingClaims();
+  const { data: comingUtxos } = usePendingClaimsForCash();
+  const { claimReceived, claimSelfToPublic, loading } = useUmbra();
+
+  const incoming = useMemo<Item[]>(
+    () => (incomingUtxos && incomingUtxos.length > 0 ? incomingUtxos.map(utxoToItem) : MOCK_INCOMING),
+    [incomingUtxos],
+  );
+  const coming = useMemo<Item[]>(
+    () => (comingUtxos && comingUtxos.length > 0 ? comingUtxos.map(utxoToItem) : MOCK_COMING),
+    [comingUtxos],
+  );
+
+  const list = tab === 'incoming' ? incoming : coming;
+  // Hide the fiat total until we have a decryption pipeline; keep it for design fallback only.
+  const isReal = tab === 'incoming' ? !!incomingUtxos?.length : !!comingUtxos?.length;
+  const total = isReal
+    ? '— —'
+    : tab === 'incoming'
+      ? '544.50'
+      : '1,343.50';
   const headerLabel =
     tab === 'incoming'
-      ? `${INCOMING.length} pending · Stealth private`
-      : `${COMING.length} on the way · Stealth private`;
+      ? `${incoming.length} pending · Stealth private`
+      : `${coming.length} on the way · Stealth private`;
+
+  const onClaim = async (item: Item) => {
+    if (!item.utxo) return; // mock row
+    try {
+      if (tab === 'incoming') {
+        await claimReceived([item.utxo]);
+      } else {
+        await claimSelfToPublic([item.utxo]);
+      }
+    } catch (err: any) {
+      const msg = err?.userMessage || err?.message || 'Claim failed';
+      Alert.alert('Claim failed', msg);
+    }
+  };
 
   return (
     <TonalBackground tone="gold">
@@ -238,6 +281,8 @@ export function ClaimPendingScreen() {
             tx={tx}
             kind={tab}
             palette={palette}
+            onClaim={() => onClaim(tx)}
+            disabled={loading}
           />
         ))}
       </ScrollView>
@@ -249,10 +294,14 @@ function ClaimItem({
   tx,
   kind,
   palette,
+  onClaim,
+  disabled,
 }: {
   tx: Item;
   kind: Tab;
   palette: Palette;
+  onClaim: () => void;
+  disabled?: boolean;
 }) {
   const isIncoming = kind === 'incoming';
   return (
@@ -350,7 +399,11 @@ function ClaimItem({
 
         <View style={{ marginTop: 12 }}>
           {isIncoming ? (
-            <ClaimButton accentGlow={palette.accentGlow} />
+            <ClaimButton
+              accentGlow={palette.accentGlow}
+              onPress={onClaim}
+              disabled={disabled}
+            />
           ) : (
             <AwaitingPill accent={palette.accent} />
           )}
@@ -389,11 +442,21 @@ function IconChip({ kind, accent }: { kind: Tab; accent: string }) {
   );
 }
 
-function ClaimButton({ accentGlow }: { accentGlow: string }) {
+function ClaimButton({
+  accentGlow,
+  onPress,
+  disabled,
+}: {
+  accentGlow: string;
+  onPress?: () => void;
+  disabled?: boolean;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Claim"
+      onPress={onPress}
+      disabled={disabled}
       style={{
         borderRadius: 100,
         overflow: 'hidden',
@@ -403,6 +466,7 @@ function ClaimButton({ accentGlow }: { accentGlow: string }) {
         shadowOpacity: 1,
         shadowRadius: 16,
         shadowOffset: { width: 0, height: 0 },
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       <LinearGradient

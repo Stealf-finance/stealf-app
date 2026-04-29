@@ -30,6 +30,8 @@ import {
   PrivacyMode,
   usePrivacyMode,
 } from '@/src/features/stealth/PrivacyModeContext';
+import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
+import { useFeatureFlag } from '@/src/services/observability/featureFlags';
 
 const FADE_OUT = 180;
 const FADE_IN = 240;
@@ -44,6 +46,13 @@ export function StealthHub() {
   const { mode, setMode, tone } = usePrivacyMode();
   const isPrivate = mode === 'private';
   const palette = txPalette(tone);
+
+  // Killswitch: hide the slice if the flag is flipped off in PostHog.
+  // Default-on so design work in DEV is unaffected.
+  const stealthEnabled = useFeatureFlag('slice-stealth-enabled', true);
+
+  const { data: pendingClaims } = usePendingClaims();
+  const claimCount = pendingClaims?.length ?? 0;
 
   const balance = isPrivate
     ? { int: '133', dec: '.25' }
@@ -62,6 +71,50 @@ export function StealthHub() {
   useEffect(() => {
     modeProgress.value = withTiming(isPrivate ? 1 : 0, { duration: MORPH_DUR });
   }, [isPrivate, modeProgress]);
+
+  if (!stealthEnabled) {
+    return (
+      <TonalBackground tone="silver">
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingTop: insets.top,
+            paddingHorizontal: 32,
+          }}
+        >
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 10,
+                letterSpacing: 3.2,
+                textTransform: 'uppercase',
+                color: SILVER.accent,
+                fontWeight: '700',
+                marginBottom: 12,
+              },
+            ]}
+          >
+            Stealth
+          </Text>
+          <Text
+            style={[
+              sansationLight,
+              {
+                fontSize: 28,
+                color: T.ink,
+                textAlign: 'center',
+              },
+            ]}
+          >
+            Coming soon
+          </Text>
+        </View>
+      </TonalBackground>
+    );
+  }
 
   const switchMode = (target: PrivacyMode) => {
     if (target === mode) return;
@@ -329,6 +382,7 @@ export function StealthHub() {
               <SquareActionTile
                 iconKey="gift"
                 label="Claim"
+                badge={claimCount}
                 onPress={() => router.push('/claim-pending')}
               />
             </>

@@ -21,4 +21,32 @@ if (!config.resolver.assetExts.includes('zkey')) {
   config.resolver.assetExts.push('zkey');
 }
 
+// Manual subpath / variant overrides.
+// `unstable_enablePackageExports = false` (above) prevents Metro from reading
+// `package.json#exports`, so any module imported via a subpath (e.g.
+// `@bufbuild/protobuf/codegenv2`) won't resolve out of the box. Same for
+// packages that ship a node-only `.cjs` we don't want.
+const moduleOverrides = {
+  '@bufbuild/protobuf/codegenv2': path.resolve(
+    __dirname,
+    'node_modules/@bufbuild/protobuf/dist/cjs/codegenv2/index.js',
+  ),
+  isows: path.resolve(__dirname, 'node_modules/isows/_cjs/native.js'),
+  '@adraffy/ens-normalize': path.resolve(
+    __dirname,
+    'node_modules/@adraffy/ens-normalize/dist/index.mjs',
+  ),
+};
+
+const originalResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleOverrides[moduleName]) {
+    return { type: 'sourceFile', filePath: moduleOverrides[moduleName] };
+  }
+  if (originalResolveRequest) {
+    return originalResolveRequest(context, moduleName, platform);
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = withNativeWind(config, { input: './global.css' });

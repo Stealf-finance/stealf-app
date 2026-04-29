@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { toAddress } from '@/src/services/solana/kit';
+import { SOL_MINT, USDC_MINT, USDC_DECIMALS } from '@/src/constants/solana';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { TxTitleBlock } from '@/src/features/send/components/TxTitleBlock';
 import { Numpad } from '@/src/features/send/components/Numpad';
@@ -10,6 +12,8 @@ import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { Icons } from '@/src/design-system/icons';
 import { sansation, sansationLight, serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
+import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
 type Direction = 'shield' | 'unshield';
 type Asset = 'USDC' | 'SOL';
@@ -53,6 +57,34 @@ export function ShieldFlow({ direction }: Props) {
     if (k === '⌫') setAmount((a) => (a.length > 1 ? a.slice(0, -1) : '0'));
     else if (k === '.') setAmount((a) => (a.includes('.') ? a : a + '.'));
     else setAmount((a) => (a === '0' ? k : a + k));
+  };
+
+  const { user } = useAuth();
+  const { depositFromBank, withdraw, loading } = useUmbra();
+
+  const onSubmit = async () => {
+    const num = Number(amount);
+    if (!num || num <= 0) return;
+
+    const mintStr = asset === 'USDC' ? USDC_MINT : SOL_MINT;
+    const decimals = asset === 'USDC' ? USDC_DECIMALS : 9;
+    const amountBigInt = BigInt(Math.floor(num * 10 ** decimals));
+    const mint = toAddress(mintStr);
+
+    try {
+      if (isShield) {
+        if (!user?.stealfWallet) {
+          throw new Error('Stealth wallet not set up. Open it once before shielding.');
+        }
+        await depositFromBank(toAddress(user.stealfWallet), mint, amountBigInt);
+      } else {
+        await withdraw(mint, amountBigInt);
+      }
+      close();
+    } catch (err: any) {
+      const msg = err?.userMessage || err?.message || 'Operation failed';
+      Alert.alert(isShield ? 'Shield failed' : 'Unshield failed', msg);
+    }
   };
 
   return (
@@ -246,7 +278,11 @@ export function ShieldFlow({ direction }: Props) {
           paddingBottom: insets.bottom + 16,
         }}
       >
-        <SwipeToSend tone={tone} label={ctaLabel} onSend={close} />
+        <SwipeToSend
+          tone={tone}
+          label={loading ? 'Processing…' : ctaLabel}
+          onSend={onSubmit}
+        />
       </View>
     </TonalBackground>
   );

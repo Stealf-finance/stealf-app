@@ -10,6 +10,7 @@ type Props = {
   accent?: boolean;
   accentTone?: Tone;
   iconColor?: string;
+  badge?: number;
   onPress?: () => void;
 };
 
@@ -19,6 +20,7 @@ export function SquareActionTile({
   accent = false,
   accentTone = 'silver',
   iconColor: iconColorOverride,
+  badge,
   onPress,
 }: Props) {
   const accentColors: [string, string] =
@@ -83,6 +85,36 @@ export function SquareActionTile({
           />
         </View>
 
+        {badge && badge > 0 ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 6,
+              right: 6,
+              minWidth: 18,
+              height: 18,
+              paddingHorizontal: 5,
+              borderRadius: 9,
+              backgroundColor: '#E5484D',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text
+              style={[
+                sansation,
+                {
+                  fontSize: 10,
+                  fontWeight: '700',
+                  color: '#fff',
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              {badge > 99 ? '99+' : badge}
+            </Text>
+          </View>
+        ) : null}
         <Icon size={22} color={iconColor} />
         <Text
           style={[
