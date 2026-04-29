@@ -15,7 +15,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { Icons } from '@/src/design-system/icons';
 import {
@@ -191,7 +191,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
   };
 
   return (
-    <TonalBackground tone={tone}>
+    <CenterGlow tone={tone}>
       <TxHeader
         step={step}
         total={4}
@@ -751,6 +751,6 @@ export function SendFlow({ tone = 'silver' }: Props) {
           </>
         )}
       </Animated.View>
-    </TonalBackground>
+    </CenterGlow>
   );
 }

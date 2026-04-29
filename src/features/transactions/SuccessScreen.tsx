@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { Icons } from '@/src/design-system/icons';
 import {
@@ -88,7 +88,7 @@ export function SuccessScreen({
   }));
 
   return (
-    <TonalBackground tone={tone}>
+    <CenterGlow tone={tone}>
       <View
         style={{
           paddingTop: insets.top + 16,
@@ -316,6 +316,6 @@ export function SuccessScreen({
           onPress={onDone}
         />
       </Animated.View>
-    </TonalBackground>
+    </CenterGlow>
   );
 }

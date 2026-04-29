@@ -9,7 +9,7 @@ import Animated, {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { Icons } from '@/src/design-system/icons';
@@ -72,7 +72,7 @@ export function MooveScreen() {
   const flowDown = direction === 'toStealth';
 
   return (
-    <TonalBackground tone="gold">
+    <CenterGlow tone="gold">
       <View
         style={{
           paddingTop: insets.top + 16,
@@ -196,7 +196,7 @@ export function MooveScreen() {
       >
         <SwipeToSend tone="gold" label="Slide to move" onSend={close} />
       </View>
-    </TonalBackground>
+    </CenterGlow>
   );
 }
 

@@ -368,8 +368,8 @@ export function StealthHub() {
                 onPress={() => router.push('/unshield')}
               />
               <SquareActionTile
-                iconKey="moove"
-                label="Moove"
+                iconKey="move"
+                label="Move"
                 accent
                 accentTone="gold"
                 onPress={() => router.push('/moove')}

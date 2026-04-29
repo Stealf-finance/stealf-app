@@ -210,8 +210,8 @@ export function BankWallet() {
             onPress={() => router.push('/send-money')}
           />
           <SquareActionTile
-            iconKey="moove"
-            label="Moove"
+            iconKey="move"
+            label="Move"
             accent
             accentTone="silver"
             onPress={() => router.push('/moove')}

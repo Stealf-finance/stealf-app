@@ -8,7 +8,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { Icons } from '@/src/design-system/icons';
 import {
@@ -113,7 +113,7 @@ export function ClaimPendingScreen() {
   };
 
   return (
-    <TonalBackground tone="gold">
+    <CenterGlow tone="gold">
       <View
         style={{
           paddingTop: insets.top + 16,
@@ -286,7 +286,7 @@ export function ClaimPendingScreen() {
           />
         ))}
       </ScrollView>
-    </TonalBackground>
+    </CenterGlow>
   );
 }
 

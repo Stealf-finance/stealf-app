@@ -1,7 +1,7 @@
 import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { Icons } from '@/src/design-system/icons';
@@ -26,7 +26,7 @@ export function ReceiveMenu() {
   const noop = () => {};
 
   return (
-    <TonalBackground tone="silver">
+    <CenterGlow tone="silver">
       <View
         style={{
           paddingTop: insets.top + 16,
@@ -141,7 +141,7 @@ export function ReceiveMenu() {
           </View>
         </View>
       </ScrollView>
-    </TonalBackground>
+    </CenterGlow>
   );
 }
 

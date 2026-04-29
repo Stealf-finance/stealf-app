@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_MINT, USDC_MINT, USDC_DECIMALS } from '@/src/constants/solana';
-import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { TxTitleBlock } from '@/src/features/send/components/TxTitleBlock';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
@@ -88,7 +88,7 @@ export function ShieldFlow({ direction }: Props) {
   };
 
   return (
-    <TonalBackground tone={tone}>
+    <CenterGlow tone={tone}>
       <View
         style={{
           paddingTop: insets.top + 16,
@@ -284,6 +284,6 @@ export function ShieldFlow({ direction }: Props) {
           onSend={onSubmit}
         />
       </View>
-    </TonalBackground>
+    </CenterGlow>
   );
 }

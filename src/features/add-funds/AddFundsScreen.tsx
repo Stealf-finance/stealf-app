@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Rect } from 'react-native-svg';
-import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Icons } from '@/src/design-system/icons';
 import {
   mono,
@@ -51,7 +51,7 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
   const dataModules = useMemo(() => buildPseudoQrModules(), []);
 
   return (
-    <TonalBackground tone={tone}>
+    <CenterGlow tone={tone}>
       <View
         style={{
           paddingTop: insets.top + 16,
@@ -329,7 +329,7 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
           </LinearGradient>
         </Pressable>
       </View>
-    </TonalBackground>
+    </CenterGlow>
   );
 }
 
