@@ -16,10 +16,19 @@ export const BalanceResponseSchema = z.object({
 });
 
 export const balanceQueries = {
-  byAddress: (address: string) => ['bank', 'balance', address] as const,
+  byAddress: (address: string) => ['wallet-balance', address] as const,
 };
 
 export async function fetchBalance(token: string, address: string) {
+  if (__DEV__) console.log('[bank/balance] fetch', address);
   const raw = await apiGet(`/api/wallet/balance/${address}`, token);
-  return BalanceResponseSchema.parse(raw);
+  const parsed = BalanceResponseSchema.parse(raw);
+  if (__DEV__)
+    console.log(
+      '[bank/balance] fetched',
+      address,
+      `$${parsed.totalUSD.toFixed(2)}`,
+      `${parsed.tokens.length} tokens`,
+    );
+  return parsed;
 }

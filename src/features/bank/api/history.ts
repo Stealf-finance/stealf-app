@@ -23,8 +23,7 @@ export const HistoryResponseSchema = z.object({
 });
 
 export const historyQueries = {
-  byAddress: (address: string, limit: number) =>
-    ['bank', 'history', address, limit] as const,
+  byAddress: (address: string) => ['wallet-history', address] as const,
 };
 
 export async function fetchHistory(
@@ -32,9 +31,17 @@ export async function fetchHistory(
   address: string,
   limit = 10,
 ) {
+  if (__DEV__) console.log('[bank/history] fetch', address, `limit=${limit}`);
   const raw = await apiGet(
     `/api/wallet/history/${address}?limit=${limit}`,
     token,
   );
-  return HistoryResponseSchema.parse(raw);
+  const parsed = HistoryResponseSchema.parse(raw);
+  if (__DEV__)
+    console.log(
+      '[bank/history] fetched',
+      address,
+      `${parsed.transactions.length}/${parsed.count} txs`,
+    );
+  return parsed;
 }

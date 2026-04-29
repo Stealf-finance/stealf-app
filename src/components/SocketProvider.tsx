@@ -6,9 +6,23 @@ export function SocketProvider({ children }: PropsWithChildren) {
   const { session, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (!isAuthenticated || !session) return;
+    if (!isAuthenticated || !session) {
+      if (__DEV__)
+        console.log(
+          '[SocketProvider] skip connect (auth=' +
+            isAuthenticated +
+            ', session=' +
+            !!session +
+            ')',
+        );
+      return;
+    }
+    if (__DEV__) console.log('[SocketProvider] connecting…');
     socketService.connect(session.sessionToken);
-    return () => socketService.disconnect();
+    return () => {
+      if (__DEV__) console.log('[SocketProvider] cleanup → disconnect');
+      socketService.disconnect();
+    };
   }, [isAuthenticated, session]);
 
   return <>{children}</>;

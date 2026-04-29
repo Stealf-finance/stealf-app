@@ -19,6 +19,7 @@ export function useSignIn() {
         throw new Error('App is still starting up. Please try again.');
       }
 
+      if (__DEV__) console.log('[useSignIn] loginWithPasskey…');
       const { sessionToken } = await loginWithPasskey();
       if (!sessionToken) throw new Error('No session token received from Turnkey');
 
@@ -26,10 +27,17 @@ export function useSignIn() {
       const cashWallet = wallets.find((w) => w.walletName?.includes('Cash'));
       const bankWallet = cashWallet?.accounts?.[0]?.address;
       if (!bankWallet) throw new Error('Failed to retrieve bank wallet address');
+      if (__DEV__) console.log('[useSignIn] bankWallet=', bankWallet);
 
       // Catch up on what happened while signed out: pull profile + bank
       // balance + history in parallel. They land in the RQ cache so the Bank
       // tab renders fresh data on first paint with no spinner.
+      // We DROP any stale cache for these keys first so prefetch always hits
+      // the network — staleTime: Infinity would otherwise reuse pre-restart data.
+      queryClient.removeQueries({ queryKey: balanceQueries.byAddress(bankWallet) });
+      queryClient.removeQueries({ queryKey: historyQueries.byAddress(bankWallet) });
+
+      if (__DEV__) console.log('[useSignIn] prefetching profile + balance + history…');
       const [profile] = await Promise.all([
         fetchUserProfile(sessionToken, bankWallet),
         queryClient.prefetchQuery({
@@ -38,11 +46,12 @@ export function useSignIn() {
           staleTime: Infinity,
         }),
         queryClient.prefetchQuery({
-          queryKey: historyQueries.byAddress(bankWallet, 10),
+          queryKey: historyQueries.byAddress(bankWallet),
           queryFn: () => fetchHistory(sessionToken, bankWallet, 10),
           staleTime: Infinity,
         }),
       ]);
+      if (__DEV__) console.log('[useSignIn] prefetch done');
 
       queryClient.setQueryData(userProfileQueries.byBankWallet(bankWallet), profile);
       await walletKeyCache.warmup();

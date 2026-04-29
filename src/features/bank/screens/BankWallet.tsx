@@ -19,9 +19,6 @@ import type { Transaction } from '@/src/features/bank/types';
 
 const S = txPalette('silver');
 
-// Fetch 10 to match the cache key written to by socket events
-// (`transaction:new` → setQueryData on limit=10). Render only the first 4.
-const HISTORY_FETCH_LIMIT = 10;
 const HISTORY_DISPLAY_LIMIT = 4;
 
 function splitBalance(usd: number): { dollars: string; cents: string } {
@@ -52,7 +49,7 @@ export function BankWallet() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { data: balance } = useBalance(user?.bankWallet);
-  const { data: history } = useHistory(user?.bankWallet, HISTORY_FETCH_LIMIT);
+  const { data: history } = useHistory(user?.bankWallet);
 
   const greeting = user?.username ?? '';
   const { dollars, cents } = splitBalance(balance?.totalUSD ?? 0);

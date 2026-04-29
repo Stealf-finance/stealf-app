@@ -16,11 +16,23 @@ class SocketService {
 
   connect(jwtToken?: string): void {
     if (this.socket) {
+      if (__DEV__)
+        console.log(
+          '[Socket] connect() — already exists, flushing',
+          this.pendingListeners.length,
+          'pending listener(s)',
+        );
       this.flushPendingListeners();
       return;
     }
 
     const { EXPO_PUBLIC_API_URL } = getEnv();
+    if (__DEV__)
+      console.log(
+        '[Socket] connect() →',
+        EXPO_PUBLIC_API_URL,
+        jwtToken ? 'with auth' : 'no auth',
+      );
 
     this.socket = io(EXPO_PUBLIC_API_URL, {
       transports: ['websocket'],
@@ -33,16 +45,39 @@ class SocketService {
     this.flushPendingListeners();
 
     this.socket.on('connect', () => {
-      if (__DEV__) console.log('[Socket] connected:', this.socket?.id);
-      this.subscribedWallets.forEach((addr) => this.socket?.emit('subscribe:wallet', addr));
-      if (this.yieldChannel) this.socket?.emit('subscribe:yield', this.yieldChannel);
+      if (__DEV__)
+        console.log(
+          '[Socket] ✅ connected',
+          this.socket?.id,
+          '— resubscribing wallets:',
+          Array.from(this.subscribedWallets),
+        );
+      this.subscribedWallets.forEach((addr) => {
+        if (__DEV__) console.log('[Socket] emit subscribe:wallet', addr);
+        this.socket?.emit('subscribe:wallet', addr);
+      });
+      if (this.yieldChannel) {
+        if (__DEV__)
+          console.log('[Socket] emit subscribe:yield', this.yieldChannel);
+        this.socket?.emit('subscribe:yield', this.yieldChannel);
+      }
 
       // First connect = nothing to catch up. Subsequent connects mean we
       // dropped and reconnected, so fire reconnect listeners for callers
       // (e.g. RQ invalidation) to refetch what they may have missed.
       if (this.hasConnectedOnce) {
+        if (__DEV__)
+          console.log(
+            '[Socket] reconnect — firing',
+            this.reconnectListeners.size,
+            'listener(s)',
+          );
         this.reconnectListeners.forEach((cb) => {
-          try { cb(); } catch (e) { if (__DEV__) console.warn('[Socket] reconnect cb threw:', e); }
+          try {
+            cb();
+          } catch (e) {
+            if (__DEV__) console.warn('[Socket] reconnect cb threw:', e);
+          }
         });
       }
       this.hasConnectedOnce = true;
@@ -50,18 +85,21 @@ class SocketService {
 
     this.socket.on('disconnect', (reason) => {
       if (__DEV__ && !this.isDisconnectingManually && reason !== 'io client disconnect') {
-        console.warn('[Socket] disconnected:', reason);
+        console.warn('[Socket] ⚠ disconnected:', reason);
+      } else if (__DEV__) {
+        console.log('[Socket] disconnect (manual or expected):', reason);
       }
       this.isDisconnectingManually = false;
     });
 
     this.socket.on('connect_error', (error) => {
-      if (__DEV__) console.warn('[Socket] connect_error:', error.message);
+      if (__DEV__) console.warn('[Socket] ❌ connect_error:', error.message);
     });
   }
 
   disconnect(): void {
     if (!this.socket) return;
+    if (__DEV__) console.log('[Socket] disconnect() requested');
     this.isDisconnectingManually = true;
     this.socket.disconnect();
     this.socket = null;
@@ -79,10 +117,20 @@ class SocketService {
 
   subscribeToWallet(address: string): void {
     this.subscribedWallets.add(address);
-    if (this.socket?.connected) this.socket.emit('subscribe:wallet', address);
+    if (this.socket?.connected) {
+      if (__DEV__)
+        console.log('[Socket] subscribeToWallet (live emit)', address);
+      this.socket.emit('subscribe:wallet', address);
+    } else if (__DEV__) {
+      console.log(
+        '[Socket] subscribeToWallet (queued — not connected yet)',
+        address,
+      );
+    }
   }
 
   unsubscribeFromWallet(address: string): void {
+    if (__DEV__) console.log('[Socket] unsubscribeFromWallet', address);
     this.subscribedWallets.delete(address);
   }
 

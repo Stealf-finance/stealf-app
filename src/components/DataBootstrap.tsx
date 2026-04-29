@@ -20,7 +20,21 @@ export function DataBootstrap() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!isAuthenticated || !user || !session) return;
+    if (!isAuthenticated || !user || !session) {
+      if (__DEV__)
+        console.log(
+          '[DataBootstrap] skip — auth=' + isAuthenticated,
+          'user=' + !!user,
+          'session=' + !!session,
+        );
+      return;
+    }
+
+    if (__DEV__)
+      console.log(
+        '[DataBootstrap] init — bankWallet=' + user.bankWallet,
+        'stealfWallet=' + (user.stealfWallet ?? 'none'),
+      );
 
     void walletKeyCache.warmup();
 
@@ -43,20 +57,31 @@ export function DataBootstrap() {
     // continue to drive incremental updates via setQueryData.
     cleanups.push(
       socketService.onReconnect(() => {
-        if (__DEV__) console.log('[DataBootstrap] socket reconnected, invalidating wallet queries');
+        if (__DEV__)
+          console.log(
+            '[DataBootstrap] socket reconnected → invalidating wallet queries',
+          );
         if (user.bankWallet) {
-          queryClient.invalidateQueries({ queryKey: balanceQueries.byAddress(user.bankWallet) });
-          queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(user.bankWallet, 10) });
-          queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(user.bankWallet, 4) });
+          queryClient.invalidateQueries({
+            queryKey: balanceQueries.byAddress(user.bankWallet),
+          });
+          queryClient.invalidateQueries({
+            queryKey: historyQueries.byAddress(user.bankWallet),
+          });
         }
         if (user.stealfWallet) {
-          queryClient.invalidateQueries({ queryKey: balanceQueries.byAddress(user.stealfWallet) });
-          queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(user.stealfWallet, 10) });
+          queryClient.invalidateQueries({
+            queryKey: balanceQueries.byAddress(user.stealfWallet),
+          });
+          queryClient.invalidateQueries({
+            queryKey: historyQueries.byAddress(user.stealfWallet),
+          });
         }
       }),
     );
 
     return () => {
+      if (__DEV__) console.log('[DataBootstrap] cleanup');
       cleanups.forEach((fn) => fn());
     };
   }, [isAuthenticated, user, session, queryClient]);

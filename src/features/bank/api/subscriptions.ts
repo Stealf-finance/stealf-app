@@ -26,19 +26,36 @@ const TransactionEventSchema = z.object({
   timestamp: z.string().optional(),
 });
 
-const HISTORY_LIMIT_DEFAULT = 10;
-
 export function subscribeToWalletUpdates(
   queryClient: QueryClient,
   address: string,
 ): () => void {
+  if (__DEV__) console.log('[bank/sub] subscribeToWalletUpdates', address);
+
   const onBalance = (raw: unknown) => {
     const parsed = BalanceUpdateEventSchema.safeParse(raw);
     if (!parsed.success) {
-      if (__DEV__) console.warn('[bank] balance:updated rejected', parsed.error);
+      if (__DEV__)
+        console.warn(
+          '[bank/sub] balance:updated rejected by Zod',
+          parsed.error.issues,
+        );
       return;
     }
-    if (parsed.data.address !== address) return;
+    if (parsed.data.address !== address) {
+      if (__DEV__)
+        console.log('[bank/sub] balance:updated ignored — address mismatch', {
+          event: parsed.data.address,
+          watching: address,
+        });
+      return;
+    }
+    if (__DEV__)
+      console.log(
+        '[bank/sub] balance:updated → setQueryData',
+        address,
+        `$${parsed.data.totalUSD.toFixed(2)}`,
+      );
     queryClient.setQueryData(
       balanceQueries.byAddress(address),
       BalanceResponseSchema.parse({
@@ -52,15 +69,43 @@ export function subscribeToWalletUpdates(
   const onTx = (raw: unknown) => {
     const parsed = TransactionEventSchema.safeParse(raw);
     if (!parsed.success) {
-      if (__DEV__) console.warn('[bank] transaction:new rejected', parsed.error);
+      if (__DEV__)
+        console.warn(
+          '[bank/sub] transaction:new rejected by Zod',
+          parsed.error.issues,
+        );
       return;
     }
-    if (parsed.data.address !== address) return;
+    if (parsed.data.address !== address) {
+      if (__DEV__)
+        console.log('[bank/sub] transaction:new ignored — address mismatch', {
+          event: parsed.data.address,
+          watching: address,
+        });
+      return;
+    }
+    if (__DEV__)
+      console.log(
+        '[bank/sub] transaction:new → setQueryData',
+        address,
+        parsed.data.transaction.type,
+        `$${parsed.data.transaction.amountUSD.toFixed(2)}`,
+        parsed.data.transaction.signature.slice(0, 8),
+      );
     queryClient.setQueryData<HistoryResponse>(
-      historyQueries.byAddress(address, HISTORY_LIMIT_DEFAULT),
+      historyQueries.byAddress(address),
       (prev) => {
         const existing = prev?.transactions ?? [];
-        if (existing.some((t) => t.signature === parsed.data.transaction.signature)) {
+        if (
+          existing.some(
+            (t) => t.signature === parsed.data.transaction.signature,
+          )
+        ) {
+          if (__DEV__)
+            console.log(
+              '[bank/sub] tx duplicate skipped',
+              parsed.data.transaction.signature.slice(0, 8),
+            );
           return prev;
         }
         return HistoryResponseSchema.parse({
@@ -77,6 +122,7 @@ export function subscribeToWalletUpdates(
   socketService.subscribeToWallet(address);
 
   return () => {
+    if (__DEV__) console.log('[bank/sub] unsubscribe', address);
     socketService.off('balance:updated', onBalance);
     socketService.off('transaction:new', onTx);
     socketService.unsubscribeFromWallet(address);
