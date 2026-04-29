@@ -15,6 +15,7 @@ import {
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { JitoMark } from '@/src/features/grow/JitoMark';
+import { useFeatureFlag } from '@/src/services/observability/featureFlags';
 
 const S = txPalette('silver');
 const RANGES = ['1W', '1M', '1Y', 'Max'] as const;
@@ -24,6 +25,53 @@ export function GrowHub() {
   const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   const [range, setRange] = useState<Range>('1Y');
+
+  // Disabled until devnet ships. Toggle the PostHog flag to enable.
+  const growEnabled = useFeatureFlag('slice-grow-enabled', false);
+
+  if (!growEnabled) {
+    return (
+      <TonalBackground tone="silver">
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingTop: insets.top,
+            paddingHorizontal: 32,
+          }}
+        >
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 10,
+                letterSpacing: 3.2,
+                textTransform: 'uppercase',
+                color: S.accent,
+                fontWeight: '700',
+                marginBottom: 12,
+              },
+            ]}
+          >
+            Grow
+          </Text>
+          <Text
+            style={[
+              sansationLight,
+              {
+                fontSize: 28,
+                color: T.ink,
+                textAlign: 'center',
+              },
+            ]}
+          >
+            Coming soon
+          </Text>
+        </View>
+      </TonalBackground>
+    );
+  }
 
   return (
     <TonalBackground tone="silver">
