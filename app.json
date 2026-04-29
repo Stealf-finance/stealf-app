@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "test-claude-design",
-    "slug": "test-claude-design",
+    "name": "stealf-app",
+    "slug": "stealf-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -10,7 +10,9 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pick6.test-claude-design"
+      "bundleIdentifier": "com.stealf.app",
+      "associatedDomains": ["webcredentials:stealf.xyz"],
+      "appleTeamId": "63724CT6P8"
     },
     "android": {
       "adaptiveIcon": {
@@ -55,7 +57,8 @@
       ],
       "expo-secure-store",
       "@sentry/react-native",
-      "expo-localization"
+      "expo-localization",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
