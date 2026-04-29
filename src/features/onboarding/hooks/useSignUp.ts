@@ -302,7 +302,7 @@ export function useSignUp(): UseSignUpReturn {
           emptyBalance,
         );
         queryClient.setQueryData(
-          historyQueries.byAddress(bankWallet, 4),
+          historyQueries.byAddress(bankWallet, 10),
           emptyHistory,
         );
 

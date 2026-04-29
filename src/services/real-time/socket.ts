@@ -3,12 +3,16 @@ import { getEnv } from '../env';
 
 type Listener = (...args: unknown[]) => void;
 
+type ReconnectListener = () => void;
+
 class SocketService {
   private socket: Socket | null = null;
   private subscribedWallets = new Set<string>();
   private yieldChannel: string | null = null;
   private pendingListeners: { event: string; callback: Listener }[] = [];
   private isDisconnectingManually = false;
+  private hasConnectedOnce = false;
+  private reconnectListeners = new Set<ReconnectListener>();
 
   connect(jwtToken?: string): void {
     if (this.socket) {
@@ -32,6 +36,16 @@ class SocketService {
       if (__DEV__) console.log('[Socket] connected:', this.socket?.id);
       this.subscribedWallets.forEach((addr) => this.socket?.emit('subscribe:wallet', addr));
       if (this.yieldChannel) this.socket?.emit('subscribe:yield', this.yieldChannel);
+
+      // First connect = nothing to catch up. Subsequent connects mean we
+      // dropped and reconnected, so fire reconnect listeners for callers
+      // (e.g. RQ invalidation) to refetch what they may have missed.
+      if (this.hasConnectedOnce) {
+        this.reconnectListeners.forEach((cb) => {
+          try { cb(); } catch (e) { if (__DEV__) console.warn('[Socket] reconnect cb threw:', e); }
+        });
+      }
+      this.hasConnectedOnce = true;
     });
 
     this.socket.on('disconnect', (reason) => {
@@ -53,6 +67,14 @@ class SocketService {
     this.socket = null;
     this.subscribedWallets.clear();
     this.yieldChannel = null;
+    this.hasConnectedOnce = false;
+  }
+
+  onReconnect(callback: ReconnectListener): () => void {
+    this.reconnectListeners.add(callback);
+    return () => {
+      this.reconnectListeners.delete(callback);
+    };
   }
 
   subscribeToWallet(address: string): void {

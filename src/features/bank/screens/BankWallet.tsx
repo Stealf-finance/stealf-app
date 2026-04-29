@@ -19,7 +19,10 @@ import type { Transaction } from '@/src/features/bank/types';
 
 const S = txPalette('silver');
 
-const HISTORY_LIMIT = 4;
+// Fetch 10 to match the cache key written to by socket events
+// (`transaction:new` → setQueryData on limit=10). Render only the first 4.
+const HISTORY_FETCH_LIMIT = 10;
+const HISTORY_DISPLAY_LIMIT = 4;
 
 function splitBalance(usd: number): { dollars: string; cents: string } {
   const fixed = Math.max(0, usd).toFixed(2);
@@ -49,12 +52,12 @@ export function BankWallet() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { data: balance } = useBalance(user?.bankWallet);
-  const { data: history } = useHistory(user?.bankWallet, HISTORY_LIMIT);
+  const { data: history } = useHistory(user?.bankWallet, HISTORY_FETCH_LIMIT);
 
   const greeting = user?.username ?? '';
   const { dollars, cents } = splitBalance(balance?.totalUSD ?? 0);
   const txRows =
-    history?.transactions.slice(0, HISTORY_LIMIT).map(formatTxRow) ?? [];
+    history?.transactions.slice(0, HISTORY_DISPLAY_LIMIT).map(formatTxRow) ?? [];
 
   return (
     <View style={{ flex: 1 }}>

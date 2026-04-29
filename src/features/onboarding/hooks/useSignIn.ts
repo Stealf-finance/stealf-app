@@ -4,6 +4,8 @@ import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { fetchUserProfile, userProfileQueries } from '../api/userProfile';
 import { useAuth } from '../context/AuthContext';
 import { classifyPasskeyError } from '../lib/passkeyHelpers';
+import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
+import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
 
 export function useSignIn() {
   const { loginWithPasskey, refreshWallets, clientState } = useTurnkey();
@@ -25,7 +27,22 @@ export function useSignIn() {
       const bankWallet = cashWallet?.accounts?.[0]?.address;
       if (!bankWallet) throw new Error('Failed to retrieve bank wallet address');
 
-      const profile = await fetchUserProfile(sessionToken, bankWallet);
+      // Catch up on what happened while signed out: pull profile + bank
+      // balance + history in parallel. They land in the RQ cache so the Bank
+      // tab renders fresh data on first paint with no spinner.
+      const [profile] = await Promise.all([
+        fetchUserProfile(sessionToken, bankWallet),
+        queryClient.prefetchQuery({
+          queryKey: balanceQueries.byAddress(bankWallet),
+          queryFn: () => fetchBalance(sessionToken, bankWallet),
+          staleTime: Infinity,
+        }),
+        queryClient.prefetchQuery({
+          queryKey: historyQueries.byAddress(bankWallet, 10),
+          queryFn: () => fetchHistory(sessionToken, bankWallet, 10),
+          staleTime: Infinity,
+        }),
+      ]);
 
       queryClient.setQueryData(userProfileQueries.byBankWallet(bankWallet), profile);
       await walletKeyCache.warmup();
