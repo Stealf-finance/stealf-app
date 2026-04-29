@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   runOnJS,
@@ -636,31 +636,12 @@ function FaceIdGlyph() {
       <View style={corner('tr')} />
       <View style={corner('bl')} />
       <View style={corner('br')} />
-      <Svg width={80} height={80} viewBox="0 0 80 80" fill="none">
-        <Path
-          d="M25 30 Q40 18 55 30 L55 52 Q40 62 25 52 Z"
-          stroke={G.accent}
-          strokeWidth={1.4}
-          fill="none"
-          opacity={0.7}
-        />
-        <Circle cx={32} cy={38} r={1.5} fill={G.accent} />
-        <Circle cx={48} cy={38} r={1.5} fill={G.accent} />
-        <Path
-          d="M40 40 L40 46 L42 48"
-          stroke={G.accent}
-          strokeWidth={1.2}
-          fill="none"
-          strokeLinecap="round"
-        />
-        <Path
-          d="M33 52 Q40 55 47 52"
-          stroke={G.accent}
-          strokeWidth={1.2}
-          fill="none"
-          strokeLinecap="round"
-        />
-      </Svg>
+      <Image
+        source={require('@/assets/images/passkey.png')}
+        style={{ width: 80, height: 80 }}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+      />
     </View>
   );
 }

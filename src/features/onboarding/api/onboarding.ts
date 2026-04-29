@@ -25,6 +25,7 @@ const OnboardingErrorCodeSchema = z.enum([
   'PSEUDO_TAKEN',
   'PSEUDO_INVALID',
   'EMAIL_INVALID',
+  'EMAIL_TAKEN',
   'INVALID_CODE',
   'CODE_EXPIRED',
   'CODE_ALREADY_USED',

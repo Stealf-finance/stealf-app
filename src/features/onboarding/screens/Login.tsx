@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
@@ -8,7 +8,6 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Circle, Path } from 'react-native-svg';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { sansationLight, serif } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
@@ -152,31 +151,11 @@ export function Login({ handle = '@thomas', onBack, onSuccess }: Props) {
               opacity: isLoading || !isClientReady ? 0.5 : 1,
             }}
           >
-            <Svg width={50} height={50} viewBox="0 0 50 50" fill="none">
-              <Path
-                d="M15 18 Q25 10 35 18 L35 32 Q25 40 15 32 Z"
-                stroke={G.accent}
-                strokeWidth={1.5}
-                fill="none"
-                opacity={0.8}
-              />
-              <Circle cx={20} cy={23} r={1.2} fill={G.accent} />
-              <Circle cx={30} cy={23} r={1.2} fill={G.accent} />
-              <Path
-                d="M25 24 L25 29 L26.5 30"
-                stroke={G.accent}
-                strokeWidth={1.2}
-                fill="none"
-                strokeLinecap="round"
-              />
-              <Path
-                d="M20 32 Q25 35 30 32"
-                stroke={G.accent}
-                strokeWidth={1.2}
-                fill="none"
-                strokeLinecap="round"
-              />
-            </Svg>
+            <Image
+              source={require('@/assets/images/passkey.png')}
+              style={{ width: 64, height: 64 }}
+              resizeMode="contain"
+            />
           </Pressable>
         </View>
 

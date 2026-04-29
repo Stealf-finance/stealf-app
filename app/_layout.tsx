@@ -1,12 +1,13 @@
 import '../global.css';
 import { useFonts } from 'expo-font';
+import { Asset } from 'expo-asset';
 import { T } from '@/src/design-system/tokens';
 import { CormorantGaramond_500Medium_Italic } from '@expo-google-fonts/cormorant-garamond';
 import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -32,7 +33,17 @@ initSentry();
 
 const env = getEnv();
 
+// Hot path images shipped with the bundle. Preloaded at boot so they're
+// in the asset cache before any screen renders — no flash on first paint.
+const PRELOAD_IMAGES = [
+  require('../assets/images/passkey.png'),
+  require('../assets/images/logo.png'),
+  require('../assets/images/usdc.png'),
+  require('../assets/images/solana-icon.png'),
+];
+
 function RootLayout() {
+  const [imagesLoaded, setImagesLoaded] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     Sansation_300Light: require('../assets/fonts/Sansation/Sansation-Light.ttf'),
     Sansation_300Light_Italic: require('../assets/fonts/Sansation/Sansation-LightItalic.ttf'),
@@ -45,10 +56,18 @@ function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) SplashScreen.hideAsync();
-  }, [fontsLoaded, fontError]);
+    Asset.loadAsync(PRELOAD_IMAGES)
+      .catch((err) => {
+        if (__DEV__) console.warn('[boot] image preload failed:', err);
+      })
+      .finally(() => setImagesLoaded(true));
+  }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  useEffect(() => {
+    if ((fontsLoaded || fontError) && imagesLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded, fontError, imagesLoaded]);
+
+  if ((!fontsLoaded && !fontError) || !imagesLoaded) return null;
 
   const tree = (
     <GestureHandlerRootView style={{ flex: 1 }}>

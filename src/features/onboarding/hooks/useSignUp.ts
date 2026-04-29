@@ -358,6 +358,8 @@ function errorToUserMessage(err: unknown, fallback: string): string {
         return 'Username must be 3–20 letters, numbers, or underscores.';
       case 'EMAIL_INVALID':
         return 'That email address is not valid.';
+      case 'EMAIL_TAKEN':
+        return 'An account with this email already exists. Try signing in.';
       case 'ONBOARDING_SESSION_MISSING':
       case 'ONBOARDING_SESSION_EXPIRED':
         return 'Your onboarding session expired. Please start again.';
