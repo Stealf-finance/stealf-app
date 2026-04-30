@@ -3,6 +3,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
@@ -17,6 +18,8 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
 import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { balanceQueries } from '@/src/features/bank/api/balance';
+import { historyQueries } from '@/src/features/bank/api/history';
 
 type Direction = 'shield' | 'unshield';
 
@@ -59,6 +62,7 @@ export function ShieldFlow({ direction }: Props) {
   const { user } = useAuth();
   const { deposit, withdraw, loading } = useUmbra();
   const { data: solPrice } = useSolPrice();
+  const queryClient = useQueryClient();
 
   // Both shield and unshield operate on the stealth wallet:
   // - shield: stealth public ATA → stealth encrypted balance
@@ -98,6 +102,25 @@ export function ShieldFlow({ direction }: Props) {
       } else {
         await withdraw(mint, amountBigInt);
       }
+
+      // Refresh both sides — shielded pool balance + the stealth public ATA.
+      // Shield debits public, credits private. Unshield does the reverse.
+      // Either way both queries change.
+      if (__DEV__) console.log('[ShieldFlow] success → invalidating balances');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['shielded-balance'] }),
+        user?.stealfWallet
+          ? queryClient.invalidateQueries({
+              queryKey: balanceQueries.byAddress(user.stealfWallet),
+            })
+          : Promise.resolve(),
+        user?.stealfWallet
+          ? queryClient.invalidateQueries({
+              queryKey: historyQueries.byAddress(user.stealfWallet),
+            })
+          : Promise.resolve(),
+      ]);
+
       close();
     } catch (err: any) {
       const msg = err?.userMessage || err?.message || 'Operation failed';

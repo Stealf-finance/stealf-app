@@ -85,6 +85,7 @@ export const walletKeyCache = {
     await Promise.all([
       deleteSecure(SECURE_STORE_KEYS.STEALF_PRIVATE_KEY).catch(() => undefined),
       deleteSecure(SECURE_STORE_KEYS.STEALF_MNEMONIC).catch(() => undefined),
+      deleteSecure(SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS).catch(() => undefined),
     ]);
   },
 

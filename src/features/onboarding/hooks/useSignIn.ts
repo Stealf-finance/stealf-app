@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTurnkey, ClientState } from '@turnkey/react-native-wallet-kit';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { fetchUserProfile, userProfileQueries } from '../api/userProfile';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, readPersistedStealfWallet } from '../context/AuthContext';
 import { classifyPasskeyError } from '../lib/passkeyHelpers';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
@@ -53,13 +53,27 @@ export function useSignIn() {
       ]);
       if (__DEV__) console.log('[useSignIn] prefetch done');
 
-      queryClient.setQueryData(userProfileQueries.byBankWallet(bankWallet), profile);
+      // Hydrate stealfWallet from SecureStore — backend doesn't track it,
+      // so we restore the locally-persisted address (set when the user
+      // created/imported a stealth wallet) into the in-memory user.
+      const persistedStealfWallet = await readPersistedStealfWallet();
+      const enrichedProfile = persistedStealfWallet
+        ? { ...profile, stealfWallet: persistedStealfWallet }
+        : profile;
+      if (__DEV__ && persistedStealfWallet) {
+        console.log('[useSignIn] hydrated stealfWallet from store=', persistedStealfWallet);
+      }
+
+      queryClient.setQueryData(
+        userProfileQueries.byBankWallet(bankWallet),
+        enrichedProfile,
+      );
       await walletKeyCache.warmup();
 
       setSession({ sessionToken });
-      setUser(profile);
+      setUser(enrichedProfile);
 
-      return profile;
+      return enrichedProfile;
     },
     onError: (err) => {
       if (__DEV__) console.error('[useSignIn] error:', err);

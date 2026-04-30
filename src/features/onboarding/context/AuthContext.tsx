@@ -1,4 +1,17 @@
-import { createContext, useCallback, useContext, useMemo, useState, type PropsWithChildren } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type PropsWithChildren,
+} from 'react';
+import {
+  SECURE_STORE_KEYS,
+  deleteSecure,
+  getSecure,
+  setSecure,
+} from '@/src/services/auth/secureStore';
 import type { Session, User } from '../types';
 
 export interface AuthContextValue {
@@ -13,12 +26,44 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+/**
+ * Read the persisted stealf wallet address from SecureStore. Pattern mirrors
+ * front-stealf where `userData.stealf_wallet` lives in storage and is merged
+ * back into the auth user on next sign-in.
+ */
+export async function readPersistedStealfWallet(): Promise<string | null> {
+  try {
+    return await getSecure(SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS);
+  } catch {
+    return null;
+  }
+}
+
+async function persistStealfWallet(address: string | null | undefined): Promise<void> {
+  try {
+    if (address) {
+      await setSecure(SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS, address);
+    } else {
+      await deleteSecure(SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS);
+    }
+  } catch {
+    // SecureStore failures shouldn't break the auth flow
+  }
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
 
+  const setUser = useCallback((next: User | null) => {
+    setUserState(next);
+    // Mirror the stealf wallet to SecureStore so it survives app restarts.
+    // Cleared explicitly on logout via deleteSecure(STEALF_WALLET_ADDRESS).
+    void persistStealfWallet(next?.stealfWallet ?? null);
+  }, []);
+
   const reset = useCallback(() => {
-    setUser(null);
+    setUserState(null);
     setSession(null);
   }, []);
 
@@ -32,7 +77,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setUser,
       reset,
     }),
-    [user, session, reset],
+    [user, session, setUser, reset],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -8,6 +8,7 @@ const KEYCHAIN_OPTIONS: SecureStore.SecureStoreOptions = {
 export const SECURE_STORE_KEYS = {
   STEALF_PRIVATE_KEY: 'stealf_private_key',
   STEALF_MNEMONIC: 'stealf_mnemonic',
+  STEALF_WALLET_ADDRESS: 'stealf_wallet_address',
   USER_DATA: 'user_data',
   SUB_ORG_ID: 'sub_org_id',
   ONBOARDING_DRAFT: 'onboarding_draft',
