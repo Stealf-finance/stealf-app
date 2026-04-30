@@ -547,19 +547,16 @@ export function StealthHub() {
                 onPress={() => router.push('/add-funds?tone=silver')}
               />
               <SquareActionTile
-                iconKey="arrUp"
-                label="Send"
-                onPress={() => router.push('/send')}
-              />
-              <SquareActionTile
                 iconKey="shieldCheck"
                 label="Shield"
+                accent
+                accentTone="silver"
                 onPress={() => router.push('/shield')}
               />
               <SquareActionTile
-                iconKey="more"
-                label="More"
-                iconColor="#ffffff"
+                iconKey="arrUp"
+                label="Send"
+                onPress={() => router.push('/send')}
               />
             </>
           )}
