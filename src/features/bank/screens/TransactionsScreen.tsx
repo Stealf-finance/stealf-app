@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
@@ -109,9 +109,13 @@ export function TransactionsScreen() {
               return (
                 <Pressable
                   key={tx.signature}
-                  onPress={() => router.push(`/tx/${tx.signature}`)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${row.title} ${row.amount}`}
+                  onPress={() =>
+                    void Linking.openURL(
+                      tx.signatureURL || `https://solscan.io/tx/${tx.signature}`,
+                    )
+                  }
+                  accessibilityRole="link"
+                  accessibilityLabel={`${row.title} ${row.amount} — open on Solana Explorer`}
                   style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
                 >
                   <TxRow
