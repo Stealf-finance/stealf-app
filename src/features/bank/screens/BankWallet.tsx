@@ -206,6 +206,7 @@ export function BankWallet() {
             iconKey="more"
             label="More"
             iconColor="#ffffff"
+            onPress={() => router.push('/more')}
           />
         </View>
 
