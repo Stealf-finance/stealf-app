@@ -536,7 +536,7 @@ export function StealthHub() {
                 label="Move"
                 accent
                 accentTone="gold"
-                onPress={() => router.push('/moove')}
+                onPress={() => router.push('/moove?direction=shielded-to-bank')}
               />
               <SquareActionTile
                 iconKey="arrUp"
@@ -564,7 +564,7 @@ export function StealthHub() {
               <SquareActionTile
                 iconKey="move"
                 label="Move"
-                onPress={() => router.push('/moove')}
+                onPress={() => router.push('/moove?direction=stealth-to-bank')}
               />
               <SquareActionTile
                 iconKey="shieldCheck"

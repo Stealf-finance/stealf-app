@@ -195,7 +195,7 @@ export function BankWallet() {
             label="Move"
             accent
             accentTone="silver"
-            onPress={() => router.push('/moove')}
+            onPress={() => router.push('/moove?direction=bank-to-shielded')}
           />
           <SquareActionTile
             iconKey="arrUp"

@@ -1,5 +1,5 @@
-import { MooveScreen } from '@/src/features/moove/MooveScreen';
+import { MoveFlow } from '@/src/features/moove/MoveFlow';
 
 export default function MooveModal() {
-  return <MooveScreen />;
+  return <MoveFlow />;
 }
