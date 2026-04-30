@@ -100,8 +100,13 @@ export interface DepositFromBankToReceiverArgs extends GetBankClientArgs {
  * Source: bank wallet ATA. The UTXO is locked to the receiver's registered
  * `userCommitment` — pass the stealth address as `destinationAddress` for
  * bank → shielded. The receiver claims it into their encrypted balance.
+ *
+ * The receiver MUST be registered on-chain so the SDK can read its
+ * `userCommitment` from the EncryptedUserAccount PDA — otherwise simulation
+ * fails. We register the stealth wallet first (idempotent, no-op if done).
  */
 export async function depositFromBankToReceiver(args: DepositFromBankToReceiverArgs) {
+  await ensureRegistered();
   const { destinationAddress, mint, amount, ...bankClientArgs } = args;
   const client = await getBankClient(bankClientArgs);
   const zkProver =
