@@ -2,12 +2,14 @@ import {
   getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
   getEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
   getPublicBalanceToSelfClaimableUtxoCreatorFunction,
+  getPublicBalanceToReceiverClaimableUtxoCreatorFunction,
 } from '@umbra-privacy/sdk';
 import type { Address } from '@solana/kit';
 import {
   createCreateUtxoWithReceiverUnlockerZkProver,
   createCreateUtxoWithEphemeralUnlockerZkProver,
   createCreateUtxoFromPublicBalanceWithEphemeralUnlockerZkProver,
+  createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver,
 } from '@/src/features/stealth/zk';
 import {
   getStealthClient,
@@ -87,23 +89,24 @@ export async function selfShieldFromPublicStealth(
   });
 }
 
-export interface SelfShieldFromPublicBankArgs extends GetBankClientArgs {
+export interface DepositFromBankToReceiverArgs extends GetBankClientArgs {
   destinationAddress: Address;
   mint: Address;
   amount: bigint;
 }
 
 /**
- * Self-claimable UTXO from the BANK's public balance, signed by Turnkey.
- * Source: bank wallet ATA. The UTXO is locked to `destinationAddress` — pass
- * the stealth address for bank → shielded.
+ * Receiver-claimable UTXO from the BANK's public balance, signed by Turnkey.
+ * Source: bank wallet ATA. The UTXO is locked to the receiver's registered
+ * `userCommitment` — pass the stealth address as `destinationAddress` for
+ * bank → shielded. The receiver claims it into their encrypted balance.
  */
-export async function selfShieldFromPublicBank(args: SelfShieldFromPublicBankArgs) {
+export async function depositFromBankToReceiver(args: DepositFromBankToReceiverArgs) {
   const { destinationAddress, mint, amount, ...bankClientArgs } = args;
   const client = await getBankClient(bankClientArgs);
   const zkProver =
-    createCreateUtxoFromPublicBalanceWithEphemeralUnlockerZkProver();
-  const createUtxo = getPublicBalanceToSelfClaimableUtxoCreatorFunction(
+    createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver();
+  const createUtxo = getPublicBalanceToReceiverClaimableUtxoCreatorFunction(
     { client },
     { zkProver },
   );

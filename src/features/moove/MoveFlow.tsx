@@ -86,7 +86,7 @@ export function MoveFlow() {
   const {
     selfShield,
     selfShieldFromPublicStealth,
-    selfShieldFromPublicBank,
+    depositFromBankToReceiver,
     loading: umbraLoading,
   } = useUmbra();
 
@@ -151,12 +151,13 @@ export function MoveFlow() {
     setSubmitting(true);
     try {
       if (direction === 'bank-to-shielded') {
-        // Bank ATA → self-claimable UTXO locked to the stealth wallet.
-        // Signed by Turnkey (bank). Stealth claims it back into shielded pool.
+        // Bank ATA → receiver-claimable UTXO locked to the stealth wallet's
+        // registered userCommitment. Signed by Turnkey (bank). Stealth claims
+        // it into its encrypted balance.
         if (!user.stealfWallet) {
           throw new Error('Stealth wallet not set up. Open the Stealth tab once first.');
         }
-        await selfShieldFromPublicBank(
+        await depositFromBankToReceiver(
           toAddress(user.stealfWallet),
           mint,
           lamports,

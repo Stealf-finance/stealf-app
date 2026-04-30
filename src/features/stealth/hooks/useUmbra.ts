@@ -27,7 +27,7 @@ import {
   sendPrivate,
   selfShield,
   selfShieldFromPublicStealth,
-  selfShieldFromPublicBank,
+  depositFromBankToReceiver,
 } from '@/src/services/umbra/operations/transfer';
 import {
   claimReceived,
@@ -168,12 +168,13 @@ export function useUmbra() {
     ),
 
     /**
-     * Self-claimable UTXO from the BANK wallet's public balance, signed by
-     * Turnkey. Used for bank → shielded.
+     * Receiver-claimable UTXO from the BANK wallet's public balance, signed
+     * by Turnkey. Used for bank → shielded — the stealth wallet claims into
+     * its encrypted balance using its registered userCommitment.
      */
-    selfShieldFromPublicBank: useCallback(
+    depositFromBankToReceiver: useCallback(
       (destinationAddress: Address, mint: Address, amount: bigint) =>
-        wrap('selfShieldFromPublicBank', async () => {
+        wrap('depositFromBankToReceiver', async () => {
           if (
             !bankWalletAccount ||
             !turnkeySignTransaction ||
@@ -181,7 +182,7 @@ export function useUmbra() {
           ) {
             throw new Error('Bank wallet not ready');
           }
-          return selfShieldFromPublicBank({
+          return depositFromBankToReceiver({
             walletAccount: bankWalletAccount as any,
             signTransaction: turnkeySignTransaction as any,
             signMessage: turnkeySignMessage as any,

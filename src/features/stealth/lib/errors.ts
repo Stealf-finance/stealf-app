@@ -24,7 +24,7 @@ export type StealthOp =
   | 'sendPrivate'
   | 'selfShield'
   | 'selfShieldFromPublicStealth'
-  | 'selfShieldFromPublicBank'
+  | 'depositFromBankToReceiver'
   | 'claimReceived'
   | 'claimSelfToPublic'
   | 'fetchClaims'
