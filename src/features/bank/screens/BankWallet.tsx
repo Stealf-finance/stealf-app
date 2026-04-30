@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -45,7 +45,7 @@ function formatTxRow(tx: Transaction): {
 }
 
 export function BankWallet() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { data: balance } = useBalance(user?.bankWallet);

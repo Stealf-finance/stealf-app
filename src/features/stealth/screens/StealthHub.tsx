@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -67,7 +67,7 @@ const SILVER = txPalette('silver');
 const GOLD = txPalette('gold');
 
 export function StealthHub() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const { mode, setMode, tone } = usePrivacyMode();
   const isPrivate = mode === 'private';

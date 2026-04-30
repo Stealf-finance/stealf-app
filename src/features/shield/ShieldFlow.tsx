@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
@@ -47,9 +47,12 @@ function formatSolBalance(sol: number): string {
 }
 
 export function ShieldFlow({ direction }: Props) {
-  const router = useRouter();
+  const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const [amount, setAmount] = useState('0');
+  // Force-remount the swipe widget after a failed op so the thumb returns
+  // to start (mirrors the SendFlow pattern).
+  const [swipeAttempt, setSwipeAttempt] = useState(0);
 
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
@@ -135,6 +138,8 @@ export function ShieldFlow({ direction }: Props) {
     } catch (err: any) {
       const msg = err?.userMessage || err?.message || 'Operation failed';
       Alert.alert(isShield ? 'Shield failed' : 'Unshield failed', msg);
+      // Bump the key so React remounts SwipeToSend → thumb resets to start.
+      setSwipeAttempt((n) => n + 1);
     }
   };
 
@@ -329,6 +334,7 @@ export function ShieldFlow({ direction }: Props) {
         }}
       >
         <SwipeToSend
+          key={swipeAttempt}
           tone={tone}
           label={loading ? 'Processing…' : ctaLabel}
           onSend={onSubmit}

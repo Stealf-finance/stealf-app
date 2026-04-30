@@ -1,5 +1,5 @@
 import { ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
@@ -18,7 +18,7 @@ import {
 } from '@/src/features/receive/components/Discs';
 
 export function SendMenu() {
-  const router = useRouter();
+  const router = useSafeRouter();
   const insets = useSafeAreaInsets();
 
   const close = () => router.back();
