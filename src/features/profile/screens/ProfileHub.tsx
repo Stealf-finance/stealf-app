@@ -11,6 +11,10 @@ import {
 } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
 
 const S = txPalette('silver');
 
@@ -21,12 +25,42 @@ const PREFERENCES: { iconKey: keyof typeof Icons; label: string }[] = [
   { iconKey: 'settings', label: 'Preferences' },
 ];
 
-const PUBLIC = 38204;
-const PRIVATE = 104203;
-const PUBLIC_PCT = PUBLIC / (PUBLIC + PRIVATE);
+function splitUsd(usd: number): { whole: string; cents: string } {
+  const safe = Math.max(0, usd);
+  const fixed = safe.toFixed(2);
+  const [w, c] = fixed.split('.');
+  const whole = `$${Number(w).toLocaleString('en-US')}`;
+  return { whole, cents: `.${c}` };
+}
+
+function formatUsdShort(usd: number): string {
+  const safe = Math.max(0, usd);
+  if (safe >= 1000) return `$${Math.round(safe).toLocaleString('en-US')}`;
+  return `$${safe.toFixed(2)}`;
+}
 
 export function ProfileHub() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+
+  const { data: bankBalance } = useBalance(user?.bankWallet ?? null);
+  const { data: stealthBalance } = useBalance(user?.stealfWallet ?? null);
+  const { data: shielded } = useShieldedSolBalance();
+  const { data: solPrice } = useSolPrice();
+
+  const bankUSD = bankBalance?.totalUSD ?? 0;
+  const stealthPublicUSD = stealthBalance?.totalUSD ?? 0;
+  const privateUSD =
+    typeof solPrice === 'number' && shielded ? shielded.sol * solPrice : 0;
+
+  const publicUSD = bankUSD + stealthPublicUSD;
+  const totalUSD = publicUSD + privateUSD;
+  const { whole: totalWhole, cents: totalCents } = splitUsd(totalUSD);
+  const publicPct = totalUSD > 0 ? publicUSD / totalUSD : 0;
+
+  const username = user?.username ?? '';
+  const avatarLetter = (username[0] ?? '·').toUpperCase();
+  const points = user?.points ?? 0;
 
   return (
     <TonalBackground tone="silver">
@@ -104,7 +138,7 @@ export function ProfileHub() {
                 },
               ]}
             >
-              T
+              {avatarLetter}
             </Text>
           </View>
         </View>
@@ -123,13 +157,15 @@ export function ProfileHub() {
               },
             ]}
           >
-            Thomas Gagnaire
+            {username || '—'}
           </Text>
-          <Text
-            style={{ fontSize: 12, color: S.inkDim, letterSpacing: 0.2 }}
-          >
-            @thomas · member since 2026
-          </Text>
+          {username ? (
+            <Text
+              style={{ fontSize: 12, color: S.inkDim, letterSpacing: 0.2 }}
+            >
+              @{username}
+            </Text>
+          ) : null}
         </View>
 
         <View
@@ -199,7 +235,7 @@ export function ProfileHub() {
               },
             ]}
           >
-            $142,408
+            {totalWhole}
           </Text>
           <Text
             style={[
@@ -213,11 +249,12 @@ export function ProfileHub() {
               },
             ]}
           >
-            .16
+            {totalCents}
           </Text>
         </View>
 
-        {/* Public/Private split bar */}
+        {/* Public/Private split bar — degenerate to a single tone when one
+            side is zero so we don't render an invisible 0%-wide segment. */}
         <View
           style={{
             height: 4,
@@ -228,8 +265,17 @@ export function ProfileHub() {
             marginBottom: 12,
           }}
         >
-          <View style={{ width: `${PUBLIC_PCT * 100}%`, backgroundColor: S.accent }} />
-          <View style={{ flex: 1, backgroundColor: T.gold }} />
+          {totalUSD === 0 ? null : (
+            <>
+              <View
+                style={{
+                  width: `${publicPct * 100}%`,
+                  backgroundColor: S.accent,
+                }}
+              />
+              <View style={{ flex: 1, backgroundColor: T.gold }} />
+            </>
+          )}
         </View>
 
         <View
@@ -259,7 +305,7 @@ export function ProfileHub() {
               <Text style={{ fontSize: 11, color: S.inkDim }}>Public</Text>
             </View>
             <Text style={{ fontSize: 15, color: S.ink }}>
-              ${PUBLIC.toLocaleString('en-US')}
+              {formatUsdShort(publicUSD)}
             </Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
@@ -282,7 +328,7 @@ export function ProfileHub() {
               />
             </View>
             <Text style={{ fontSize: 15, color: T.gold }}>
-              ${PRIVATE.toLocaleString('en-US')}
+              {formatUsdShort(privateUSD)}
             </Text>
           </View>
         </View>
@@ -315,14 +361,9 @@ export function ProfileHub() {
                   },
                 ]}
               >
-                2,840
+                {points.toLocaleString('en-US')}
               </Text>
             </View>
-            <Text
-              style={{ fontSize: 10, color: S.inkFaint, marginTop: 8 }}
-            >
-              +40 this week
-            </Text>
           </StatCard>
 
           <StatCard label="Tier">
