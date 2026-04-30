@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, Pressable, Share, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Rect } from 'react-native-svg';
+import QRCode from 'react-native-qrcode-svg';
+import * as Clipboard from 'expo-clipboard';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Icons } from '@/src/design-system/icons';
 import {
@@ -13,13 +14,11 @@ import {
 } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { Tone, txPalette } from '@/src/design-system/palettes';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
 type Props = { tone?: Tone };
 
-const QR_MODULES = 25;
 const QR_SIZE = 244;
-const MODULE = QR_SIZE / QR_MODULES;
-const FINDER = 7;
 
 const ACCENT_GRADIENTS: Record<Tone, [string, string]> = {
   gold: ['#e6c079', '#a37b2e'],
@@ -34,6 +33,7 @@ const ACCENT_DIM: Record<Tone, string> = {
 export function AddFundsScreen({ tone = 'gold' }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const palette = txPalette(tone);
   const isGold = tone === 'gold';
   const accent = palette.accent;
@@ -43,12 +43,29 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
 
   const [network] = useState('Solana');
   const destination = isGold ? 'Stealth private' : 'Bank wallet';
-  const address = '96t84T8vRqXp3zK...XTCdgY';
+  const fullAddress = (isGold ? user?.stealfWallet : user?.bankWallet) ?? '';
+  const displayAddress = fullAddress
+    ? `${fullAddress.slice(0, 14)}...${fullAddress.slice(-6)}`
+    : '—';
 
   const close = () => router.back();
-  const noop = () => {};
+  const [copied, setCopied] = useState(false);
 
-  const dataModules = useMemo(() => buildPseudoQrModules(), []);
+  const handleCopy = async () => {
+    if (!fullAddress) return;
+    await Clipboard.setStringAsync(fullAddress);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+
+  const handleShare = async () => {
+    if (!fullAddress) return;
+    try {
+      await Share.share({ message: fullAddress });
+    } catch {
+      // user cancel — no-op
+    }
+  };
 
   return (
     <CenterGlow tone={tone}>
@@ -165,22 +182,28 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
             elevation: 6,
           }}
         >
-          <Svg width={QR_SIZE} height={QR_SIZE} viewBox={`0 0 ${QR_SIZE} ${QR_SIZE}`}>
-            {dataModules.map(([x, y], i) => (
-              <Rect
-                key={i}
-                x={x * MODULE}
-                y={y * MODULE}
-                width={MODULE}
-                height={MODULE}
-                fill="#0a0a0a"
-              />
-            ))}
-            <FinderPattern x={0} y={0} />
-            <FinderPattern x={QR_MODULES - FINDER} y={0} />
-            <FinderPattern x={0} y={QR_MODULES - FINDER} />
-          </Svg>
-
+          {fullAddress ? (
+            <QRCode
+              value={fullAddress}
+              size={QR_SIZE}
+              color="#0a0a0a"
+              backgroundColor="#f6f2e8"
+              ecl="M"
+            />
+          ) : (
+            <View
+              style={{
+                width: QR_SIZE,
+                height: QR_SIZE,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={[sansation, { color: '#0a0a0a', fontSize: 12 }]}>
+                Wallet unavailable
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -204,10 +227,10 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
             },
           ]}
         >
-          {address}
+          {displayAddress}
         </Text>
         <Pressable
-          onPress={noop}
+          onPress={handleCopy}
           accessibilityRole="button"
           accessibilityLabel="Copy address"
           hitSlop={6}
@@ -251,7 +274,7 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
         }}
       >
         <Pressable
-          onPress={noop}
+          onPress={handleCopy}
           accessibilityRole="button"
           accessibilityLabel="Copy address"
           style={{
@@ -280,11 +303,11 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
               },
             ]}
           >
-            Copy address
+            {copied ? 'Copied' : 'Copy address'}
           </Text>
         </Pressable>
         <Pressable
-          onPress={noop}
+          onPress={handleShare}
           accessibilityRole="button"
           accessibilityLabel="Share address"
           style={{
@@ -333,50 +356,3 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
   );
 }
 
-function FinderPattern({ x, y }: { x: number; y: number }) {
-  const px = x * MODULE;
-  const py = y * MODULE;
-  const size = FINDER * MODULE;
-  const inset1 = MODULE;
-  const inset2 = MODULE * 2;
-  const inner1 = (FINDER - 2) * MODULE;
-  const inner2 = (FINDER - 4) * MODULE;
-  return (
-    <>
-      <Rect x={px} y={py} width={size} height={size} fill="#0a0a0a" />
-      <Rect
-        x={px + inset1}
-        y={py + inset1}
-        width={inner1}
-        height={inner1}
-        fill="#f6f2e8"
-      />
-      <Rect
-        x={px + inset2}
-        y={py + inset2}
-        width={inner2}
-        height={inner2}
-        fill="#0a0a0a"
-      />
-    </>
-  );
-}
-
-function buildPseudoQrModules(): [number, number][] {
-  const out: [number, number][] = [];
-  for (let y = 0; y < QR_MODULES; y++) {
-    for (let x = 0; x < QR_MODULES; x++) {
-      if (isInFinder(x, y)) continue;
-      const seed = (x * 73856093) ^ (y * 19349663);
-      if ((seed >>> 0) % 100 < 48) out.push([x, y]);
-    }
-  }
-  return out;
-}
-
-function isInFinder(x: number, y: number): boolean {
-  const inTL = x < FINDER + 1 && y < FINDER + 1;
-  const inTR = x > QR_MODULES - FINDER - 2 && y < FINDER + 1;
-  const inBL = x < FINDER + 1 && y > QR_MODULES - FINDER - 2;
-  return inTL || inTR || inBL;
-}

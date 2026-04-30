@@ -23,7 +23,6 @@ export function ReceiveMenu() {
   const insets = useSafeAreaInsets();
 
   const close = () => router.back();
-  const noop = () => {};
 
   return (
     <CenterGlow tone="silver">
@@ -67,7 +66,7 @@ export function ReceiveMenu() {
           <GlassListRow
             leading={<StealfDisc />}
             label="Stealf user"
-            onPress={noop}
+            disabled
           />
         </View>
 
@@ -78,7 +77,7 @@ export function ReceiveMenu() {
           <GlassListRow
             leading={<UsdFlagDisc />}
             label="USD bank transfer"
-            onPress={noop}
+            disabled
           />
         </View>
 
@@ -105,7 +104,7 @@ export function ReceiveMenu() {
                 <Text style={[sansationBold, { color: T.ink }]}>Solana</Text>
               </Text>
             }
-            onPress={noop}
+            onPress={() => router.push('/add-funds?tone=silver')}
           />
 
           <View

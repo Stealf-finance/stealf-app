@@ -13,6 +13,8 @@ type Props = {
   /** Vertical padding override — defaults to 14, the address row uses 16. */
   paddingVertical?: number;
   accessibilityLabel?: string;
+  /** When true, dims the row, disables press, and shows a "Soon" pill instead of the chevron. */
+  disabled?: boolean;
 };
 
 export function GlassListRow({
@@ -22,12 +24,15 @@ export function GlassListRow({
   onPress,
   paddingVertical = 14,
   accessibilityLabel,
+  disabled = false,
 }: Props) {
   return (
     <Pressable
-      onPress={onPress}
+      onPress={disabled ? undefined : onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       style={{
         borderRadius: 16,
         overflow: 'hidden',
@@ -37,6 +42,7 @@ export function GlassListRow({
         shadowOpacity: 0.25,
         shadowRadius: 8,
         shadowOffset: { width: 0, height: 2 },
+        opacity: disabled ? 0.45 : 1,
       }}
     >
       <LinearGradient
@@ -102,8 +108,38 @@ export function GlassListRow({
           ) : null}
         </View>
 
-        <Icons.chevR size={14} color={T.inkFaint} />
+        {disabled ? <SoonPill /> : <Icons.chevR size={14} color={T.inkFaint} />}
       </LinearGradient>
     </Pressable>
+  );
+}
+
+function SoonPill() {
+  return (
+    <View
+      style={{
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 100,
+        borderWidth: 1,
+        borderColor: T.hairline,
+        backgroundColor: 'rgba(255,255,255,0.04)',
+      }}
+    >
+      <Text
+        style={[
+          sansation,
+          {
+            fontSize: 9,
+            letterSpacing: 1.6,
+            textTransform: 'uppercase',
+            color: T.inkFaint,
+            fontWeight: '700',
+          },
+        ]}
+      >
+        Soon
+      </Text>
+    </View>
   );
 }
