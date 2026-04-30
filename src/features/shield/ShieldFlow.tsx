@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { toAddress } from '@/src/services/solana/kit';
-import { SOL_MINT, USDC_MINT, USDC_DECIMALS } from '@/src/constants/solana';
+import { SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { TxTitleBlock } from '@/src/features/send/components/TxTitleBlock';
 import { Numpad } from '@/src/features/send/components/Numpad';
@@ -14,29 +14,32 @@ import { sansation, sansationLight, serif } from '@/src/design-system/typography
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
 
 type Direction = 'shield' | 'unshield';
-type Asset = 'USDC' | 'SOL';
 
 type Props = { direction: Direction };
 
-const RATES: Record<Asset, number> = { USDC: 1, SOL: 88.47 };
-
-const BALANCES: Record<Direction, Record<Asset, string>> = {
-  shield: { USDC: '2,418.20', SOL: '5.4127' },
-  unshield: { USDC: '544.50', SOL: '0.4212' },
-};
+// Devnet-only: only SOL is available on shield/unshield until USDC ships.
+const ASSET_SYMBOL = 'SOL' as const;
+const SOL_DECIMALS = 9;
 
 const PILL_GRADIENTS: Record<Tone, [string, string]> = {
   silver: ['#e8e8ea', '#9a9a9f'],
   gold: ['#e6c079', '#a37b2e'],
 };
 
+function formatSolBalance(sol: number): string {
+  if (sol === 0) return '0';
+  return sol.toFixed(4).replace(/\.?0+$/, '');
+}
+
 export function ShieldFlow({ direction }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [amount, setAmount] = useState('0');
-  const [asset, setAsset] = useState<Asset>('USDC');
 
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
@@ -48,9 +51,22 @@ export function ShieldFlow({ direction }: Props) {
   const directionLine = isShield
     ? 'Shield your assets to protect them'
     : 'Unshield to bring assets back public';
-  const balance = BALANCES[direction][asset];
-  const tokMark = asset === 'USDC' ? '$' : '◎';
-  const fiat = (Number(amount) * RATES[asset]).toFixed(2);
+
+  const { user } = useAuth();
+  const { depositFromBank, withdraw, loading } = useUmbra();
+  const { data: solPrice } = useSolPrice();
+
+  // Shield reads from the bank (public) wallet; unshield reads from the
+  // shielded pool. Both expose SOL only on devnet.
+  const { data: bankBalance } = useBalance(isShield ? user?.bankWallet ?? null : null);
+  const { data: shielded } = useShieldedSolBalance();
+  const publicSol = bankBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+  const privateSol = shielded?.sol ?? 0;
+  const sourceSol = isShield ? publicSol : privateSol;
+  const balanceLabel = formatSolBalance(sourceSol);
+
+  const rate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
+  const fiat = (Number(amount) * rate).toFixed(2);
 
   const close = () => router.back();
   const onKey = (k: string) => {
@@ -59,17 +75,12 @@ export function ShieldFlow({ direction }: Props) {
     else setAmount((a) => (a === '0' ? k : a + k));
   };
 
-  const { user } = useAuth();
-  const { depositFromBank, withdraw, loading } = useUmbra();
-
   const onSubmit = async () => {
     const num = Number(amount);
     if (!num || num <= 0) return;
 
-    const mintStr = asset === 'USDC' ? USDC_MINT : SOL_MINT;
-    const decimals = asset === 'USDC' ? USDC_DECIMALS : 9;
-    const amountBigInt = BigInt(Math.floor(num * 10 ** decimals));
-    const mint = toAddress(mintStr);
+    const amountBigInt = BigInt(Math.floor(num * 10 ** SOL_DECIMALS));
+    const mint = toAddress(SOL_MINT);
 
     try {
       if (isShield) {
@@ -155,7 +166,7 @@ export function ShieldFlow({ direction }: Props) {
               },
             ]}
           >
-            {asset}
+            {ASSET_SYMBOL}
           </Text>
         </View>
         <Text
@@ -176,9 +187,9 @@ export function ShieldFlow({ direction }: Props) {
 
       <View style={{ alignItems: 'center', marginBottom: 28 }}>
         <Pressable
-          onPress={() => setAsset((a) => (a === 'USDC' ? 'SOL' : 'USDC'))}
+          onPress={() => setAmount(balanceLabel)}
           accessibilityRole="button"
-          accessibilityLabel={`Asset ${asset}, tap to change`}
+          accessibilityLabel={`Use max balance ${balanceLabel} ${ASSET_SYMBOL}`}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -229,7 +240,7 @@ export function ShieldFlow({ direction }: Props) {
                 },
               ]}
             >
-              {tokMark}
+              ◎
             </Text>
           </View>
           <Text
@@ -244,7 +255,7 @@ export function ShieldFlow({ direction }: Props) {
               },
             ]}
           >
-            {asset}
+            {ASSET_SYMBOL}
           </Text>
           <View
             style={{
@@ -263,9 +274,8 @@ export function ShieldFlow({ direction }: Props) {
               },
             ]}
           >
-            {balance} {asset}
+            {balanceLabel} {ASSET_SYMBOL}
           </Text>
-          <Icons.chevR size={11} color="rgba(0,0,0,0.55)" />
         </Pressable>
       </View>
 
