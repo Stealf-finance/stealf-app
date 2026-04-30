@@ -37,6 +37,8 @@ import { useFeatureFlag } from '@/src/services/observability/featureFlags';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
+import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
 import {
   StealfWalletSetup,
   type SetupChoice,
@@ -86,23 +88,32 @@ export function StealthHub() {
   // History is prefetched here so it's warm by the time the user opens
   // a future "see all" on the stealth tab.
   useHistory(stealfWallet);
-  const totalUSD = balanceData?.totalUSD ?? 0;
-  const dollars = Math.max(0, Math.floor(totalUSD)).toLocaleString('en-US');
-  const cents = `.${(Math.abs(totalUSD) % 1).toFixed(2).slice(2)}`;
-  // Public mode shows on-chain SOL position. Private shielded balances
-  // require Slice 5 wiring; until then, render 0.00 instead of mock values.
-  const balance = isPrivate
-    ? { int: '0', dec: '.00' }
-    : { int: dollars, dec: cents };
+  const { data: shielded } = useShieldedSolBalance();
+  const { data: solPrice } = useSolPrice();
+
+  const publicUSD = balanceData?.totalUSD ?? 0;
+  const privateUSD =
+    shielded && typeof solPrice === 'number' ? shielded.sol * solPrice : 0;
+
+  const formatBalance = (usd: number) => {
+    const safe = Math.max(0, usd);
+    return {
+      int: Math.floor(safe).toLocaleString('en-US'),
+      dec: `.${(safe % 1).toFixed(2).slice(2)}`,
+    };
+  };
+  const balance = formatBalance(isPrivate ? privateUSD : publicUSD);
 
   const solRow = balanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL');
-  const solBalance = solRow?.balance ?? 0;
-  const solUSD = solRow?.balanceUSD ?? 0;
+  const solBalance = isPrivate ? (shielded?.sol ?? 0) : (solRow?.balance ?? 0);
+  const solUSD = isPrivate ? privateUSD : (solRow?.balanceUSD ?? 0);
 
-  // Privacy gauge: ratio of dollars in each side of the wallet. Falls to 0
-  // for the private side until shielded balances are wired in Slice 5.
-  const publicValue = totalUSD > 0 ? Math.min(1, totalUSD / 1000) : 0;
-  const privateValue = 0;
+  // Privacy gauge: each side fills proportionally to its share of the
+  // wallet's total dollar value. Both arcs sum to 1 when funds exist on
+  // both sides; falls to 0 cleanly when the wallet is empty.
+  const totalUSD = publicUSD + privateUSD;
+  const publicValue = totalUSD > 0 ? publicUSD / totalUSD : 0;
+  const privateValue = totalUSD > 0 ? privateUSD / totalUSD : 0;
 
   const kicker = isPrivate ? 'Shielded Pool' : 'Stealth Wallet';
   const subkicker = isPrivate ? 'private' : 'public';
