@@ -17,7 +17,10 @@ import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
-import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import {
+  shieldedBalanceQueries,
+  useShieldedSolBalance,
+} from '@/src/features/stealth/hooks/useShieldedSolBalance';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 
@@ -108,7 +111,14 @@ export function ShieldFlow({ direction }: Props) {
       // Either way both queries change.
       if (__DEV__) console.log('[ShieldFlow] success → invalidating balances');
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['shielded-balance'] }),
+        // Refetch the encrypted balance so the gauge / private USD update.
+        queryClient.invalidateQueries({
+          queryKey: shieldedBalanceQueries.byStealfWallet(
+            user?.stealfWallet ?? '',
+          ),
+        }),
+        // Refetch the stealth public ATA balance + history (shield debits it,
+        // unshield credits it).
         user?.stealfWallet
           ? queryClient.invalidateQueries({
               queryKey: balanceQueries.byAddress(user.stealfWallet),

@@ -10,6 +10,7 @@ export const SECURE_STORE_KEYS = {
   STEALF_MNEMONIC: 'stealf_mnemonic',
   STEALF_WALLET_ADDRESS: 'stealf_wallet_address',
   USER_DATA: 'user_data',
+  SESSION_TOKEN: 'session_token',
   SUB_ORG_ID: 'sub_org_id',
   ONBOARDING_DRAFT: 'onboarding_draft',
 } as const;
