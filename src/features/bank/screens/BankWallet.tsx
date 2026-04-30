@@ -202,12 +202,6 @@ export function BankWallet() {
             accentTone="silver"
             onPress={() => router.push('/moove')}
           />
-          <SquareActionTile
-            iconKey="more"
-            label="More"
-            iconColor="#ffffff"
-            onPress={() => router.push('/more')}
-          />
         </View>
 
         <CardPromo />
