@@ -69,9 +69,10 @@ export function MoveFlow() {
   const direction = (params.direction as MoveDirection) ?? 'bank-to-shielded';
   const config = CONFIG[direction];
 
-  // Tone follows the destination side: gold when moving into private, silver
-  // otherwise — keeps the mental model "gold = private, silver = public".
-  const tone: Tone = direction === 'bank-to-shielded' ? 'gold' : 'silver';
+  // Tone follows the source side: silver when moving out of a public wallet,
+  // gold when moving out of the shielded pool. Anchors the screen on where
+  // the funds are leaving from.
+  const tone: Tone = direction === 'shielded-to-bank' ? 'gold' : 'silver';
   const palette = txPalette(tone);
 
   const [amount, setAmount] = useState('0');
