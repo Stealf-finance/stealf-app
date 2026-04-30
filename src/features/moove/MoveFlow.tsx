@@ -51,7 +51,7 @@ const CONFIG: Record<MoveDirection, DirectionConfig> = {
   },
   'stealth-to-bank': {
     title: 'Move to bank',
-    fromLabel: 'Stealth public',
+    fromLabel: 'Stealth wallet',
     toLabel: 'Bank wallet',
     cta: 'Slide to move',
   },
