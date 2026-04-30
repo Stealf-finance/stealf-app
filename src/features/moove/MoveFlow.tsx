@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,10 +16,26 @@ import { SOL_MINT } from '@/src/constants/solana';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
-import { useShieldedSolBalance, shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import {
+  useShieldedSolBalance,
+  shieldedBalanceQueries,
+} from '@/src/features/stealth/hooks/useShieldedSolBalance';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
+import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
+import type { PendingOpKind } from '@/src/components/pending-ops/types';
+
+function kindForDirection(d: MoveDirection): PendingOpKind {
+  switch (d) {
+    case 'bank-to-shielded':
+      return 'move-bank-to-shielded';
+    case 'shielded-to-bank':
+      return 'move-shielded-to-bank';
+    case 'stealth-to-bank':
+      return 'move-stealth-to-bank';
+  }
+}
 
 export type MoveDirection =
   | 'bank-to-shielded'
@@ -75,11 +91,10 @@ export function MoveFlow() {
   const palette = txPalette(tone);
 
   const [amount, setAmount] = useState('0');
-  const [submitting, setSubmitting] = useState(false);
-  const [swipeAttempt, setSwipeAttempt] = useState(0);
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const pendingOps = usePendingOps();
   const { data: solPrice } = useSolPrice();
   const rate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
 
@@ -87,7 +102,6 @@ export function MoveFlow() {
     selfShield,
     selfShieldFromPublicStealth,
     depositFromBankToReceiver,
-    loading: umbraLoading,
   } = useUmbra();
 
   const { data: bankBalanceData } = useBalance(
@@ -137,65 +151,96 @@ export function MoveFlow() {
     await Promise.all(keys);
   };
 
-  const onSubmit = async () => {
+  const onSubmit = () => {
     const num = Number(amount);
     if (!num || num <= 0) return;
-    if (!user) {
-      Alert.alert('Not signed in', 'Please sign in again before continuing.');
-      return;
-    }
 
-    const lamports = BigInt(Math.floor(num * 10 ** SOL_DECIMALS));
-    const mint = toAddress(SOL_MINT);
-
-    setSubmitting(true);
-    try {
-      if (direction === 'bank-to-shielded') {
-        // Bank ATA → receiver-claimable UTXO locked to the stealth wallet's
-        // registered userCommitment. Signed by Turnkey (bank). Stealth claims
-        // it into its encrypted balance.
-        if (!user.stealfWallet) {
-          throw new Error('Stealth wallet not set up. Open the Stealth tab once first.');
-        }
-        await depositFromBankToReceiver(
-          toAddress(user.stealfWallet),
-          mint,
-          lamports,
-        );
-      } else if (direction === 'shielded-to-bank') {
-        // Shielded balance → self-claimable UTXO locked to the bank wallet.
-        // Signed by stealth (encrypted-balance source). Bank claims it later
-        // into its public ATA.
-        if (!user.bankWallet) throw new Error('Bank wallet missing.');
-        await selfShield(mint, lamports, toAddress(user.bankWallet));
-      } else {
-        // Stealth ATA → self-claimable UTXO locked to the bank wallet.
-        // Signed by stealth (public-balance source).
-        if (!user.bankWallet || !user.stealfWallet) {
-          throw new Error('Wallets missing.');
-        }
-        await selfShieldFromPublicStealth(
-          mint,
-          lamports,
-          toAddress(user.bankWallet),
-        );
-      }
-
-      if (__DEV__) console.log('[MoveFlow] success →', direction);
-      await invalidateAll();
+    // Pre-flight: surface auth/wallet gaps as failed pills + close the modal.
+    // The user gets the explanation on the destination screen instead of an
+    // intrusive Alert that traps them in the modal.
+    const failPre = (msg: string) => {
+      const id = pendingOps.enqueue({
+        kind: kindForDirection(direction),
+        tone,
+        amountSol: num,
+      });
+      pendingOps.complete(id, 'failed', msg);
       close();
-    } catch (err: any) {
-      const msg = err?.userMessage || err?.message || 'Move failed';
-      if (__DEV__) console.warn('[MoveFlow] failed:', direction, msg);
-      Alert.alert('Move failed', msg);
-      setSwipeAttempt((n) => n + 1);
-    } finally {
-      setSubmitting(false);
+    };
+
+    if (!user) return failPre('Please sign in again before continuing.');
+    if (direction === 'bank-to-shielded' && !user.stealfWallet) {
+      return failPre('Stealth wallet not set up. Open the Stealth tab once first.');
     }
+    if (direction === 'shielded-to-bank' && !user.bankWallet) {
+      return failPre('Bank wallet missing.');
+    }
+    if (direction === 'stealth-to-bank' && (!user.bankWallet || !user.stealfWallet)) {
+      return failPre('Wallets missing.');
+    }
+
+    const lamportsBig = BigInt(Math.floor(num * 10 ** SOL_DECIMALS));
+    const mint = toAddress(SOL_MINT);
+    const stealfWallet = user.stealfWallet ?? null;
+    const bankWallet = user.bankWallet ?? null;
+
+    const opId = pendingOps.enqueue({
+      kind: kindForDirection(direction),
+      tone,
+      amountSol: num,
+    });
+
+    // Eager close — pill takes over the status surface from here. Balances
+    // stay honest until the op confirms (no optimistic debit).
+    close();
+
+    // Detached: the closure keeps stable refs to root-mounted singletons
+    // (queryClient, pendingOps), so this survives the screen unmount.
+    void (async () => {
+      const provingTimer = setTimeout(() => {
+        pendingOps.setPhase(opId, 'proving');
+      }, 700);
+
+      try {
+        if (direction === 'bank-to-shielded') {
+          // Bank ATA → receiver-claimable UTXO locked to the stealth wallet's
+          // registered userCommitment. Signed by Turnkey (bank). Stealth
+          // claims it into its encrypted balance.
+          await depositFromBankToReceiver(
+            toAddress(stealfWallet!),
+            mint,
+            lamportsBig,
+          );
+        } else if (direction === 'shielded-to-bank') {
+          // Shielded balance → self-claimable UTXO locked to the bank wallet.
+          // Signed by stealth (encrypted-balance source). Bank claims later.
+          await selfShield(mint, lamportsBig, toAddress(bankWallet!));
+        } else {
+          // Stealth ATA → self-claimable UTXO locked to the bank wallet.
+          // Signed by stealth (public-balance source).
+          await selfShieldFromPublicStealth(
+            mint,
+            lamportsBig,
+            toAddress(bankWallet!),
+          );
+        }
+
+        clearTimeout(provingTimer);
+        pendingOps.setPhase(opId, 'confirming');
+
+        if (__DEV__) console.log('[MoveFlow] success →', direction);
+        await invalidateAll();
+        pendingOps.complete(opId, 'done');
+      } catch (err: any) {
+        clearTimeout(provingTimer);
+        const msg = err?.userMessage || err?.message || 'Move failed';
+        if (__DEV__) console.warn('[MoveFlow] failed:', direction, msg);
+        pendingOps.complete(opId, 'failed', msg);
+      }
+    })();
   };
 
-  const loading = submitting || umbraLoading;
-  const ctaLabel = loading ? 'Processing…' : config.cta;
+  const ctaLabel = config.cta;
 
   return (
     <CenterGlow tone={tone}>
@@ -359,12 +404,7 @@ export function MoveFlow() {
           paddingBottom: insets.bottom + 16,
         }}
       >
-        <SwipeToSend
-          key={swipeAttempt}
-          tone={tone}
-          label={ctaLabel}
-          onSend={onSubmit}
-        />
+        <SwipeToSend tone={tone} label={ctaLabel} onSend={onSubmit} />
       </View>
     </CenterGlow>
   );

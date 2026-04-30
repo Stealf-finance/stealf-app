@@ -24,6 +24,7 @@ import { SocketProvider } from '@/src/components/SocketProvider';
 import { DataBootstrap } from '@/src/components/DataBootstrap';
 import { AuthGuard } from '@/src/components/AuthGuard';
 import { TelemetrySmokeTest } from '@/src/components/TelemetrySmokeTest';
+import { PendingOpsProvider } from '@/src/components/pending-ops/PendingOpsContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -77,6 +78,7 @@ function RootLayout() {
             <AuthProvider>
               <SocketProvider>
                 <PrivacyModeProvider initial="private">
+                  <PendingOpsProvider>
                   <DataBootstrap />
                   <AuthGuard />
                   <TelemetrySmokeTest />
@@ -102,6 +104,7 @@ function RootLayout() {
                   <Stack.Screen name="tx/[id]" options={{ presentation: 'modal' }} />
                   </Stack>
                   <StatusBar style="light" />
+                  </PendingOpsProvider>
                 </PrivacyModeProvider>
               </SocketProvider>
             </AuthProvider>

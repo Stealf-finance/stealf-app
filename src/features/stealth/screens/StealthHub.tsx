@@ -534,13 +534,13 @@ export function StealthHub() {
               <SquareActionTile
                 iconKey="move"
                 label="Move"
-                accent
-                accentTone="gold"
                 onPress={() => router.push('/moove?direction=shielded-to-bank')}
               />
               <SquareActionTile
                 iconKey="arrUp"
                 label="Send"
+                accent
+                accentTone="gold"
                 onPress={() =>
                   router.push('/send?tone=gold&wallet=stealth')
                 }

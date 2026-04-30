@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +23,7 @@ import {
 } from '@/src/features/stealth/hooks/useShieldedSolBalance';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
+import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 
 type Direction = 'shield' | 'unshield';
 
@@ -31,10 +32,6 @@ type Props = { direction: Direction };
 // Devnet-only: only SOL is available on shield/unshield until USDC ships.
 const ASSET_SYMBOL = 'SOL' as const;
 const SOL_DECIMALS = 9;
-
-// Reserve for tx fee (~5k lamports) + ATA rent (~0.002 SOL) + headroom.
-// Without it, "Max" leaves the wallet unable to pay its own deposit fee.
-const SHIELD_RESERVE_SOL = 0.005;
 
 const PILL_GRADIENTS: Record<Tone, [string, string]> = {
   silver: ['#e8e8ea', '#9a9a9f'],
@@ -50,9 +47,6 @@ export function ShieldFlow({ direction }: Props) {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const [amount, setAmount] = useState('0');
-  // Force-remount the swipe widget after a failed op so the thumb returns
-  // to start (mirrors the SendFlow pattern).
-  const [swipeAttempt, setSwipeAttempt] = useState(0);
 
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
@@ -66,9 +60,10 @@ export function ShieldFlow({ direction }: Props) {
     : 'Unshield to bring assets back public';
 
   const { user } = useAuth();
-  const { deposit, withdraw, loading } = useUmbra();
+  const { deposit, withdraw } = useUmbra();
   const { data: solPrice } = useSolPrice();
   const queryClient = useQueryClient();
+  const pendingOps = usePendingOps();
 
   // Both shield and unshield operate on the stealth wallet:
   // - shield: stealth public ATA → stealth encrypted balance
@@ -92,55 +87,86 @@ export function ShieldFlow({ direction }: Props) {
     else setAmount((a) => (a === '0' ? k : a + k));
   };
 
-  const onSubmit = async () => {
+  const onSubmit = () => {
     const num = Number(amount);
     if (!num || num <= 0) return;
+    if (isShield && !user?.stealfWallet) {
+      // Pre-condition not met. Surface as a failed pill (so the user sees
+      // the reason on the destination screen) and close the modal anyway —
+      // there's nothing actionable to retry inside.
+      const id = pendingOps.enqueue({
+        kind: 'shield',
+        tone,
+        amountSol: num,
+      });
+      pendingOps.complete(
+        id,
+        'failed',
+        'Stealth wallet not set up. Open it once before shielding.',
+      );
+      close();
+      return;
+    }
 
     const amountBigInt = BigInt(Math.floor(num * 10 ** SOL_DECIMALS));
     const mint = toAddress(SOL_MINT);
+    const stealfWallet = user?.stealfWallet ?? null;
 
-    try {
-      if (isShield) {
-        if (!user?.stealfWallet) {
-          throw new Error('Stealth wallet not set up. Open it once before shielding.');
+    const opId = pendingOps.enqueue({
+      kind: isShield ? 'shield' : 'unshield',
+      tone,
+      amountSol: num,
+    });
+
+    // Eager close — the modal animates away while the heavy work runs in the
+    // background. The pill (mounted at the tabs layout) takes over status;
+    // the balances stay honest until the op confirms (no optimistic debit).
+    close();
+
+    // Detached async — survives this component's unmount because the closure
+    // holds stable references to pendingOps + queryClient (root-level singletons).
+    void (async () => {
+      // Heuristic phase progression: most of the wall-clock time on these
+      // ops is spent in ZK proof gen. Surface "Generating proof…" after a
+      // short submitting window so the pill feels alive.
+      const provingTimer = setTimeout(() => {
+        pendingOps.setPhase(opId, 'proving');
+      }, 700);
+
+      try {
+        if (isShield) {
+          await deposit(mint, amountBigInt);
+        } else {
+          await withdraw(mint, amountBigInt);
         }
-        await deposit(mint, amountBigInt);
-      } else {
-        await withdraw(mint, amountBigInt);
+        clearTimeout(provingTimer);
+        pendingOps.setPhase(opId, 'confirming');
+
+        if (__DEV__) console.log('[ShieldFlow] success → invalidating balances');
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet ?? ''),
+          }),
+          stealfWallet
+            ? queryClient.invalidateQueries({
+                queryKey: balanceQueries.byAddress(stealfWallet),
+              })
+            : Promise.resolve(),
+          stealfWallet
+            ? queryClient.invalidateQueries({
+                queryKey: historyQueries.byAddress(stealfWallet),
+              })
+            : Promise.resolve(),
+        ]);
+
+        pendingOps.complete(opId, 'done');
+      } catch (err: any) {
+        clearTimeout(provingTimer);
+        const msg = err?.userMessage || err?.message || 'Operation failed';
+        if (__DEV__) console.warn('[ShieldFlow] failed:', msg);
+        pendingOps.complete(opId, 'failed', msg);
       }
-
-      // Refresh both sides — shielded pool balance + the stealth public ATA.
-      // Shield debits public, credits private. Unshield does the reverse.
-      // Either way both queries change.
-      if (__DEV__) console.log('[ShieldFlow] success → invalidating balances');
-      await Promise.all([
-        // Refetch the encrypted balance so the gauge / private USD update.
-        queryClient.invalidateQueries({
-          queryKey: shieldedBalanceQueries.byStealfWallet(
-            user?.stealfWallet ?? '',
-          ),
-        }),
-        // Refetch the stealth public ATA balance + history (shield debits it,
-        // unshield credits it).
-        user?.stealfWallet
-          ? queryClient.invalidateQueries({
-              queryKey: balanceQueries.byAddress(user.stealfWallet),
-            })
-          : Promise.resolve(),
-        user?.stealfWallet
-          ? queryClient.invalidateQueries({
-              queryKey: historyQueries.byAddress(user.stealfWallet),
-            })
-          : Promise.resolve(),
-      ]);
-
-      close();
-    } catch (err: any) {
-      const msg = err?.userMessage || err?.message || 'Operation failed';
-      Alert.alert(isShield ? 'Shield failed' : 'Unshield failed', msg);
-      // Bump the key so React remounts SwipeToSend → thumb resets to start.
-      setSwipeAttempt((n) => n + 1);
-    }
+    })();
   };
 
   return (
@@ -333,12 +359,7 @@ export function ShieldFlow({ direction }: Props) {
           paddingBottom: insets.bottom + 16,
         }}
       >
-        <SwipeToSend
-          key={swipeAttempt}
-          tone={tone}
-          label={loading ? 'Processing…' : ctaLabel}
-          onSend={onSubmit}
-        />
+        <SwipeToSend tone={tone} label={ctaLabel} onSend={onSubmit} />
       </View>
     </CenterGlow>
   );

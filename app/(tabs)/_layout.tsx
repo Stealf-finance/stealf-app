@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { T } from '@/src/design-system/tokens';
 import { TabBar, TabId } from '@/src/design-system/primitives/TabBar';
 import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
+import { PendingOpsPill } from '@/src/components/pending-ops/PendingOpsPill';
 
 const TAB_IDS: TabId[] = ['bank', 'stealth', 'grow', 'profile'];
 
@@ -48,6 +49,7 @@ export default function TabsLayout() {
     <View style={{ flex: 1, backgroundColor: T.bg }}>
       <Slot />
       <TabBar active={active} tone={tabBarTone} onTab={handleTab} />
+      <PendingOpsPill />
     </View>
   );
 }
