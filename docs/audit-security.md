@@ -162,19 +162,16 @@ Tracked here so they don't slip; status updated at fix time.
 
 ### 6.1 SendFlow gold tone signs from bank wallet, not stealth wallet
 **Severity**: 🔴 high (loss-of-funds confusion)
-**Status**: open, blocks Slice 5 ship
-**Surface**: `src/features/send/SendFlow.tsx:80,114,217`
+**Status**: ✅ resolved — `SendFlow` now takes a `wallet: 'bank' | 'stealth'`
+prop orthogonal to `tone`. `useSendSimple` branches the signer:
+Turnkey (passkey) for bank, local ED25519 (`walletKeyCache`) for stealth
+— ported from front-stealf's `transactionSimple` path. Stealth Send
+routes (`/send?wallet=stealth`) confirmed wiring the stealfWallet
+balance + signing key.
 
-When the user taps "Send" from `StealthHub` with `?tone=gold`, the UI
-applies the gold palette but reads `useBalance(user.bankWallet)` and
-signs with `fromAddress: user.bankWallet`. The user thinks they're
-sending from stealth, but it's actually a bank send with cosmetic
-gold styling. Pre-existing from Slice 5b/5c — not introduced this
-session, but visible in interaction with the new Send flow.
-
-**Fix**: branch `bankWallet` vs `stealfWallet` selection on `tone`,
-swap balance source to `useEncryptedBalances` for gold, wire the
-Umbra signing path instead of `useSendSimple`. Slice 5 work proper.
+**Note**: Slice 5 still owes the **shielded** send path (Umbra UTXO
+spending via ZK proof) — this fix unlocks the **public** stealth-wallet
+send only, which is what the Stealth Hub public-mode tile triggers.
 
 ### 6.2 Onboarding email lookup uses legacy plaintext column
 **Severity**: 🟡 medium (silent breakage when migration window closes)

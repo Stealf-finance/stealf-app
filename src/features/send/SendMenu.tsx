@@ -94,7 +94,7 @@ export function SendMenu() {
                 <Text style={[sansationBold, { color: T.ink }]}>Solana</Text>
               </Text>
             }
-            onPress={() => router.push('/send')}
+            onPress={() => router.push('/send?tone=silver&wallet=bank')}
           />
 
           <View

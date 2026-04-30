@@ -85,16 +85,28 @@ function bigAmountFontSize(displayLen: number): number {
   return 36;
 }
 
-type Props = { tone?: Tone };
+type WalletSource = 'bank' | 'stealth';
 
-export function SendFlow({ tone = 'silver' }: Props) {
+type Props = { tone?: Tone; wallet?: WalletSource };
+
+export function SendFlow({ tone = 'silver', wallet }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const S = txPalette(tone);
   const maxGradient = MAX_GRADIENTS[tone];
   const { user, isAuthenticated } = useAuth();
-  const bankWallet = user?.bankWallet ?? '';
-  const { data: balance } = useBalance(bankWallet);
+  // `wallet` decides which account signs and what balance is shown. It's
+  // orthogonal to `tone` (visual styling) — the Stealth public tab uses
+  // tone=silver but pulls the stealf wallet, while the Stealth private tab
+  // uses tone=gold for the same wallet. Falls back to the legacy tone-based
+  // mapping when the prop isn't passed.
+  const walletSource: WalletSource =
+    wallet ?? (tone === 'gold' ? 'stealth' : 'bank');
+  const fromAddress =
+    (walletSource === 'stealth' ? user?.stealfWallet : user?.bankWallet) ?? '';
+  const fromLabel =
+    walletSource === 'stealth' ? 'Stealth wallet' : 'Bank wallet';
+  const { data: balance } = useBalance(fromAddress);
   const { data: solPrice } = useSolPrice();
   const sendMutation = useSendSimple();
 
@@ -184,7 +196,6 @@ export function SendFlow({ tone = 'silver' }: Props) {
       ? NETWORK_FEE_SOL * solPrice
       : null;
   const feeLabel = feeUSD === null ? '—' : `$${feeUSD.toFixed(4)}`;
-  const fromLabel = tone === 'gold' ? 'Stealth wallet' : 'Bank wallet';
 
   const submitRecipient = () => {
     const trimmed = recipientQuery.trim();
@@ -192,11 +203,11 @@ export function SendFlow({ tone = 'silver' }: Props) {
       setRecipientError('Enter a Solana address or .sol name.');
       return;
     }
-    if (bankWallet && trimmed === bankWallet) {
+    if (fromAddress && trimmed === fromAddress) {
       setRecipientError("You can't send funds to your own wallet.");
       return;
     }
-    if (!isValidRecipient(trimmed, bankWallet)) {
+    if (!isValidRecipient(trimmed, fromAddress)) {
       setRecipientError('Not a valid Solana address.');
       return;
     }
@@ -214,9 +225,10 @@ export function SendFlow({ tone = 'silver' }: Props) {
     if (__DEV__) console.log('[SendFlow] sending', amount, asset.symbol, '→', recipient.name);
     try {
       const sig = await sendMutation.mutateAsync({
-        fromAddress: user.bankWallet,
+        fromAddress,
         toAddress: recipient.name.trim(),
         amountSol: Number(amount),
+        walletSource,
         balanceSol: balanceNum,
       });
       if (__DEV__) console.log('[SendFlow] success, sig=', sig);
@@ -504,7 +516,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
                 variant="primary"
                 tone={tone}
                 label="Continue"
-                disabled={!isValidRecipient(recipientQuery, bankWallet)}
+                disabled={!isValidRecipient(recipientQuery, fromAddress)}
                 onPress={submitRecipient}
               />
             </View>

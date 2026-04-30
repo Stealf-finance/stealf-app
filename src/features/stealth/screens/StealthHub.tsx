@@ -530,7 +530,9 @@ export function StealthHub() {
               <SquareActionTile
                 iconKey="arrUp"
                 label="Send"
-                onPress={() => router.push('/send?tone=gold')}
+                onPress={() =>
+                  router.push('/send?tone=gold&wallet=stealth')
+                }
               />
               <SquareActionTile
                 iconKey="gift"
@@ -558,7 +560,9 @@ export function StealthHub() {
               <SquareActionTile
                 iconKey="arrUp"
                 label="Send"
-                onPress={() => router.push('/send')}
+                onPress={() =>
+                  router.push('/send?tone=silver&wallet=stealth')
+                }
               />
             </>
           )}
