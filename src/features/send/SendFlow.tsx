@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
+  Linking,
   Pressable,
   ScrollView,
   Text,
@@ -33,6 +34,7 @@ import {
 } from '@/src/features/send/components/RecipientRow';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
+import { SuccessScreen } from '@/src/features/transactions/SuccessScreen';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from './hooks/useSolPrice';
@@ -49,6 +51,23 @@ const MAX_GRADIENTS: Record<Tone, [string, string]> = {
 
 // Solana base fee = 5,000 lamports per signature. Single-sig transfer = 5,000.
 const NETWORK_FEE_SOL = 0.000005;
+
+// Solana base58: alphabet excludes 0, O, I, l. Address length is 32–44.
+const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+// Lightweight .sol name accept-list — backend will resolve later.
+const SOL_NAME_RE = /^[a-zA-Z0-9._-]{1,32}\.sol$/;
+
+function isValidRecipient(input: string): boolean {
+  const s = input.trim();
+  return SOLANA_ADDRESS_RE.test(s) || SOL_NAME_RE.test(s);
+}
+
+function truncateAddress(input: string, head = 6, tail = 4): string {
+  const s = input.trim();
+  if (s.length <= head + tail + 1) return s;
+  if (!SOLANA_ADDRESS_RE.test(s)) return s;
+  return `${s.slice(0, head)}…${s.slice(-tail)}`;
+}
 
 type Props = { tone?: Tone };
 
@@ -77,6 +96,11 @@ export function SendFlow({ tone = 'silver' }: Props) {
   const [inToken, setInToken] = useState(true);
   const [recipientQuery, setRecipientQuery] = useState('');
   const [assetQuery, setAssetQuery] = useState('');
+  const [recipientError, setRecipientError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [txSig, setTxSig] = useState<string | null>(null);
+  // Force-remount the swipe widget after a failed send so the thumb returns to start.
+  const swipeAttempt = useRef(0);
 
   const opacity = useSharedValue(1);
   const translate = useSharedValue(0);
@@ -122,7 +146,18 @@ export function SendFlow({ tone = 'silver' }: Props) {
       : (asset.priceUSD ?? 0)
     : 0;
   const fiatValue = (Number(amount) * rate).toFixed(2);
-  const amountValid = Number(amount) > 0;
+  const amountNum = Number(amount);
+  const balanceNum = asset ? Number(asset.balance) : 0;
+  // Reserve the network fee on top of the amount when the asset is the gas token.
+  const exceedsBalance =
+    asset?.symbol === 'SOL'
+      ? amountNum + NETWORK_FEE_SOL > balanceNum
+      : amountNum > balanceNum;
+  const amountValid = amountNum > 0 && !exceedsBalance;
+  const amountError =
+    amountNum > 0 && exceedsBalance
+      ? `Insufficient balance · max ${asset?.balance ?? 0} ${asset?.symbol ?? ''}`
+      : null;
   const feeUSD =
     typeof solPrice === 'number' && solPrice > 0
       ? NETWORK_FEE_SOL * solPrice
@@ -130,22 +165,75 @@ export function SendFlow({ tone = 'silver' }: Props) {
   const feeLabel = feeUSD === null ? '—' : `$${feeUSD.toFixed(4)}`;
   const fromLabel = tone === 'gold' ? 'Stealth wallet' : 'Bank wallet';
 
+  const submitRecipient = () => {
+    const trimmed = recipientQuery.trim();
+    if (!trimmed) {
+      setRecipientError('Enter a Solana address or .sol name.');
+      return;
+    }
+    if (!isValidRecipient(trimmed)) {
+      setRecipientError('Not a valid Solana address.');
+      return;
+    }
+    setRecipientError(null);
+    setRecipient({ name: trimmed, meta: '' });
+    transitionTo(2, 'forward');
+  };
+
   const onSwipeSend = async () => {
     if (!isAuthenticated || !user || !asset || !recipient) {
       close();
       return;
     }
+    setSendError(null);
+    if (__DEV__) console.log('[SendFlow] sending', amount, asset.symbol, '→', recipient.name);
     try {
-      await sendMutation.mutateAsync({
+      const sig = await sendMutation.mutateAsync({
         fromAddress: user.bankWallet,
-        toAddress: recipient.name,
+        toAddress: recipient.name.trim(),
         amountSol: Number(amount),
+        balanceSol: balanceNum,
       });
-      close();
+      if (__DEV__) console.log('[SendFlow] success, sig=', sig);
+      setTxSig(sig);
+      transitionTo(4, 'forward');
     } catch (err) {
       if (__DEV__) console.warn('[SendFlow] send failed:', err);
+      const msg =
+        err instanceof Error ? err.message : 'Could not send the transaction.';
+      setSendError(msg);
+      // Force the swipe widget to reset visually so the user can retry.
+      swipeAttempt.current += 1;
     }
   };
+
+  // Success owns the whole screen (its own CenterGlow + header) so we early-return
+  // to avoid double-wrapping in the wizard's CenterGlow.
+  if (step === 4 && asset && recipient) {
+    return (
+      <SuccessScreen
+        tone={tone}
+        kicker="Sent"
+        prefix="$"
+        amount={fiatValue}
+        subtitle={`to ${truncateAddress(recipient.name)}`}
+        onClose={close}
+        onDone={close}
+        onNewTransfer={() => {
+          setRecipient(null);
+          setRecipientQuery('');
+          setRecipientError(null);
+          setAmount('0');
+          setSendError(null);
+          setTxSig(null);
+          setStep(1);
+        }}
+        onViewExplorer={() => {
+          if (txSig) void Linking.openURL(`https://solscan.io/tx/${txSig}`);
+        }}
+      />
+    );
+  }
 
   return (
     <CenterGlow tone={tone}>
@@ -246,9 +334,9 @@ export function SendFlow({ tone = 'silver' }: Props) {
             <TxTitleBlock
               kicker="Step 2 of 4"
               title="Who's it for?"
-              subtitle="address, or .sol name"
+              subtitle="Solana address or .sol name"
             />
-            <View style={{ paddingHorizontal: 24, marginBottom: 18 }}>
+            <View style={{ paddingHorizontal: 24, marginBottom: 10 }}>
               <View
                 style={{
                   flexDirection: 'row',
@@ -258,7 +346,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
                   paddingHorizontal: 18,
                   borderRadius: 18,
                   borderWidth: 1,
-                  borderColor: S.hairline,
+                  borderColor: recipientError ? '#E5484D' : S.hairline,
                   overflow: 'hidden',
                 }}
               >
@@ -290,18 +378,16 @@ export function SendFlow({ tone = 'silver' }: Props) {
                 </Text>
                 <TextInput
                   value={recipientQuery}
-                  onChangeText={setRecipientQuery}
-                  placeholder="username, address or .sol"
+                  onChangeText={(v) => {
+                    setRecipientQuery(v);
+                    if (recipientError) setRecipientError(null);
+                  }}
+                  placeholder="address or name.sol"
                   placeholderTextColor={S.inkFaint}
                   autoCapitalize="none"
                   autoCorrect={false}
-                  returnKeyType="next"
-                  onSubmitEditing={() => {
-                    const trimmed = recipientQuery.trim();
-                    if (!trimmed) return;
-                    setRecipient({ name: trimmed, meta: '' });
-                    transitionTo(2, 'forward');
-                  }}
+                  returnKeyType="done"
+                  onSubmitEditing={submitRecipient}
                   style={[
                     sansation,
                     { flex: 1, padding: 0, color: S.ink, fontSize: 15 },
@@ -325,6 +411,21 @@ export function SendFlow({ tone = 'silver' }: Props) {
                   <Icons.qr size={16} color={S.accent} />
                 </Pressable>
               </View>
+              {recipientError ? (
+                <Text
+                  style={[
+                    sansation,
+                    {
+                      marginTop: 10,
+                      paddingHorizontal: 4,
+                      fontSize: 12,
+                      color: '#E5484D',
+                    },
+                  ]}
+                >
+                  {recipientError}
+                </Text>
+              ) : null}
             </View>
             {recents.length > 0 ? (
               <>
@@ -368,6 +469,21 @@ export function SendFlow({ tone = 'silver' }: Props) {
             ) : (
               <View style={{ flex: 1 }} />
             )}
+            <View
+              style={{
+                paddingHorizontal: 24,
+                paddingTop: 12,
+                paddingBottom: insets.bottom + 24,
+              }}
+            >
+              <PillBtn
+                variant="primary"
+                tone={tone}
+                label="Continue"
+                disabled={!isValidRecipient(recipientQuery)}
+                onPress={submitRecipient}
+              />
+            </View>
           </>
         )}
 
@@ -375,7 +491,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
           <>
             <TxTitleBlock
               kicker="Step 3 of 4"
-              title={`For ${recipient.name}`}
+              title={`For ${truncateAddress(recipient.name)}`}
               subtitle="Enter the amount to send"
             />
 
@@ -550,10 +666,25 @@ export function SendFlow({ tone = 'silver' }: Props) {
             <View
               style={{
                 paddingHorizontal: 24,
-                paddingTop: 28,
+                paddingTop: 16,
                 paddingBottom: insets.bottom + 24,
               }}
             >
+              {amountError ? (
+                <Text
+                  style={[
+                    sansation,
+                    {
+                      fontSize: 12,
+                      color: '#E5484D',
+                      textAlign: 'center',
+                      marginBottom: 10,
+                    },
+                  ]}
+                >
+                  {amountError}
+                </Text>
+              ) : null}
               <PillBtn
                 variant="primary"
                 tone={tone}
@@ -667,7 +798,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
 
                   {[
                     ['From', fromLabel],
-                    ['To', recipient.name],
+                    ['To', truncateAddress(recipient.name)],
                     ['Asset', `${asset.symbol} · ${asset.name}`],
                     ['Network fee', feeLabel],
                   ].map(([l, v], i, arr) => (
@@ -736,10 +867,31 @@ export function SendFlow({ tone = 'silver' }: Props) {
                 paddingBottom: insets.bottom + 24,
               }}
             >
-              <SwipeToSend tone={tone} onSend={onSwipeSend} />
+              {sendError ? (
+                <Text
+                  style={[
+                    sansation,
+                    {
+                      fontSize: 12,
+                      color: '#E5484D',
+                      textAlign: 'center',
+                      marginBottom: 10,
+                    },
+                  ]}
+                >
+                  {sendError}
+                </Text>
+              ) : null}
+              <SwipeToSend
+                key={swipeAttempt.current}
+                tone={tone}
+                label={sendMutation.isPending ? 'Sending…' : 'Swipe to send'}
+                onSend={onSwipeSend}
+              />
             </View>
           </>
         )}
+
       </Animated.View>
     </CenterGlow>
   );

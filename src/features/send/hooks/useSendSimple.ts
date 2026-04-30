@@ -8,6 +8,7 @@ import {
   type GuardResult,
 } from '@/src/services/solana/transactionsGuard';
 import { balanceQueries } from '@/src/features/bank/api/balance';
+import { historyQueries } from '@/src/features/bank/api/history';
 import { buildSolTransferMessage } from '../lib/buildTransfer';
 
 export interface SendSimpleParams {
@@ -80,12 +81,7 @@ export function useSendSimple() {
     onSuccess: (_txId, { fromAddress }) => {
       // Server-side history will catch up via socket; refetch as a safety net.
       queryClient.invalidateQueries({ queryKey: balanceQueries.byAddress(fromAddress) });
-      queryClient.invalidateQueries({
-        predicate: (q) =>
-          q.queryKey[0] === 'bank' &&
-          q.queryKey[1] === 'history' &&
-          q.queryKey[2] === fromAddress,
-      });
+      queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(fromAddress) });
     },
   });
 }
