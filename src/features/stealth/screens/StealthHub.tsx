@@ -562,6 +562,11 @@ export function StealthHub() {
                 }
               />
               <SquareActionTile
+                iconKey="move"
+                label="Move"
+                onPress={() => router.push('/moove')}
+              />
+              <SquareActionTile
                 iconKey="shieldCheck"
                 label="Shield"
                 accent
