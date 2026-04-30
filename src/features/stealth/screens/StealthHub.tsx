@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Alert,
   Image,
   PanResponder,
   Pressable,
@@ -8,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   runOnJS,
@@ -32,6 +34,28 @@ import {
 } from '@/src/features/stealth/PrivacyModeContext';
 import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
 import { useFeatureFlag } from '@/src/services/observability/featureFlags';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { useHistory } from '@/src/features/bank/hooks/useHistory';
+import {
+  StealfWalletSetup,
+  type SetupChoice,
+} from '@/src/features/stealth/screens/StealfWalletSetup';
+import { useSetupStealfWallet } from '@/src/features/stealth/hooks/useSetupStealfWallet';
+import { registerStealfWallet } from '@/src/features/stealth/api/registerStealfWallet';
+import {
+  balanceQueries,
+  fetchBalance,
+} from '@/src/features/bank/api/balance';
+import {
+  historyQueries,
+  fetchHistory,
+} from '@/src/features/bank/api/history';
+import type {
+  BalanceResponse,
+  HistoryResponse,
+} from '@/src/features/bank/types';
+import { socketService } from '@/src/services/real-time/socket';
 
 const FADE_OUT = 180;
 const FADE_IN = 240;
@@ -46,6 +70,9 @@ export function StealthHub() {
   const { mode, setMode, tone } = usePrivacyMode();
   const isPrivate = mode === 'private';
   const palette = txPalette(tone);
+  const queryClient = useQueryClient();
+  const { user, session, setUser } = useAuth();
+  const sessionToken = session?.sessionToken ?? null;
 
   // Killswitch: hide the slice if the flag is flipped off in PostHog.
   // Default-on so design work in DEV is unaffected.
@@ -54,9 +81,29 @@ export function StealthHub() {
   const { data: pendingClaims } = usePendingClaims();
   const claimCount = pendingClaims?.length ?? 0;
 
+  const stealfWallet = user?.stealfWallet ?? null;
+  const { data: balanceData } = useBalance(stealfWallet);
+  // History is prefetched here so it's warm by the time the user opens
+  // a future "see all" on the stealth tab.
+  useHistory(stealfWallet);
+  const totalUSD = balanceData?.totalUSD ?? 0;
+  const dollars = Math.max(0, Math.floor(totalUSD)).toLocaleString('en-US');
+  const cents = `.${(Math.abs(totalUSD) % 1).toFixed(2).slice(2)}`;
+  // Public mode shows on-chain SOL position. Private shielded balances
+  // require Slice 5 wiring; until then, render 0.00 instead of mock values.
   const balance = isPrivate
-    ? { int: '133', dec: '.25' }
-    : { int: '34', dec: '.51' };
+    ? { int: '0', dec: '.00' }
+    : { int: dollars, dec: cents };
+
+  const solRow = balanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL');
+  const solBalance = solRow?.balance ?? 0;
+  const solUSD = solRow?.balanceUSD ?? 0;
+
+  // Privacy gauge: ratio of dollars in each side of the wallet. Falls to 0
+  // for the private side until shielded balances are wired in Slice 5.
+  const publicValue = totalUSD > 0 ? Math.min(1, totalUSD / 1000) : 0;
+  const privateValue = 0;
+
   const kicker = isPrivate ? 'Shielded Pool' : 'Stealth Wallet';
   const subkicker = isPrivate ? 'private' : 'public';
 
@@ -71,6 +118,99 @@ export function StealthHub() {
   useEffect(() => {
     modeProgress.value = withTiming(isPrivate ? 1 : 0, { duration: MORPH_DUR });
   }, [isPrivate, modeProgress]);
+
+  const setup = useSetupStealfWallet();
+  const [pendingMnemonic, setPendingMnemonic] = useState<string | null>(null);
+  const [pendingAddress, setPendingAddress] = useState<string | null>(null);
+
+  const persistStealfWallet = async (
+    walletAddress: string,
+    isFresh: boolean,
+  ) => {
+    if (!sessionToken || !user) {
+      Alert.alert('Not signed in', 'Please sign in again before continuing.');
+      return;
+    }
+    try {
+      await registerStealfWallet(sessionToken, walletAddress);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to register wallet';
+      if (__DEV__) console.warn('[StealthHub] register failed:', msg);
+      Alert.alert('Could not save wallet', msg);
+      return;
+    }
+
+    socketService.subscribeToWallet(walletAddress);
+
+    if (isFresh) {
+      const emptyBalance: BalanceResponse = {
+        address: walletAddress,
+        tokens: [],
+        totalUSD: 0,
+      };
+      const emptyHistory: HistoryResponse = {
+        address: walletAddress,
+        count: 0,
+        transactions: [],
+      };
+      queryClient.setQueryData(
+        balanceQueries.byAddress(walletAddress),
+        emptyBalance,
+      );
+      queryClient.setQueryData(
+        historyQueries.byAddress(walletAddress),
+        emptyHistory,
+      );
+    } else {
+      void queryClient.prefetchQuery({
+        queryKey: balanceQueries.byAddress(walletAddress),
+        queryFn: () => fetchBalance(sessionToken, walletAddress),
+        staleTime: Infinity,
+      });
+      void queryClient.prefetchQuery({
+        queryKey: historyQueries.byAddress(walletAddress),
+        queryFn: () => fetchHistory(sessionToken, walletAddress, 10),
+        staleTime: Infinity,
+      });
+    }
+
+    setUser({ ...user, stealfWallet: walletAddress });
+  };
+
+  const handleSetupComplete = async (choice: SetupChoice) => {
+    if (choice.mode === 'create') {
+      // Two-phase: first call generates+caches the mnemonic and shows it;
+      // second call (after the user confirms they saved it) registers it.
+      if (pendingMnemonic && pendingAddress) {
+        await persistStealfWallet(pendingAddress, true);
+        setPendingMnemonic(null);
+        setPendingAddress(null);
+        return;
+      }
+      const result = await setup.createWallet();
+      if (!result.success || !result.walletAddress || !result.mnemonic) {
+        Alert.alert('Could not create wallet', result.error ?? 'Unknown error');
+        return;
+      }
+      setPendingAddress(result.walletAddress);
+      setPendingMnemonic(result.mnemonic);
+      return;
+    }
+
+    if (choice.mode === 'import') {
+      const result = await setup.importWallet(choice.mnemonic);
+      if (!result.success || !result.walletAddress) {
+        Alert.alert('Could not import wallet', result.error ?? 'Unknown error');
+        return;
+      }
+      await persistStealfWallet(result.walletAddress, false);
+    }
+  };
+
+  const cancelSetup = () => {
+    setPendingMnemonic(null);
+    setPendingAddress(null);
+  };
 
   if (!stealthEnabled) {
     return (
@@ -113,6 +253,19 @@ export function StealthHub() {
           </Text>
         </View>
       </TonalBackground>
+    );
+  }
+
+  // No stealth wallet yet → setup screen (create or import). Cleared once
+  // the backend register call succeeds and AuthContext is updated.
+  if (!stealfWallet) {
+    return (
+      <StealfWalletSetup
+        onComplete={handleSetupComplete}
+        onCancel={cancelSetup}
+        loading={setup.loading}
+        generatedMnemonic={pendingMnemonic ?? undefined}
+      />
     );
   }
 
@@ -244,8 +397,8 @@ export function StealthHub() {
           >
             <PrivacyGauge
               modeProgress={modeProgress}
-              publicValue={0.22}
-              privateValue={0.86}
+              publicValue={publicValue}
+              privateValue={privateValue}
               publicColor={SILVER.accent}
               privateColor={GOLD.accent}
               publicGlow={SILVER.accentGlow}
@@ -452,24 +605,16 @@ export function StealthHub() {
                   marginTop: 2,
                 }}
               >
-                {isPrivate ? '1.5077 · encrypted' : '0.3904 · on-chain'}
+                {solBalance > 0
+                  ? `${solBalance.toFixed(4)} · ${isPrivate ? 'encrypted' : 'on-chain'}`
+                  : isPrivate
+                    ? 'encrypted'
+                    : 'on-chain'}
               </Text>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 15, color: palette.ink }}>
-                ${balance.int}
-                {balance.dec}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: T.green,
-                  marginTop: 2,
-                }}
-              >
-                +3.43%
-              </Text>
-            </View>
+            <Text style={{ fontSize: 15, color: palette.ink }}>
+              {`$${solUSD.toFixed(2)}`}
+            </Text>
           </View>
         </View>
       </ScrollView>
