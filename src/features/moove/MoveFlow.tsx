@@ -31,28 +31,28 @@ const SOL_DECIMALS = 9;
 
 type DirectionConfig = {
   title: string;
-  fromKicker: string;
-  toKicker: string;
+  fromLabel: string;
+  toLabel: string;
   cta: string;
 };
 
 const CONFIG: Record<MoveDirection, DirectionConfig> = {
   'bank-to-shielded': {
     title: 'Move to private',
-    fromKicker: 'From · Bank wallet',
-    toKicker: 'To · Stealth private',
+    fromLabel: 'Bank wallet',
+    toLabel: 'Shielded pool',
     cta: 'Slide to move',
   },
   'shielded-to-bank': {
     title: 'Move to bank',
-    fromKicker: 'From · Stealth private',
-    toKicker: 'To · Bank wallet',
+    fromLabel: 'Shielded pool',
+    toLabel: 'Bank wallet',
     cta: 'Slide to move',
   },
   'stealth-to-bank': {
     title: 'Move to bank',
-    fromKicker: 'From · Stealth public',
-    toKicker: 'To · Bank wallet',
+    fromLabel: 'Stealth public',
+    toLabel: 'Bank wallet',
     cta: 'Slide to move',
   },
 };
@@ -224,25 +224,12 @@ export function MoveFlow() {
         </Pressable>
       </View>
 
-      <View style={{ paddingHorizontal: 20, gap: 12 }}>
-        <DirectionCard kicker={config.fromKicker} role="from" tone={tone} />
-        <View style={{ alignItems: 'center', marginVertical: -6 }}>
-          <View
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: palette.hairline,
-              backgroundColor: 'rgba(0,0,0,0.4)',
-            }}
-          >
-            <Icons.arrDown size={14} color={palette.accent} />
-          </View>
-        </View>
-        <DirectionCard kicker={config.toKicker} role="to" tone={tone} />
+      <View style={{ paddingHorizontal: 20 }}>
+        <DirectionRow
+          fromLabel={config.fromLabel}
+          toLabel={config.toLabel}
+          tone={tone}
+        />
       </View>
 
       <View style={{ flex: 1, justifyContent: 'center' }}>
@@ -372,37 +359,37 @@ export function MoveFlow() {
   );
 }
 
-function DirectionCard({
-  kicker,
-  role,
+function DirectionRow({
+  fromLabel,
+  toLabel,
   tone,
 }: {
-  kicker: string;
-  role: 'from' | 'to';
+  fromLabel: string;
+  toLabel: string;
   tone: Tone;
 }) {
   const palette = txPalette(tone);
-  const isPrivateDest = tone === 'gold' && role === 'to';
-  const cardColors: [string, string] = isPrivateDest
-    ? ['rgba(212,165,83,0.14)', 'rgba(163,123,46,0.05)']
-    : ['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.01)'];
-  const border = isPrivateDest ? 'rgba(212,165,83,0.25)' : palette.hairline;
-  const kickerColor = isPrivateDest ? 'rgba(230,192,121,0.85)' : palette.inkFaint;
 
   return (
     <View
       style={{
         borderRadius: 18,
         borderWidth: 1,
-        borderColor: border,
+        borderColor: palette.hairline,
         overflow: 'hidden',
       }}
     >
       <LinearGradient
-        colors={cardColors}
+        colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.01)']}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
-        style={{ paddingVertical: 16, paddingHorizontal: 18 }}
+        style={{
+          paddingVertical: 14,
+          paddingHorizontal: 18,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+        }}
       >
         <Text
           style={[
@@ -412,11 +399,54 @@ function DirectionCard({
               letterSpacing: 2.52,
               textTransform: 'uppercase',
               fontWeight: '700',
-              color: kickerColor,
+              color: palette.inkFaint,
             },
           ]}
         >
-          {kicker}
+          From
+        </Text>
+        <Text
+          style={[
+            sansation,
+            {
+              fontSize: 13,
+              color: palette.ink,
+              fontWeight: '500',
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {fromLabel}
+        </Text>
+        <View style={{ flex: 1 }} />
+        <Icons.arrRight size={14} color={palette.accent} />
+        <View style={{ flex: 1 }} />
+        <Text
+          style={[
+            sansation,
+            {
+              fontSize: 9,
+              letterSpacing: 2.52,
+              textTransform: 'uppercase',
+              fontWeight: '700',
+              color: palette.inkFaint,
+            },
+          ]}
+        >
+          To
+        </Text>
+        <Text
+          style={[
+            sansation,
+            {
+              fontSize: 13,
+              color: palette.ink,
+              fontWeight: '500',
+            },
+          ]}
+          numberOfLines={1}
+        >
+          {toLabel}
         </Text>
       </LinearGradient>
     </View>
