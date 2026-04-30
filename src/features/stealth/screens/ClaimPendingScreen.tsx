@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -14,39 +15,29 @@ import { Icons } from '@/src/design-system/icons';
 import {
   mono,
   sansation,
-  sansationLight,
   serif,
 } from '@/src/design-system/typography';
 import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
-import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
-import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import {
+  usePendingClaims,
+  pendingClaimsQueries,
+} from '@/src/features/stealth/hooks/usePendingClaims';
+import {
+  usePendingClaimsForCash,
+  pendingClaimsForCashQueries,
+} from '@/src/features/stealth/hooks/usePendingClaimsForCash';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
+import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { balanceQueries } from '@/src/features/bank/api/balance';
+import { historyQueries } from '@/src/features/bank/api/history';
 
 type Tab = 'coming' | 'incoming';
-type Asset = 'USDC' | 'SOL';
-type Item = { amount: string; asset: Asset; ago: string; utxo?: unknown };
-
-// Mock fallbacks when no real data is loaded (DEV bypass / first paint).
-const MOCK_INCOMING: Item[] = [
-  { amount: '420.00', asset: 'USDC', ago: '2 min ago' },
-  { amount: '0.4212', asset: 'SOL', ago: '18 min ago' },
-  { amount: '124.50', asset: 'USDC', ago: '1 h ago' },
-  { amount: '12.0000', asset: 'USDC', ago: '4 h ago' },
-];
-
-const MOCK_COMING: Item[] = [
-  { amount: '1,200.00', asset: 'USDC', ago: 'in ~3 min' },
-  { amount: '0.8500', asset: 'SOL', ago: 'in ~12 min' },
-];
+type Item = { ago: string; utxo: unknown };
 
 function utxoToItem(utxo: any): Item {
-  return {
-    amount: '— —',
-    asset: 'USDC',
-    ago: 'Encrypted',
-    utxo,
-  };
+  return { ago: 'Encrypted', utxo };
 }
 
 const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
@@ -72,42 +63,77 @@ export function ClaimPendingScreen() {
 
   const close = () => router.back();
 
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: incomingUtxos } = usePendingClaims();
   const { data: comingUtxos } = usePendingClaimsForCash();
   const { claimReceived, claimSelfToPublic, loading } = useUmbra();
 
   const incoming = useMemo<Item[]>(
-    () => (incomingUtxos && incomingUtxos.length > 0 ? incomingUtxos.map(utxoToItem) : MOCK_INCOMING),
+    () => (incomingUtxos ?? []).map(utxoToItem),
     [incomingUtxos],
   );
   const coming = useMemo<Item[]>(
-    () => (comingUtxos && comingUtxos.length > 0 ? comingUtxos.map(utxoToItem) : MOCK_COMING),
+    () => (comingUtxos ?? []).map(utxoToItem),
     [comingUtxos],
   );
 
   const list = tab === 'incoming' ? incoming : coming;
-  // Hide the fiat total until we have a decryption pipeline; keep it for design fallback only.
-  const isReal = tab === 'incoming' ? !!incomingUtxos?.length : !!comingUtxos?.length;
-  const total = isReal
-    ? '— —'
-    : tab === 'incoming'
-      ? '544.50'
-      : '1,343.50';
   const headerLabel =
     tab === 'incoming'
-      ? `${incoming.length} pending · Stealth private`
-      : `${coming.length} on the way · Stealth private`;
+      ? `${incoming.length} pending · into shielded pool`
+      : `${coming.length} on the way · to bank wallet`;
+
+  const invalidateAfterClaim = async (kind: Tab) => {
+    const tasks: Promise<unknown>[] = [];
+    if (user?.stealfWallet) {
+      tasks.push(
+        queryClient.invalidateQueries({
+          queryKey: pendingClaimsQueries.byStealfWallet(user.stealfWallet),
+        }),
+      );
+    }
+    if (user?.bankWallet) {
+      tasks.push(
+        queryClient.invalidateQueries({
+          queryKey: pendingClaimsForCashQueries.byBankWallet(user.bankWallet),
+        }),
+      );
+    }
+    if (kind === 'incoming' && user?.stealfWallet) {
+      // claimReceived → encrypted balance refresh.
+      tasks.push(
+        queryClient.invalidateQueries({
+          queryKey: shieldedBalanceQueries.byStealfWallet(user.stealfWallet),
+        }),
+      );
+    }
+    if (kind === 'coming' && user?.bankWallet) {
+      // claimSelfToPublic → bank ATA gets credited.
+      tasks.push(
+        queryClient.invalidateQueries({
+          queryKey: balanceQueries.byAddress(user.bankWallet),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: historyQueries.byAddress(user.bankWallet),
+        }),
+      );
+    }
+    await Promise.all(tasks);
+  };
 
   const onClaim = async (item: Item) => {
-    if (!item.utxo) return; // mock row
+    if (!item.utxo) return;
     try {
       if (tab === 'incoming') {
         await claimReceived([item.utxo]);
       } else {
         await claimSelfToPublic([item.utxo]);
       }
+      await invalidateAfterClaim(tab);
     } catch (err: any) {
       const msg = err?.userMessage || err?.message || 'Claim failed';
+      if (__DEV__) console.warn('[ClaimPending] claim failed:', msg);
       Alert.alert('Claim failed', msg);
     }
   };
@@ -213,8 +239,8 @@ export function ClaimPendingScreen() {
 
       <View
         style={{
-          paddingTop: 18,
-          paddingBottom: 24,
+          paddingTop: 24,
+          paddingBottom: 22,
           paddingHorizontal: 24,
           alignItems: 'center',
         }}
@@ -228,42 +254,11 @@ export function ClaimPendingScreen() {
               textTransform: 'uppercase',
               color: 'rgba(230,192,121,0.85)',
               fontWeight: '700',
-              marginBottom: 14,
             },
           ]}
         >
           — {headerLabel} —
         </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-          <Text
-            style={[
-              serif,
-              {
-                fontSize: 28,
-                color: palette.accent,
-                fontStyle: 'italic',
-                lineHeight: 28,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            $
-          </Text>
-          <Text
-            style={[
-              sansationLight,
-              {
-                fontSize: 54,
-                letterSpacing: -1.62,
-                lineHeight: 54,
-                color: T.ink,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            {total}
-          </Text>
-        </View>
       </View>
 
       <ScrollView
@@ -275,16 +270,20 @@ export function ClaimPendingScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {list.map((tx, i) => (
-          <ClaimItem
-            key={`${tab}-${i}`}
-            tx={tx}
-            kind={tab}
-            palette={palette}
-            onClaim={() => onClaim(tx)}
-            disabled={loading}
-          />
-        ))}
+        {list.length === 0 ? (
+          <EmptyState kind={tab} palette={palette} />
+        ) : (
+          list.map((tx, i) => (
+            <ClaimItem
+              key={`${tab}-${i}`}
+              tx={tx}
+              kind={tab}
+              palette={palette}
+              onClaim={() => onClaim(tx)}
+              disabled={loading}
+            />
+          ))
+        )}
       </ScrollView>
     </CenterGlow>
   );
@@ -347,7 +346,7 @@ function ClaimItem({
                 },
               ]}
             >
-              Encrypted sender
+              {isIncoming ? 'Encrypted incoming' : 'Encrypted to bank'}
             </Text>
             <Text
               style={[
@@ -363,52 +362,46 @@ function ClaimItem({
               {tx.ago}
             </Text>
           </View>
-
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text
-              style={[
-                serif,
-                {
-                  fontSize: 18,
-                  fontStyle: 'italic',
-                  color: T.ink,
-                  lineHeight: 18,
-                  includeFontPadding: false,
-                },
-              ]}
-            >
-              +{tx.amount}
-            </Text>
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 9,
-                  letterSpacing: 1.62,
-                  textTransform: 'uppercase',
-                  color: palette.accent,
-                  fontWeight: '700',
-                  marginTop: 4,
-                },
-              ]}
-            >
-              {tx.asset}
-            </Text>
-          </View>
         </View>
 
         <View style={{ marginTop: 12 }}>
-          {isIncoming ? (
-            <ClaimButton
-              accentGlow={palette.accentGlow}
-              onPress={onClaim}
-              disabled={disabled}
-            />
-          ) : (
-            <AwaitingPill accent={palette.accent} />
-          )}
+          <ClaimButton
+            accentGlow={palette.accentGlow}
+            onPress={onClaim}
+            disabled={disabled}
+            label={isIncoming ? 'Claim into shielded' : 'Claim to bank'}
+          />
         </View>
       </LinearGradient>
+    </View>
+  );
+}
+
+function EmptyState({ kind, palette }: { kind: Tab; palette: Palette }) {
+  const copy =
+    kind === 'incoming'
+      ? 'No incoming transfers waiting.'
+      : 'No transfers on the way to your bank.';
+  return (
+    <View
+      style={{
+        paddingTop: 60,
+        alignItems: 'center',
+      }}
+    >
+      <Text
+        style={[
+          serif,
+          {
+            fontSize: 15,
+            fontStyle: 'italic',
+            color: palette.inkFaint,
+            textAlign: 'center',
+          },
+        ]}
+      >
+        {copy}
+      </Text>
     </View>
   );
 }
@@ -446,10 +439,12 @@ function ClaimButton({
   accentGlow,
   onPress,
   disabled,
+  label = 'Claim',
 }: {
   accentGlow: string;
   onPress?: () => void;
   disabled?: boolean;
+  label?: string;
 }) {
   return (
     <Pressable
@@ -494,54 +489,10 @@ function ClaimButton({
             },
           ]}
         >
-          Claim
+          {label}
         </Text>
       </LinearGradient>
     </Pressable>
   );
 }
 
-function AwaitingPill({ accent }: { accent: string }) {
-  return (
-    <View
-      style={{
-        paddingVertical: 9,
-        borderRadius: 100,
-        backgroundColor: 'rgba(255,255,255,0.04)',
-        borderWidth: 1,
-        borderColor: T.hairline,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-      }}
-    >
-      <View
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: 3,
-          backgroundColor: accent,
-          shadowColor: accent,
-          shadowOpacity: 1,
-          shadowRadius: 8,
-          shadowOffset: { width: 0, height: 0 },
-        }}
-      />
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 10,
-            letterSpacing: 2.4,
-            textTransform: 'uppercase',
-            fontWeight: '700',
-            color: T.inkDim,
-          },
-        ]}
-      >
-        Awaiting confirmation
-      </Text>
-    </View>
-  );
-}
