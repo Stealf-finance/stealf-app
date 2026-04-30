@@ -16,7 +16,10 @@ import {
   getBankClient,
   type GetBankClientArgs,
 } from '../client';
-import { ensureRegistered } from '@/src/features/stealth/lib/registration';
+import {
+  ensureRegistered,
+  ensureRegisteredFor,
+} from '@/src/features/stealth/lib/registration';
 
 /** Private send: creates a UTXO claimable by `recipient`. */
 export async function sendPrivate(
@@ -101,14 +104,17 @@ export interface DepositFromBankToReceiverArgs extends GetBankClientArgs {
  * `userCommitment` — pass the stealth address as `destinationAddress` for
  * bank → shielded. The receiver claims it into their encrypted balance.
  *
- * The receiver MUST be registered on-chain so the SDK can read its
- * `userCommitment` from the EncryptedUserAccount PDA — otherwise simulation
- * fails. We register the stealth wallet first (idempotent, no-op if done).
+ * BOTH wallets must be registered on Umbra:
+ * - The receiver (stealth) so the SDK can read its `userCommitment` from
+ *   the EncryptedUserAccount PDA when locking the UTXO.
+ * - The sender (bank) so the SDK can produce a sender commitment for the
+ *   mixer tree leaf — without it, the on-chain instruction fails simulation.
  */
 export async function depositFromBankToReceiver(args: DepositFromBankToReceiverArgs) {
   await ensureRegistered();
   const { destinationAddress, mint, amount, ...bankClientArgs } = args;
   const client = await getBankClient(bankClientArgs);
+  await ensureRegisteredFor(client);
   const zkProver =
     createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver();
   const createUtxo = getPublicBalanceToReceiverClaimableUtxoCreatorFunction(

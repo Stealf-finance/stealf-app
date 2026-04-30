@@ -1,37 +1,48 @@
 import { getUserRegistrationFunction } from '@umbra-privacy/sdk';
-import { getStealthClient } from '@/src/services/umbra/client';
+import { getStealthClient, type UmbraClient } from '@/src/services/umbra/client';
 import { createUserRegistrationProver } from '../zk/provers/register';
 
-let registered = false;
+const registeredAddresses = new Set<string>();
 
-/**
- * Make sure the active stealth wallet is registered with the Umbra protocol
- * on chain. Idempotent in-memory: subsequent calls in the same session no-op
- * once registration has succeeded (or the chain reports the user is already
- * registered).
- */
-export async function ensureRegistered(): Promise<void> {
-  if (registered) return;
+async function registerWith(client: UmbraClient): Promise<void> {
+  const addr = client.signer.address.toString();
+  if (registeredAddresses.has(addr)) return;
   try {
-    const client = await getStealthClient();
     const zkProver = await createUserRegistrationProver();
     const register = getUserRegistrationFunction({ client }, { zkProver });
     await register({ confidential: true, anonymous: true });
-    registered = true;
+    registeredAddresses.add(addr);
   } catch (err: unknown) {
     const msg = (err as { message?: string })?.message ?? '';
     if (/already/i.test(msg)) {
-      registered = true;
+      registeredAddresses.add(addr);
       return;
     }
     throw err;
   }
 }
 
+/** Register the active stealth wallet on the Umbra protocol. Idempotent. */
+export async function ensureRegistered(): Promise<void> {
+  const client = await getStealthClient();
+  return registerWith(client);
+}
+
 /**
- * Reset the in-memory registration flag — typically called on logout or
+ * Register an arbitrary client (e.g. the bank wallet) on the Umbra protocol.
+ * Required before any flow that needs the wallet's `EncryptedUserAccount` PDA
+ * to exist — receiver-claimable UTXOs read the destination's `userCommitment`
+ * from that PDA, and creating UTXOs in the mixer tree references the sender's
+ * commitment too.
+ */
+export async function ensureRegisteredFor(client: UmbraClient): Promise<void> {
+  return registerWith(client);
+}
+
+/**
+ * Reset the in-memory registration cache — typically called on logout or
  * wallet switch so the next operation re-checks the on-chain state.
  */
 export function clearRegistration(): void {
-  registered = false;
+  registeredAddresses.clear();
 }
