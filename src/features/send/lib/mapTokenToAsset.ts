@@ -1,3 +1,4 @@
+import type { ImageSourcePropType } from 'react-native';
 import type { Asset } from '@/src/features/send/components/AssetPill';
 import type { TokenBalance } from '@/src/features/bank/types';
 
@@ -8,6 +9,10 @@ const GRADIENTS: Record<string, [string, string]> = {
   BTC: ['#F7931A', '#a65e06'],
   ETH: ['#627EEA', '#3b4fa8'],
   EURC: ['#1a2c6b', '#0a1840'],
+};
+
+const ICONS: Record<string, ImageSourcePropType> = {
+  SOL: require('@/assets/images/solana-icon.png'),
 };
 
 const FALLBACK_GRADIENT: [string, string] = ['#9a9a9f', '#5a5a5e'];
@@ -33,13 +38,27 @@ function formatFiat(usd: number): string {
   return `$${usd.toFixed(2)}`;
 }
 
+// Stablecoins: backend may omit balanceUSD when the wallet is empty, so we
+// hardcode parity here rather than fall back to 0.
+const STABLE_PRICES: Record<string, number> = {
+  USDC: 1,
+  USDT: 1,
+  EURC: 1,
+};
+
 export function mapTokenToAsset(token: TokenBalance): Asset {
+  const derivedPrice =
+    token.balance > 0 ? token.balanceUSD / token.balance : undefined;
+  const priceUSD = STABLE_PRICES[token.tokenSymbol] ?? derivedPrice;
+
   return {
     symbol: token.tokenSymbol,
     name: DISPLAY_NAMES[token.tokenSymbol] ?? token.tokenSymbol,
     balance: formatBalance(token.balance, token.tokenDecimals),
     fiat: formatFiat(token.balanceUSD),
     gradient: GRADIENTS[token.tokenSymbol] ?? FALLBACK_GRADIENT,
+    iconSource: ICONS[token.tokenSymbol],
+    priceUSD,
   };
 }
 

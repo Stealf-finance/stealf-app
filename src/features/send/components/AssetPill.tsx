@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from 'react-native';
+import { Image, ImageSourcePropType, Pressable, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -9,6 +9,10 @@ export type Asset = {
   balance: string;
   fiat?: string;
   gradient: [string, string];
+  /** When set, rendered inside the 44px disc instead of the gradient. */
+  iconSource?: ImageSourcePropType;
+  /** Per-unit USD price, used to convert the typed amount to fiat in real time. */
+  priceUSD?: number;
 };
 
 type Props = Asset & {
@@ -22,6 +26,7 @@ export function AssetPill({
   balance,
   fiat,
   gradient,
+  iconSource,
   tone = 'silver',
   onPress,
 }: Props) {
@@ -52,16 +57,24 @@ export function AssetPill({
           gap: 14,
         }}
       >
-        <LinearGradient
-          colors={gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-          }}
-        />
+        {iconSource ? (
+          <Image
+            source={iconSource}
+            resizeMode="contain"
+            style={{ width: 44, height: 44, borderRadius: 22 }}
+          />
+        ) : (
+          <LinearGradient
+            colors={gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+            }}
+          />
+        )}
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ fontSize: 16, color: palette.ink }}>{name}</Text>
           <Text

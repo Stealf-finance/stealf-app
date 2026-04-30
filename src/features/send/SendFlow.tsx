@@ -47,60 +47,8 @@ const MAX_GRADIENTS: Record<Tone, [string, string]> = {
   gold: ['#e6c079', '#a37b2e'],
 };
 
-const ASSETS: Asset[] = [
-  {
-    symbol: 'SOL',
-    name: 'Solana',
-    balance: '1.8981',
-    fiat: '$167.92',
-    gradient: ['#9945FF', '#14F195'],
-  },
-  {
-    symbol: 'USDC',
-    name: 'USD Coin',
-    balance: '840.12',
-    fiat: '$840.12',
-    gradient: ['#2775CA', '#1a5390'],
-  },
-  {
-    symbol: 'jitoSOL',
-    name: 'Jito staked SOL',
-    balance: '19.42',
-    fiat: '$2,847',
-    gradient: ['#c9c9cc', '#5a5a5e'],
-  },
-  {
-    symbol: 'BTC',
-    name: 'Bitcoin',
-    balance: '0.0142',
-    fiat: '$892',
-    gradient: ['#F7931A', '#a65e06'],
-  },
-  {
-    symbol: 'ETH',
-    name: 'Ethereum',
-    balance: '0.38',
-    fiat: '$1,124',
-    gradient: ['#627EEA', '#3b4fa8'],
-  },
-  {
-    symbol: 'EURC',
-    name: 'Euro Coin',
-    balance: '200',
-    fiat: '€200',
-    gradient: ['#1a2c6b', '#0a1840'],
-  },
-];
-
-const RECENTS: Recipient[] = [
-  { name: '@maria', meta: 'Stealf · 2 days ago', avatar: ['#c9a86a', '#8b6a2e'] },
-  { name: '@jona', meta: 'Stealf · 5 days ago', avatar: ['#9945FF', '#14F195'] },
-  { name: 'vitalik.sol', meta: '.sol · 1 week ago' },
-  { name: '7zMmK…9xQP', meta: 'Solana · 2 weeks ago' },
-  { name: '@alex', meta: 'Stealf · 3 weeks ago', avatar: ['#2775CA', '#5BA0E0'] },
-];
-
-const RATE = 88.47;
+// Solana base fee = 5,000 lamports per signature. Single-sig transfer = 5,000.
+const NETWORK_FEE_SOL = 0.000005;
 
 type Props = { tone?: Tone };
 
@@ -115,14 +63,16 @@ export function SendFlow({ tone = 'silver' }: Props) {
   const { data: solPrice } = useSolPrice();
   const sendMutation = useSendSimple();
 
-  // Real assets when authenticated; mock list keeps the design intact in bypass mode.
-  const realAssets = useMemo(() => mapTokensToAssets(balance?.tokens ?? []), [balance]);
-  const assets = isAuthenticated && realAssets.length > 0 ? realAssets : ASSETS;
-  const recents = RECENTS; // Recent recipients endpoint is not in scope for Slice 3.
+  const assets = useMemo(
+    () => mapTokensToAssets(balance?.tokens ?? []),
+    [balance],
+  );
+  // Recent recipients endpoint not yet built — empty until the backend exposes it.
+  const recents: Recipient[] = [];
 
   const [step, setStep] = useState(0);
-  const [asset, setAsset] = useState<Asset>(assets[0]);
-  const [recipient, setRecipient] = useState<Recipient>(recents[0]);
+  const [asset, setAsset] = useState<Asset | null>(null);
+  const [recipient, setRecipient] = useState<Recipient | null>(null);
   const [amount, setAmount] = useState('0');
   const [inToken, setInToken] = useState(true);
   const [recipientQuery, setRecipientQuery] = useState('');
@@ -163,18 +113,25 @@ export function SendFlow({ tone = 'silver' }: Props) {
     }
   };
 
-  // Use the live SOL price for SOL; for other tokens, fall back to the asset's
-  // own fiat hint or the legacy mock RATE so the design remains demoable.
-  const rate =
-    asset.symbol === 'SOL' && typeof solPrice === 'number' && solPrice > 0
+  // SOL → live price from the dedicated endpoint (fresher than wallet snapshot).
+  // Other tokens → per-unit price derived from the wallet balance/balanceUSD pair
+  // (or stable parity for USDC/EURC/USDT). 0 if we genuinely don't know.
+  const rate = asset
+    ? asset.symbol === 'SOL' && typeof solPrice === 'number' && solPrice > 0
       ? solPrice
-      : RATE;
+      : (asset.priceUSD ?? 0)
+    : 0;
   const fiatValue = (Number(amount) * rate).toFixed(2);
   const amountValid = Number(amount) > 0;
+  const feeUSD =
+    typeof solPrice === 'number' && solPrice > 0
+      ? NETWORK_FEE_SOL * solPrice
+      : null;
+  const feeLabel = feeUSD === null ? '—' : `$${feeUSD.toFixed(4)}`;
+  const fromLabel = tone === 'gold' ? 'Stealth wallet' : 'Bank wallet';
 
   const onSwipeSend = async () => {
-    // In bypass / unauthenticated mode, just close — the design is the contract.
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !user || !asset || !recipient) {
       close();
       return;
     }
@@ -243,32 +200,53 @@ export function SendFlow({ tone = 'silver' }: Props) {
               }}
               showsVerticalScrollIndicator={false}
             >
-              {assets.filter(
-                (a) =>
-                  !assetQuery ||
-                  a.name.toLowerCase().includes(assetQuery.toLowerCase()) ||
-                  a.symbol.toLowerCase().includes(assetQuery.toLowerCase()),
-              ).map((a) => (
-                <AssetPill
-                  key={a.symbol}
-                  {...a}
-                  tone={tone}
-                  onPress={() => {
-                    setAsset(a);
-                    transitionTo(1, 'forward');
-                  }}
-                />
-              ))}
+              {assets.length === 0 ? (
+                <Text
+                  style={[
+                    serif,
+                    {
+                      textAlign: 'center',
+                      marginTop: 48,
+                      fontStyle: 'italic',
+                      fontSize: 14,
+                      color: S.inkFaint,
+                    },
+                  ]}
+                >
+                  No assets to send yet.
+                </Text>
+              ) : (
+                assets
+                  .filter(
+                    (a) =>
+                      !assetQuery ||
+                      a.name.toLowerCase().includes(assetQuery.toLowerCase()) ||
+                      a.symbol
+                        .toLowerCase()
+                        .includes(assetQuery.toLowerCase()),
+                  )
+                  .map((a) => (
+                    <AssetPill
+                      key={a.symbol}
+                      {...a}
+                      tone={tone}
+                      onPress={() => {
+                        setAsset(a);
+                        transitionTo(1, 'forward');
+                      }}
+                    />
+                  ))
+              )}
             </ScrollView>
           </>
         )}
 
-        {step === 1 && (
+        {step === 1 && asset && (
           <>
             <TxTitleBlock
               kicker="Step 2 of 4"
               title="Who's it for?"
-              subtitle="@handle, address, or .sol name"
+              subtitle="address, or .sol name"
             />
             <View style={{ paddingHorizontal: 24, marginBottom: 18 }}>
               <View
@@ -317,6 +295,13 @@ export function SendFlow({ tone = 'silver' }: Props) {
                   placeholderTextColor={S.inkFaint}
                   autoCapitalize="none"
                   autoCorrect={false}
+                  returnKeyType="next"
+                  onSubmitEditing={() => {
+                    const trimmed = recipientQuery.trim();
+                    if (!trimmed) return;
+                    setRecipient({ name: trimmed, meta: '' });
+                    transitionTo(2, 'forward');
+                  }}
                   style={[
                     sansation,
                     { flex: 1, padding: 0, color: S.ink, fontSize: 15 },
@@ -341,46 +326,52 @@ export function SendFlow({ tone = 'silver' }: Props) {
                 </Pressable>
               </View>
             </View>
-            <View style={{ paddingHorizontal: 24, marginBottom: 6 }}>
-              <Text
-                style={[
-                  sansation,
-                  {
-                    fontSize: 9,
-                    letterSpacing: 2.52,
-                    textTransform: 'uppercase',
-                    color: S.inkFaint,
-                    fontWeight: '700',
-                  },
-                ]}
-              >
-                Recent
-              </Text>
-            </View>
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={{
-                paddingHorizontal: 6,
-                paddingBottom: insets.bottom + 32,
-              }}
-              showsVerticalScrollIndicator={false}
-            >
-              {recents.map((r) => (
-                <RecipientRow
-                  key={r.name}
-                  {...r}
-                  tone={tone}
-                  onPress={() => {
-                    setRecipient(r);
-                    transitionTo(2, 'forward');
+            {recents.length > 0 ? (
+              <>
+                <View style={{ paddingHorizontal: 24, marginBottom: 6 }}>
+                  <Text
+                    style={[
+                      sansation,
+                      {
+                        fontSize: 9,
+                        letterSpacing: 2.52,
+                        textTransform: 'uppercase',
+                        color: S.inkFaint,
+                        fontWeight: '700',
+                      },
+                    ]}
+                  >
+                    Recent
+                  </Text>
+                </View>
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{
+                    paddingHorizontal: 6,
+                    paddingBottom: insets.bottom + 32,
                   }}
-                />
-              ))}
-            </ScrollView>
+                  showsVerticalScrollIndicator={false}
+                >
+                  {recents.map((r) => (
+                    <RecipientRow
+                      key={r.name}
+                      {...r}
+                      tone={tone}
+                      onPress={() => {
+                        setRecipient(r);
+                        transitionTo(2, 'forward');
+                      }}
+                    />
+                  ))}
+                </ScrollView>
+              </>
+            ) : (
+              <View style={{ flex: 1 }} />
+            )}
           </>
         )}
 
-        {step === 2 && (
+        {step === 2 && asset && recipient && (
           <>
             <TxTitleBlock
               kicker="Step 3 of 4"
@@ -574,7 +565,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
           </>
         )}
 
-        {step === 3 && (
+        {step === 3 && asset && recipient && (
           <>
             <TxTitleBlock
               kicker="Step 4 of 4"
@@ -675,11 +666,10 @@ export function SendFlow({ tone = 'silver' }: Props) {
                   </View>
 
                   {[
-                    ['From', 'Bank · EUR'],
+                    ['From', fromLabel],
                     ['To', recipient.name],
                     ['Asset', `${asset.symbol} · ${asset.name}`],
-                    ['Network fee', '$0.02'],
-                    ['Note', '—'],
+                    ['Network fee', feeLabel],
                   ].map(([l, v], i, arr) => (
                     <View
                       key={l}
@@ -734,7 +724,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
                     },
                   ]}
                 >
-                  ${(Number(fiatValue) + 0.02).toFixed(2)}
+                  ${(Number(fiatValue) + (feeUSD ?? 0)).toFixed(2)}
                 </Text>
               </View>
             </ScrollView>
