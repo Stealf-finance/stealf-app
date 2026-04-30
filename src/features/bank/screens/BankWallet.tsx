@@ -224,7 +224,10 @@ export function BankWallet() {
             Transactions
           </Text>
           <Pressable
+            onPress={() => router.push('/transactions')}
             accessibilityRole="link"
+            accessibilityLabel="See all transactions"
+            hitSlop={8}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
           >
             <Text
