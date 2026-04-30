@@ -155,6 +155,107 @@ Updated at slice DoD time.
 
 ---
 
+## 6. Known issues — to fix before dev/prod
+
+Issues caught during review of the auth-hardening + Slice 1/2/3 work.
+Tracked here so they don't slip; status updated at fix time.
+
+### 6.1 SendFlow gold tone signs from bank wallet, not stealth wallet
+**Severity**: 🔴 high (loss-of-funds confusion)
+**Status**: open, blocks Slice 5 ship
+**Surface**: `src/features/send/SendFlow.tsx:80,114,217`
+
+When the user taps "Send" from `StealthHub` with `?tone=gold`, the UI
+applies the gold palette but reads `useBalance(user.bankWallet)` and
+signs with `fromAddress: user.bankWallet`. The user thinks they're
+sending from stealth, but it's actually a bank send with cosmetic
+gold styling. Pre-existing from Slice 5b/5c — not introduced this
+session, but visible in interaction with the new Send flow.
+
+**Fix**: branch `bankWallet` vs `stealfWallet` selection on `tone`,
+swap balance source to `useEncryptedBalances` for gold, wire the
+Umbra signing path instead of `useSendSimple`. Slice 5 work proper.
+
+### 6.2 Onboarding email lookup uses legacy plaintext column
+**Severity**: 🟡 medium (silent breakage when migration window closes)
+**Status**: open, blocks legacy `email` column drop
+**Surface**: `backend-stealf/src/controllers/onboardingController.ts:152`
+
+```ts
+const taken = await User.findOne({ email });  // legacy plaintext
+```
+
+Security Officer added `emailHash` (HMAC-SHA256 indexed) +
+`emailEncrypted` (AES-256-GCM at-rest) so the plaintext `email`
+column can be dropped. The uniqueness check still queries the
+plaintext column. As long as `createUser` populates both, this
+works — but the day the legacy column is dropped, this query
+returns `null` for every email and duplicate registrations slip
+through silently.
+
+**Fix**: switch to `User.findOne({ emailHash: hashEmail(email) })`
+in both `OnboardingController.email` (line 152) and
+`OnboardingController.resendCode` if it queries email at all.
+`hashEmail` is already exported from `src/utils/emailCrypto.ts`.
+
+### 6.3 EMAIL_TAKEN 409 reverses the anti-enumeration intent
+**Severity**: 🟡 medium (security trade-off, documented choice)
+**Status**: accepted trade-off, this is the canonical record
+
+The original Security Officer design returned `200 success: true`
+silently when the submitted email was already registered, with a
+600 ms timing pad. This defeated email enumeration: an attacker
+couldn't tell from the response whether a given email was already
+on the platform.
+
+We reverted that to an explicit `409 EMAIL_TAKEN` because the silent
+path broke onboarding UX (user proceeds to the verify-code screen
+expecting a code that never arrives). The trade-off is acceptable
+for Stealf because:
+
+- Stealf is **invite-gated**. To probe the email enumeration oracle,
+  an attacker would need a valid invite code per probe. Invite codes
+  are scarce and trackable.
+- Stealf is **pre-launch / closed beta**. Attacker incentive is low
+  versus public mainnet apps.
+
+**Reconsider before**: opening invite codes to public registration,
+or any time the invite-gating is loosened. At that point either
+revert to silent-200 or move enumeration defense further upstream
+(rate-limit per IP, captcha on `/email`, etc.).
+
+Implemented in `feat/auth-hardening` commit `dcd8f4e`.
+
+### 6.4 No tests on the realtime layer
+**Severity**: 🟡 medium (caught a silent bug last week)
+**Status**: open, ~30 min of work, high ROI
+**Surface**: `src/features/bank/api/subscriptions.ts`,
+`src/services/real-time/socket.ts`
+
+The `transaction:new` / `balance:updated` handlers, the cache-key
+shape, and `socket.onReconnect()` invalidation have zero tests. A
+mismatched cache key (`limit=4` read vs `limit=10` write) silently
+dropped live updates for two commits before being caught
+manually — a 20-line vitest mocking `socketService.on(...)` would
+have flagged it on first commit.
+
+**Fix**: add tests covering (a) `setQueryData` lands on the same
+key `useHistory` reads, (b) self-address mismatch is filtered, (c)
+the reconnect callback fires `invalidateQueries` for the right
+keys.
+
+### 6.5 `'#E5484D'` raw hex in 5+ places instead of token
+**Severity**: 🟢 low (cosmetic / DS hygiene)
+**Status**: open, ~10 min
+**Surface**: `src/features/send/SendFlow.tsx` (4 occurrences),
+`src/features/onboarding/OnboardWizard.tsx` (1 occurrence)
+
+Error red is hardcoded as `'#E5484D'`. Should be promoted to a
+shared token (e.g. `T.danger` or `palette.danger`) so a future
+palette tweak doesn't require a grep-and-replace.
+
+---
+
 ## 5. Glossary
 
 Defined in `glossary.md`. Cross-references rather than duplications.
