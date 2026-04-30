@@ -26,6 +26,10 @@ type Props = { direction: Direction };
 const ASSET_SYMBOL = 'SOL' as const;
 const SOL_DECIMALS = 9;
 
+// Reserve for tx fee (~5k lamports) + ATA rent (~0.002 SOL) + headroom.
+// Without it, "Max" leaves the wallet unable to pay its own deposit fee.
+const SHIELD_RESERVE_SOL = 0.005;
+
 const PILL_GRADIENTS: Record<Tone, [string, string]> = {
   silver: ['#e8e8ea', '#9a9a9f'],
   gold: ['#e6c079', '#a37b2e'],
@@ -53,14 +57,17 @@ export function ShieldFlow({ direction }: Props) {
     : 'Unshield to bring assets back public';
 
   const { user } = useAuth();
-  const { depositFromBank, withdraw, loading } = useUmbra();
+  const { deposit, withdraw, loading } = useUmbra();
   const { data: solPrice } = useSolPrice();
 
-  // Shield reads from the bank (public) wallet; unshield reads from the
-  // shielded pool. Both expose SOL only on devnet.
-  const { data: bankBalance } = useBalance(isShield ? user?.bankWallet ?? null : null);
+  // Both shield and unshield operate on the stealth wallet:
+  // - shield: stealth public ATA → stealth encrypted balance
+  // - unshield: stealth encrypted → stealth public ATA
+  const { data: stealthBalance } = useBalance(
+    isShield ? user?.stealfWallet ?? null : null,
+  );
   const { data: shielded } = useShieldedSolBalance();
-  const publicSol = bankBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+  const publicSol = stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
   const privateSol = shielded?.sol ?? 0;
   const sourceSol = isShield ? publicSol : privateSol;
   const balanceLabel = formatSolBalance(sourceSol);
@@ -87,7 +94,7 @@ export function ShieldFlow({ direction }: Props) {
         if (!user?.stealfWallet) {
           throw new Error('Stealth wallet not set up. Open it once before shielding.');
         }
-        await depositFromBank(toAddress(user.stealfWallet), mint, amountBigInt);
+        await deposit(mint, amountBigInt);
       } else {
         await withdraw(mint, amountBigInt);
       }
