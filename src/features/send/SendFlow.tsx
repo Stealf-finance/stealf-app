@@ -133,7 +133,12 @@ export function SendFlow({ tone = 'silver' }: Props) {
     } else if (k === '.') {
       setAmount((a) => (a.includes('.') ? a : a + '.'));
     } else {
-      setAmount((a) => (a === '0' ? k : a + k));
+      // Cap at 9 chars so the giant amount typography never overflows
+      // the screen and shifts the layout (matches Apple Pay / Revolut).
+      setAmount((a) => {
+        if (a.length >= 9) return a;
+        return a === '0' ? k : a + k;
+      });
     }
   };
 

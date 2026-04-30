@@ -22,7 +22,6 @@ export function SendMenu() {
   const insets = useSafeAreaInsets();
 
   const close = () => router.back();
-  const noop = () => {};
 
   return (
     <CenterGlow tone="silver">
@@ -68,7 +67,7 @@ export function SendMenu() {
           <GlassListRow
             leading={<UsdFlagDisc />}
             label="USD bank transfer"
-            onPress={noop}
+            disabled
           />
         </View>
 
