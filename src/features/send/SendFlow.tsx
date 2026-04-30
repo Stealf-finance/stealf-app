@@ -57,8 +57,9 @@ const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 // Lightweight .sol name accept-list — backend will resolve later.
 const SOL_NAME_RE = /^[a-zA-Z0-9._-]{1,32}\.sol$/;
 
-function isValidRecipient(input: string): boolean {
+function isValidRecipient(input: string, selfAddress?: string): boolean {
   const s = input.trim();
+  if (selfAddress && s === selfAddress) return false;
   return SOLANA_ADDRESS_RE.test(s) || SOL_NAME_RE.test(s);
 }
 
@@ -67,6 +68,21 @@ function truncateAddress(input: string, head = 6, tail = 4): string {
   if (s.length <= head + tail + 1) return s;
   if (!SOLANA_ADDRESS_RE.test(s)) return s;
   return `${s.slice(0, head)}…${s.slice(-tail)}`;
+}
+
+// Big-number display shrinks as digits accumulate so the layout below
+// (fiat hint, Max chip, Numpad) never moves. Hand-tuned breakpoints to
+// keep the typography readable from 1 char through the 12-char ceiling
+// reachable when toggling to fiat on a high-balance wallet.
+function bigAmountFontSize(displayLen: number): number {
+  if (displayLen <= 5) return 84;
+  if (displayLen === 6) return 72;
+  if (displayLen === 7) return 62;
+  if (displayLen === 8) return 54;
+  if (displayLen === 9) return 48;
+  if (displayLen === 10) return 44;
+  if (displayLen === 11) return 40;
+  return 36;
 }
 
 type Props = { tone?: Tone };
@@ -176,7 +192,11 @@ export function SendFlow({ tone = 'silver' }: Props) {
       setRecipientError('Enter a Solana address or .sol name.');
       return;
     }
-    if (!isValidRecipient(trimmed)) {
+    if (bankWallet && trimmed === bankWallet) {
+      setRecipientError("You can't send funds to your own wallet.");
+      return;
+    }
+    if (!isValidRecipient(trimmed, bankWallet)) {
       setRecipientError('Not a valid Solana address.');
       return;
     }
@@ -416,21 +436,20 @@ export function SendFlow({ tone = 'silver' }: Props) {
                   <Icons.qr size={16} color={S.accent} />
                 </Pressable>
               </View>
-              {recipientError ? (
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      marginTop: 10,
-                      paddingHorizontal: 4,
-                      fontSize: 12,
-                      color: '#E5484D',
-                    },
-                  ]}
-                >
-                  {recipientError}
-                </Text>
-              ) : null}
+              <View
+                style={{
+                  height: 22,
+                  marginTop: 10,
+                  paddingHorizontal: 4,
+                  justifyContent: 'center',
+                }}
+              >
+                {recipientError ? (
+                  <Text style={[sansation, { fontSize: 12, color: '#E5484D' }]}>
+                    {recipientError}
+                  </Text>
+                ) : null}
+              </View>
             </View>
             {recents.length > 0 ? (
               <>
@@ -485,7 +504,7 @@ export function SendFlow({ tone = 'silver' }: Props) {
                 variant="primary"
                 tone={tone}
                 label="Continue"
-                disabled={!isValidRecipient(recipientQuery)}
+                disabled={!isValidRecipient(recipientQuery, bankWallet)}
                 onPress={submitRecipient}
               />
             </View>
@@ -513,68 +532,80 @@ export function SendFlow({ tone = 'silver' }: Props) {
                 }}
               >
                 {inToken ? (
-                  <>
-                    <Text
-                      style={[
-                        sansationLight,
-                        {
-                          fontSize: 84,
-                          letterSpacing: -4.2,
-                          color: S.ink,
-                          lineHeight: 84,
-                          includeFontPadding: false,
-                        },
-                      ]}
-                    >
-                      {amount}
-                    </Text>
-                    <Text
-                      style={[
-                        serif,
-                        {
-                          fontSize: 30,
-                          color: S.accent,
-                          fontStyle: 'italic',
-                          lineHeight: 30,
-                          includeFontPadding: false,
-                          marginLeft: 6,
-                        },
-                      ]}
-                    >
-                      {asset.symbol}
-                    </Text>
-                  </>
+                  (() => {
+                    const size = bigAmountFontSize(amount.length);
+                    return (
+                      <>
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            sansationLight,
+                            {
+                              fontSize: size,
+                              letterSpacing: size * -0.05,
+                              color: S.ink,
+                              lineHeight: size,
+                              includeFontPadding: false,
+                            },
+                          ]}
+                        >
+                          {amount}
+                        </Text>
+                        <Text
+                          style={[
+                            serif,
+                            {
+                              fontSize: Math.max(20, size * 0.36),
+                              color: S.accent,
+                              fontStyle: 'italic',
+                              lineHeight: Math.max(20, size * 0.36),
+                              includeFontPadding: false,
+                              marginLeft: 6,
+                            },
+                          ]}
+                        >
+                          {asset.symbol}
+                        </Text>
+                      </>
+                    );
+                  })()
                 ) : (
-                  <>
-                    <Text
-                      style={[
-                        serif,
-                        {
-                          fontSize: 38,
-                          color: S.accent,
-                          fontStyle: 'italic',
-                          lineHeight: 38,
-                          includeFontPadding: false,
-                        },
-                      ]}
-                    >
-                      $
-                    </Text>
-                    <Text
-                      style={[
-                        sansationLight,
-                        {
-                          fontSize: 84,
-                          letterSpacing: -4.2,
-                          color: S.ink,
-                          lineHeight: 84,
-                          includeFontPadding: false,
-                        },
-                      ]}
-                    >
-                      {fiatValue}
-                    </Text>
-                  </>
+                  (() => {
+                    const size = bigAmountFontSize(fiatValue.length);
+                    return (
+                      <>
+                        <Text
+                          style={[
+                            serif,
+                            {
+                              fontSize: Math.max(22, size * 0.45),
+                              color: S.accent,
+                              fontStyle: 'italic',
+                              lineHeight: Math.max(22, size * 0.45),
+                              includeFontPadding: false,
+                            },
+                          ]}
+                        >
+                          $
+                        </Text>
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            sansationLight,
+                            {
+                              fontSize: size,
+                              letterSpacing: size * -0.05,
+                              color: S.ink,
+                              lineHeight: size,
+                              includeFontPadding: false,
+                            },
+                          ]}
+                        >
+                          {fiatValue}
+                        </Text>
+                      </>
+                    );
+                  })()
                 )}
               </Pressable>
               <Text
@@ -675,21 +706,28 @@ export function SendFlow({ tone = 'silver' }: Props) {
                 paddingBottom: insets.bottom + 24,
               }}
             >
-              {amountError ? (
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 12,
-                      color: '#E5484D',
-                      textAlign: 'center',
-                      marginBottom: 10,
-                    },
-                  ]}
-                >
-                  {amountError}
-                </Text>
-              ) : null}
+              <View
+                style={{
+                  height: 22,
+                  marginBottom: 4,
+                  justifyContent: 'center',
+                }}
+              >
+                {amountError ? (
+                  <Text
+                    style={[
+                      sansation,
+                      {
+                        fontSize: 12,
+                        color: '#E5484D',
+                        textAlign: 'center',
+                      },
+                    ]}
+                  >
+                    {amountError}
+                  </Text>
+                ) : null}
+              </View>
               <PillBtn
                 variant="primary"
                 tone={tone}
