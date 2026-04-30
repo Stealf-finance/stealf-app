@@ -23,6 +23,8 @@ export type StealthOp =
   | 'withdraw'
   | 'sendPrivate'
   | 'selfShield'
+  | 'selfShieldFromPublicStealth'
+  | 'selfShieldFromPublicBank'
   | 'claimReceived'
   | 'claimSelfToPublic'
   | 'fetchClaims'

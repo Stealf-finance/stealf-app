@@ -18,7 +18,6 @@ import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
 import { useShieldedSolBalance, shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
-import { useSendSimple } from '@/src/features/send/hooks/useSendSimple';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 
@@ -84,8 +83,12 @@ export function MoveFlow() {
   const { data: solPrice } = useSolPrice();
   const rate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
 
-  const { depositFromBank, selfShield, loading: umbraLoading } = useUmbra();
-  const sendMutation = useSendSimple();
+  const {
+    selfShield,
+    selfShieldFromPublicStealth,
+    selfShieldFromPublicBank,
+    loading: umbraLoading,
+  } = useUmbra();
 
   const { data: bankBalanceData } = useBalance(
     direction === 'bank-to-shielded' ? user?.bankWallet ?? null : null,
@@ -148,27 +151,33 @@ export function MoveFlow() {
     setSubmitting(true);
     try {
       if (direction === 'bank-to-shielded') {
+        // Bank ATA → self-claimable UTXO locked to the stealth wallet.
+        // Signed by Turnkey (bank). Stealth claims it back into shielded pool.
         if (!user.stealfWallet) {
           throw new Error('Stealth wallet not set up. Open the Stealth tab once first.');
         }
-        await depositFromBank(toAddress(user.stealfWallet), mint, lamports);
+        await selfShieldFromPublicBank(
+          toAddress(user.stealfWallet),
+          mint,
+          lamports,
+        );
       } else if (direction === 'shielded-to-bank') {
+        // Shielded balance → self-claimable UTXO locked to the bank wallet.
+        // Signed by stealth (encrypted-balance source). Bank claims it later
+        // into its public ATA.
         if (!user.bankWallet) throw new Error('Bank wallet missing.');
-        // selfShield with destination = bank wallet creates a self-claimable
-        // UTXO that pays out to the bank. Pattern repris de front-stealf moove.
         await selfShield(mint, lamports, toAddress(user.bankWallet));
       } else {
-        // stealth-to-bank: regular SOL transfer signed by the stealth key.
+        // Stealth ATA → self-claimable UTXO locked to the bank wallet.
+        // Signed by stealth (public-balance source).
         if (!user.bankWallet || !user.stealfWallet) {
           throw new Error('Wallets missing.');
         }
-        await sendMutation.mutateAsync({
-          fromAddress: user.stealfWallet,
-          toAddress: user.bankWallet,
-          amountSol: num,
-          walletSource: 'stealth',
-          balanceSol: sourceSol,
-        });
+        await selfShieldFromPublicStealth(
+          mint,
+          lamports,
+          toAddress(user.bankWallet),
+        );
       }
 
       if (__DEV__) console.log('[MoveFlow] success →', direction);
@@ -184,7 +193,7 @@ export function MoveFlow() {
     }
   };
 
-  const loading = submitting || umbraLoading || sendMutation.isPending;
+  const loading = submitting || umbraLoading;
   const ctaLabel = loading ? 'Processing…' : config.cta;
 
   return (
