@@ -544,7 +544,9 @@ export function StealthHub() {
               <SquareActionTile
                 iconKey="arrDown"
                 label="Receive"
-                onPress={() => router.push('/add-funds?tone=silver')}
+                onPress={() =>
+                  router.push('/add-funds?tone=silver&wallet=stealth')
+                }
               />
               <SquareActionTile
                 iconKey="shieldCheck"

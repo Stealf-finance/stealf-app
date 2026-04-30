@@ -16,7 +16,13 @@ import { T } from '@/src/design-system/tokens';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
-type Props = { tone?: Tone };
+type WalletSource = 'bank' | 'stealth';
+
+type Props = {
+  tone?: Tone;
+  /** Which wallet's address to display. Defaults to bank for silver, stealth for gold. */
+  wallet?: WalletSource;
+};
 
 const QR_SIZE = 244;
 
@@ -30,7 +36,7 @@ const ACCENT_DIM: Record<Tone, string> = {
   silver: 'rgba(232,232,234,0.2)',
 };
 
-export function AddFundsScreen({ tone = 'gold' }: Props) {
+export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -41,9 +47,12 @@ export function AddFundsScreen({ tone = 'gold' }: Props) {
   const accentDim = ACCENT_DIM[tone];
   const kickerColor = isGold ? 'rgba(230,192,121,0.85)' : T.inkFaint;
 
+  const resolvedWallet: WalletSource = wallet ?? (isGold ? 'stealth' : 'bank');
+  const isStealth = resolvedWallet === 'stealth';
+
   const [network] = useState('Solana');
-  const destination = isGold ? 'Stealth private' : 'Bank wallet';
-  const fullAddress = (isGold ? user?.stealfWallet : user?.bankWallet) ?? '';
+  const destination = isStealth ? 'Stealth wallet' : 'Bank wallet';
+  const fullAddress = (isStealth ? user?.stealfWallet : user?.bankWallet) ?? '';
   const displayAddress = fullAddress
     ? `${fullAddress.slice(0, 14)}...${fullAddress.slice(-6)}`
     : '—';
