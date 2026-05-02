@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
@@ -12,17 +13,35 @@ import {
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useLogout } from '@/src/features/onboarding/hooks/useLogout';
+import { useDeleteAccount } from '@/src/features/onboarding/hooks/useDeleteAccount';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
 
 const S = txPalette('silver');
 
-const PREFERENCES: { iconKey: keyof typeof Icons; label: string }[] = [
-  { iconKey: 'key', label: 'Security & passkeys' },
-  { iconKey: 'bell', label: 'Notifications' },
-  { iconKey: 'card', label: 'Cards & limits' },
-  { iconKey: 'settings', label: 'Preferences' },
+type SettingsItem = {
+  iconKey: keyof typeof Icons;
+  label: string;
+  href?: string;
+  to?: string;
+};
+
+const SETTINGS: SettingsItem[] = [
+  {
+    iconKey: 'mail',
+    label: 'Contact Support',
+    href: 'https://t.me/stealf_bot',
+  },
+  {
+    iconKey: 'key',
+    label: 'Solana Private Key',
+    to: '/profile/private-key',
+  },
+  { iconKey: 'info', label: 'About us', href: 'https://www.stealf.xyz' },
+  { iconKey: 'folder', label: 'Terms of Services' },
+  { iconKey: 'shield', label: 'Privacy Policy' },
 ];
 
 function splitUsd(usd: number): { whole: string; cents: string } {
@@ -41,7 +60,40 @@ function formatUsdShort(usd: number): string {
 
 export function ProfileHub() {
   const insets = useSafeAreaInsets();
+  const router = useSafeRouter();
   const { user } = useAuth();
+  const logout = useLogout();
+  const deleteAccount = useDeleteAccount();
+
+  const confirmLogout = () => {
+    Alert.alert(
+      'Log out?',
+      'You will need to sign in again to access your wallets.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Log out',
+          style: 'destructive',
+          onPress: () => logout.mutate(),
+        },
+      ],
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete account?',
+      'This permanently deletes your Stealf account and wipes your wallets from this device. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteAccount.mutate(),
+        },
+      ],
+    );
+  };
 
   const { data: bankBalance } = useBalance(user?.bankWallet ?? null);
   const { data: stealthBalance } = useBalance(user?.stealfWallet ?? null);
@@ -333,14 +385,8 @@ export function ProfileHub() {
           </View>
         </View>
 
-        {/* Points + Tier */}
-        <View
-          style={{
-            flexDirection: 'row',
-            gap: 10,
-            marginBottom: 28,
-          }}
-        >
+        {/* Points */}
+        <View style={{ marginBottom: 28 }}>
           <StatCard label="Points">
             <View
               style={{
@@ -365,36 +411,26 @@ export function ProfileHub() {
               </Text>
             </View>
           </StatCard>
-
-          <StatCard label="Tier">
-            <Text
-              style={[
-                serif,
-                {
-                  fontStyle: 'italic',
-                  fontSize: 22,
-                  color: S.ink,
-                  lineHeight: 24,
-                  includeFontPadding: false,
-                },
-              ]}
-            >
-              Noctua
-            </Text>
-          </StatCard>
         </View>
 
-        {/* Preferences */}
-        <SectionLabel>Preferences</SectionLabel>
+        {/* Settings */}
+        <SectionLabel>Settings</SectionLabel>
         <SettingsCard>
-          {PREFERENCES.map((item, i) => {
+          {SETTINGS.map((item, i) => {
             const Icon = Icons[item.iconKey];
-            const isLast = i === PREFERENCES.length - 1;
+            const isLast = i === SETTINGS.length - 1;
             return (
               <Pressable
                 key={item.label}
-                accessibilityRole="button"
+                accessibilityRole={item.href ? 'link' : 'button'}
                 accessibilityLabel={item.label}
+                onPress={
+                  item.href
+                    ? () => void Linking.openURL(item.href!)
+                    : item.to
+                    ? () => router.push(item.to as any)
+                    : undefined
+                }
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -439,6 +475,9 @@ export function ProfileHub() {
         <SettingsCard>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Logout"
+            disabled={logout.isPending}
+            onPress={confirmLogout}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -446,6 +485,7 @@ export function ProfileHub() {
               paddingHorizontal: 16,
               borderBottomWidth: 1,
               borderBottomColor: 'rgba(255,255,255,0.04)',
+              opacity: logout.isPending ? 0.5 : 1,
             }}
           >
             <Text
@@ -454,17 +494,21 @@ export function ProfileHub() {
                 { flex: 1, fontSize: 14, color: S.ink },
               ]}
             >
-              Logout
+              {logout.isPending ? 'Logging out…' : 'Logout'}
             </Text>
             <Icons.chevR size={14} color={S.inkFaint} />
           </Pressable>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="Delete Account"
+            disabled={deleteAccount.isPending}
+            onPress={confirmDeleteAccount}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
               paddingVertical: 14,
               paddingHorizontal: 16,
+              opacity: deleteAccount.isPending ? 0.5 : 1,
             }}
           >
             <Text
@@ -473,7 +517,7 @@ export function ProfileHub() {
                 { flex: 1, fontSize: 14, color: T.red },
               ]}
             >
-              Delete my account
+              {deleteAccount.isPending ? 'Deleting…' : 'Delete Account'}
             </Text>
             <Icons.chevR size={14} color={S.inkFaint} />
           </Pressable>
@@ -506,7 +550,7 @@ export function ProfileHub() {
               },
             ]}
           >
-            VERSION 0.2 · MMXXVI
+            VERSION 0.2
           </Text>
         </View>
       </ScrollView>

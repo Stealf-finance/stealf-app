@@ -103,6 +103,19 @@ export function StealthHub() {
     };
   };
   const balance = formatBalance(isPrivate ? privateUSD : publicUSD);
+  // Dynamic typography sizing: scale the balance down as the integer part
+  // grows so 9-figure totals still fit inside the gauge's center.
+  const intLen = balance.int.length;
+  const balanceFontSize =
+    intLen <= 4
+      ? { int: 64, dec: 28, dollar: 30 }
+      : intLen <= 6
+      ? { int: 56, dec: 24, dollar: 26 }
+      : intLen <= 8
+      ? { int: 46, dec: 20, dollar: 22 }
+      : intLen <= 10
+      ? { int: 38, dec: 18, dollar: 20 }
+      : { int: 32, dec: 16, dollar: 18 };
 
   const solRow = balanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL');
   const solBalance = isPrivate ? (shielded?.sol ?? 0) : (solRow?.balance ?? 0);
@@ -347,8 +360,8 @@ export function StealthHub() {
             style={[
               {
                 alignItems: 'center',
-                paddingTop: 20,
-                marginBottom: 24,
+                paddingTop: 12,
+                marginBottom: 20,
               },
               contentStyle,
             ]}
@@ -404,7 +417,7 @@ export function StealthHub() {
           <View
             style={{
               position: 'relative',
-              height: 220,
+              height: 270,
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: 28,
@@ -418,7 +431,7 @@ export function StealthHub() {
               privateColor={GOLD.accent}
               publicGlow={SILVER.accentGlow}
               privateGlow={GOLD.accentGlow}
-              size={210}
+              size={260}
               thickness={5}
             />
 
@@ -438,10 +451,10 @@ export function StealthHub() {
                   style={[
                     serif,
                     {
-                      fontSize: 30,
+                      fontSize: balanceFontSize.dollar,
                       color: palette.accent,
                       fontStyle: 'italic',
-                      lineHeight: 30,
+                      lineHeight: balanceFontSize.dollar,
                       includeFontPadding: false,
                     },
                   ]}
@@ -452,9 +465,9 @@ export function StealthHub() {
                   style={[
                     sansationLight,
                     {
-                      fontSize: 64,
-                      letterSpacing: -2.56,
-                      lineHeight: 64,
+                      fontSize: balanceFontSize.int,
+                      letterSpacing: balanceFontSize.int * -0.04,
+                      lineHeight: balanceFontSize.int,
                       color: palette.ink,
                       includeFontPadding: false,
                     },
@@ -466,10 +479,10 @@ export function StealthHub() {
                   style={[
                     sansationLight,
                     {
-                      fontSize: 28,
+                      fontSize: balanceFontSize.dec,
                       color: palette.inkDim,
-                      letterSpacing: -0.56,
-                      lineHeight: 28,
+                      letterSpacing: balanceFontSize.dec * -0.02,
+                      lineHeight: balanceFontSize.dec,
                       includeFontPadding: false,
                     },
                   ]}

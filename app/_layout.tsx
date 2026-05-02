@@ -101,6 +101,7 @@ function RootLayout() {
                   <Stack.Screen name="claim-pending" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="transactions" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="tx/[id]" options={{ presentation: 'modal' }} />
+                  <Stack.Screen name="profile/private-key" options={{ presentation: 'modal' }} />
                   </Stack>
                   <StatusBar style="light" />
                   </PendingOpsProvider>

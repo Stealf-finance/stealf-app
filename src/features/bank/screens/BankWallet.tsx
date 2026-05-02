@@ -326,7 +326,7 @@ function CardPromo() {
         <View
           style={{
             flexDirection: 'row',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             gap: 16,
             marginBottom: 20,
           }}
@@ -338,6 +338,7 @@ function CardPromo() {
             style={{
               width: 110,
               height: 78,
+              marginTop: 6,
             }}
           />
           <View style={{ flex: 1, minWidth: 0 }}>
