@@ -406,7 +406,12 @@ export function MoveFlow() {
           paddingBottom: insets.bottom + 16,
         }}
       >
-        <SwipeToSend tone={tone} label={ctaLabel} onSend={onSubmit} />
+        <SwipeToSend
+          tone={tone}
+          label={ctaLabel}
+          onSend={onSubmit}
+          disabled={Number(amount) <= 0}
+        />
       </View>
     </CenterGlow>
   );

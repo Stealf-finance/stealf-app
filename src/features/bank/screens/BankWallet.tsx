@@ -1,5 +1,6 @@
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
@@ -298,9 +299,9 @@ function CardPromo() {
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
         style={{
-          paddingTop: 28,
-          paddingHorizontal: 26,
-          paddingBottom: 26,
+          paddingTop: 22,
+          paddingHorizontal: 22,
+          paddingBottom: 18,
         }}
       >
         {/* top sheen */}
@@ -326,95 +327,80 @@ function CardPromo() {
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            marginBottom: 18,
+            gap: 16,
+            marginBottom: 20,
           }}
         >
-          <View
-            style={{ width: 22, height: 1, backgroundColor: S.accentDim }}
+          <Image
+            source={require('@/assets/images/card-stealf.png')}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            style={{
+              width: 110,
+              height: 78,
+            }}
           />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              style={[
+                sansationLight,
+                {
+                  fontSize: 22,
+                  letterSpacing: -0.4,
+                  lineHeight: 26,
+                  color: S.ink,
+                  marginBottom: 6,
+                },
+              ]}
+            >
+              Get your card
+            </Text>
+            <Text
+              style={[
+                sansation,
+                {
+                  fontSize: 13,
+                  lineHeight: 18,
+                  color: S.inkDim,
+                },
+              ]}
+            >
+              Spend anywhere. Stay private where it matters.
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Get your card"
+          style={{
+            paddingVertical: 14,
+            borderRadius: 100,
+            backgroundColor: 'rgba(255,255,255,0.06)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.14)',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+          }}
+        >
           <Text
             style={[
               sansation,
               {
                 fontSize: 11,
-                letterSpacing: 3.52,
+                letterSpacing: 2.64,
                 textTransform: 'uppercase',
-                color: S.accent,
+                color: S.ink,
                 fontWeight: '700',
               },
             ]}
           >
-            Bank without limits
+            Get your card
           </Text>
-          <View
-            style={{ width: 22, height: 1, backgroundColor: S.accentDim }}
-          />
-        </View>
-
-        <Text
-          style={[
-            sansationLight,
-            {
-              fontSize: 26,
-              letterSpacing: -0.65,
-              lineHeight: 31,
-              color: S.ink,
-              textAlign: 'center',
-              marginBottom: 4,
-            },
-          ]}
-        >
-          Your physical card
-        </Text>
-        <Text
-          style={[
-            serif,
-            {
-              fontSize: 15,
-              fontStyle: 'italic',
-              color: S.accent,
-              textAlign: 'center',
-              marginBottom: 22,
-            },
-          ]}
-        >
-          Ships within 48h.
-        </Text>
-
-        <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
-          <Pressable
-            accessibilityRole="button"
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              paddingVertical: 12,
-              paddingHorizontal: 22,
-              borderRadius: 100,
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.14)',
-            }}
-          >
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 11,
-                  letterSpacing: 2.64,
-                  textTransform: 'uppercase',
-                  color: S.ink,
-                  fontWeight: '700',
-                },
-              ]}
-            >
-              Get your bank account
-            </Text>
-            <Icons.arrRight size={12} color={S.ink} />
-          </Pressable>
-        </View>
+          <Icons.arrRight size={12} color={S.ink} />
+        </Pressable>
       </LinearGradient>
     </View>
   );

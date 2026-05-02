@@ -331,7 +331,12 @@ export function ShieldFlow({ direction }: Props) {
           paddingBottom: insets.bottom + 16,
         }}
       >
-        <SwipeToSend tone={tone} label={ctaLabel} onSend={onSubmit} />
+        <SwipeToSend
+          tone={tone}
+          label={ctaLabel}
+          onSend={onSubmit}
+          disabled={Number(amount) <= 0}
+        />
       </View>
     </CenterGlow>
   );

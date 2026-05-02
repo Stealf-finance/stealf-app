@@ -41,6 +41,7 @@ const PRELOAD_IMAGES = [
   require('../assets/images/logo.png'),
   require('../assets/images/usdc.png'),
   require('../assets/images/solana-icon.png'),
+  require('../assets/images/card-stealf.png'),
 ];
 
 function RootLayout() {

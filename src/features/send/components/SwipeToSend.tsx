@@ -4,6 +4,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +16,8 @@ type Props = {
   onSend: () => void;
   tone?: Tone;
   label?: string;
+  /** Blocks the gesture and dims the track. Use when the amount is 0/invalid. */
+  disabled?: boolean;
 };
 
 const THUMB = 48;
@@ -30,11 +33,23 @@ const RELEASE_THRESHOLD = 0.78;
 const SPRING_BACK = { damping: 18, stiffness: 200, mass: 0.7 } as const;
 const SPRING_SNAP = { damping: 22, stiffness: 380, mass: 0.6 } as const;
 
-export function SwipeToSend({ onSend, tone = 'silver', label = 'Swipe to send' }: Props) {
+// Success flash: arrow → check on the thumb after the snap, hold briefly
+// before handing off to the caller. Total dwell is ~360ms (220 cross-fade
+// + 140 hold) — long enough to feel rewarding, short enough not to delay.
+const SUCCESS_FADE_MS = 220;
+const SUCCESS_HOLD_MS = 140;
+
+export function SwipeToSend({
+  onSend,
+  tone = 'silver',
+  label = 'Swipe to send',
+  disabled = false,
+}: Props) {
   const palette = txPalette(tone);
   // Shared values (not refs) so worklets read consistent UI-thread values.
   const trackW = useSharedValue(0);
   const x = useSharedValue(0);
+  const successProgress = useSharedValue(0);
 
   const thumbColors: [string, string] =
     tone === 'gold' ? ['#e6c079', '#a37b2e'] : ['#e8e8ea', '#9a9a9f'];
@@ -43,10 +58,15 @@ export function SwipeToSend({ onSend, tone = 'silver', label = 'Swipe to send' }
     trackW.value = e.nativeEvent.layout.width;
   };
 
+  const fireOnSend = () => {
+    onSend();
+  };
+
   // Pan over the FULL track surface (not just the thumb): users can grab
   // anywhere along the strip and the thumb follows. failOffsetY hands the
   // gesture back to the modal-sheet pull-down if the user moves vertically.
   const gesture = Gesture.Pan()
+    .enabled(!disabled)
     .activeOffsetX([-4, 4])
     .failOffsetY([-12, 12])
     .onUpdate((e) => {
@@ -66,8 +86,26 @@ export function SwipeToSend({ onSend, tone = 'silver', label = 'Swipe to send' }
         return;
       }
       if (x.value >= max * RELEASE_THRESHOLD) {
-        x.value = withSpring(max, SPRING_SNAP, (done) => {
-          if (done) runOnJS(onSend)();
+        x.value = withSpring(max, SPRING_SNAP, (snapped) => {
+          'worklet';
+          if (!snapped) return;
+          // Cross-fade arrow → check, then hold, then hand off to JS.
+          successProgress.value = withTiming(
+            1,
+            { duration: SUCCESS_FADE_MS },
+            (faded) => {
+              'worklet';
+              if (!faded) return;
+              successProgress.value = withTiming(
+                1,
+                { duration: SUCCESS_HOLD_MS },
+                (held) => {
+                  'worklet';
+                  if (held) runOnJS(fireOnSend)();
+                },
+              );
+            },
+          );
         });
       } else {
         x.value = withSpring(0, SPRING_BACK);
@@ -79,13 +117,21 @@ export function SwipeToSend({ onSend, tone = 'silver', label = 'Swipe to send' }
       // gesture (e.g. modal dismiss), reset rather than leave the thumb
       // floating mid-track.
       const max = trackW.value - THUMB - TRACK_PAD * 2;
-      if (max > 0 && x.value > 0 && x.value < max * RELEASE_THRESHOLD) {
+      if (
+        max > 0 &&
+        x.value > 0 &&
+        x.value < max * RELEASE_THRESHOLD &&
+        successProgress.value === 0
+      ) {
         x.value = withSpring(0, SPRING_BACK);
       }
     });
 
   const thumbStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }],
+    transform: [
+      { translateX: x.value },
+      { scale: 1 + successProgress.value * 0.06 },
+    ],
   }));
 
   // Progress fill: a tinted layer that grows from the left with the thumb,
@@ -105,6 +151,15 @@ export function SwipeToSend({ onSend, tone = 'silver', label = 'Swipe to send' }
     return { opacity: 1 - x.value / max };
   });
 
+  const arrowStyle = useAnimatedStyle(() => ({
+    opacity: 1 - successProgress.value,
+  }));
+
+  const checkStyle = useAnimatedStyle(() => ({
+    opacity: successProgress.value,
+    transform: [{ scale: 0.7 + successProgress.value * 0.3 }],
+  }));
+
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
@@ -118,6 +173,7 @@ export function SwipeToSend({ onSend, tone = 'silver', label = 'Swipe to send' }
           overflow: 'hidden',
           padding: TRACK_PAD,
           justifyContent: 'center',
+          opacity: disabled ? 0.45 : 1,
         }}
       >
         {/* Progress fill — sits behind the thumb and grows with x */}
@@ -202,7 +258,30 @@ export function SwipeToSend({ onSend, tone = 'silver', label = 'Swipe to send' }
               justifyContent: 'center',
             }}
           >
-            <Icons.arrRight size={20} color="#0a0a0a" />
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                arrowStyle,
+              ]}
+            >
+              <Icons.arrRight size={20} color="#0a0a0a" />
+            </Animated.View>
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                checkStyle,
+              ]}
+            >
+              <Icons.check size={22} color="#0a0a0a" strokeWidth={2.6} />
+            </Animated.View>
           </LinearGradient>
         </Animated.View>
       </Animated.View>

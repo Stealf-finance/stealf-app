@@ -942,6 +942,7 @@ export function SendFlow({ tone = 'silver', wallet }: Props) {
                 tone={tone}
                 label={sendMutation.isPending ? 'Sending…' : 'Swipe to send'}
                 onSend={onSwipeSend}
+                disabled={!amountValid || sendMutation.isPending}
               />
             </View>
           </>
