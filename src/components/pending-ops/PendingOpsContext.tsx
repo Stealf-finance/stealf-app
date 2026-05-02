@@ -146,20 +146,29 @@ const VERBS: Record<
 
 function formatSolShort(sol: number): string {
   if (sol === 0) return '0';
-  // Up to 4 decimals, strip trailing zeros so "0.5 SOL" reads tighter than
-  // "0.5000 SOL". Cap at 4 to keep the pill narrow.
+
   return `${Number(sol.toFixed(4))}`;
 }
 
-/**
- * Single-line text shown inside the pill. Derived from the op so the pill
- * never has to truncate — the text is sized to fit ~24 chars at fontSize 12,
- * which comfortably matches our 280-pt cap.
- */
+
+function sourceAssetSymbol(kind: import('./types').PendingOpKind): string {
+  switch (kind) {
+    case 'unshield':
+    case 'move-shielded-to-bank':
+    case 'send-private':
+      return 'WSOL';
+    case 'shield':
+    case 'move-bank-to-shielded':
+    case 'move-stealth-to-bank':
+      return 'SOL';
+  }
+}
+
+
 export function formatPillText(op: import('./types').PendingOp): string {
   const v = VERBS[op.kind];
-  const sol = `${formatSolShort(op.amountSol)} SOL`;
-  if (op.phase === 'done') return `${v.ed} ${sol}`;
+  const amount = `${formatSolShort(op.amountSol)} ${sourceAssetSymbol(op.kind)}`;
+  if (op.phase === 'done') return `${v.ed} ${amount}`;
   if (op.phase === 'failed') return `${v.noun} failed`;
-  return `${v.ing} ${sol}…`;
+  return `${v.ing} ${amount}…`;
 }

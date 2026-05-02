@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
+import { DirectionRow } from '@/src/features/send/components/DirectionRow';
 import { Icons } from '@/src/design-system/icons';
 import { sansation, sansationLight, serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -89,6 +90,9 @@ export function MoveFlow() {
   // the funds are leaving from.
   const tone: Tone = direction === 'shielded-to-bank' ? 'gold' : 'silver';
   const palette = txPalette(tone);
+  // Source-side asset symbol — WSOL when leaving the encrypted balance,
+  // SOL otherwise. Keeps the user oriented on what they're spending.
+  const assetSymbol = direction === 'shielded-to-bank' ? 'WSOL' : 'SOL';
 
   const [amount, setAmount] = useState('0');
 
@@ -325,7 +329,7 @@ export function MoveFlow() {
               },
             ]}
           >
-            SOL
+            {assetSymbol}
           </Text>
         </View>
         <Text
@@ -348,7 +352,7 @@ export function MoveFlow() {
         <Pressable
           onPress={() => setAmount(balanceLabel)}
           accessibilityRole="button"
-          accessibilityLabel={`Use max balance ${balanceLabel} SOL`}
+          accessibilityLabel={`Use max balance ${balanceLabel} ${assetSymbol}`}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -390,7 +394,7 @@ export function MoveFlow() {
               { fontSize: 10, color: '#0a0a0a', fontWeight: '500' },
             ]}
           >
-            {balanceLabel} SOL
+            {balanceLabel} {assetSymbol}
           </Text>
         </Pressable>
       </View>
@@ -410,96 +414,3 @@ export function MoveFlow() {
   );
 }
 
-function DirectionRow({
-  fromLabel,
-  toLabel,
-  tone,
-}: {
-  fromLabel: string;
-  toLabel: string;
-  tone: Tone;
-}) {
-  const palette = txPalette(tone);
-
-  return (
-    <View
-      style={{
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: palette.hairline,
-        overflow: 'hidden',
-      }}
-    >
-      <LinearGradient
-        colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.01)']}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={{
-          paddingVertical: 14,
-          paddingHorizontal: 18,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2.52,
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              color: palette.inkFaint,
-            },
-          ]}
-        >
-          From
-        </Text>
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 13,
-              color: palette.ink,
-              fontWeight: '500',
-            },
-          ]}
-          numberOfLines={1}
-        >
-          {fromLabel}
-        </Text>
-        <View style={{ flex: 1 }} />
-        <Icons.arrRight size={14} color={palette.accent} />
-        <View style={{ flex: 1 }} />
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2.52,
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              color: palette.inkFaint,
-            },
-          ]}
-        >
-          To
-        </Text>
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 13,
-              color: palette.ink,
-              fontWeight: '500',
-            },
-          ]}
-          numberOfLines={1}
-        >
-          {toLabel}
-        </Text>
-      </LinearGradient>
-    </View>
-  );
-}

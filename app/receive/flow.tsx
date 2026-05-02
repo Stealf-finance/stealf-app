@@ -1,14 +1,14 @@
 import { useLocalSearchParams } from 'expo-router';
-import { SendFlow } from '@/src/features/send/SendFlow';
+import { AddFundsScreen } from '@/src/features/add-funds/AddFundsScreen';
 import { Tone } from '@/src/design-system/palettes';
 
-export default function SendRoute() {
+export default function ReceiveFlowRoute() {
   const { tone, wallet } = useLocalSearchParams<{
     tone?: string;
     wallet?: string;
   }>();
-  const resolvedTone: Tone = tone === 'gold' ? 'gold' : 'silver';
+  const resolvedTone: Tone = tone === 'silver' ? 'silver' : 'gold';
   const resolvedWallet =
     wallet === 'stealth' ? 'stealth' : wallet === 'bank' ? 'bank' : undefined;
-  return <SendFlow tone={resolvedTone} wallet={resolvedWallet} />;
+  return <AddFundsScreen tone={resolvedTone} wallet={resolvedWallet} />;
 }

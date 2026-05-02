@@ -1,5 +1,5 @@
 import { ReceiveMenu } from '@/src/features/receive/ReceiveMenu';
 
-export default function ReceiveRoute() {
+export default function ReceiveMenuRoute() {
   return <ReceiveMenu />;
 }

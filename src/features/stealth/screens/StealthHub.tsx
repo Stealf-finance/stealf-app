@@ -542,7 +542,7 @@ export function StealthHub() {
                 accent
                 accentTone="gold"
                 onPress={() =>
-                  router.push('/send?tone=gold&wallet=stealth')
+                  router.push('/send/flow?tone=gold&wallet=stealth')
                 }
               />
               <SquareActionTile
@@ -558,7 +558,7 @@ export function StealthHub() {
                 iconKey="arrDown"
                 label="Receive"
                 onPress={() =>
-                  router.push('/add-funds?tone=silver&wallet=stealth')
+                  router.push('/receive/flow?tone=silver&wallet=stealth')
                 }
               />
               <SquareActionTile
@@ -577,7 +577,7 @@ export function StealthHub() {
                 iconKey="arrUp"
                 label="Send"
                 onPress={() =>
-                  router.push('/send?tone=silver&wallet=stealth')
+                  router.push('/send/flow?tone=silver&wallet=stealth')
                 }
               />
             </>
@@ -616,7 +616,9 @@ export function StealthHub() {
               resizeMode="contain"
             />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, color: palette.ink }}>SOL</Text>
+              <Text style={{ fontSize: 15, color: palette.ink }}>
+                {isPrivate ? 'WSOL' : 'SOL'}
+              </Text>
               <Text
                 style={{
                   fontSize: 11,

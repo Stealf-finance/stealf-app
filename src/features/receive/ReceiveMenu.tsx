@@ -104,7 +104,7 @@ export function ReceiveMenu() {
                 <Text style={[sansationBold, { color: T.ink }]}>Solana</Text>
               </Text>
             }
-            onPress={() => router.push('/add-funds?tone=silver&wallet=bank')}
+            onPress={() => router.push('/receive/flow?tone=silver&wallet=bank')}
           />
 
           <View

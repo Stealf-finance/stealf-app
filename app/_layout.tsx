@@ -93,11 +93,9 @@ function RootLayout() {
                   <Stack.Screen name="moove" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="shield" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="unshield" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="add-funds" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="card" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="lock" options={{ presentation: 'fullScreenModal' }} />
                   <Stack.Screen name="send" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="send-money" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="receive" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="claim-pending" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="transactions" options={{ presentation: 'modal' }} />
