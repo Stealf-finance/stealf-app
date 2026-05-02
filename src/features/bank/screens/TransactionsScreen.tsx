@@ -1,5 +1,5 @@
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
@@ -8,13 +8,21 @@ import {
   sansation,
   serif,
 } from '@/src/design-system/typography';
-import { txPalette } from '@/src/design-system/palettes';
+import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
 import type { Transaction } from '@/src/features/bank/types';
 
-const S = txPalette('silver');
+type WalletKind = 'bank' | 'stealth';
+
+const CONFIG: Record<
+  WalletKind,
+  { title: string; tone: Tone }
+> = {
+  bank: { title: 'Bank transactions history', tone: 'silver' },
+  stealth: { title: 'Stealth transactions history', tone: 'gold' },
+};
 
 function formatTxRow(tx: Transaction): {
   type: 'sent' | 'received';
@@ -36,16 +44,23 @@ export function TransactionsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { data: history, isLoading } = useHistory(user?.bankWallet);
+  const params = useLocalSearchParams<{ wallet?: WalletKind }>();
+  const walletKind: WalletKind = params.wallet === 'stealth' ? 'stealth' : 'bank';
+  const config = CONFIG[walletKind];
+  const palette = txPalette(config.tone);
+
+  const address =
+    walletKind === 'stealth' ? user?.stealfWallet : user?.bankWallet;
+  const { data: history, isLoading } = useHistory(address);
 
   const txs = history?.transactions ?? [];
 
   return (
-    <CenterGlow tone="silver">
+    <CenterGlow tone={config.tone} flat>
       <View
         style={{
-          paddingTop: insets.top + 16,
-          paddingBottom: 22,
+          paddingTop: insets.top,
+          paddingBottom: 14,
           paddingHorizontal: 16,
           flexDirection: 'row',
           alignItems: 'center',
@@ -65,7 +80,7 @@ export function TransactionsScreen() {
             },
           ]}
         >
-          Transactions
+          {config.title}
         </Text>
       </View>
 
@@ -77,7 +92,7 @@ export function TransactionsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {txs.length === 0 ? (
-          <EmptyState loading={isLoading} />
+          <EmptyState loading={isLoading} faintColor={palette.inkFaint} />
         ) : (
           <>
             <View
@@ -96,7 +111,7 @@ export function TransactionsScreen() {
                     fontSize: 9,
                     letterSpacing: 2.52,
                     textTransform: 'uppercase',
-                    color: S.inkFaint,
+                    color: palette.inkFaint,
                     fontWeight: '700',
                   },
                 ]}
@@ -135,7 +150,13 @@ export function TransactionsScreen() {
   );
 }
 
-function EmptyState({ loading }: { loading: boolean }) {
+function EmptyState({
+  loading,
+  faintColor,
+}: {
+  loading: boolean;
+  faintColor: string;
+}) {
   return (
     <View
       style={{
@@ -149,7 +170,7 @@ function EmptyState({ loading }: { loading: boolean }) {
           {
             fontSize: 15,
             fontStyle: 'italic',
-            color: S.inkFaint,
+            color: faintColor,
             textAlign: 'center',
           },
         ]}
@@ -159,4 +180,3 @@ function EmptyState({ loading }: { loading: boolean }) {
     </View>
   );
 }
-

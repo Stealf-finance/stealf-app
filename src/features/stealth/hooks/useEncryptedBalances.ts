@@ -8,10 +8,7 @@ export const encryptedBalancesQueries = {
     ['stealth', 'encrypted-balances', wallet, ...mints] as const,
 };
 
-/**
- * Fetch encrypted balances for the given mints. Requires a stealth wallet
- * with a master seed already loaded — gated on `user.stealfWallet`.
- */
+
 export function useEncryptedBalances(mints: Address[]) {
   const { user } = useAuth();
   const wallet = user?.stealfWallet ?? '';

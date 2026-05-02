@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, Pressable, Share, Text, View } from 'react-native';
+import { Pressable, Share, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,7 +21,6 @@ type WalletSource = 'bank' | 'stealth';
 
 type Props = {
   tone?: Tone;
-  /** Which wallet's address to display. Defaults to bank for silver, stealth for gold. */
   wallet?: WalletSource;
 };
 
@@ -80,7 +80,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
     <CenterGlow tone={tone}>
       <View
         style={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top,
           paddingHorizontal: 24,
           paddingBottom: 18,
           flexDirection: 'row',
@@ -114,7 +114,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             justifyContent: 'center',
           }}
         >
-          <Icons.close size={18} color={palette.inkDim} />
+          <Icons.close size={22} color={T.ink} strokeWidth={1.6} />
         </Pressable>
       </View>
 
@@ -152,7 +152,8 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
         >
           <Image
             source={require('@/assets/images/solana-icon.png')}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="memory-disk"
             style={{ width: 24, height: 24, borderRadius: 12 }}
           />
           <Text

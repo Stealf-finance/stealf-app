@@ -24,11 +24,11 @@ export function SendMenu() {
   const close = () => router.back();
 
   return (
-    <CenterGlow tone="silver">
+    <CenterGlow tone="silver" flat>
       <View
         style={{
-          paddingTop: insets.top + 16,
-          paddingBottom: 22,
+          paddingTop: insets.top,
+          paddingBottom: 14,
           paddingHorizontal: 16,
           flexDirection: 'row',
           alignItems: 'center',
@@ -78,7 +78,6 @@ export function SendMenu() {
           <GlassListRow
             leading={<UsdcDisc />}
             label="USDC"
-            paddingVertical={16}
             sub={
               <Text
                 style={[

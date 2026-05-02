@@ -20,9 +20,7 @@ import type {
  * the install size reasonable; everything else is downloaded on demand.
  */
 const BUNDLED_ZKEYS: Partial<Record<ZKeyType, number>> = {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   userRegistration: require('@/assets/zk/userregistration.zkey'),
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   createDepositWithPublicAmount: require('@/assets/zk/createdepositwithpublicamount.zkey'),
 };
 
@@ -255,12 +253,7 @@ async function getCachedUri(
   return file.uri;
 }
 
-/**
- * Resolve a local file:// URI for a given circuit. Order of resolution:
- *   1. validated local cache
- *   2. bundled asset (only for the 2 most-used circuits)
- *   3. download from CDN
- */
+
 export async function getZKey(
   type: ZKeyType,
   variant?: ClaimVariant,

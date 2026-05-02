@@ -21,6 +21,7 @@ import {
   serif,
 } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
+import { T } from '@/src/design-system/tokens';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -91,7 +92,7 @@ export function SuccessScreen({
     <CenterGlow tone={tone}>
       <View
         style={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top,
           paddingHorizontal: 24,
           paddingBottom: 0,
           flexDirection: 'row',
@@ -114,7 +115,7 @@ export function SuccessScreen({
             justifyContent: 'center',
           }}
         >
-          <Icons.close size={18} color={palette.ink} />
+          <Icons.close size={22} color={T.ink} strokeWidth={1.6} />
         </Pressable>
       </View>
 

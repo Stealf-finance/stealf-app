@@ -13,6 +13,7 @@ import {
 } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { getGreeting } from '@/src/lib/greeting';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
 import type { Transaction } from '@/src/features/bank/types';
@@ -51,7 +52,8 @@ export function BankWallet() {
   const { data: balance } = useBalance(user?.bankWallet);
   const { data: history } = useHistory(user?.bankWallet);
 
-  const greeting = user?.username ?? '';
+  const username = user?.username ?? '';
+  const greeting = getGreeting();
   const { dollars, cents } = splitBalance(balance?.totalUSD ?? 0);
   const txRows =
     history?.transactions.slice(0, HISTORY_DISPLAY_LIMIT).map(formatTxRow) ?? [];
@@ -61,7 +63,7 @@ export function BankWallet() {
       {/* Greeting row */}
       <View
         style={{
-          paddingTop: insets.top + 4,
+          paddingTop: insets.top,
           paddingHorizontal: 24,
           paddingBottom: 16,
           flexDirection: 'row',
@@ -70,7 +72,7 @@ export function BankWallet() {
         }}
       >
         <Text style={{ fontSize: 13, color: S.inkDim, fontWeight: '300' }}>
-          Good morning, <Text style={{ color: S.ink }}>{greeting}</Text>
+          {greeting}, <Text style={{ color: S.ink }}>{username}</Text>
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <CircleIconBtn iconKey="card" onPress={() => router.push('/card')} />

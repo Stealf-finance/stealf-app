@@ -52,9 +52,6 @@ export function DataBootstrap() {
       cleanups.push(subscribeToWalletUpdates(queryClient, user.stealfWallet));
     }
 
-    // Socket reconnect = we may have missed events while offline. Invalidate
-    // balance + history so RQ refetches them fresh; future socket events
-    // continue to drive incremental updates via setQueryData.
     cleanups.push(
       socketService.onReconnect(() => {
         if (__DEV__)

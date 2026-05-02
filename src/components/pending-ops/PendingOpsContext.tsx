@@ -142,6 +142,7 @@ const VERBS: Record<
   'move-shielded-to-bank': { ing: 'Moving', ed: 'Moved', noun: 'Move' },
   'move-stealth-to-bank': { ing: 'Moving', ed: 'Moved', noun: 'Move' },
   'send-private': { ing: 'Sending', ed: 'Sent', noun: 'Send' },
+  'claim-to-bank': { ing: 'Claiming', ed: 'Claimed', noun: 'Claim' },
 };
 
 function formatSolShort(sol: number): string {
@@ -160,6 +161,7 @@ function sourceAssetSymbol(kind: import('./types').PendingOpKind): string {
     case 'shield':
     case 'move-bank-to-shielded':
     case 'move-stealth-to-bank':
+    case 'claim-to-bank':
       return 'SOL';
   }
 }
@@ -167,6 +169,11 @@ function sourceAssetSymbol(kind: import('./types').PendingOpKind): string {
 
 export function formatPillText(op: import('./types').PendingOp): string {
   const v = VERBS[op.kind];
+  if (op.kind === 'claim-to-bank') {
+    if (op.phase === 'done') return v.ed;
+    if (op.phase === 'failed') return `${v.noun} failed`;
+    return `${v.ing}…`;
+  }
   const amount = `${formatSolShort(op.amountSol)} ${sourceAssetSymbol(op.kind)}`;
   if (op.phase === 'done') return `${v.ed} ${amount}`;
   if (op.phase === 'failed') return `${v.noun} failed`;

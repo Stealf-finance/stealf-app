@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   runOnJS,
@@ -191,7 +192,7 @@ export function OnboardWizard({ onExitBack }: Props) {
       {/* Fixed header */}
       <View
         style={{
-          paddingTop: insets.top + 12,
+          paddingTop: insets.top,
           paddingHorizontal: 24,
           paddingBottom: 16,
           flexDirection: 'row',
@@ -226,9 +227,9 @@ export function OnboardWizard({ onExitBack }: Props) {
           >
             <UnderlineField
               value={state.invite}
-              onChangeText={(v) => setInvite(v.toUpperCase())}
+              onChangeText={setInvite}
               placeholder="your invite code"
-              autoCapitalize="characters"
+              autoCapitalize="none"
               rightSlot={
                 inviteValid ? (
                   <Icons.check size={18} color={SOLANA_GREEN} />
@@ -639,7 +640,8 @@ function FaceIdGlyph() {
       <Image
         source={require('@/assets/images/passkey.png')}
         style={{ width: 80, height: 80 }}
-        resizeMode="contain"
+        contentFit="contain"
+        cachePolicy="memory-disk"
         accessibilityIgnoresInvertColors
       />
     </View>

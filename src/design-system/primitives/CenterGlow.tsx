@@ -12,6 +12,11 @@ type Props = {
    * presence, 1.3 for more drama.
    */
   intensity?: number;
+  /**
+   * Skip the radial haze and render a pure black shell. Used on menu/list
+   * screens where the visual hierarchy comes entirely from glass surfaces.
+   */
+  flat?: boolean;
 };
 
 const GLOW: Record<Tone, string> = {
@@ -33,6 +38,7 @@ const STOPS: { offset: string; silver: number; gold: number }[] = [
 export function CenterGlow({
   tone = 'silver',
   intensity = 1,
+  flat = false,
   children,
 }: Props) {
   const { width, height } = useWindowDimensions();
@@ -41,44 +47,46 @@ export function CenterGlow({
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <Svg
-        width={width}
-        height={height}
-        style={{ position: 'absolute', top: 0, left: 0 }}
-        pointerEvents="none"
-      >
-        <Defs>
-          <RadialGradient
-            id="centerGlow"
-            cx={width / 2}
-            cy={height / 2}
-            rx={radius}
-            ry={radius}
-            fx={width / 2}
-            fy={height / 2}
-            gradientUnits="userSpaceOnUse"
-          >
-            {STOPS.map((s, i) => {
-              const opacity = (tone === 'gold' ? s.gold : s.silver) * intensity;
-              return (
-                <Stop
-                  key={i}
-                  offset={s.offset}
-                  stopColor={stopColor}
-                  stopOpacity={opacity}
-                />
-              );
-            })}
-          </RadialGradient>
-        </Defs>
-        <Rect
-          x={0}
-          y={0}
+      {flat ? null : (
+        <Svg
           width={width}
           height={height}
-          fill="url(#centerGlow)"
-        />
-      </Svg>
+          style={{ position: 'absolute', top: 0, left: 0 }}
+          pointerEvents="none"
+        >
+          <Defs>
+            <RadialGradient
+              id="centerGlow"
+              cx={width / 2}
+              cy={height / 2}
+              rx={radius}
+              ry={radius}
+              fx={width / 2}
+              fy={height / 2}
+              gradientUnits="userSpaceOnUse"
+            >
+              {STOPS.map((s, i) => {
+                const opacity = (tone === 'gold' ? s.gold : s.silver) * intensity;
+                return (
+                  <Stop
+                    key={i}
+                    offset={s.offset}
+                    stopColor={stopColor}
+                    stopOpacity={opacity}
+                  />
+                );
+              })}
+            </RadialGradient>
+          </Defs>
+          <Rect
+            x={0}
+            y={0}
+            width={width}
+            height={height}
+            fill="url(#centerGlow)"
+          />
+        </Svg>
+      )}
       {children}
     </View>
   );

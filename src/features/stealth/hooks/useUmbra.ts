@@ -28,6 +28,8 @@ import {
   selfShield,
   selfShieldFromPublicStealth,
   depositFromBankToReceiver,
+  transferFromEncryptedBalanceToReceiver,
+  transferFromPublicStealthToReceiver,
 } from '@/src/services/umbra/operations/transfer';
 import {
   claimReceived,
@@ -183,6 +185,62 @@ export function useUmbra() {
             throw new Error('Bank wallet not ready');
           }
           return depositFromBankToReceiver({
+            walletAccount: bankWalletAccount as any,
+            signTransaction: turnkeySignTransaction as any,
+            signMessage: turnkeySignMessage as any,
+            destinationAddress,
+            mint,
+            amount,
+          });
+        }),
+      [wrap, bankWalletAccount, turnkeySignTransaction, turnkeySignMessage],
+    ),
+
+    /**
+     * Receiver-claimable UTXO from the stealth wallet's ENCRYPTED balance,
+     * locked to a destination (typically the bank wallet). Stealth signs the
+     * tx; the destination later claims into its own encrypted balance.
+     * Symmetric to `depositFromBankToReceiver`. Turnkey args are needed only
+     * to register the bank's `userCommitment` PDA on first use.
+     */
+    transferFromEncryptedBalanceToReceiver: useCallback(
+      (destinationAddress: Address, mint: Address, amount: bigint) =>
+        wrap('transferFromEncryptedBalanceToReceiver', async () => {
+          if (
+            !bankWalletAccount ||
+            !turnkeySignTransaction ||
+            !turnkeySignMessage
+          ) {
+            throw new Error('Bank wallet not ready');
+          }
+          return transferFromEncryptedBalanceToReceiver({
+            walletAccount: bankWalletAccount as any,
+            signTransaction: turnkeySignTransaction as any,
+            signMessage: turnkeySignMessage as any,
+            destinationAddress,
+            mint,
+            amount,
+          });
+        }),
+      [wrap, bankWalletAccount, turnkeySignTransaction, turnkeySignMessage],
+    ),
+
+    /**
+     * Receiver-claimable UTXO from the stealth wallet's PUBLIC ATA, locked
+     * to a destination (typically the bank wallet). Stealth signs locally;
+     * Turnkey args register the bank's userCommitment if not yet registered.
+     */
+    transferFromPublicStealthToReceiver: useCallback(
+      (destinationAddress: Address, mint: Address, amount: bigint) =>
+        wrap('transferFromPublicStealthToReceiver', async () => {
+          if (
+            !bankWalletAccount ||
+            !turnkeySignTransaction ||
+            !turnkeySignMessage
+          ) {
+            throw new Error('Bank wallet not ready');
+          }
+          return transferFromPublicStealthToReceiver({
             walletAccount: bankWalletAccount as any,
             signTransaction: turnkeySignTransaction as any,
             signMessage: turnkeySignMessage as any,

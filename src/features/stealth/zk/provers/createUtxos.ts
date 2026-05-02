@@ -46,10 +46,6 @@ export function createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver(
   };
 }
 
-// Self-claimable variant from public balance: same circuit (and zkey) as the
-// receiver-claimable variant — only the unlocker branch differs and is wired
-// SDK-side, not in the ZK proof. Used for Move flows that go through a
-// self-claimable UTXO instead of a direct deposit/transfer.
 export function createCreateUtxoFromPublicBalanceWithEphemeralUnlockerZkProver(
   zkLib: ZkType = Zk,
 ): ZkProverForSelfClaimableUtxoFromPublicBalance {

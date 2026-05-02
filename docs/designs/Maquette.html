@@ -30,6 +30,8 @@
 
 
 
+
+
 // ══════ appv2/design-canvas.jsx ══════
 
 // DesignCanvas.jsx — Figma-ish design canvas wrapper
@@ -601,8 +603,8 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
       </div>
 
       {/* card centered, label + index below — only the card itself stops
-               propagation so any backdrop click (including the margins around
-               the card) exits focus */}
+                  propagation so any backdrop click (including the margins around
+                  the card) exits focus */}
       <div
         style={{ position: 'absolute', top: 64, bottom: 56, left: 100, right: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
         <div onClick={(e) => e.stopPropagation()} style={{ width: width * scale, height: height * scale, position: 'relative' }}>
@@ -5042,12 +5044,25 @@ const ClaimPendingScreen = () => {
   const accentDim = 'rgba(230,192,121,0.22)';
   const chipGrad = 'linear-gradient(160deg, #e6c079 0%, #a37b2e 100%)';
 
-  const pending = [
+  const [tab, setTab] = useState('incoming'); // 'coming' | 'incoming'
+
+  const incoming = [
   { amount: '420.00', asset: 'USDC', ago: '2 min ago' },
   { amount: '0.4212', asset: 'SOL', ago: '18 min ago' },
   { amount: '124.50', asset: 'USDC', ago: '1 h ago' },
   { amount: '12.0000', asset: 'USDC', ago: '4 h ago' }];
 
+  const coming = [
+  { amount: '1,200.00', asset: 'USDC', ago: 'in ~3 min' },
+  { amount: '0.8500', asset: 'SOL', ago: 'in ~12 min' }];
+
+  const list = tab === 'incoming' ? incoming : coming;
+  const totalIncoming = '544.50';
+  const totalComing = '1,343.50';
+  const headerTotal = tab === 'incoming' ? totalIncoming : totalComing;
+  const headerLabel = tab === 'incoming'
+    ? `${incoming.length} pending · Stealth private`
+    : `${coming.length} on the way · Stealth private`;
 
   return (
     <Frame>
@@ -5069,16 +5084,60 @@ const ClaimPendingScreen = () => {
         <div style={{ width: 36 }} />
       </div>
 
+      {/* Coming / Incoming tab bar */}
+      <div style={{ padding: '0 20px 8px' }}>
+        <div style={{ display: 'flex', position: 'relative' }}>
+          {[
+            { id: 'coming', label: 'Coming' },
+            { id: 'incoming', label: 'Incoming' }
+          ].map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                style={{
+                  flex: 1, padding: '14px 0',
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  ...sansation,
+                  fontSize: 12,
+                  letterSpacing: '0.32em',
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                  color: active ? T.ink : T.inkFaint,
+                  transition: 'color .2s'
+                }}>
+                {t.label}
+              </button>
+            );
+          })}
+          {/* Underline track */}
+          <div style={{
+            position: 'absolute', left: 0, right: 0, bottom: 0, height: 1,
+            background: T.hairline
+          }} />
+          {/* Active underline */}
+          <div style={{
+            position: 'absolute', bottom: 0, height: 2,
+            width: '50%',
+            left: tab === 'coming' ? '0%' : '50%',
+            background: accent,
+            boxShadow: `0 0 12px ${accentDim}`,
+            transition: 'left .25s ease'
+          }} />
+        </div>
+      </div>
+
       {/* Hero summary */}
-      <div style={{ padding: '8px 24px 24px', textAlign: 'center' }}>
+      <div style={{ padding: '18px 24px 24px', textAlign: 'center' }}>
         <div style={{
           ...sansation, fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase',
           color: 'rgba(230,192,121,0.85)', fontWeight: 700, marginBottom: 14
-        }}>— {pending.length} pending · Stealth private —</div>
+        }}>— {headerLabel} —</div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 4 }}>
           <span style={{ ...serif, fontSize: 28, color: accent, fontStyle: 'italic' }}>$</span>
-          <span style={{ fontSize: 54, fontWeight: 300, letterSpacing: '-0.03em', color: T.ink, lineHeight: 1 }}>544.50</span>
+          <span style={{ fontSize: 54, fontWeight: 300, letterSpacing: '-0.03em', color: T.ink, lineHeight: 1 }}>{headerTotal}</span>
         </div>
         <div style={{ ...serif, fontSize: 14, color: T.inkDim, fontStyle: 'italic', marginTop: 8 }}>
 
@@ -5087,13 +5146,14 @@ const ClaimPendingScreen = () => {
 
       {/* List — scrollable */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
-        {pending.map((tx, i) =>
+        {list.map((tx, i) =>
         <div key={i} style={{
           padding: '14px 16px', borderRadius: 18,
           background: 'linear-gradient(160deg, rgba(212,165,83,0.10) 0%, rgba(163,123,46,0.03) 100%)',
           border: '1px solid rgba(212,165,83,0.18)',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-          marginBottom: 10
+          marginBottom: 10,
+          opacity: tab === 'coming' ? 0.85 : 1
         }}>
             {/* Top row — sender + amount */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -5108,9 +5168,17 @@ const ClaimPendingScreen = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: accent, flexShrink: 0
             }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 12l-7 7-7-7M12 5v14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                {tab === 'incoming' ? (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M19 12l-7 7-7-7M12 5v14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : (
+                  // clock icon for "coming"
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+                    <path d="M12 7v5l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
               </div>
 
               {/* Middle */}
@@ -5135,23 +5203,43 @@ const ClaimPendingScreen = () => {
               </div>
             </div>
 
-            {/* Per-tx Claim button */}
-            <button style={{
-            width: '100%', marginTop: 12, padding: '10px',
-            borderRadius: 100,
-            background: chipGrad,
-            border: '1px solid rgba(255,255,255,0.18)',
-            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 16px ${accentDim}`,
-            color: '#0a0a0a',
-            ...sansation, fontSize: 10, letterSpacing: '0.24em', textTransform: 'uppercase', fontWeight: 700,
-            cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-          }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Claim
-            </button>
+            {/* Per-tx action button — Claim for incoming, status pill for coming */}
+            {tab === 'incoming' ? (
+              <button style={{
+              width: '100%', marginTop: 12, padding: '10px',
+              borderRadius: 100,
+              background: chipGrad,
+              border: '1px solid rgba(255,255,255,0.18)',
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 16px ${accentDim}`,
+              color: '#0a0a0a',
+              ...sansation, fontSize: 10, letterSpacing: '0.24em', textTransform: 'uppercase', fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+            }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Claim
+              </button>
+            ) : (
+              <div style={{
+              width: '100%', marginTop: 12, padding: '9px',
+              borderRadius: 100,
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${T.hairline}`,
+              color: T.inkDim,
+              ...sansation, fontSize: 10, letterSpacing: '0.24em', textTransform: 'uppercase', fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+            }}>
+                {/* tiny pulsing dot */}
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: accent,
+                  boxShadow: `0 0 8px ${accent}`
+                }} />
+                Awaiting confirmation
+              </div>
+            )}
           </div>
         )}
 
@@ -5177,21 +5265,21 @@ const ShieldFlow = ({ direction = 'shield' }) => {
   // Tone tokens
   const accent = isShield ? '#e6c079' : '#c9c9cc';
   const accentDim = isShield ? 'rgba(230,192,121,0.22)' : 'rgba(201,201,204,0.18)';
-  const chipGrad = isShield
-    ? 'linear-gradient(160deg, #e6c079 0%, #a37b2e 100%)'
-    : 'linear-gradient(160deg, #e8e8ea 0%, #9a9a9f 100%)';
-  const cardGrad = isShield
-    ? 'linear-gradient(160deg, rgba(212,165,83,0.10) 0%, rgba(163,123,46,0.03) 100%)'
-    : 'linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.015) 100%)';
+  const chipGrad = isShield ?
+  'linear-gradient(160deg, #e6c079 0%, #a37b2e 100%)' :
+  'linear-gradient(160deg, #e8e8ea 0%, #9a9a9f 100%)';
+  const cardGrad = isShield ?
+  'linear-gradient(160deg, rgba(212,165,83,0.10) 0%, rgba(163,123,46,0.03) 100%)' :
+  'linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.015) 100%)';
   const cardBorder = isShield ? 'rgba(212,165,83,0.18)' : 'rgba(255,255,255,0.10)';
 
   const title = isShield ? 'Shield' : 'Unshield';
   const ctaText = isShield ? 'Slide to shield' : 'Slide to unshield';
   const fromLabel = isShield ? 'Bank · public' : 'Stealth · private';
   const toLabel = isShield ? 'Stealth · private' : 'Bank · public';
-  const balance = isShield
-    ? (asset === 'USDC' ? '2,418.20 USDC' : '5.4127 SOL')
-    : (asset === 'USDC' ? '544.50 USDC' : '0.4212 SOL');
+  const balance = isShield ?
+  asset === 'USDC' ? '2,418.20 USDC' : '5.4127 SOL' :
+  asset === 'USDC' ? '544.50 USDC' : '0.4212 SOL';
   const prefix = asset === 'USDC' ? '$' : '';
   const tokMark = asset === 'USDC' ? '$' : '◎';
 
@@ -5204,7 +5292,7 @@ const ShieldFlow = ({ direction = 'shield' }) => {
     });
   };
 
-  const keys = ['1','2','3','4','5','6','7','8','9','.','0','⌫'];
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫'];
 
   return (
     <Frame>
@@ -5232,7 +5320,7 @@ const ShieldFlow = ({ direction = 'shield' }) => {
           ...sansation, fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase',
           color: isShield ? 'rgba(230,192,121,0.85)' : T.inkFaint,
           fontWeight: 700,
-          display: 'inline-flex', alignItems: 'center', gap: 8,
+          display: 'inline-flex', alignItems: 'center', gap: 8
         }}>
           <span>{fromLabel}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -5248,7 +5336,7 @@ const ShieldFlow = ({ direction = 'shield' }) => {
           ...serif, fontStyle: 'italic', fontWeight: 300,
           fontSize: amount.length > 7 ? 56 : 72,
           letterSpacing: '-0.03em', color: T.ink, lineHeight: 1,
-          display: 'inline-flex', alignItems: 'baseline', gap: 4,
+          display: 'inline-flex', alignItems: 'baseline', gap: 4
         }}>
           <span style={{ fontSize: '0.5em', color: accent }}>{prefix}</span>
           {amount}
@@ -5258,21 +5346,21 @@ const ShieldFlow = ({ direction = 'shield' }) => {
       {/* Asset picker pill */}
       <div style={{ display: 'flex', justifyContent: 'center', padding: '0 24px 16px' }}>
         <button
-          onClick={() => setAsset(a => a === 'USDC' ? 'SOL' : 'USDC')}
+          onClick={() => setAsset((a) => a === 'USDC' ? 'SOL' : 'USDC')}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 10,
             padding: '8px 14px 8px 8px', borderRadius: 100,
             background: cardGrad,
             border: `1px solid ${cardBorder}`,
             backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            cursor: 'pointer',
+            cursor: 'pointer'
           }}>
           <div style={{
             width: 26, height: 26, borderRadius: '50%',
             background: chipGrad,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: '#0a0a0a', fontSize: 13, fontWeight: 700,
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)'
           }}>{tokMark}</div>
           <span style={{ fontSize: 13, color: T.ink, fontWeight: 500, ...sansation }}>{asset}</span>
           <span style={{ fontSize: 11, color: T.inkFaint, ...sansation }}>· {balance}</span>
@@ -5288,19 +5376,19 @@ const ShieldFlow = ({ direction = 'shield' }) => {
       {/* Numpad */}
       <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         {keys.map((k) =>
-          <button key={k} onClick={() => onKey(k)} style={{
-            padding: '16px 0',
-            background: 'linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.015) 100%)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.25)',
-            color: T.ink,
-            fontSize: 26, fontWeight: 300, cursor: 'pointer', ...sansation,
-            borderRadius: 14,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
+        <button key={k} onClick={() => onKey(k)} style={{
+          padding: '16px 0',
+          background: 'linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.015) 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.25)',
+          color: T.ink,
+          fontSize: 26, fontWeight: 300, cursor: 'pointer', ...sansation,
+          borderRadius: 14,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
             {k === '⌫' ?
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path d="M22 5H9l-6 7 6 7h13a1 1 0 001-1V6a1 1 0 00-1-1z" stroke="currentColor" strokeWidth="1.3" />
                 <path d="M13 9l6 6M19 9l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
               </svg> : k}
@@ -5337,12 +5425,376 @@ const ShieldFlow = ({ direction = 'shield' }) => {
       </div>
 
       <HomeIndicator />
-    </Frame>
-  );
+    </Frame>);
+
 };
 
 const ShieldScreen = () => <ShieldFlow direction="shield" />;
 const UnshieldScreen = () => <ShieldFlow direction="unshield" />;
+
+
+// ══════════════════════════════════════════════════════════════
+// RECEIVE MONEY — entry menu
+//   Three rails: Stealf user · USD bank transfer · USDC on Solana
+//   Inspired by Kast's "Receive money" sheet, restyled to Stealf DA
+// ══════════════════════════════════════════════════════════════
+const ReceiveMoneyScreen = () => {
+  // Glass row — same recipe as the glass cards used elsewhere
+  // (linear gradient + blur + saturate + inset 1px highlight)
+  const glassRow = {
+    width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+    padding: '14px 16px', borderRadius: 16,
+    background: 'linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.015) 100%)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    backdropFilter: 'blur(20px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(140%)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.25)',
+    color: T.ink, cursor: 'pointer', textAlign: 'left',
+    ...sansation
+  };
+
+  const ListRow = ({ leading, label, sub, onClick }) =>
+  <button onClick={onClick} style={glassRow}>
+      {leading}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, color: T.ink, fontWeight: 400 }}>{label}</div>
+        {sub && <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>{sub}</div>}
+      </div>
+      <div style={{ color: T.inkFaint }}><Icons.chevR s={14} /></div>
+    </button>;
+
+  // Mini Stealf monogram disc (replaces Kast logo)
+  const StealfDisc =
+  <div style={{
+    width: 36, height: 36, borderRadius: '50%',
+    background: T.ink,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    ...serif, fontSize: 18, color: T.bg, fontStyle: 'italic', fontWeight: 500,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)'
+  }}>s.</div>;
+
+
+  // USD flag disc — minimal stripes/star, no emoji
+  const UsdDisc =
+  <div style={{
+    width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', position: 'relative',
+    border: `1px solid ${T.hairline}`, flexShrink: 0
+  }}>
+      {/* red/white stripes */}
+      <div style={{
+      position: 'absolute', inset: 0,
+      background: `repeating-linear-gradient(180deg,
+          #b22234 0 4px, #ffffff 4px 8px)`
+    }} />
+      {/* blue canton */}
+      <div style={{
+      position: 'absolute', top: 0, left: 0, width: '50%', height: '50%',
+      background: '#3c3b6e',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#fff', fontSize: 9, lineHeight: 1
+    }}>★</div>
+    </div>;
+
+
+  // Solana glyph disc (used as the single Receive-by-address option)
+  const SolanaDisc =
+  <div style={{
+    width: 36, height: 36, borderRadius: '50%',
+    background: '#0a0a0a',
+    border: '1px solid rgba(153,69,255,0.35)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    position: 'relative', overflow: 'hidden', flexShrink: 0
+  }}>
+      {/* three angled bars in Solana gradient */}
+      <svg width="20" height="14" viewBox="0 0 20 14" fill="none" style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="solg" x1="0" y1="0" x2="20" y2="14" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="#9945FF" />
+            <stop offset="0.5" stopColor="#19FB9B" />
+            <stop offset="1" stopColor="#14F195" />
+          </linearGradient>
+        </defs>
+        <path d="M3 1 L19 1 L17 3 L1 3 Z" fill="url(#solg)" />
+        <path d="M3 6 L19 6 L17 8 L1 8 Z" fill="url(#solg)" />
+        <path d="M3 11 L19 11 L17 13 L1 13 Z" fill="url(#solg)" />
+      </svg>
+    </div>;
+
+
+  // USDC token disc (blue with $)
+  const UsdcDisc =
+  <div style={{
+    width: 32, height: 32, borderRadius: '50%',
+    background: 'linear-gradient(160deg, #2775ca 0%, #1c5798 100%)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: '#fff', fontSize: 14, fontWeight: 700,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 6px rgba(39,117,202,0.3)',
+    border: '1px solid rgba(255,255,255,0.15)'
+  }}>$</div>;
+
+
+  return (
+    <Frame>
+      <StatusBar />
+
+      {/* Header — matches FlowHeader pattern (centered title, soft back chip) */}
+      <div style={{ padding: '4px 16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button aria-label="Back" style={{
+          width: 36, height: 36, borderRadius: '50%', background: T.bgCardStrong,
+          border: `1px solid ${T.hairline}`, color: T.ink, cursor: 'pointer', padding: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <Icons.arrLeft s={14} />
+        </button>
+        <div style={{ fontSize: 14, fontWeight: 400, color: T.ink }}>Receive money
+
+        </div>
+        <div style={{ width: 36 }} />
+      </div>
+
+      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+        {/* ── STEALF ───────────────────────────────────────── */}
+        <div>
+          <Kicker style={{ marginBottom: 10, paddingLeft: 4 }}>Stealf</Kicker>
+          <ListRow
+            leading={StealfDisc}
+            label="Stealf user" />
+          
+        </div>
+
+        {/* ── BANK TRANSFER ────────────────────────────────── */}
+        <div>
+          <Kicker style={{ marginBottom: 10, paddingLeft: 4 }}>Bank transfer</Kicker>
+          <ListRow
+            leading={UsdDisc}
+            label="USD bank transfer" />
+          
+        </div>
+
+        {/* ── RECEIVE BY ADDRESS — single option: USDC on Solana ── */}
+        <div>
+          <Kicker style={{ marginBottom: 10, paddingLeft: 4 }}>Receive by address</Kicker>
+          <button style={{
+            ...glassRow,
+            padding: '16px'
+          }}>
+            {/* Stacked token icons: USDC on top of Solana network */}
+            <div style={{ position: 'relative', width: 44, height: 36, flexShrink: 0 }}>
+              {SolanaDisc}
+              <div style={{
+                position: 'absolute', right: -2, bottom: -2,
+                boxShadow: `0 0 0 2px ${T.bg}`, borderRadius: '50%'
+              }}>
+                {UsdcDisc}
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, color: T.ink, fontWeight: 400 }}>USDC</div>
+              <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>on</span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '2px 8px', borderRadius: 100,
+                  background: 'rgba(153,69,255,0.08)',
+                  border: '1px solid rgba(153,69,255,0.18)',
+                  color: 'rgba(241,236,225,0.75)'
+                }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: 'linear-gradient(135deg,#9945FF,#14F195)'
+                  }} />
+                  Solana
+                </span>
+              </div>
+            </div>
+            <div style={{ color: T.inkFaint }}><Icons.chevR s={14} /></div>
+          </button>
+
+          {/* Helper note */}
+          <div style={{
+            marginTop: 10, padding: '0 4px',
+            display: 'flex', alignItems: 'flex-start', gap: 8
+          }}>
+            <div style={{ color: T.inkFaint, marginTop: 1 }}><Icons.info s={12} /></div>
+            <div style={{ fontSize: 11, color: T.inkFaint, lineHeight: 1.5 }}>
+              Only <span style={{ color: T.ink, fontWeight: 500 }}>USDC</span> on the <span style={{ color: T.ink, fontWeight: 500 }}>Solana</span> network is supported. Sending other tokens or chains will result in lost funds.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <HomeIndicator />
+    </Frame>);
+
+};
+
+
+// ══════════════════════════════════════════════════════════════
+// SEND MONEY — entry menu
+//   Two rails: USD bank transfer · Send by address (USDC on Solana)
+//   Mirrors ReceiveMoneyScreen layout & glass treatment
+// ══════════════════════════════════════════════════════════════
+const SendMoneyScreen = () => {
+  const glassRow = {
+    width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+    padding: '14px 16px', borderRadius: 16,
+    background: 'linear-gradient(160deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.015) 100%)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    backdropFilter: 'blur(20px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(20px) saturate(140%)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.25)',
+    color: T.ink, cursor: 'pointer', textAlign: 'left',
+    ...sansation
+  };
+
+  const ListRow = ({ leading, label, sub, onClick }) =>
+  <button onClick={onClick} style={glassRow}>
+      {leading}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, color: T.ink, fontWeight: 400 }}>{label}</div>
+        {sub && <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 2 }}>{sub}</div>}
+      </div>
+      <div style={{ color: T.inkFaint }}><Icons.chevR s={14} /></div>
+    </button>;
+
+  // USD flag disc — minimal stripes/star, no emoji
+  const UsdDisc =
+  <div style={{
+    width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', position: 'relative',
+    border: `1px solid ${T.hairline}`, flexShrink: 0
+  }}>
+      <div style={{
+      position: 'absolute', inset: 0,
+      background: `repeating-linear-gradient(180deg,
+          #b22234 0 4px, #ffffff 4px 8px)`
+    }} />
+      <div style={{
+      position: 'absolute', top: 0, left: 0, width: '50%', height: '50%',
+      background: '#3c3b6e',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: '#fff', fontSize: 9, lineHeight: 1
+    }}>★</div>
+    </div>;
+
+
+  // Solana network disc
+  const SolanaDisc =
+  <div style={{
+    width: 36, height: 36, borderRadius: '50%',
+    background: '#0a0a0a',
+    border: '1px solid rgba(153,69,255,0.35)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    position: 'relative', overflow: 'hidden', flexShrink: 0
+  }}>
+      <svg width="20" height="14" viewBox="0 0 20 14" fill="none" style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="solg-send" x1="0" y1="0" x2="20" y2="14" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stopColor="#9945FF" />
+            <stop offset="0.5" stopColor="#19FB9B" />
+            <stop offset="1" stopColor="#14F195" />
+          </linearGradient>
+        </defs>
+        <path d="M3 1 L19 1 L17 3 L1 3 Z" fill="url(#solg-send)" />
+        <path d="M3 6 L19 6 L17 8 L1 8 Z" fill="url(#solg-send)" />
+        <path d="M3 11 L19 11 L17 13 L1 13 Z" fill="url(#solg-send)" />
+      </svg>
+    </div>;
+
+
+  // USDC token disc (blue with $)
+  const UsdcDisc =
+  <div style={{
+    width: 32, height: 32, borderRadius: '50%',
+    background: 'linear-gradient(160deg, #2775ca 0%, #1c5798 100%)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: '#fff', fontSize: 14, fontWeight: 700,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 2px 6px rgba(39,117,202,0.3)',
+    border: '1px solid rgba(255,255,255,0.15)'
+  }}>$</div>;
+
+
+  return (
+    <Frame>
+      <StatusBar />
+
+      {/* Header */}
+      <div style={{ padding: '4px 16px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button aria-label="Back" style={{
+          width: 36, height: 36, borderRadius: '50%', background: T.bgCardStrong,
+          border: `1px solid ${T.hairline}`, color: T.ink, cursor: 'pointer', padding: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <Icons.arrLeft s={14} />
+        </button>
+        <div style={{ fontSize: 14, fontWeight: 400, color: T.ink }}>Send money
+
+        </div>
+        <div style={{ width: 36 }} />
+      </div>
+
+      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+        {/* ── BANK TRANSFER ────────────────────────────────── */}
+        <div>
+          <Kicker style={{ marginBottom: 10, paddingLeft: 4 }}>Bank transfer</Kicker>
+          <ListRow
+            leading={UsdDisc}
+            label="USD bank transfer" />
+          
+        </div>
+
+        {/* ── SEND BY ADDRESS — single option: USDC on Solana ── */}
+        <div>
+          <Kicker style={{ marginBottom: 10, paddingLeft: 4 }}>Send by address</Kicker>
+          <button style={{ ...glassRow, padding: '16px' }}>
+            <div style={{ position: 'relative', width: 44, height: 36, flexShrink: 0 }}>
+              {SolanaDisc}
+              <div style={{
+                position: 'absolute', right: -2, bottom: -2,
+                boxShadow: `0 0 0 2px ${T.bg}`, borderRadius: '50%'
+              }}>
+                {UsdcDisc}
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, color: T.ink, fontWeight: 400 }}>USDC</div>
+              <div style={{ fontSize: 11, color: T.inkFaint, marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>on</span>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '2px 8px', borderRadius: 100,
+                  background: 'rgba(153,69,255,0.08)',
+                  border: '1px solid rgba(153,69,255,0.18)',
+                  color: 'rgba(241,236,225,0.75)'
+                }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: 'linear-gradient(135deg,#9945FF,#14F195)'
+                  }} />
+                  Solana
+                </span>
+              </div>
+            </div>
+            <div style={{ color: T.inkFaint }}><Icons.chevR s={14} /></div>
+          </button>
+
+          <div style={{
+            marginTop: 10, padding: '0 4px',
+            display: 'flex', alignItems: 'flex-start', gap: 8
+          }}>
+            <div style={{ color: T.inkFaint, marginTop: 1 }}><Icons.info s={12} /></div>
+            <div style={{ fontSize: 11, color: T.inkFaint, lineHeight: 1.5 }}>
+              Only <span style={{ color: T.ink, fontWeight: 500 }}>USDC</span> on the <span style={{ color: T.ink, fontWeight: 500 }}>Solana</span> network is supported. Double-check the destination address before sending.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <HomeIndicator />
+    </Frame>);
+
+};
 
 
 // ══════════════════════════════════════════════════════════════
@@ -6527,6 +6979,7 @@ const TxSuccess_Gold = () => <TxSuccess tone="gold" />;
 
 Object.assign(window, {
   MooveScreenA, MooveScreenB, MooveScreenC, SendScreen, ReceiveScreen,
+  ReceiveMoneyScreen, SendMoneyScreen,
   AddFundsScreen, AddFundsScreen_Gold, AddFundsScreen_Silver,
   ClaimPendingScreen,
   ShieldScreen, UnshieldScreen,
@@ -6626,6 +7079,12 @@ const App = () =>
   subtitle="Signature flow — how Bank funds become private (and back)">
       <DCArtboard id="moove-c" label="C · Bridge · two-account stack" width={375} height={812}>
         <MooveScreenC />
+      </DCArtboard>
+      <DCArtboard id="receive-money" label="Receive money · entry menu" width={375} height={812}>
+        <ReceiveMoneyScreen />
+      </DCArtboard>
+      <DCArtboard id="send-money" label="Send money · entry menu" width={375} height={812}>
+        <SendMoneyScreen />
       </DCArtboard>
       <DCArtboard id="add-funds-gold" label="Add funds · Stealth (gold)" width={375} height={812}>
         <AddFundsScreen_Gold />

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
@@ -56,7 +57,7 @@ export function Login({ handle = '@thomas', onBack, onSuccess }: Props) {
       {/* Header */}
       <View
         style={{
-          paddingTop: insets.top + 12,
+          paddingTop: insets.top,
           paddingHorizontal: 24,
           paddingBottom: 16,
           flexDirection: 'row',
@@ -154,7 +155,8 @@ export function Login({ handle = '@thomas', onBack, onSuccess }: Props) {
             <Image
               source={require('@/assets/images/passkey.png')}
               style={{ width: 64, height: 64 }}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="memory-disk"
             />
           </Pressable>
         </View>

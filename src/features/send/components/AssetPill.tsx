@@ -1,4 +1,5 @@
-import { Image, ImageSourcePropType, Pressable, Text, View } from 'react-native';
+import { ImageSourcePropType, Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -60,7 +61,8 @@ export function AssetPill({
         {iconSource ? (
           <Image
             source={iconSource}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="memory-disk"
             style={{ width: 44, height: 44, borderRadius: 22 }}
           />
         ) : (

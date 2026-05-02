@@ -140,7 +140,7 @@ export function StealfWalletSetup({
     <CenterGlow tone={TONE}>
       <View
         style={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top,
           paddingBottom: 12,
           paddingHorizontal: 16,
           flexDirection: 'row',

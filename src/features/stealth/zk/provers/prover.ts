@@ -13,8 +13,6 @@ export interface ZkProver {
  * Wrap a single zkey path into a `ZkProver` that calls the native Mopro
  * bridge, converts the resulting Groth16 proof into the byte layout the
  * Umbra SDK expects, and returns it.
- *
- * `zkLib` is exposed for tests so callers can inject a fake Mopro client.
  */
 export function createZkProver(zkeyPath: string, zkLib: ZkType = Zk): ZkProver {
   return {

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
-  Image,
   PanResponder,
   Pressable,
   ScrollView,
   Text,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -310,7 +310,7 @@ export function StealthHub() {
       {/* Greeting row */}
       <View
         style={{
-          paddingTop: insets.top + 4,
+          paddingTop: insets.top,
           paddingHorizontal: 24,
           paddingBottom: 16,
           flexDirection: 'row',
@@ -318,7 +318,11 @@ export function StealthHub() {
           alignItems: 'center',
         }}
       >
-        <CircleIconBtn iconKey="history" tone={tone} />
+        <CircleIconBtn
+          iconKey="history"
+          tone={tone}
+          onPress={() => router.push('/transactions?wallet=stealth')}
+        />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <CircleIconBtn
             iconKey="card"
@@ -613,7 +617,8 @@ export function StealthHub() {
             <Image
               source={require('@/assets/images/solana-icon.png')}
               style={{ width: 40, height: 40, borderRadius: 20 }}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="memory-disk"
             />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, color: palette.ink }}>

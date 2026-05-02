@@ -29,10 +29,7 @@ type Direction = 'shield' | 'unshield';
 
 type Props = { direction: Direction };
 
-// Devnet-only: only SOL is available on shield/unshield until USDC ships.
-// The SYMBOL displayed follows the SOURCE side: SOL when depositing from
-// the public ATA (shield), WSOL when spending from the encrypted balance
-// (unshield) — the encrypted balance is wrapped SOL semantically.
+
 const SOL_DECIMALS = 9;
 
 const PILL_GRADIENTS: Record<Tone, [string, string]> = {
@@ -58,9 +55,7 @@ export function ShieldFlow({ direction }: Props) {
 
   const title = isShield ? 'Shield' : 'Unshield';
   const ctaLabel = isShield ? 'Slide to shield' : 'Slide to unshield';
-  // Short guidance line under the title — no DirectionRow, the verb itself
-  // already implies the source/destination, so we use the subtitle to nudge
-  // the user on the *why* of the action.
+
   const subtitle = isShield
     ? 'Protect your assets'
     : 'Bring assets back to public';
@@ -71,8 +66,7 @@ export function ShieldFlow({ direction }: Props) {
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
 
-  // Both shield and unshield operate on the stealth wallet:
-  // - shield: stealth public ATA → stealth encrypted balance
+
   // - unshield: stealth encrypted → stealth public ATA
   const { data: stealthBalance } = useBalance(
     isShield ? user?.stealfWallet ?? null : null,
@@ -97,9 +91,7 @@ export function ShieldFlow({ direction }: Props) {
     const num = Number(amount);
     if (!num || num <= 0) return;
     if (isShield && !user?.stealfWallet) {
-      // Pre-condition not met. Surface as a failed pill (so the user sees
-      // the reason on the destination screen) and close the modal anyway —
-      // there's nothing actionable to retry inside.
+
       const id = pendingOps.enqueue({
         kind: 'shield',
         tone,
@@ -124,9 +116,6 @@ export function ShieldFlow({ direction }: Props) {
       amountSol: num,
     });
 
-    // Eager close — the modal animates away while the heavy work runs in the
-    // background. The pill (mounted at the tabs layout) takes over status;
-    // the balances stay honest until the op confirms (no optimistic debit).
     close();
 
     // Detached async — survives this component's unmount because the closure
@@ -179,9 +168,9 @@ export function ShieldFlow({ direction }: Props) {
     <CenterGlow tone={tone}>
       <View
         style={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top,
           paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingBottom: 12,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 14,
@@ -209,7 +198,7 @@ export function ShieldFlow({ direction }: Props) {
           hitSlop={10}
           style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
         >
-          <Icons.close size={18} color={palette.inkDim} />
+          <Icons.close size={22} color={T.ink} strokeWidth={1.6} />
         </Pressable>
       </View>
 

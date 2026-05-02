@@ -103,9 +103,9 @@ export function MoveFlow() {
   const rate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
 
   const {
-    selfShield,
-    selfShieldFromPublicStealth,
     depositFromBankToReceiver,
+    transferFromEncryptedBalanceToReceiver,
+    transferFromPublicStealthToReceiver,
   } = useUmbra();
 
   const { data: bankBalanceData } = useBalance(
@@ -198,8 +198,6 @@ export function MoveFlow() {
     // stay honest until the op confirms (no optimistic debit).
     close();
 
-    // Detached: the closure keeps stable refs to root-mounted singletons
-    // (queryClient, pendingOps), so this survives the screen unmount.
     void (async () => {
       const provingTimer = setTimeout(() => {
         pendingOps.setPhase(opId, 'proving');
@@ -207,25 +205,25 @@ export function MoveFlow() {
 
       try {
         if (direction === 'bank-to-shielded') {
-          // Bank ATA → receiver-claimable UTXO locked to the stealth wallet's
-          // registered userCommitment. Signed by Turnkey (bank). Stealth
-          // claims it into its encrypted balance.
-          await depositFromBankToReceiver(
+
+          await transferFromPublicStealthToReceiver(
             toAddress(stealfWallet!),
             mint,
             lamportsBig,
           );
         } else if (direction === 'shielded-to-bank') {
-          // Shielded balance → self-claimable UTXO locked to the bank wallet.
-          // Signed by stealth (encrypted-balance source). Bank claims later.
-          await selfShield(mint, lamportsBig, toAddress(bankWallet!));
-        } else {
-          // Stealth ATA → self-claimable UTXO locked to the bank wallet.
-          // Signed by stealth (public-balance source).
-          await selfShieldFromPublicStealth(
+
+          await transferFromEncryptedBalanceToReceiver(
+            toAddress(bankWallet!),
             mint,
             lamportsBig,
+          );
+        } else {
+
+          await transferFromPublicStealthToReceiver(
             toAddress(bankWallet!),
+            mint,
+            lamportsBig,
           );
         }
 
@@ -250,9 +248,9 @@ export function MoveFlow() {
     <CenterGlow tone={tone}>
       <View
         style={{
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top,
           paddingHorizontal: 20,
-          paddingBottom: 18,
+          paddingBottom: 12,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 14,
@@ -280,7 +278,7 @@ export function MoveFlow() {
           hitSlop={10}
           style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
         >
-          <Icons.close size={18} color={palette.inkDim} />
+          <Icons.close size={22} color={T.ink} strokeWidth={1.6} />
         </Pressable>
       </View>
 

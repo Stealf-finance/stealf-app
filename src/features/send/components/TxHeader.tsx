@@ -3,7 +3,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StepBar } from '@/src/design-system/primitives/StepBar';
 import { Icons } from '@/src/design-system/icons';
-import { Tone, txPalette } from '@/src/design-system/palettes';
+import { Tone } from '@/src/design-system/palettes';
+import { T } from '@/src/design-system/tokens';
 
 type Props = {
   step: number;
@@ -20,14 +21,13 @@ export function TxHeader({
   onBack,
   onClose,
 }: Props) {
-  const palette = txPalette(tone);
   const insets = useSafeAreaInsets();
   return (
     <View
       style={{
-        paddingTop: insets.top + 16,
+        paddingTop: insets.top,
         paddingHorizontal: 24,
-        paddingBottom: 20,
+        paddingBottom: 14,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
@@ -47,7 +47,7 @@ export function TxHeader({
           justifyContent: 'center',
         }}
       >
-        <Icons.close size={18} color={palette.inkDim} />
+        <Icons.close size={22} color={T.ink} strokeWidth={1.6} />
       </Pressable>
     </View>
   );

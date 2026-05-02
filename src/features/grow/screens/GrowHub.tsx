@@ -16,6 +16,8 @@ import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { JitoMark } from '@/src/features/grow/JitoMark';
 import { useFeatureFlag } from '@/src/services/observability/featureFlags';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { getGreeting } from '@/src/lib/greeting';
 
 const S = txPalette('silver');
 const RANGES = ['1W', '1M', '1Y', 'Max'] as const;
@@ -28,6 +30,9 @@ export function GrowHub() {
 
   // Disabled until devnet ships. Toggle the PostHog flag to enable.
   const growEnabled = useFeatureFlag('slice-grow-enabled', false);
+  const { user } = useAuth();
+  const username = user?.username ?? '';
+  const greeting = getGreeting();
 
   if (!growEnabled) {
     return (
@@ -78,7 +83,7 @@ export function GrowHub() {
       {/* Greeting row */}
       <View
         style={{
-          paddingTop: insets.top + 4,
+          paddingTop: insets.top,
           paddingHorizontal: 24,
           paddingBottom: 16,
           flexDirection: 'row',
@@ -87,7 +92,7 @@ export function GrowHub() {
         }}
       >
         <Text style={{ fontSize: 13, color: S.inkDim, fontWeight: '300' }}>
-          Good morning, <Text style={{ color: S.ink }}>Thomas</Text>
+          {greeting}, <Text style={{ color: S.ink }}>{username}</Text>
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <CircleIconBtn iconKey="info" />

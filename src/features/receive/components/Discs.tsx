@@ -1,4 +1,5 @@
-import { Image, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { T } from '@/src/design-system/tokens';
 
 const STEALF_SIZE = 36;
@@ -9,7 +10,8 @@ export function StealfDisc() {
   return (
     <Image
       source={require('@/assets/images/logo.png')}
-      resizeMode="cover"
+      contentFit="cover"
+      cachePolicy="memory-disk"
       style={{
         width: STEALF_SIZE,
         height: STEALF_SIZE,
@@ -74,7 +76,8 @@ export function UsdcDisc({ size = USDC_DEFAULT_SIZE }: { size?: number } = {}) {
   return (
     <Image
       source={require('@/assets/images/usdc.png')}
-      resizeMode="contain"
+      contentFit="contain"
+      cachePolicy="memory-disk"
       style={{
         width: size,
         height: size,

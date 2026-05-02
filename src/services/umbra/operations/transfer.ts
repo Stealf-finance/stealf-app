@@ -41,12 +41,7 @@ export async function sendPrivate(
   });
 }
 
-/**
- * Self-claimable UTXO from the stealth's encrypted balance.
- * Source: shielded pool (signed by stealth wallet).
- * Default destination = signer; pass `destinationAddress` to direct the UTXO
- * to a different self-claimer (e.g. the bank wallet for shielded → bank).
- */
+
 export async function selfShield(
   mint: Address,
   amount: bigint,
@@ -66,12 +61,7 @@ export async function selfShield(
   });
 }
 
-/**
- * Self-claimable UTXO from the stealth's PUBLIC balance (its ATA), signed by
- * the stealth wallet's local key. The UTXO is locked to `destinationAddress`
- * — pass the bank address for stealth → bank, or omit for self-shield from
- * public.
- */
+
 export async function selfShieldFromPublicStealth(
   mint: Address,
   amount: bigint,
@@ -98,23 +88,64 @@ export interface DepositFromBankToReceiverArgs extends GetBankClientArgs {
   amount: bigint;
 }
 
-/**
- * Receiver-claimable UTXO from the BANK's public balance, signed by Turnkey.
- * Source: bank wallet ATA. The UTXO is locked to the receiver's registered
- * `userCommitment` — pass the stealth address as `destinationAddress` for
- * bank → shielded. The receiver claims it into their encrypted balance.
- *
- * BOTH wallets must be registered on Umbra:
- * - The receiver (stealth) so the SDK can read its `userCommitment` from
- *   the EncryptedUserAccount PDA when locking the UTXO.
- * - The sender (bank) so the SDK can produce a sender commitment for the
- *   mixer tree leaf — without it, the on-chain instruction fails simulation.
- */
+
 export async function depositFromBankToReceiver(args: DepositFromBankToReceiverArgs) {
   await ensureRegistered();
   const { destinationAddress, mint, amount, ...bankClientArgs } = args;
   const client = await getBankClient(bankClientArgs);
   await ensureRegisteredFor(client);
+  const zkProver =
+    createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver();
+  const createUtxo = getPublicBalanceToReceiverClaimableUtxoCreatorFunction(
+    { client },
+    { zkProver },
+  );
+  return createUtxo({
+    destinationAddress,
+    mint,
+    amount: amount as any,
+  });
+}
+
+
+export interface TransferToReceiverArgs extends GetBankClientArgs {
+  destinationAddress: Address;
+  mint: Address;
+  amount: bigint;
+}
+
+export async function transferFromEncryptedBalanceToReceiver(
+  args: TransferToReceiverArgs,
+) {
+  const { destinationAddress, mint, amount, ...bankClientArgs } = args;
+
+  await ensureRegistered();
+  const bankClient = await getBankClient(bankClientArgs);
+  await ensureRegisteredFor(bankClient);
+
+  const client = await getStealthClient();
+  const zkProver = createCreateUtxoWithReceiverUnlockerZkProver();
+  const createUtxo = getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction(
+    { client },
+    { zkProver },
+  );
+  return createUtxo({
+    destinationAddress,
+    mint,
+    amount: amount as any,
+  });
+}
+
+export async function transferFromPublicStealthToReceiver(
+  args: TransferToReceiverArgs,
+) {
+  const { destinationAddress, mint, amount, ...bankClientArgs } = args;
+
+  await ensureRegistered();
+  const bankClient = await getBankClient(bankClientArgs);
+  await ensureRegisteredFor(bankClient);
+
+  const client = await getStealthClient();
   const zkProver =
     createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver();
   const createUtxo = getPublicBalanceToReceiverClaimableUtxoCreatorFunction(

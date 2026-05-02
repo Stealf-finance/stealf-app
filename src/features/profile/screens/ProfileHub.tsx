@@ -66,7 +66,7 @@ export function ProfileHub() {
     <TonalBackground tone="silver">
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + 4,
+          paddingTop: insets.top,
           paddingHorizontal: 24,
           paddingBottom: insets.bottom + 100,
         }}

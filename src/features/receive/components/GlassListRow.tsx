@@ -15,6 +15,8 @@ type Props = {
   accessibilityLabel?: string;
   /** When true, dims the row, disables press, and shows a "Soon" pill instead of the chevron. */
   disabled?: boolean;
+  /** Replaces the chevron/Soon pill with a custom node (e.g., a Claim CTA). */
+  trailing?: ReactNode;
 };
 
 export function GlassListRow({
@@ -25,6 +27,7 @@ export function GlassListRow({
   paddingVertical = 14,
   accessibilityLabel,
   disabled = false,
+  trailing,
 }: Props) {
   return (
     <Pressable
@@ -37,16 +40,16 @@ export function GlassListRow({
         borderRadius: 16,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(255,255,255,0.10)',
         shadowColor: '#000',
-        shadowOpacity: 0.25,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
-        opacity: disabled ? 0.45 : 1,
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 3 },
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       <LinearGradient
-        colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.015)']}
+        colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
         style={{
@@ -55,7 +58,7 @@ export function GlassListRow({
           gap: 14,
           paddingVertical,
           paddingHorizontal: 16,
-          minHeight: 64,
+          minHeight: 72,
         }}
       >
         {/* top inset highlight */}
@@ -67,7 +70,7 @@ export function GlassListRow({
             left: 0,
             right: 0,
             height: 1,
-            backgroundColor: 'rgba(255,255,255,0.08)',
+            backgroundColor: 'rgba(255,255,255,0.12)',
           }}
         />
 
@@ -108,7 +111,7 @@ export function GlassListRow({
           ) : null}
         </View>
 
-        {disabled ? <SoonPill /> : <Icons.chevR size={14} color={T.inkFaint} />}
+        {trailing ?? (disabled ? <SoonPill /> : <Icons.chevR size={14} color={T.inkFaint} />)}
       </LinearGradient>
     </Pressable>
   );
