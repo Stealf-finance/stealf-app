@@ -1,10 +1,9 @@
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
 import { StepBar } from '@/src/design-system/primitives/StepBar';
-import { Icons } from '@/src/design-system/icons';
 import { Tone } from '@/src/design-system/palettes';
-import { T } from '@/src/design-system/tokens';
 
 type Props = {
   step: number;
@@ -35,20 +34,7 @@ export function TxHeader({
     >
       <BackBtn onPress={onBack} />
       <StepBar current={step} total={total} tone={tone} />
-      <Pressable
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel="Close"
-        hitSlop={10}
-        style={{
-          width: 36,
-          height: 36,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Icons.close size={22} color={T.ink} strokeWidth={1.6} />
-      </Pressable>
+      <CloseBtn onPress={onClose} />
     </View>
   );
 }

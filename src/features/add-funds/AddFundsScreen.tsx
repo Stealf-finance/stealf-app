@@ -7,6 +7,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
+import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
 import { Icons } from '@/src/design-system/icons';
 import {
   mono,
@@ -57,7 +59,8 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
     ? `${fullAddress.slice(0, 14)}...${fullAddress.slice(-6)}`
     : '—';
 
-  const close = () => router.back();
+  const back = () => router.back();
+  const close = () => router.replace('/(tabs)/bank');
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -81,13 +84,14 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
       <View
         style={{
           paddingTop: insets.top,
-          paddingHorizontal: 24,
+          paddingHorizontal: 20,
           paddingBottom: 18,
           flexDirection: 'row',
           alignItems: 'center',
+          gap: 14,
         }}
       >
-        <View style={{ width: 36 }} />
+        <BackBtn onPress={back} />
         <Text
           style={[
             serif,
@@ -102,20 +106,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
         >
           Add funds
         </Text>
-        <Pressable
-          onPress={close}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          hitSlop={10}
-          style={{
-            width: 36,
-            height: 36,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icons.close size={22} color={T.ink} strokeWidth={1.6} />
-        </Pressable>
+        <CloseBtn onPress={close} />
       </View>
 
       <View style={{ paddingHorizontal: 24, paddingBottom: 14, alignItems: 'center' }}>

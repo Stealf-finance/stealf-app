@@ -14,14 +14,14 @@ describe('parseStealthError', () => {
 
   it('classifies "user is not registered" -> USER_NOT_REGISTERED', () => {
     const err = new Error('user is not registered yet');
-    const out = parseStealthError(err, 'sendPrivate');
+    const out = parseStealthError(err, 'getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction');
     expect(out.code).toBe('USER_NOT_REGISTERED');
-    expect(out.op).toBe('sendPrivate');
+    expect(out.op).toBe('getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction');
   });
 
   it('classifies "receiver is not registered" -> RECEIVER_NOT_REGISTERED', () => {
     const err = new Error('receiver is not registered');
-    const out = parseStealthError(err, 'sendPrivate');
+    const out = parseStealthError(err, 'getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction');
     expect(out.code).toBe('RECEIVER_NOT_REGISTERED');
   });
 

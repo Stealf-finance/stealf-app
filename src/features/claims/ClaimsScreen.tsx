@@ -1,12 +1,21 @@
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  interpolate,
+} from 'react-native-reanimated';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
 import { Icons } from '@/src/design-system/icons';
 import { mono, sansation, serif } from '@/src/design-system/typography';
+import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -18,24 +27,35 @@ import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 
-const CLAIM_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
-const ACCENT = '#e6c079';
-const ACCENT_GLOW = 'rgba(230,192,121,0.45)';
+const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
+const ANIM_HOLD_MS = 480;
+
+type Item = { ago: string; utxo: unknown };
+
+function utxoToItem(utxo: any): Item {
+  return { ago: 'Encrypted', utxo };
+}
 
 export function ClaimsScreen() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
+  const palette = txPalette('gold');
+
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
   const { claimSelfToPublic } = useUmbra();
-  const { data: pendingUtxos, isLoading } = usePendingClaimsForCash();
+  const { data: pendingUtxos } = usePendingClaimsForCash();
 
-  const claims = pendingUtxos ?? [];
+  const items: Item[] = (pendingUtxos ?? []).map(utxoToItem);
+  const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
+
   const close = () => router.back();
 
-  const onClaim = (utxo: unknown) => {
-    if (!utxo) return;
+  const onClaim = (item: Item, index: number) => {
+    if (!item.utxo || claimingIndex !== null) return;
+    setClaimingIndex(index);
+
     const bankWallet = user?.bankWallet ?? null;
 
     const opId = pendingOps.enqueue({
@@ -44,7 +64,11 @@ export function ClaimsScreen() {
       amountSol: 0,
     });
 
-    close();
+    // Animation plays for ANIM_HOLD_MS then we hand off to the bank screen;
+    // the pending pill takes over the status surface from there.
+    setTimeout(() => {
+      router.replace('/(tabs)/bank');
+    }, ANIM_HOLD_MS);
 
     void (async () => {
       const provingTimer = setTimeout(() => {
@@ -52,28 +76,27 @@ export function ClaimsScreen() {
       }, 700);
 
       try {
-        await claimSelfToPublic([utxo]);
+        await claimSelfToPublic([item.utxo]);
         clearTimeout(provingTimer);
         pendingOps.setPhase(opId, 'confirming');
 
-        await Promise.all([
-          bankWallet
-            ? queryClient.invalidateQueries({
-                queryKey:
-                  pendingClaimsForCashQueries.byBankWallet(bankWallet),
-              })
-            : Promise.resolve(),
-          bankWallet
-            ? queryClient.invalidateQueries({
-                queryKey: balanceQueries.byAddress(bankWallet),
-              })
-            : Promise.resolve(),
-          bankWallet
-            ? queryClient.invalidateQueries({
-                queryKey: historyQueries.byAddress(bankWallet),
-              })
-            : Promise.resolve(),
-        ]);
+        const invalidate = () => {
+          if (!bankWallet) return;
+          queryClient.invalidateQueries({
+            queryKey: pendingClaimsForCashQueries.byBankWallet(bankWallet),
+          });
+          queryClient.invalidateQueries({
+            queryKey: balanceQueries.byAddress(bankWallet),
+          });
+          queryClient.invalidateQueries({
+            queryKey: historyQueries.byAddress(bankWallet),
+          });
+        };
+        invalidate();
+        // Indexer + RPC take a few seconds to reflect the burn and the
+        // public-ATA credit; stagger refetches so the bank screen updates as
+        // soon as either side catches up.
+        [3000, 8000, 15000].forEach((d) => setTimeout(invalidate, d));
 
         pendingOps.complete(opId, 'done');
       } catch (err: any) {
@@ -86,14 +109,15 @@ export function ClaimsScreen() {
   };
 
   return (
-    <CenterGlow tone="silver" flat>
+    <CenterGlow tone="silver">
       <View
         style={{
           paddingTop: insets.top,
-          paddingHorizontal: 16,
-          paddingBottom: 12,
+          paddingBottom: 18,
+          paddingHorizontal: 20,
           flexDirection: 'row',
           alignItems: 'center',
+          gap: 14,
         }}
       >
         <BackBtn onPress={close} />
@@ -106,12 +130,12 @@ export function ClaimsScreen() {
               fontSize: 17,
               color: T.ink,
               includeFontPadding: false,
-              marginRight: 36,
             },
           ]}
         >
-          Pending claims
+          Claim pending
         </Text>
+        <CloseBtn onPress={() => router.replace('/(tabs)/bank')} />
       </View>
 
       <View
@@ -134,7 +158,7 @@ export function ClaimsScreen() {
             },
           ]}
         >
-          — {claims.length} on the way · to bank wallet —
+          — {items.length} pending · to bank wallet —
         </Text>
       </View>
 
@@ -147,13 +171,17 @@ export function ClaimsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {claims.length === 0 ? (
-          <EmptyState loading={isLoading} />
+        {items.length === 0 ? (
+          <EmptyState palette={palette} />
         ) : (
-          claims.map((utxo, i) => (
-            <ClaimCard
+          items.map((tx, i) => (
+            <ClaimItem
               key={`claim-${i}`}
-              onClaim={() => onClaim(utxo)}
+              tx={tx}
+              palette={palette}
+              claiming={claimingIndex === i}
+              disabled={claimingIndex !== null && claimingIndex !== i}
+              onClaim={() => onClaim(tx, i)}
             />
           ))
         )}
@@ -162,7 +190,19 @@ export function ClaimsScreen() {
   );
 }
 
-function ClaimCard({ onClaim }: { onClaim: () => void }) {
+function ClaimItem({
+  tx,
+  palette,
+  claiming,
+  disabled,
+  onClaim,
+}: {
+  tx: Item;
+  palette: Palette;
+  claiming: boolean;
+  disabled: boolean;
+  onClaim: () => void;
+}) {
   return (
     <View
       style={{
@@ -170,6 +210,7 @@ function ClaimCard({ onClaim }: { onClaim: () => void }) {
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: 'rgba(212,165,83,0.18)',
+        opacity: disabled ? 0.45 : 1,
       }}
     >
       <LinearGradient
@@ -189,9 +230,9 @@ function ClaimCard({ onClaim }: { onClaim: () => void }) {
             backgroundColor: 'rgba(255,255,255,0.05)',
           }}
         />
-
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <IconChip />
+          <IconChip accent={palette.accent} />
+
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
               style={[
@@ -218,20 +259,45 @@ function ClaimCard({ onClaim }: { onClaim: () => void }) {
                 },
               ]}
             >
-              Encrypted
+              {tx.ago}
             </Text>
           </View>
         </View>
 
         <View style={{ marginTop: 12 }}>
-          <ClaimButton onPress={onClaim} />
+          <ClaimButton
+            accentGlow={palette.accentGlow}
+            claiming={claiming}
+            disabled={disabled}
+            onPress={onClaim}
+          />
         </View>
       </LinearGradient>
     </View>
   );
 }
 
-function IconChip() {
+function EmptyState({ palette }: { palette: Palette }) {
+  return (
+    <View style={{ paddingTop: 60, alignItems: 'center' }}>
+      <Text
+        style={[
+          serif,
+          {
+            fontSize: 15,
+            fontStyle: 'italic',
+            color: palette.inkFaint,
+            textAlign: 'center',
+          },
+        ]}
+      >
+        No transfers on the way to your bank.
+      </Text>
+    </View>
+  );
+}
+
+function IconChip({ accent }: { accent: string }) {
   return (
     <View
       style={{
@@ -251,78 +317,123 @@ function IconChip() {
         end={{ x: 0.8, y: 1 }}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
-      <Icons.clock size={16} color={ACCENT} strokeWidth={1.6} />
+      <Icons.arrDown size={16} color={accent} strokeWidth={1.8} />
     </View>
   );
 }
 
-function ClaimButton({ onPress }: { onPress?: () => void }) {
+function ClaimButton({
+  accentGlow,
+  claiming,
+  disabled,
+  onPress,
+}: {
+  accentGlow: string;
+  claiming: boolean;
+  disabled: boolean;
+  onPress?: () => void;
+}) {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withTiming(claiming ? 1 : 0, { duration: 280 });
+  }, [claiming, progress]);
+
+  const idleStyle = useAnimatedStyle(() => ({
+    opacity: 1 - progress.value,
+    transform: [{ scale: interpolate(progress.value, [0, 1], [1, 0.92]) }],
+  }));
+
+  const claimedStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: interpolate(progress.value, [0, 1], [0.85, 1]) }],
+  }));
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Claim to bank"
       onPress={onPress}
+      disabled={claiming || disabled}
       style={{
         borderRadius: 100,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.18)',
-        shadowColor: ACCENT_GLOW,
+        shadowColor: accentGlow,
         shadowOpacity: 1,
         shadowRadius: 16,
         shadowOffset: { width: 0, height: 0 },
       }}
     >
       <LinearGradient
-        colors={CLAIM_GRADIENT}
+        colors={GOLD_GRADIENT}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
         style={{
           paddingVertical: 10,
-          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
+          minHeight: 36,
         }}
       >
-        <Icons.check size={12} color="#0a0a0a" strokeWidth={2.4} />
-        <Text
+        <Animated.View
           style={[
-            sansation,
             {
-              fontSize: 10,
-              letterSpacing: 2.4,
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              color: '#0a0a0a',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
             },
+            idleStyle,
           ]}
         >
-          Claim to bank
-        </Text>
+          <Icons.check size={12} color="#0a0a0a" strokeWidth={2.4} />
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 10,
+                letterSpacing: 2.4,
+                textTransform: 'uppercase',
+                fontWeight: '700',
+                color: '#0a0a0a',
+              },
+            ]}
+          >
+            Claim to bank
+          </Text>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            },
+            claimedStyle,
+          ]}
+        >
+          <Icons.check size={14} color="#0a0a0a" strokeWidth={2.8} />
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 10,
+                letterSpacing: 2.4,
+                textTransform: 'uppercase',
+                fontWeight: '700',
+                color: '#0a0a0a',
+              },
+            ]}
+          >
+            Claimed
+          </Text>
+        </Animated.View>
       </LinearGradient>
     </Pressable>
-  );
-}
-
-function EmptyState({ loading }: { loading: boolean }) {
-  return (
-    <View style={{ paddingTop: 60, alignItems: 'center' }}>
-      <Text
-        style={[
-          serif,
-          {
-            fontSize: 15,
-            fontStyle: 'italic',
-            color: T.inkFaint,
-            textAlign: 'center',
-          },
-        ]}
-      >
-        {loading
-          ? 'Looking for incoming transfers…'
-          : 'No transfers on the way to your bank.'}
-      </Text>
-    </View>
   );
 }

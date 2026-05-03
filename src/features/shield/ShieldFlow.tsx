@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
+import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { Icons } from '@/src/design-system/icons';
@@ -191,15 +192,7 @@ export function ShieldFlow({ direction }: Props) {
         >
           {title}
         </Text>
-        <Pressable
-          onPress={close}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          hitSlop={10}
-          style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
-        >
-          <Icons.close size={22} color={T.ink} strokeWidth={1.6} />
-        </Pressable>
+        <CloseBtn onPress={close} />
       </View>
 
       <Text

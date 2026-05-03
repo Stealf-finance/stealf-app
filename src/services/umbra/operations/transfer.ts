@@ -1,8 +1,8 @@
 import {
-  getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
-  getEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
-  getPublicBalanceToSelfClaimableUtxoCreatorFunction,
-  getPublicBalanceToReceiverClaimableUtxoCreatorFunction,
+  getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction as sdkGetEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
+  getEncryptedBalanceToSelfClaimableUtxoCreatorFunction as sdkGetEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
+  getPublicBalanceToReceiverClaimableUtxoCreatorFunction as sdkGetPublicBalanceToReceiverClaimableUtxoCreatorFunction,
+  getPublicBalanceToSelfClaimableUtxoCreatorFunction as sdkGetPublicBalanceToSelfClaimableUtxoCreatorFunction,
 } from '@umbra-privacy/sdk';
 import type { Address } from '@solana/kit';
 import {
@@ -11,150 +11,83 @@ import {
   createCreateUtxoFromPublicBalanceWithEphemeralUnlockerZkProver,
   createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver,
 } from '@/src/features/stealth/zk';
-import {
-  getStealthClient,
-  getBankClient,
-  type GetBankClientArgs,
-} from '../client';
-import {
-  ensureRegistered,
-  ensureRegisteredFor,
-} from '@/src/features/stealth/lib/registration';
+import { ensureRegisteredFor } from '@/src/features/stealth/lib/registration';
+import type { UmbraClient } from '../client';
 
-/** Private send: creates a UTXO claimable by `recipient`. */
-export async function sendPrivate(
-  recipient: Address,
-  mint: Address,
-  amount: bigint,
-) {
-  await ensureRegistered();
-  const client = await getStealthClient();
-  const zkProver = createCreateUtxoWithReceiverUnlockerZkProver();
-  const createUtxo = getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction(
-    { client },
-    { zkProver },
-  );
-  return createUtxo({
-    destinationAddress: recipient,
-    mint,
-    amount: amount as any,
-  });
-}
-
-
-export async function selfShield(
-  mint: Address,
-  amount: bigint,
-  destinationAddress?: Address,
-) {
-  await ensureRegistered();
-  const client = await getStealthClient();
-  const zkProver = createCreateUtxoWithEphemeralUnlockerZkProver();
-  const createUtxo = getEncryptedBalanceToSelfClaimableUtxoCreatorFunction(
-    { client },
-    { zkProver },
-  );
-  return createUtxo({
-    destinationAddress: destinationAddress ?? client.signer.address,
-    mint,
-    amount: amount as any,
-  });
-}
-
-
-export async function selfShieldFromPublicStealth(
-  mint: Address,
-  amount: bigint,
-  destinationAddress?: Address,
-) {
-  await ensureRegistered();
-  const client = await getStealthClient();
-  const zkProver =
-    createCreateUtxoFromPublicBalanceWithEphemeralUnlockerZkProver();
-  const createUtxo = getPublicBalanceToSelfClaimableUtxoCreatorFunction(
-    { client },
-    { zkProver },
-  );
-  return createUtxo({
-    destinationAddress: destinationAddress ?? client.signer.address,
-    mint,
-    amount: amount as any,
-  });
-}
-
-export interface DepositFromBankToReceiverArgs extends GetBankClientArgs {
+interface CreateUtxoArgs {
   destinationAddress: Address;
   mint: Address;
   amount: bigint;
 }
 
+/**
+ * Thin wrappers over Umbra SDK's UTXO creator factories. Each wrapper:
+ *   1. Injects the matching zkProver (the SDK doesn't bundle them).
+ *   2. Registers the creator's client on first use.
+ *   3. Casts `amount` to U64 (the SDK's branded bigint).
+ *
+ * The wrapper does NOT register the destination wallet. Receiver-claimable
+ * UTXOs read the destination's userCommitment PDA on-chain, so the caller
+ * must `ensureRegistered` / `ensureRegisteredFor` the destination before
+ * invoking the creator if it isn't already known to be registered.
+ */
 
-export async function depositFromBankToReceiver(args: DepositFromBankToReceiverArgs) {
-  await ensureRegistered();
-  const { destinationAddress, mint, amount, ...bankClientArgs } = args;
-  const client = await getBankClient(bankClientArgs);
-  await ensureRegisteredFor(client);
-  const zkProver =
-    createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver();
-  const createUtxo = getPublicBalanceToReceiverClaimableUtxoCreatorFunction(
+export function getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction({
+  client,
+}: {
+  client: UmbraClient;
+}) {
+  const sdkFn = sdkGetEncryptedBalanceToReceiverClaimableUtxoCreatorFunction(
     { client },
-    { zkProver },
+    { zkProver: createCreateUtxoWithReceiverUnlockerZkProver() },
   );
-  return createUtxo({
-    destinationAddress,
-    mint,
-    amount: amount as any,
-  });
+  return async ({ destinationAddress, mint, amount }: CreateUtxoArgs) => {
+    await ensureRegisteredFor(client);
+    return sdkFn({ destinationAddress, mint, amount: amount as any });
+  };
 }
 
-
-export interface TransferToReceiverArgs extends GetBankClientArgs {
-  destinationAddress: Address;
-  mint: Address;
-  amount: bigint;
+export function getEncryptedBalanceToSelfClaimableUtxoCreatorFunction({
+  client,
+}: {
+  client: UmbraClient;
+}) {
+  const sdkFn = sdkGetEncryptedBalanceToSelfClaimableUtxoCreatorFunction(
+    { client },
+    { zkProver: createCreateUtxoWithEphemeralUnlockerZkProver() },
+  );
+  return async ({ destinationAddress, mint, amount }: CreateUtxoArgs) => {
+    await ensureRegisteredFor(client);
+    return sdkFn({ destinationAddress, mint, amount: amount as any });
+  };
 }
 
-export async function transferFromEncryptedBalanceToReceiver(
-  args: TransferToReceiverArgs,
-) {
-  const { destinationAddress, mint, amount, ...bankClientArgs } = args;
-
-  await ensureRegistered();
-  const bankClient = await getBankClient(bankClientArgs);
-  await ensureRegisteredFor(bankClient);
-
-  const client = await getStealthClient();
-  const zkProver = createCreateUtxoWithReceiverUnlockerZkProver();
-  const createUtxo = getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction(
+export function getPublicBalanceToReceiverClaimableUtxoCreatorFunction({
+  client,
+}: {
+  client: UmbraClient;
+}) {
+  const sdkFn = sdkGetPublicBalanceToReceiverClaimableUtxoCreatorFunction(
     { client },
-    { zkProver },
+    { zkProver: createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver() },
   );
-  return createUtxo({
-    destinationAddress,
-    mint,
-    amount: amount as any,
-  });
+  return async ({ destinationAddress, mint, amount }: CreateUtxoArgs) => {
+    await ensureRegisteredFor(client);
+    return sdkFn({ destinationAddress, mint, amount: amount as any });
+  };
 }
 
-export async function transferFromPublicStealthToReceiver(
-  args: TransferToReceiverArgs,
-) {
-  const { destinationAddress, mint, amount, ...bankClientArgs } = args;
-
-  await ensureRegistered();
-  const bankClient = await getBankClient(bankClientArgs);
-  await ensureRegisteredFor(bankClient);
-
-  const client = await getStealthClient();
-  const zkProver =
-    createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver();
-  const createUtxo = getPublicBalanceToReceiverClaimableUtxoCreatorFunction(
+export function getPublicBalanceToSelfClaimableUtxoCreatorFunction({
+  client,
+}: {
+  client: UmbraClient;
+}) {
+  const sdkFn = sdkGetPublicBalanceToSelfClaimableUtxoCreatorFunction(
     { client },
-    { zkProver },
+    { zkProver: createCreateUtxoFromPublicBalanceWithEphemeralUnlockerZkProver() },
   );
-  return createUtxo({
-    destinationAddress,
-    mint,
-    amount: amount as any,
-  });
+  return async ({ destinationAddress, mint, amount }: CreateUtxoArgs) => {
+    await ensureRegisteredFor(client);
+    return sdkFn({ destinationAddress, mint, amount: amount as any });
+  };
 }

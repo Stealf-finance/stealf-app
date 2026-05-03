@@ -7,7 +7,8 @@ export type PendingOpKind =
   | 'move-shielded-to-bank'
   | 'move-stealth-to-bank'
   | 'send-private'
-  | 'claim-to-bank';
+  | 'claim-to-bank'
+  | 'claim-to-shielded';
 
 export type PendingOpPhase =
   | 'submitting'

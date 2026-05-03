@@ -19,14 +19,11 @@ export {
 export type StealthOp =
   | 'register'
   | 'deposit'
-  | 'depositFromBank'
   | 'withdraw'
-  | 'sendPrivate'
-  | 'selfShield'
-  | 'selfShieldFromPublicStealth'
-  | 'depositFromBankToReceiver'
-  | 'transferFromEncryptedBalanceToReceiver'
-  | 'transferFromPublicStealthToReceiver'
+  | 'getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction'
+  | 'getEncryptedBalanceToSelfClaimableUtxoCreatorFunction'
+  | 'getPublicBalanceToReceiverClaimableUtxoCreatorFunction'
+  | 'getPublicBalanceToSelfClaimableUtxoCreatorFunction'
   | 'claimReceived'
   | 'claimSelfToPublic'
   | 'fetchClaims'
@@ -151,12 +148,7 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
       case 'account-fetch':
         return build(err, op, 'RPC_ERROR', err.stage);
       case 'transaction-sign':
-        return build(
-          err,
-          op,
-          op === 'depositFromBank' ? 'SIGNING_FAILED' : 'USER_CANCELLED',
-          err.stage,
-        );
+        return build(err, op, 'USER_CANCELLED', err.stage);
       case 'transaction-send': {
         const e = err as { cause?: { context?: { logs?: string[] } } };
         const logs = e?.cause?.context?.logs ?? [];

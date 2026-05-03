@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,15 +8,12 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  interpolate,
 } from 'react-native-reanimated';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { Icons } from '@/src/design-system/icons';
-import {
-  mono,
-  sansation,
-  serif,
-} from '@/src/design-system/typography';
+import { mono, sansation, serif } from '@/src/design-system/typography';
 import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -24,118 +21,86 @@ import {
   usePendingClaims,
   pendingClaimsQueries,
 } from '@/src/features/stealth/hooks/usePendingClaims';
-import {
-  usePendingClaimsForCash,
-  pendingClaimsForCashQueries,
-} from '@/src/features/stealth/hooks/usePendingClaimsForCash';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
-import { balanceQueries } from '@/src/features/bank/api/balance';
-import { historyQueries } from '@/src/features/bank/api/history';
+import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 
-type Tab = 'coming' | 'incoming';
+const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
+const ANIM_HOLD_MS = 480;
+
 type Item = { ago: string; utxo: unknown };
 
 function utxoToItem(utxo: any): Item {
   return { ago: 'Encrypted', utxo };
 }
 
-const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
-
 export function ClaimPendingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const palette = txPalette('gold');
 
-  const [tab, setTab] = useState<Tab>('incoming');
-  const [tabsWidth, setTabsWidth] = useState(0);
-  const tabProgress = useSharedValue(1);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const pendingOps = usePendingOps();
+  const { data: incomingUtxos } = usePendingClaims();
+  const { claimReceived } = useUmbra();
 
-  useEffect(() => {
-    tabProgress.value = withTiming(tab === 'incoming' ? 1 : 0, {
-      duration: 250,
-    });
-  }, [tab, tabProgress]);
-
-  const underlineStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: tabProgress.value * (tabsWidth / 2) }],
-  }));
+  const items: Item[] = (incomingUtxos ?? []).map(utxoToItem);
+  const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
 
   const close = () => router.back();
 
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { data: incomingUtxos } = usePendingClaims();
-  const { data: comingUtxos } = usePendingClaimsForCash();
-  const { claimReceived, claimSelfToPublic, loading } = useUmbra();
+  const onClaim = (item: Item, index: number) => {
+    if (!item.utxo || claimingIndex !== null) return;
+    setClaimingIndex(index);
 
-  const incoming = useMemo<Item[]>(
-    () => (incomingUtxos ?? []).map(utxoToItem),
-    [incomingUtxos],
-  );
-  const coming = useMemo<Item[]>(
-    () => (comingUtxos ?? []).map(utxoToItem),
-    [comingUtxos],
-  );
+    const stealfWallet = user?.stealfWallet ?? null;
 
-  const list = tab === 'incoming' ? incoming : coming;
-  const headerLabel =
-    tab === 'incoming'
-      ? `${incoming.length} pending · into shielded pool`
-      : `${coming.length} on the way · to bank wallet`;
+    const opId = pendingOps.enqueue({
+      kind: 'claim-to-shielded',
+      tone: 'gold',
+      amountSol: 0,
+    });
 
-  const invalidateAfterClaim = async (kind: Tab) => {
-    const tasks: Promise<unknown>[] = [];
-    if (user?.stealfWallet) {
-      tasks.push(
-        queryClient.invalidateQueries({
-          queryKey: pendingClaimsQueries.byStealfWallet(user.stealfWallet),
-        }),
-      );
-    }
-    if (user?.bankWallet) {
-      tasks.push(
-        queryClient.invalidateQueries({
-          queryKey: pendingClaimsForCashQueries.byBankWallet(user.bankWallet),
-        }),
-      );
-    }
-    if (kind === 'incoming' && user?.stealfWallet) {
-      // claimReceived → encrypted balance refresh.
-      tasks.push(
-        queryClient.invalidateQueries({
-          queryKey: shieldedBalanceQueries.byStealfWallet(user.stealfWallet),
-        }),
-      );
-    }
-    if (kind === 'coming' && user?.bankWallet) {
-      // claimSelfToPublic → bank ATA gets credited.
-      tasks.push(
-        queryClient.invalidateQueries({
-          queryKey: balanceQueries.byAddress(user.bankWallet),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: historyQueries.byAddress(user.bankWallet),
-        }),
-      );
-    }
-    await Promise.all(tasks);
-  };
+    // Animation plays for ANIM_HOLD_MS then we hand off to the stealth screen;
+    // the pending pill takes over the status surface from there.
+    setTimeout(() => {
+      router.replace('/(tabs)/stealth');
+    }, ANIM_HOLD_MS);
 
-  const onClaim = async (item: Item) => {
-    if (!item.utxo) return;
-    try {
-      if (tab === 'incoming') {
+    void (async () => {
+      const provingTimer = setTimeout(() => {
+        pendingOps.setPhase(opId, 'proving');
+      }, 700);
+
+      try {
         await claimReceived([item.utxo]);
-      } else {
-        await claimSelfToPublic([item.utxo]);
+        clearTimeout(provingTimer);
+        pendingOps.setPhase(opId, 'confirming');
+
+        const invalidate = () => {
+          if (!stealfWallet) return;
+          queryClient.invalidateQueries({
+            queryKey: pendingClaimsQueries.byStealfWallet(stealfWallet),
+          });
+          queryClient.invalidateQueries({
+            queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),
+          });
+        };
+        invalidate();
+        // Indexer + RPC take a few seconds to reflect the burn and the
+        // encrypted-balance credit; stagger refetches so the stealth screen
+        // updates as soon as either side catches up.
+        [3000, 8000, 15000].forEach((d) => setTimeout(invalidate, d));
+
+        pendingOps.complete(opId, 'done');
+      } catch (err: any) {
+        clearTimeout(provingTimer);
+        const msg = err?.userMessage || err?.message || 'Claim failed';
+        if (__DEV__) console.warn('[ClaimPending] claim failed:', msg);
+        pendingOps.complete(opId, 'failed', msg);
       }
-      await invalidateAfterClaim(tab);
-    } catch (err: any) {
-      const msg = err?.userMessage || err?.message || 'Claim failed';
-      if (__DEV__) console.warn('[ClaimPending] claim failed:', msg);
-      Alert.alert('Claim failed', msg);
-    }
+    })();
   };
 
   return (
@@ -168,78 +133,9 @@ export function ClaimPendingScreen() {
         </Text>
       </View>
 
-      <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-        <View
-          style={{ flexDirection: 'row', position: 'relative' }}
-          onLayout={(e) => setTabsWidth(e.nativeEvent.layout.width)}
-        >
-          {(['coming', 'incoming'] as const).map((id) => {
-            const active = tab === id;
-            return (
-              <Pressable
-                key={id}
-                onPress={() => setTab(id)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: active }}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  alignItems: 'center',
-                }}
-              >
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 12,
-                      letterSpacing: 3.84,
-                      textTransform: 'uppercase',
-                      fontWeight: '700',
-                      color: active ? T.ink : T.inkFaint,
-                      includeFontPadding: false,
-                    },
-                  ]}
-                >
-                  {id === 'coming' ? 'Coming' : 'Incoming'}
-                </Text>
-              </Pressable>
-            );
-          })}
-
-          <View
-            style={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 1,
-              backgroundColor: T.hairline,
-            }}
-          />
-
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                height: 2,
-                width: '50%',
-                backgroundColor: palette.accent,
-                shadowColor: palette.accentGlow,
-                shadowOpacity: 1,
-                shadowRadius: 12,
-                shadowOffset: { width: 0, height: 0 },
-              },
-              underlineStyle,
-            ]}
-          />
-        </View>
-      </View>
-
       <View
         style={{
-          paddingTop: 24,
+          paddingTop: 8,
           paddingBottom: 22,
           paddingHorizontal: 24,
           alignItems: 'center',
@@ -257,7 +153,7 @@ export function ClaimPendingScreen() {
             },
           ]}
         >
-          — {headerLabel} —
+          — {items.length} pending · into shielded pool —
         </Text>
       </View>
 
@@ -270,17 +166,17 @@ export function ClaimPendingScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {list.length === 0 ? (
-          <EmptyState kind={tab} palette={palette} />
+        {items.length === 0 ? (
+          <EmptyState palette={palette} />
         ) : (
-          list.map((tx, i) => (
+          items.map((tx, i) => (
             <ClaimItem
-              key={`${tab}-${i}`}
+              key={`incoming-${i}`}
               tx={tx}
-              kind={tab}
               palette={palette}
-              onClaim={() => onClaim(tx)}
-              disabled={loading}
+              claiming={claimingIndex === i}
+              disabled={claimingIndex !== null && claimingIndex !== i}
+              onClaim={() => onClaim(tx, i)}
             />
           ))
         )}
@@ -291,18 +187,17 @@ export function ClaimPendingScreen() {
 
 function ClaimItem({
   tx,
-  kind,
   palette,
-  onClaim,
+  claiming,
   disabled,
+  onClaim,
 }: {
   tx: Item;
-  kind: Tab;
   palette: Palette;
+  claiming: boolean;
+  disabled: boolean;
   onClaim: () => void;
-  disabled?: boolean;
 }) {
-  const isIncoming = kind === 'incoming';
   return (
     <View
       style={{
@@ -310,7 +205,7 @@ function ClaimItem({
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: 'rgba(212,165,83,0.18)',
-        opacity: isIncoming ? 1 : 0.85,
+        opacity: disabled ? 0.45 : 1,
       }}
     >
       <LinearGradient
@@ -331,7 +226,7 @@ function ClaimItem({
           }}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <IconChip kind={kind} accent={palette.accent} />
+          <IconChip accent={palette.accent} />
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
@@ -346,7 +241,7 @@ function ClaimItem({
                 },
               ]}
             >
-              {isIncoming ? 'Encrypted incoming' : 'Encrypted to bank'}
+              Encrypted incoming
             </Text>
             <Text
               style={[
@@ -367,9 +262,9 @@ function ClaimItem({
         <View style={{ marginTop: 12 }}>
           <ClaimButton
             accentGlow={palette.accentGlow}
-            onPress={onClaim}
+            claiming={claiming}
             disabled={disabled}
-            label={isIncoming ? 'Claim into shielded' : 'Claim to bank'}
+            onPress={onClaim}
           />
         </View>
       </LinearGradient>
@@ -377,18 +272,9 @@ function ClaimItem({
   );
 }
 
-function EmptyState({ kind, palette }: { kind: Tab; palette: Palette }) {
-  const copy =
-    kind === 'incoming'
-      ? 'No incoming transfers waiting.'
-      : 'No transfers on the way to your bank.';
+function EmptyState({ palette }: { palette: Palette }) {
   return (
-    <View
-      style={{
-        paddingTop: 60,
-        alignItems: 'center',
-      }}
-    >
+    <View style={{ paddingTop: 60, alignItems: 'center' }}>
       <Text
         style={[
           serif,
@@ -400,13 +286,13 @@ function EmptyState({ kind, palette }: { kind: Tab; palette: Palette }) {
           },
         ]}
       >
-        {copy}
+        No incoming transfers waiting.
       </Text>
     </View>
   );
 }
 
-function IconChip({ kind, accent }: { kind: Tab; accent: string }) {
+function IconChip({ accent }: { accent: string }) {
   return (
     <View
       style={{
@@ -426,32 +312,44 @@ function IconChip({ kind, accent }: { kind: Tab; accent: string }) {
         end={{ x: 0.8, y: 1 }}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
-      {kind === 'incoming' ? (
-        <Icons.arrDown size={16} color={accent} strokeWidth={1.8} />
-      ) : (
-        <Icons.clock size={16} color={accent} strokeWidth={1.6} />
-      )}
+      <Icons.arrDown size={16} color={accent} strokeWidth={1.8} />
     </View>
   );
 }
 
 function ClaimButton({
   accentGlow,
-  onPress,
+  claiming,
   disabled,
-  label = 'Claim',
+  onPress,
 }: {
   accentGlow: string;
+  claiming: boolean;
+  disabled: boolean;
   onPress?: () => void;
-  disabled?: boolean;
-  label?: string;
 }) {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withTiming(claiming ? 1 : 0, { duration: 280 });
+  }, [claiming, progress]);
+
+  const idleStyle = useAnimatedStyle(() => ({
+    opacity: 1 - progress.value,
+    transform: [{ scale: interpolate(progress.value, [0, 1], [1, 0.92]) }],
+  }));
+
+  const claimedStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: interpolate(progress.value, [0, 1], [0.85, 1]) }],
+  }));
+
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Claim"
+      accessibilityLabel="Claim into shielded"
       onPress={onPress}
-      disabled={disabled}
+      disabled={claiming || disabled}
       style={{
         borderRadius: 100,
         overflow: 'hidden',
@@ -461,7 +359,6 @@ function ClaimButton({
         shadowOpacity: 1,
         shadowRadius: 16,
         shadowOffset: { width: 0, height: 0 },
-        opacity: disabled ? 0.5 : 1,
       }}
     >
       <LinearGradient
@@ -470,29 +367,68 @@ function ClaimButton({
         end={{ x: 0.8, y: 1 }}
         style={{
           paddingVertical: 10,
-          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 8,
+          minHeight: 36,
         }}
       >
-        <Icons.check size={12} color="#0a0a0a" strokeWidth={2.4} />
-        <Text
+        <Animated.View
           style={[
-            sansation,
             {
-              fontSize: 10,
-              letterSpacing: 2.4,
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              color: '#0a0a0a',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
             },
+            idleStyle,
           ]}
         >
-          {label}
-        </Text>
+          <Icons.check size={12} color="#0a0a0a" strokeWidth={2.4} />
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 10,
+                letterSpacing: 2.4,
+                textTransform: 'uppercase',
+                fontWeight: '700',
+                color: '#0a0a0a',
+              },
+            ]}
+          >
+            Claim into shielded
+          </Text>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            },
+            claimedStyle,
+          ]}
+        >
+          <Icons.check size={14} color="#0a0a0a" strokeWidth={2.8} />
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 10,
+                letterSpacing: 2.4,
+                textTransform: 'uppercase',
+                fontWeight: '700',
+                color: '#0a0a0a',
+              },
+            ]}
+          >
+            Claimed
+          </Text>
+        </Animated.View>
       </LinearGradient>
     </Pressable>
   );
 }
-
