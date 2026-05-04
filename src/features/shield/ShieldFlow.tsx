@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import {
   applyAmountKey,
@@ -7,7 +8,6 @@ import {
   SOL_DECIMALS,
 } from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_MINT } from '@/src/constants/solana';
@@ -17,7 +17,12 @@ import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSe
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { Icons } from '@/src/design-system/icons';
-import { sansation, sansationLight, serif } from '@/src/design-system/typography';
+import {
+  sansation,
+  sansationBold,
+  sansationLight,
+  serif,
+} from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -36,11 +41,6 @@ type Direction = 'shield' | 'unshield';
 
 type Props = { direction: Direction };
 
-const PILL_GRADIENTS: Record<Tone, [string, string]> = {
-  silver: ['#e8e8ea', '#9a9a9f'],
-  gold: ['#e6c079', '#a37b2e'],
-};
-
 function formatSolBalance(sol: number): string {
   if (sol === 0) return '0';
   return sol.toFixed(4).replace(/\.?0+$/, '');
@@ -54,7 +54,6 @@ export function ShieldFlow({ direction }: Props) {
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
   const palette = txPalette(tone);
-  const pillGradient = PILL_GRADIENTS[tone];
   const assetSymbol = isShield ? 'SOL' : 'WSOL';
 
   const title = isShield ? 'Shield' : 'Unshield';
@@ -274,14 +273,14 @@ export function ShieldFlow({ direction }: Props) {
             serif,
             {
               textAlign: 'center',
-              marginTop: 8,
+              marginTop: 12,
               fontStyle: 'italic',
-              fontSize: 16,
-              color: palette.inkDim,
+              fontSize: 30,
+              color: T.ink,
             },
           ]}
         >
-          ≈ ${fiat}
+          ${fiat}
         </Text>
         {insufficient ? (
           <Text
@@ -301,53 +300,89 @@ export function ShieldFlow({ direction }: Props) {
         ) : null}
       </View>
 
-      <View style={{ alignItems: 'center', marginBottom: 20 }}>
-        <Pressable
-          onPress={() => setAmount(maxLabel)}
-          accessibilityRole="button"
-          accessibilityLabel={`Use max balance ${maxLabel} ${assetSymbol}`}
+      <View style={{ paddingHorizontal: 24, marginBottom: 20 }}>
+        <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
-            paddingVertical: 8,
-            paddingHorizontal: 14,
-            borderRadius: 100,
+            paddingVertical: 14,
+            paddingLeft: 12,
+            paddingRight: 10,
+            borderRadius: 18,
+            backgroundColor: 'rgba(255,255,255,0.04)',
             borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.2)',
-            overflow: 'hidden',
+            borderColor: T.hairline,
           }}
         >
-          <LinearGradient
-            colors={pillGradient}
-            start={{ x: 0.2, y: 0 }}
-            end={{ x: 0.8, y: 1 }}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+          <Image
+            source={require('@/assets/images/solana-icon.png')}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: '#0a0a0a',
+            }}
           />
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 2.2,
-                textTransform: 'uppercase',
-                fontWeight: '700',
-                color: '#0a0a0a',
-              },
-            ]}
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            >
+              <Text
+                style={[
+                  sansation,
+                  { fontSize: 14, color: T.ink, fontWeight: '600' },
+                ]}
+              >
+                {isShield ? 'Solana' : 'Wrapped SOL'}
+              </Text>
+              <Icons.chevD size={12} color={T.inkDim} strokeWidth={2} />
+            </View>
+            <Text
+              style={[
+                sansation,
+                {
+                  fontSize: 11,
+                  color: T.inkFaint,
+                  marginTop: 2,
+                  letterSpacing: 0.2,
+                },
+              ]}
+            >
+              {balanceLabel} {assetSymbol}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => setAmount(maxLabel)}
+            accessibilityRole="button"
+            accessibilityLabel={`Use max balance ${maxLabel} ${assetSymbol}`}
+            hitSlop={6}
+            style={({ pressed }) => ({
+              marginRight: 6,
+              paddingVertical: 9,
+              paddingHorizontal: 16,
+              borderRadius: 12,
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              borderWidth: 1.5,
+              borderColor: 'rgba(255,255,255,0.55)',
+              opacity: pressed ? 0.85 : 1,
+            })}
           >
-            Max
-          </Text>
-          <View style={{ width: 1, height: 10, backgroundColor: 'rgba(0,0,0,0.2)' }} />
-          <Text
-            style={[
-              sansation,
-              { fontSize: 10, color: '#0a0a0a', fontWeight: '500' },
-            ]}
-          >
-            {maxLabel} {assetSymbol}
-          </Text>
-        </Pressable>
+            <Text
+              style={[
+                sansationBold,
+                {
+                  fontSize: 11,
+                  color: T.ink,
+                  letterSpacing: 0.6,
+                },
+              ]}
+            >
+              Use Max
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       <Numpad onKey={onKey} tone={tone} />

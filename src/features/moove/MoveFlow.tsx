@@ -4,6 +4,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   applyAmountKey,
   maxSpendableSol,
+  PROTOCOL_FEE_RATE,
+  protocolFeeSol,
   SOL_DECIMALS,
 } from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -145,7 +147,11 @@ export function MoveFlow() {
   // buckets, no reserve needed.
   const sourcePaysFees =
     direction === 'bank-to-shielded' || direction === 'stealth-to-bank';
-  const maxSol = maxSpendableSol(sourceSol, sourcePaysFees);
+  // Umbra protocol fee (0.30%) applies to anything touching the encrypted
+  // balance. stealth-to-bank is a plain SOL transfer between public ATAs,
+  // so no protocol fee.
+  const hasProtocolFee = direction !== 'stealth-to-bank';
+  const maxSol = maxSpendableSol(sourceSol, sourcePaysFees, hasProtocolFee);
   const maxLabel = formatSolBalance(maxSol);
 
   const fiat = (Number(amount) * rate).toFixed(2);
@@ -558,15 +564,34 @@ export function MoveFlow() {
             serif,
             {
               textAlign: 'center',
-              marginTop: 8,
+              marginTop: 12,
               fontStyle: 'italic',
-              fontSize: 16,
+              fontSize: 22,
               color: palette.inkDim,
             },
           ]}
         >
           ≈ ${fiat}
         </Text>
+        {hasProtocolFee && numericAmount > 0 ? (
+          <Text
+            style={[
+              sansation,
+              {
+                textAlign: 'center',
+                marginTop: 6,
+                fontSize: 10.5,
+                letterSpacing: 1.2,
+                textTransform: 'uppercase',
+                color: palette.inkFaint,
+              },
+            ]}
+          >
+            Privacy fee {(PROTOCOL_FEE_RATE * 100).toFixed(2)}% ·{' '}
+            {protocolFeeSol(numericAmount).toFixed(4).replace(/\.?0+$/, '')}{' '}
+            {assetSymbol}
+          </Text>
+        ) : null}
         {insufficient ? (
           <Text
             style={[

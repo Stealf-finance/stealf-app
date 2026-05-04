@@ -49,7 +49,11 @@ import { historyQueries } from '@/src/features/bank/api/history';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_MINT } from '@/src/constants/solana';
-import { SOL_DECIMALS } from '@/src/features/send/lib/amount';
+import {
+  PROTOCOL_FEE_RATE,
+  protocolFeeSol,
+  SOL_DECIMALS,
+} from '@/src/features/send/lib/amount';
 import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 
 const FADE_OUT = 160;
@@ -227,6 +231,17 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const fiatValue = (Number(amount) * rate).toFixed(2);
   const amountNum = Number(amount);
   const balanceNum = asset ? Number(asset.balance) : 0;
+  // Private sends pay a 0.30% Umbra protocol fee on the encrypted balance,
+  // so Max has to leave that wedge unspent — otherwise the create-UTXO tx
+  // fails at submit time.
+  const privateMaxNum = isPrivate
+    ? Math.max(0, balanceNum * (1 - PROTOCOL_FEE_RATE))
+    : balanceNum;
+  const maxAmountStr = isPrivate
+    ? privateMaxNum === 0
+      ? '0'
+      : privateMaxNum.toFixed(6).replace(/\.?0+$/, '')
+    : asset?.balance ?? '0';
   // Reserve the network fee on top of the amount when the asset is the gas token.
   const exceedsBalance =
     asset?.symbol === 'SOL'
@@ -723,7 +738,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
               }}
             >
               <Pressable
-                onPress={() => setAmount(asset.balance)}
+                onPress={() => setAmount(maxAmountStr)}
                 accessibilityRole="button"
                 style={{
                   flexDirection: 'row',
@@ -784,9 +799,27 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                     },
                   ]}
                 >
-                  {asset.balance} {asset.symbol}
+                  {maxAmountStr} {asset.symbol}
                 </Text>
               </Pressable>
+              {isPrivate && amountNum > 0 ? (
+                <Text
+                  style={[
+                    sansation,
+                    {
+                      marginTop: 10,
+                      fontSize: 10.5,
+                      letterSpacing: 1.2,
+                      textTransform: 'uppercase',
+                      color: S.inkFaint,
+                    },
+                  ]}
+                >
+                  Privacy fee {(PROTOCOL_FEE_RATE * 100).toFixed(2)}% ·{' '}
+                  {protocolFeeSol(amountNum).toFixed(4).replace(/\.?0+$/, '')}{' '}
+                  {asset.symbol}
+                </Text>
+              ) : null}
             </View>
 
             <Numpad onKey={onKey} tone={tone} />
@@ -931,12 +964,24 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                     </Text>
                   </View>
 
-                  {[
-                    ['From', fromLabel],
-                    ['To', truncateAddress(recipient.name)],
-                    ['Asset', `${asset.symbol} · ${asset.name}`],
-                    ['Network fee', feeLabel],
-                  ].map(([l, v], i, arr) => (
+                  {(
+                    [
+                      ['From', fromLabel],
+                      ['To', truncateAddress(recipient.name)],
+                      ['Asset', `${asset.symbol} · ${asset.name}`],
+                      ['Network fee', feeLabel],
+                      ...(isPrivate
+                        ? ([
+                            [
+                              `Privacy fee · ${(PROTOCOL_FEE_RATE * 100).toFixed(2)}%`,
+                              `${protocolFeeSol(amountNum)
+                                .toFixed(4)
+                                .replace(/\.?0+$/, '')} ${asset.symbol}`,
+                            ],
+                          ] as const)
+                        : []),
+                    ] as const
+                  ).map(([l, v], i, arr) => (
                     <View
                       key={l}
                       style={{
