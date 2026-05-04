@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import {
@@ -35,8 +34,6 @@ export function DataBootstrap() {
         '[DataBootstrap] init — bankWallet=' + user.bankWallet,
         'stealfWallet=' + (user.stealfWallet ?? 'none'),
       );
-
-    void walletKeyCache.warmup();
 
     void queryClient.prefetchQuery({
       queryKey: userProfileQueries.byBankWallet(user.bankWallet),
