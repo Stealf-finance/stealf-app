@@ -19,7 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
-import { PrivacyGauge } from '@/src/design-system/primitives/PrivacyGauge';
+import { Icons } from '@/src/design-system/icons';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { SquareActionTile } from '@/src/design-system/primitives/SquareActionTile';
 import {
@@ -104,33 +104,21 @@ export function StealthHub() {
     };
   };
   const balance = formatBalance(isPrivate ? privateUSD : publicUSD);
-  // Dynamic typography sizing: scale the balance down as the integer part
-  // grows so 9-figure totals still fit inside the gauge's center.
-  const intLen = balance.int.length;
-  const balanceFontSize =
-    intLen <= 4
-      ? { int: 64, dec: 28, dollar: 30 }
-      : intLen <= 6
-      ? { int: 56, dec: 24, dollar: 26 }
-      : intLen <= 8
-      ? { int: 46, dec: 20, dollar: 22 }
-      : intLen <= 10
-      ? { int: 38, dec: 18, dollar: 20 }
-      : { int: 32, dec: 16, dollar: 18 };
+  // Match the BankWallet hero exactly so toggling tabs doesn't shift the
+  // amount typography. Static sizes mirror BankWallet.tsx:134/148/162.
+  const balanceFontSize = { int: 76, dec: 32, dollar: 36 } as const;
 
   const solRow = balanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL');
   const solBalance = isPrivate ? (shielded?.sol ?? 0) : (solRow?.balance ?? 0);
   const solUSD = isPrivate ? privateUSD : (solRow?.balanceUSD ?? 0);
 
-  // Privacy gauge: each side fills proportionally to its share of the
-  // wallet's total dollar value. Both arcs sum to 1 when funds exist on
-  // both sides; falls to 0 cleanly when the wallet is empty.
+  // Public / private split — each side proportional to its share of the
+  // wallet's total dollar value. Drives the horizontal bar below the
+  // balance; falls to 0 cleanly when the wallet is empty.
   const totalUSD = publicUSD + privateUSD;
   const publicValue = totalUSD > 0 ? publicUSD / totalUSD : 0;
-  const privateValue = totalUSD > 0 ? privateUSD / totalUSD : 0;
 
   const kicker = isPrivate ? 'Shielded Pool' : 'Stealth Wallet';
-  const subkicker = isPrivate ? 'private' : 'public';
 
   const modeProgress = useSharedValue(isPrivate ? 1 : 0);
   const contentOpacity = useSharedValue(1);
@@ -161,6 +149,7 @@ export function StealthHub() {
   const [pendingMnemonic, setPendingMnemonic] = useState<string | null>(null);
   const [pendingAddress, setPendingAddress] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
+  const [balanceHidden, setBalanceHidden] = useState(false);
 
   const persistStealfWallet = async (
     walletAddress: string,
@@ -374,98 +363,66 @@ export function StealthHub() {
       >
         {/* Swipe-toggle zone: kicker + gauge + dots only */}
         <View {...panHandlers}>
-          {/* Kicker + subkicker — cross-fades on mode swap */}
+          {/* Kicker + eye toggle — grouped inline so the eye reads as part
+              of the wallet header rather than floating at the screen edge. */}
           <Animated.View
             style={[
               {
-                alignItems: 'center',
                 paddingTop: 12,
-                marginBottom: 20,
+                marginBottom: 18,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 18,
               },
               contentStyle,
             ]}
           >
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
-            >
-              <View
-                style={{
-                  width: 18,
-                  height: 1,
-                  backgroundColor: palette.accentDim,
-                }}
-              />
-              <Text
-                style={[
-                  sansation,
-                  {
-                    fontSize: 10,
-                    letterSpacing: 3.2,
-                    textTransform: 'uppercase',
-                    color: palette.accent,
-                    fontWeight: '700',
-                  },
-                ]}
-              >
-                {kicker}
-              </Text>
-              <View
-                style={{
-                  width: 18,
-                  height: 1,
-                  backgroundColor: palette.accentDim,
-                }}
-              />
-            </View>
             <Text
               style={[
-                serif,
+                sansation,
                 {
-                  fontStyle: 'italic',
-                  fontSize: 13,
-                  color: palette.inkDim,
-                  marginTop: 6,
+                  fontSize: 10,
+                  letterSpacing: 3.2,
+                  textTransform: 'uppercase',
+                  color: T.ink,
+                  fontWeight: '700',
                 },
               ]}
             >
-              {subkicker}
+              {kicker}
             </Text>
+            <Pressable
+              onPress={() => setBalanceHidden((h) => !h)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                balanceHidden ? 'Show balance' : 'Hide balance'
+              }
+              hitSlop={10}
+              style={({ pressed }) => ({
+                padding: 4,
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              {balanceHidden ? (
+                <Icons.eyeOff size={22} color={T.ink} />
+              ) : (
+                <Icons.eye size={22} color={T.ink} />
+              )}
+            </Pressable>
           </Animated.View>
 
-          {/* Gauge — morphs continuously, no fade */}
-          <View
-            style={{
-              position: 'relative',
-              height: 270,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 28,
-            }}
+          {/* Balance — cross-fade on mode swap. marginTop balances the
+              kicker's marginBottom (18) so the amount sits at the visual
+              midpoint between the kicker and the nav dots below. */}
+          <Animated.View
+            style={[
+              { alignItems: 'center', marginTop: 30, marginBottom: 48 },
+              contentStyle,
+            ]}
           >
-            <PrivacyGauge
-              modeProgress={modeProgress}
-              publicValue={publicValue}
-              privateValue={privateValue}
-              publicColor={SILVER.accent}
-              privateColor={GOLD.accent}
-              publicGlow={SILVER.accentGlow}
-              privateGlow={GOLD.accentGlow}
-              size={260}
-              thickness={5}
-            />
-
-            {/* Center balance — cross-fade on mode swap */}
-            <Animated.View
-              style={[
-                {
-                  position: 'absolute',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                },
-                contentStyle,
-              ]}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              {balanceHidden ? null : (
                 <Text
                   style={[
                     serif,
@@ -480,37 +437,37 @@ export function StealthHub() {
                 >
                   $
                 </Text>
-                <Text
-                  style={[
-                    sansationLight,
-                    {
-                      fontSize: balanceFontSize.int,
-                      letterSpacing: balanceFontSize.int * -0.04,
-                      lineHeight: balanceFontSize.int,
-                      color: palette.ink,
-                      includeFontPadding: false,
-                    },
-                  ]}
-                >
-                  {balance.int}
-                </Text>
-                <Text
-                  style={[
-                    sansationLight,
-                    {
-                      fontSize: balanceFontSize.dec,
-                      color: palette.inkDim,
-                      letterSpacing: balanceFontSize.dec * -0.02,
-                      lineHeight: balanceFontSize.dec,
-                      includeFontPadding: false,
-                    },
-                  ]}
-                >
-                  {balance.dec}
-                </Text>
-              </View>
-            </Animated.View>
-          </View>
+              )}
+              <Text
+                style={[
+                  sansationLight,
+                  {
+                    fontSize: balanceFontSize.int,
+                    letterSpacing: balanceFontSize.int * -0.04,
+                    lineHeight: balanceFontSize.int,
+                    color: palette.ink,
+                    includeFontPadding: false,
+                  },
+                ]}
+              >
+                {balanceHidden ? '****' : balance.int}
+              </Text>
+              <Text
+                style={[
+                  sansationLight,
+                  {
+                    fontSize: balanceFontSize.dec,
+                    color: palette.inkDim,
+                    letterSpacing: balanceFontSize.dec * -0.02,
+                    lineHeight: balanceFontSize.dec,
+                    includeFontPadding: false,
+                  },
+                ]}
+              >
+                {balanceHidden ? '' : balance.dec}
+              </Text>
+            </View>
+          </Animated.View>
 
           {/* Dots indicator — stays visible, snaps width */}
           <View
@@ -518,7 +475,7 @@ export function StealthHub() {
               flexDirection: 'row',
               justifyContent: 'center',
               gap: 8,
-              marginBottom: 36,
+              marginBottom: 24,
             }}
           >
             {(['public', 'private'] as const).map((m) => {
@@ -545,6 +502,97 @@ export function StealthHub() {
                 />
               );
             })}
+          </View>
+
+          {/* Public / private split — sits below the toggle dots so the
+              gauge reads as a summary of the wallet's distribution rather
+              than as part of the balance hero. Width-aligned with the
+              action tiles row (no extra horizontal padding — the parent
+              ScrollView already insets by 24). */}
+          <View
+            style={{
+              marginBottom: 32,
+            }}
+          >
+            <View
+              style={{
+                height: 4,
+                borderRadius: 2,
+                overflow: 'hidden',
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                flexDirection: 'row',
+                marginBottom: 12,
+              }}
+            >
+              {totalUSD === 0 ? null : (
+                <>
+                  <View
+                    style={{
+                      width: `${publicValue * 100}%`,
+                      backgroundColor: SILVER.accent,
+                    }}
+                  />
+                  <View style={{ flex: 1, backgroundColor: GOLD.accent }} />
+                </>
+              )}
+            </View>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginBottom: 2,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 2,
+                      backgroundColor: SILVER.accent,
+                    }}
+                  />
+                  <Text style={{ fontSize: 11, color: palette.inkDim }}>
+                    Public
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 14, color: palette.ink }}>
+                  {balanceHidden ? '***' : `$${publicUSD.toFixed(2)}`}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginBottom: 2,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: palette.inkDim }}>
+                    Private
+                  </Text>
+                  <View
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 2,
+                      backgroundColor: GOLD.accent,
+                    }}
+                  />
+                </View>
+                <Text style={{ fontSize: 14, color: GOLD.accent }}>
+                  {balanceHidden ? '***' : `$${privateUSD.toFixed(2)}`}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
         {/* /swipe-toggle zone */}
