@@ -1,21 +1,29 @@
 import { useEffect, useState } from 'react';
 import {
   Alert,
-  PanResponder,
+  Dimensions,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
+  cancelAnimation,
+  Easing,
+  interpolate,
+  interpolateColor,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
@@ -60,19 +68,57 @@ import type {
 } from '@/src/features/bank/types';
 import { socketService } from '@/src/services/real-time/socket';
 
-const FADE_OUT = 180;
-const FADE_IN = 240;
-const MORPH_DUR = 420;
+// Mode-switch motion. The kicker / balance / action tiles live in
+// horizontal carousels; both modes are mounted side-by-side and a single
+// translateX (driven by `modeProgress`) glides between them. No fade —
+// what's off-screen is genuinely off-screen. EASE_INOUT covers
+// programmatic toggles (dot taps); EASE_RELEASE is snappier and is used
+// when the user releases mid-drag, so the snap doesn't feel decelerated
+// after their finger already gave the carousel momentum.
+const MORPH_DUR = 480;
+const EASE_INOUT = Easing.bezier(0.25, 0.1, 0.25, 1);
+const EASE_RELEASE = Easing.out(Easing.cubic);
+// ScrollView paddingHorizontal: 24 on each side, so the visible content
+// width is the screen width minus those gutters.
+const PAGE_WIDTH = Dimensions.get('window').width - 48;
+// Buffer between the two carousel pages — without this, tiles from the
+// outgoing page sit flush against tiles from the incoming page and read
+// as overlapping during the swipe. The gutter is fully clipped by the
+// parent's `overflow: 'hidden'` at rest.
+const PAGE_GUTTER = 32;
+const SLIDE_DIST = PAGE_WIDTH + PAGE_GUTTER;
 
 const SILVER = txPalette('silver');
 const GOLD = txPalette('gold');
+
+// Inlined replicas of TonalBackground's gradient stops. Rendering the two
+// tone-flavoured gradients side-by-side and cross-fading them via opacity
+// avoids the costly `LinearGradient` re-render that happens when the
+// `tone` prop on TonalBackground changes — that was the main source of
+// the perceived stutter on mode switch.
+const TONAL_STOP_LOCATIONS = [0, 0.08, 0.18, 0.28, 0.4, 1];
+const SILVER_GRADIENT: [string, string, ...string[]] = [
+  'rgba(220,220,225,0.18)',
+  'rgba(220,220,225,0.14)',
+  'rgba(220,220,225,0.08)',
+  'rgba(220,220,225,0.04)',
+  'rgba(220,220,225,0.018)',
+  'rgba(220,220,225,0)',
+];
+const GOLD_GRADIENT: [string, string, ...string[]] = [
+  'rgba(212,175,99,0.2)',
+  'rgba(212,175,99,0.16)',
+  'rgba(212,175,99,0.1)',
+  'rgba(212,175,99,0.05)',
+  'rgba(212,175,99,0.022)',
+  'rgba(212,175,99,0)',
+];
 
 export function StealthHub() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const { mode, setMode, tone } = usePrivacyMode();
   const isPrivate = mode === 'private';
-  const palette = txPalette(tone);
   const queryClient = useQueryClient();
   const { user, session, setUser } = useAuth();
   const sessionToken = session?.sessionToken ?? null;
@@ -103,7 +149,10 @@ export function StealthHub() {
       dec: `.${(safe % 1).toFixed(2).slice(2)}`,
     };
   };
-  const balance = formatBalance(isPrivate ? privateUSD : publicUSD);
+  // Both modes' balances are pre-formatted because they're rendered side
+  // by side in the carousel — nothing toggles based on `isPrivate` here.
+  const publicBalance = formatBalance(publicUSD);
+  const privateBalance = formatBalance(privateUSD);
   // Match the BankWallet hero exactly so toggling tabs doesn't shift the
   // amount typography. Static sizes mirror BankWallet.tsx:134/148/162.
   const balanceFontSize = { int: 76, dec: 32, dollar: 36 } as const;
@@ -118,12 +167,29 @@ export function StealthHub() {
   const totalUSD = publicUSD + privateUSD;
   const publicValue = totalUSD > 0 ? publicUSD / totalUSD : 0;
 
-  const kicker = isPrivate ? 'Shielded Pool' : 'Stealth Wallet';
 
   const modeProgress = useSharedValue(isPrivate ? 1 : 0);
-  const contentOpacity = useSharedValue(1);
-  const contentStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value,
+  // Snapshot of `modeProgress` taken at the start of each pan so the
+  // gesture's translation is computed relative to where the carousel was
+  // when the finger landed (not always 0 or 1). Lets a partial drag from
+  // mid-transition still feel correct.
+  const baseProgress = useSharedValue(isPrivate ? 1 : 0);
+  // Carousel slider — both modes mount side-by-side; this drives the
+  // horizontal offset between them. translateX = -modeProgress * SLIDE_DIST
+  // (page width + gutter) so 0 = public visible, 1 = private visible, and
+  // the gutter sits invisibly inside the parent's overflow:hidden window.
+  const sliderStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -modeProgress.value * SLIDE_DIST }],
+  }));
+  // Two background layers, opacity inverted: silver fades out as gold
+  // fades in. Both stay mounted, so the LinearGradients never re-render
+  // when the React `mode` flips — the entire transition is opacity-only
+  // on the UI thread.
+  const silverBgStyle = useAnimatedStyle(() => ({
+    opacity: 1 - modeProgress.value,
+  }));
+  const goldBgStyle = useAnimatedStyle(() => ({
+    opacity: modeProgress.value,
   }));
 
   // Fade the main hub in when the user just finished wallet setup. Initialize
@@ -139,10 +205,17 @@ export function StealthHub() {
     }
   }, [stealfWallet, enterOpacity]);
 
-  // Keep modeProgress in sync if the context mode changes externally
-  // (e.g. from another screen, future: a global toggle elsewhere).
+  // Drive the carousel from `mode` (the React state). Skips the timing
+  // when `modeProgress` is already at (or very near) the target — the
+  // gesture release path animates on the UI thread first, so by the time
+  // setMode flushes here we'd otherwise re-animate a no-op snap.
   useEffect(() => {
-    modeProgress.value = withTiming(isPrivate ? 1 : 0, { duration: MORPH_DUR });
+    const target = isPrivate ? 1 : 0;
+    if (Math.abs(modeProgress.value - target) < 0.001) return;
+    modeProgress.value = withTiming(target, {
+      duration: MORPH_DUR,
+      easing: EASE_INOUT,
+    });
   }, [isPrivate, modeProgress]);
 
   const setup = useSetupStealfWallet();
@@ -302,31 +375,97 @@ export function StealthHub() {
 
   const switchMode = (target: PrivacyMode) => {
     if (target === mode) return;
-    modeProgress.value = withTiming(target === 'private' ? 1 : 0, {
-      duration: MORPH_DUR,
-    });
-    contentOpacity.value = withTiming(0, { duration: FADE_OUT }, (done) => {
-      if (!done) return;
-      runOnJS(setMode)(target);
-      contentOpacity.value = withTiming(1, { duration: FADE_IN });
-    });
+    // Just flip the React state — the useEffect on `isPrivate` animates
+    // `modeProgress` to the new value, which drives the carousel slider
+    // and the dot indicators in lockstep.
+    setMode(target);
   };
 
-  // Carousel direction: swipe left = next item (private, right dot),
-  // swipe right = previous item (public, left dot). At the boundary the
-  // target equals the current mode and switchMode no-ops.
-  const panHandlers = PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) =>
-      Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
-    onPanResponderRelease: (_, g) => {
-      if (Math.abs(g.dx) > 40) {
-        switchMode(g.dx < 0 ? 'private' : 'public');
+  // Continuous drag: track finger movement and update modeProgress in
+  // real time so the carousel follows the finger. On release, decide
+  // between snap-forward and snap-back based on travel distance + flick
+  // velocity. activeOffsetX/failOffsetY hand the gesture back to the
+  // ScrollView for any predominantly-vertical pan. The activation
+  // threshold is small so the carousel responds immediately rather than
+  // sitting in a 12-px "deadzone" before catching up to the finger.
+  const pan = Gesture.Pan()
+    .activeOffsetX([-6, 6])
+    .failOffsetY([-14, 14])
+    .minDistance(0)
+    .onBegin(() => {
+      'worklet';
+      // Stop any in-flight snap animation so the finger gets immediate
+      // control instead of fighting the easing curve.
+      cancelAnimation(modeProgress);
+      baseProgress.value = modeProgress.value;
+    })
+    .onUpdate((e) => {
+      'worklet';
+      const next = baseProgress.value - e.translationX / SLIDE_DIST;
+      // Hard clamp at the edges — there are only two pages, so any
+      // resistance past 0 or 1 reads as drag-lag. Snapping to the bound
+      // keeps the response 1:1 with the finger inside the valid range.
+      modeProgress.value = next < 0 ? 0 : next > 1 ? 1 : next;
+    })
+    .onEnd((e) => {
+      'worklet';
+      const dragged = baseProgress.value - e.translationX / SLIDE_DIST;
+      // Velocity-aware snap: a fast flick commits the swap even if the
+      // user only dragged a sliver; otherwise snap to whichever side
+      // they ended past the midpoint.
+      let target: 0 | 1;
+      if (Math.abs(e.velocityX) > 500) {
+        target = e.velocityX < 0 ? 1 : 0;
+      } else {
+        target = dragged > 0.5 ? 1 : 0;
       }
-    },
-  }).panHandlers;
+      // Adaptive duration: when the finger left the carousel near the
+      // target the snap should be quick, otherwise scale up. Caps at
+      // MORPH_DUR for the worst case (full half-page to cross).
+      const remaining = Math.abs(target - modeProgress.value);
+      const dur = Math.max(160, Math.round(MORPH_DUR * remaining));
+      const startedAt = baseProgress.value < 0.5 ? 0 : 1;
+      if (target === startedAt) {
+        // No mode change — snap modeProgress back ourselves.
+        modeProgress.value = withTiming(target, {
+          duration: dur,
+          easing: EASE_RELEASE,
+        });
+      } else {
+        // Mode change — drive the snap on the UI thread first (snappy
+        // post-release curve), then flush React state. The useEffect
+        // guards on near-equality so it won't re-animate when it fires.
+        modeProgress.value = withTiming(target, {
+          duration: dur,
+          easing: EASE_RELEASE,
+        });
+        runOnJS(setMode)(target === 1 ? 'private' : 'public');
+      }
+    });
 
   return (
-    <TonalBackground tone={tone}>
+    <View style={{ flex: 1, backgroundColor: T.bg }}>
+      {/* Tonal halo — both gradients mounted, cross-faded by modeProgress */}
+      <Animated.View
+        style={[StyleSheet.absoluteFill, silverBgStyle]}
+        pointerEvents="none"
+      >
+        <LinearGradient
+          colors={SILVER_GRADIENT}
+          locations={TONAL_STOP_LOCATIONS as [number, number, ...number[]]}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View
+        style={[StyleSheet.absoluteFill, goldBgStyle]}
+        pointerEvents="none"
+      >
+        <LinearGradient
+          colors={GOLD_GRADIENT}
+          locations={TONAL_STOP_LOCATIONS as [number, number, ...number[]]}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
       <Animated.View style={[{ flex: 1 }, enterStyle]}>
       {/* Greeting row */}
       <View
@@ -341,13 +480,13 @@ export function StealthHub() {
       >
         <CircleIconBtn
           iconKey="history"
-          tone={tone}
+          tone="silver"
           onPress={() => router.push('/transactions?wallet=stealth')}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <CircleIconBtn
             iconKey="card"
-            tone={tone}
+            tone="silver"
             onPress={() => router.push('/card')}
           />
           <CircleIconBtn iconKey="bell" tone={tone} hasDot />
@@ -361,115 +500,52 @@ export function StealthHub() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Swipe-toggle zone: kicker + gauge + dots only */}
-        <View {...panHandlers}>
-          {/* Kicker + eye toggle — grouped inline so the eye reads as part
-              of the wallet header rather than floating at the screen edge. */}
-          <Animated.View
-            style={[
-              {
-                paddingTop: 12,
-                marginBottom: 18,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 18,
-              },
-              contentStyle,
-            ]}
-          >
-            <Text
+        {/* Swipe-toggle zone: kicker + balance + dots + gauge + tiles all
+            share one Pan gesture so a drag anywhere in the active area
+            scrubs the carousel position. */}
+        <GestureDetector gesture={pan}>
+        <View>
+          {/* Kicker + balance carousel. Both modes mounted side-by-side
+              and translated as a single unit so the swap reads as a real
+              slide rather than a cross-fade. */}
+          <View style={{ width: PAGE_WIDTH, overflow: 'hidden' }}>
+            <Animated.View
               style={[
-                sansation,
                 {
-                  fontSize: 10,
-                  letterSpacing: 3.2,
-                  textTransform: 'uppercase',
-                  color: T.ink,
-                  fontWeight: '700',
+                  width: PAGE_WIDTH * 2 + PAGE_GUTTER,
+                  flexDirection: 'row',
                 },
+                sliderStyle,
               ]}
             >
-              {kicker}
-            </Text>
-            <Pressable
-              onPress={() => setBalanceHidden((h) => !h)}
-              accessibilityRole="button"
-              accessibilityLabel={
-                balanceHidden ? 'Show balance' : 'Hide balance'
-              }
-              hitSlop={10}
-              style={({ pressed }) => ({
-                padding: 4,
-                opacity: pressed ? 0.6 : 1,
-              })}
-            >
-              {balanceHidden ? (
-                <Icons.eyeOff size={22} color={T.ink} />
-              ) : (
-                <Icons.eye size={22} color={T.ink} />
-              )}
-            </Pressable>
-          </Animated.View>
+              <KickerBalancePage
+                width={PAGE_WIDTH}
+                kicker="Stealth Wallet"
+                balance={publicBalance}
+                accent={SILVER.accent}
+                ink={SILVER.ink}
+                inkDim={SILVER.inkDim}
+                fontSize={balanceFontSize}
+                balanceHidden={balanceHidden}
+                onToggleHidden={() => setBalanceHidden((h) => !h)}
+              />
+              <View style={{ width: PAGE_GUTTER }} />
+              <KickerBalancePage
+                width={PAGE_WIDTH}
+                kicker="Shielded Pool"
+                balance={privateBalance}
+                accent={GOLD.accent}
+                ink={GOLD.ink}
+                inkDim={GOLD.inkDim}
+                fontSize={balanceFontSize}
+                balanceHidden={balanceHidden}
+                onToggleHidden={() => setBalanceHidden((h) => !h)}
+              />
+            </Animated.View>
+          </View>
 
-          {/* Balance — cross-fade on mode swap. marginTop balances the
-              kicker's marginBottom (18) so the amount sits at the visual
-              midpoint between the kicker and the nav dots below. */}
-          <Animated.View
-            style={[
-              { alignItems: 'center', marginTop: 30, marginBottom: 48 },
-              contentStyle,
-            ]}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-              {balanceHidden ? null : (
-                <Text
-                  style={[
-                    serif,
-                    {
-                      fontSize: balanceFontSize.dollar,
-                      color: palette.accent,
-                      fontStyle: 'italic',
-                      lineHeight: balanceFontSize.dollar,
-                      includeFontPadding: false,
-                    },
-                  ]}
-                >
-                  $
-                </Text>
-              )}
-              <Text
-                style={[
-                  sansationLight,
-                  {
-                    fontSize: balanceFontSize.int,
-                    letterSpacing: balanceFontSize.int * -0.04,
-                    lineHeight: balanceFontSize.int,
-                    color: palette.ink,
-                    includeFontPadding: false,
-                  },
-                ]}
-              >
-                {balanceHidden ? '****' : balance.int}
-              </Text>
-              <Text
-                style={[
-                  sansationLight,
-                  {
-                    fontSize: balanceFontSize.dec,
-                    color: palette.inkDim,
-                    letterSpacing: balanceFontSize.dec * -0.02,
-                    lineHeight: balanceFontSize.dec,
-                    includeFontPadding: false,
-                  },
-                ]}
-              >
-                {balanceHidden ? '' : balance.dec}
-              </Text>
-            </View>
-          </Animated.View>
-
-          {/* Dots indicator — stays visible, snaps width */}
+          {/* Dots indicator — morphs continuously with modeProgress so the
+              active capsule glides between sides instead of snapping. */}
           <View
             style={{
               flexDirection: 'row',
@@ -478,30 +554,20 @@ export function StealthHub() {
               marginBottom: 24,
             }}
           >
-            {(['public', 'private'] as const).map((m) => {
-              const isActive = mode === m;
-              return (
-                <Pressable
-                  key={m}
-                  onPress={() => switchMode(m)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Switch to ${m} mode`}
-                  hitSlop={8}
-                  style={{
-                    width: isActive ? 22 : 6,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: isActive
-                      ? palette.accent
-                      : 'rgba(255,255,255,0.2)',
-                    shadowColor: isActive ? palette.accentGlow : 'transparent',
-                    shadowOpacity: isActive ? 1 : 0,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 0 },
-                  }}
-                />
-              );
-            })}
+            <ModeDot
+              mode="public"
+              modeProgress={modeProgress}
+              activeColor={SILVER.accent}
+              activeGlow={SILVER.accentGlow}
+              onPress={() => switchMode('public')}
+            />
+            <ModeDot
+              mode="private"
+              modeProgress={modeProgress}
+              activeColor={GOLD.accent}
+              activeGlow={GOLD.accentGlow}
+              onPress={() => switchMode('private')}
+            />
           </View>
 
           {/* Public / private split — sits below the toggle dots so the
@@ -559,11 +625,11 @@ export function StealthHub() {
                       backgroundColor: SILVER.accent,
                     }}
                   />
-                  <Text style={{ fontSize: 11, color: palette.inkDim }}>
+                  <Text style={{ fontSize: 11, color: SILVER.inkDim }}>
                     Public
                   </Text>
                 </View>
-                <Text style={{ fontSize: 14, color: palette.ink }}>
+                <Text style={{ fontSize: 14, color: SILVER.ink }}>
                   {balanceHidden ? '***' : `$${publicUSD.toFixed(2)}`}
                 </Text>
               </View>
@@ -576,7 +642,7 @@ export function StealthHub() {
                     marginBottom: 2,
                   }}
                 >
-                  <Text style={{ fontSize: 11, color: palette.inkDim }}>
+                  <Text style={{ fontSize: 11, color: SILVER.inkDim }}>
                     Private
                   </Text>
                   <View
@@ -594,22 +660,64 @@ export function StealthHub() {
               </View>
             </View>
           </View>
-        </View>
-        {/* /swipe-toggle zone */}
 
-        {/* Action tiles — cross-fade on mode swap */}
-        <Animated.View
-          style={[
-            {
-              flexDirection: 'row',
-              gap: 8,
-              paddingBottom: 40,
-            },
-            contentStyle,
-          ]}
+        {/* Action tiles carousel — same slider mechanism as the kicker /
+            balance zone, driven by the same `modeProgress` so everything
+            slides in lockstep. */}
+        <View
+          style={{ width: PAGE_WIDTH, overflow: 'hidden', paddingBottom: 40 }}
         >
-          {isPrivate ? (
-            <>
+          <Animated.View
+            style={[
+              {
+                width: PAGE_WIDTH * 2 + PAGE_GUTTER,
+                flexDirection: 'row',
+              },
+              sliderStyle,
+            ]}
+          >
+            <View
+              style={{
+                width: PAGE_WIDTH,
+                flexDirection: 'row',
+                gap: 8,
+              }}
+            >
+              <SquareActionTile
+                iconKey="arrDown"
+                label="Receive"
+                onPress={() =>
+                  router.push('/receive/flow?tone=silver&wallet=stealth')
+                }
+              />
+              <SquareActionTile
+                iconKey="move"
+                label="Move"
+                onPress={() => router.push('/moove?direction=stealth-to-bank')}
+              />
+              <SquareActionTile
+                iconKey="shieldCheck"
+                label="Shield"
+                accent
+                accentTone="silver"
+                onPress={() => router.push('/shield')}
+              />
+              <SquareActionTile
+                iconKey="arrUp"
+                label="Send"
+                onPress={() =>
+                  router.push('/send/flow?tone=silver&wallet=stealth')
+                }
+              />
+            </View>
+            <View style={{ width: PAGE_GUTTER }} />
+            <View
+              style={{
+                width: PAGE_WIDTH,
+                flexDirection: 'row',
+                gap: 8,
+              }}
+            >
               <SquareActionTile
                 iconKey="shieldOff"
                 label="Unshield"
@@ -637,38 +745,12 @@ export function StealthHub() {
                 badge={claimCount}
                 onPress={() => router.push('/claim-pending')}
               />
-            </>
-          ) : (
-            <>
-              <SquareActionTile
-                iconKey="arrDown"
-                label="Receive"
-                onPress={() =>
-                  router.push('/receive/flow?tone=silver&wallet=stealth')
-                }
-              />
-              <SquareActionTile
-                iconKey="move"
-                label="Move"
-                onPress={() => router.push('/moove?direction=stealth-to-bank')}
-              />
-              <SquareActionTile
-                iconKey="shieldCheck"
-                label="Shield"
-                accent
-                accentTone="silver"
-                onPress={() => router.push('/shield')}
-              />
-              <SquareActionTile
-                iconKey="arrUp"
-                label="Send"
-                onPress={() =>
-                  router.push('/send/flow?tone=silver&wallet=stealth')
-                }
-              />
-            </>
-          )}
-        </Animated.View>
+            </View>
+          </Animated.View>
+        </View>
+        </View>
+        </GestureDetector>
+        {/* /swipe-toggle zone */}
 
         {/* Assets */}
         <Text
@@ -677,7 +759,7 @@ export function StealthHub() {
             {
               fontSize: 22,
               letterSpacing: -0.44,
-              color: palette.ink,
+              color: SILVER.ink,
               marginBottom: 4,
             },
           ]}
@@ -690,7 +772,7 @@ export function StealthHub() {
             style={{
               paddingVertical: 14,
               borderBottomWidth: 1,
-              borderBottomColor: palette.hairline,
+              borderBottomColor: SILVER.hairline,
               flexDirection: 'row',
               alignItems: 'center',
               gap: 14,
@@ -703,13 +785,13 @@ export function StealthHub() {
               cachePolicy="memory-disk"
             />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, color: palette.ink }}>
+              <Text style={{ fontSize: 15, color: SILVER.ink }}>
                 {isPrivate ? 'WSOL' : 'SOL'}
               </Text>
               <Text
                 style={{
                   fontSize: 11,
-                  color: palette.inkFaint,
+                  color: SILVER.inkFaint,
                   marginTop: 2,
                 }}
               >
@@ -720,7 +802,7 @@ export function StealthHub() {
                     : 'on-chain'}
               </Text>
             </View>
-            <Text style={{ fontSize: 15, color: palette.ink }}>
+            <Text style={{ fontSize: 15, color: SILVER.ink }}>
               {`$${solUSD.toFixed(2)}`}
             </Text>
           </View>
@@ -729,6 +811,190 @@ export function StealthHub() {
       </Animated.View>
 
       {isPrivate ? <StealthSetupOverlay onClose={() => setMode('public')} /> : null}
-    </TonalBackground>
+    </View>
+  );
+}
+
+/**
+ * One slide of the kicker / balance carousel. Each page owns its own
+ * tone-tinted balance hero and a duplicate eye toggle (cheap — both call
+ * the same setter). Width is fixed by the parent so the slider can compute
+ * its translateX cleanly on the UI thread.
+ */
+function KickerBalancePage({
+  width,
+  kicker,
+  balance,
+  accent,
+  ink,
+  inkDim,
+  fontSize,
+  balanceHidden,
+  onToggleHidden,
+}: {
+  width: number;
+  kicker: string;
+  balance: { int: string; dec: string };
+  accent: string;
+  ink: string;
+  inkDim: string;
+  fontSize: { int: number; dec: number; dollar: number };
+  balanceHidden: boolean;
+  onToggleHidden: () => void;
+}) {
+  return (
+    <View style={{ width }}>
+      <View
+        style={{
+          paddingTop: 12,
+          marginBottom: 18,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 18,
+        }}
+      >
+        <Text
+          style={[
+            sansation,
+            {
+              fontSize: 10,
+              letterSpacing: 3.2,
+              textTransform: 'uppercase',
+              color: T.ink,
+              fontWeight: '700',
+            },
+          ]}
+        >
+          {kicker}
+        </Text>
+        <Pressable
+          onPress={onToggleHidden}
+          accessibilityRole="button"
+          accessibilityLabel={
+            balanceHidden ? 'Show balance' : 'Hide balance'
+          }
+          hitSlop={10}
+          style={({ pressed }) => ({
+            padding: 4,
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          {balanceHidden ? (
+            <Icons.eyeOff size={22} color={T.ink} />
+          ) : (
+            <Icons.eye size={22} color={T.ink} />
+          )}
+        </Pressable>
+      </View>
+      <View
+        style={{ alignItems: 'center', marginTop: 30, marginBottom: 48 }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+          {balanceHidden ? null : (
+            <Text
+              style={[
+                serif,
+                {
+                  fontSize: fontSize.dollar,
+                  color: accent,
+                  fontStyle: 'italic',
+                  lineHeight: fontSize.dollar,
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              $
+            </Text>
+          )}
+          <Text
+            style={[
+              sansationLight,
+              {
+                fontSize: fontSize.int,
+                letterSpacing: fontSize.int * -0.04,
+                lineHeight: fontSize.int,
+                color: ink,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {balanceHidden ? '****' : balance.int}
+          </Text>
+          <Text
+            style={[
+              sansationLight,
+              {
+                fontSize: fontSize.dec,
+                color: inkDim,
+                letterSpacing: fontSize.dec * -0.02,
+                lineHeight: fontSize.dec,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {balanceHidden ? '' : balance.dec}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Animated mode dot — width + color + glow opacity all interpolate from
+ * `modeProgress`, so the capsule morphs continuously rather than flipping
+ * states on JS-thread setMode. The Pressable wraps an Animated.View so the
+ * tap target stays generous (hitSlop) while the visual styles run on UI.
+ */
+function ModeDot({
+  mode,
+  modeProgress,
+  activeColor,
+  activeGlow,
+  onPress,
+}: {
+  mode: PrivacyMode;
+  modeProgress: SharedValue<number>;
+  activeColor: string;
+  activeGlow: string;
+  onPress: () => void;
+}) {
+  // active = 1 means "this dot is the live one". For public, active when
+  // modeProgress === 0; for private, active when modeProgress === 1.
+  const dotStyle = useAnimatedStyle(() => {
+    const active =
+      mode === 'public' ? 1 - modeProgress.value : modeProgress.value;
+    return {
+      width: interpolate(active, [0, 1], [6, 22]),
+      backgroundColor: interpolateColor(
+        active,
+        [0, 1],
+        ['rgba(255,255,255,0.2)', activeColor],
+      ),
+      shadowOpacity: active,
+    };
+  });
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Switch to ${mode} mode`}
+      hitSlop={8}
+    >
+      <Animated.View
+        style={[
+          {
+            height: 6,
+            borderRadius: 3,
+            shadowColor: activeGlow,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 0 },
+          },
+          dotStyle,
+        ]}
+      />
+    </Pressable>
   );
 }
