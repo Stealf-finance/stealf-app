@@ -1,3 +1,4 @@
+/* eslint-disable import/first -- vi.mock must precede the import of the module under test */
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 
 const getStringAsync = vi.fn<() => Promise<string>>();

@@ -1,3 +1,4 @@
+/* eslint-disable import/first -- vi.mock must precede the import of the module under test */
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('expo-secure-store', () => ({
