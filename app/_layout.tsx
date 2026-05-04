@@ -89,8 +89,8 @@ function RootLayout() {
                     contentStyle: { backgroundColor: T.bg },
                   }}
                 >
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+                  <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
                   <Stack.Screen name="moove" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="shield" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="unshield" options={{ presentation: 'modal' }} />

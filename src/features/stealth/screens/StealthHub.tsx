@@ -137,6 +137,19 @@ export function StealthHub() {
     opacity: contentOpacity.value,
   }));
 
+  // Fade the main hub in when the user just finished wallet setup. Initialize
+  // to 1 if the wallet was already set on first mount (cold-start case) so we
+  // don't flash an empty screen behind the splash.
+  const enterOpacity = useSharedValue(stealfWallet ? 1 : 0);
+  const enterStyle = useAnimatedStyle(() => ({
+    opacity: enterOpacity.value,
+  }));
+  useEffect(() => {
+    if (stealfWallet) {
+      enterOpacity.value = withTiming(1, { duration: 360 });
+    }
+  }, [stealfWallet, enterOpacity]);
+
   // Keep modeProgress in sync if the context mode changes externally
   // (e.g. from another screen, future: a global toggle elsewhere).
   useEffect(() => {
@@ -146,6 +159,7 @@ export function StealthHub() {
   const setup = useSetupStealfWallet();
   const [pendingMnemonic, setPendingMnemonic] = useState<string | null>(null);
   const [pendingAddress, setPendingAddress] = useState<string | null>(null);
+  const [registering, setRegistering] = useState(false);
 
   const persistStealfWallet = async (
     walletAddress: string,
@@ -155,12 +169,14 @@ export function StealthHub() {
       Alert.alert('Not signed in', 'Please sign in again before continuing.');
       return;
     }
+    setRegistering(true);
     try {
       await registerStealfWallet(sessionToken, walletAddress);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to register wallet';
       if (__DEV__) console.warn('[StealthHub] register failed:', msg);
       Alert.alert('Could not save wallet', msg);
+      setRegistering(false);
       return;
     }
 
@@ -199,6 +215,7 @@ export function StealthHub() {
     }
 
     setUser({ ...user, stealfWallet: walletAddress });
+    setRegistering(false);
   };
 
   const handleSetupComplete = async (choice: SetupChoice) => {
@@ -287,7 +304,7 @@ export function StealthHub() {
       <StealfWalletSetup
         onComplete={handleSetupComplete}
         onCancel={cancelSetup}
-        loading={setup.loading}
+        loading={setup.loading || registering}
         generatedMnemonic={pendingMnemonic ?? undefined}
       />
     );
@@ -320,6 +337,7 @@ export function StealthHub() {
 
   return (
     <TonalBackground tone={tone}>
+      <Animated.View style={[{ flex: 1 }, enterStyle]}>
       {/* Greeting row */}
       <View
         style={{
@@ -657,6 +675,7 @@ export function StealthHub() {
           </View>
         </View>
       </ScrollView>
+      </Animated.View>
     </TonalBackground>
   );
 }

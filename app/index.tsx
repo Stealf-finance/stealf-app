@@ -1,11 +1,21 @@
 import { Redirect } from 'expo-router';
 import { getEnv } from '@/src/services/env';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
 export default function Index() {
-  // Dev: when EXPO_PUBLIC_DEV_BYPASS_AUTH=true, land directly in the app shell
-  // so the designer doesn't have to walk through onboarding on every reload.
+  const { isAuthenticated, isLoading } = useAuth();
+
   if (getEnv().EXPO_PUBLIC_DEV_BYPASS_AUTH) {
     return <Redirect href="/(tabs)/bank" />;
   }
-  return <Redirect href="/(auth)/welcome" />;
+
+  // Wait for the AuthProvider's keychain hydration before deciding where to
+  // route — otherwise we briefly flash welcome before AuthGuard redirects.
+  if (isLoading) return null;
+
+  return isAuthenticated ? (
+    <Redirect href="/(tabs)/bank" />
+  ) : (
+    <Redirect href="/(auth)/welcome" />
+  );
 }

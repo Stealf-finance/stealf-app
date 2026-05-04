@@ -11,9 +11,11 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { LoaderOverlay } from '@/src/design-system/primitives/LoaderOverlay';
 import { Icons } from '@/src/design-system/icons';
 import {
   mono,
@@ -25,10 +27,10 @@ import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { validateMnemonic } from '@/src/services/solana/transactionsGuard';
 
-const G = txPalette('gold');
+const G = txPalette('silver');
 
 const WORD_COUNT = 12;
-const TONE = 'gold' as const;
+const TONE = 'silver' as const;
 
 export type SetupChoice =
   | { mode: 'create' }
@@ -140,7 +142,7 @@ export function StealfWalletSetup({
     <CenterGlow tone={TONE}>
       <View
         style={{
-          paddingTop: insets.top,
+          paddingTop: insets.top + 24,
           paddingBottom: 12,
           paddingHorizontal: 16,
           flexDirection: 'row',
@@ -189,31 +191,53 @@ export function StealfWalletSetup({
         showsVerticalScrollIndicator={false}
       >
         {step === 'choose' ? (
-          <ChooseStep loading={loading} onComplete={onComplete} setStep={setStep} />
+          <Animated.View key="choose" entering={FadeIn.duration(280)}>
+            <ChooseStep
+              loading={loading}
+              onComplete={onComplete}
+              setStep={setStep}
+            />
+          </Animated.View>
         ) : null}
 
         {step === 'showMnemonic' && generatedMnemonic ? (
-          <ShowMnemonicStep
-            mnemonic={generatedMnemonic}
-            copied={copied}
-            onCopy={handleCopyMnemonic}
-            onConfirm={handleConfirmCreate}
-            loading={loading}
-          />
+          <Animated.View key="showMnemonic" entering={FadeIn.duration(320)}>
+            <ShowMnemonicStep
+              mnemonic={generatedMnemonic}
+              copied={copied}
+              onCopy={handleCopyMnemonic}
+              onConfirm={handleConfirmCreate}
+              loading={loading}
+            />
+          </Animated.View>
         ) : null}
 
         {step === 'importWallet' ? (
-          <ImportStep
-            words={words}
-            wordRefs={wordRefs}
-            onWordChange={setWordAt}
-            onSubmit={handleSubmitImport}
-            error={importError}
-            loading={loading}
-            disabled={!importComplete}
-          />
+          <Animated.View key="importWallet" entering={FadeIn.duration(280)}>
+            <ImportStep
+              words={words}
+              wordRefs={wordRefs}
+              onWordChange={setWordAt}
+              onSubmit={handleSubmitImport}
+              error={importError}
+              loading={loading}
+              disabled={!importComplete}
+            />
+          </Animated.View>
         ) : null}
       </ScrollView>
+
+      {loading ? (
+        <LoaderOverlay
+          tone={TONE}
+          label={
+            step === 'importWallet'
+              ? 'Restoring your wallet…'
+              : 'Setting up your stealth wallet…'
+          }
+          sub="This can take a moment. Hang tight."
+        />
+      ) : null}
     </CenterGlow>
   );
 }
