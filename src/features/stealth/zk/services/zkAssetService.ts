@@ -16,11 +16,13 @@ import type {
 
 /**
  * Bundled ZK assets — shipped inside the app and used as a fallback when
- * we can't reach the CDN. Only the most-used circuits are bundled to keep
- * the install size reasonable; everything else is downloaded on demand.
+ * we can't reach the CDN. We bundle only the hot-path public deposit zkey
+ * (~4 MB) so that creating UTXOs from the public balance works offline /
+ * on first launch. `userRegistration` (~47 MB) is fetched on demand the
+ * first time a wallet registers, which is always preceded by an
+ * authenticated network call anyway.
  */
 const BUNDLED_ZKEYS: Partial<Record<ZKeyType, number>> = {
-  userRegistration: require('@/assets/zk/userregistration.zkey'),
   createDepositWithPublicAmount: require('@/assets/zk/createdepositwithpublicamount.zkey'),
 };
 
