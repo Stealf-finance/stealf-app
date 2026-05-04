@@ -127,7 +127,7 @@ function RootLayout() {
       apiKey={env.EXPO_PUBLIC_POSTHOG_API_KEY}
       options={{
         host: env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com',
-        enableSessionReplay: true,
+        enableSessionReplay: false,
         captureAppLifecycleEvents: true,
       }}
       autocapture

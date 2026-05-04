@@ -14,7 +14,7 @@ export function initPostHog(): PostHog | null {
 
   _client = new PostHog(env.EXPO_PUBLIC_POSTHOG_API_KEY, {
     host: env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com',
-    enableSessionReplay: true,
+    enableSessionReplay: false,
     captureAppLifecycleEvents: true,
   });
 
