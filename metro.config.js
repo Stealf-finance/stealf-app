@@ -36,17 +36,46 @@ const moduleOverrides = {
     __dirname,
     'node_modules/@adraffy/ens-normalize/dist/index.mjs',
   ),
+  '@posthog/core/surveys': path.resolve(
+    __dirname,
+    'node_modules/@posthog/core/dist/surveys/index.js',
+  ),
+  '@peculiar/utils/bytes': path.resolve(
+    __dirname,
+    'node_modules/@peculiar/utils/build/cjs/bytes/index.js',
+  ),
+  '@peculiar/utils/converters': path.resolve(
+    __dirname,
+    'node_modules/@peculiar/utils/build/cjs/converters/index.js',
+  ),
+  '@peculiar/utils/encoding': path.resolve(
+    __dirname,
+    'node_modules/@peculiar/utils/build/cjs/encoding/index.js',
+  ),
+  '@peculiar/utils/legacy': path.resolve(
+    __dirname,
+    'node_modules/@peculiar/utils/build/cjs/legacy/index.js',
+  ),
+  '@peculiar/utils/pem': path.resolve(
+    __dirname,
+    'node_modules/@peculiar/utils/build/cjs/pem/index.js',
+  ),
 };
 
-const originalResolveRequest = config.resolver.resolveRequest;
-config.resolver.resolveRequest = (context, moduleName, platform) => {
+const wrapped = withNativeWind(config, { input: './global.css' });
+
+// Apply overrides AFTER withNativeWind so its own wrapper doesn't replace
+// our resolveRequest. Metro calls resolveRequest first; we either return a
+// match from moduleOverrides or hand off to whatever was previously set.
+const previousResolveRequest = wrapped.resolver.resolveRequest;
+wrapped.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleOverrides[moduleName]) {
     return { type: 'sourceFile', filePath: moduleOverrides[moduleName] };
   }
-  if (originalResolveRequest) {
-    return originalResolveRequest(context, moduleName, platform);
+  if (previousResolveRequest) {
+    return previousResolveRequest(context, moduleName, platform);
   }
   return context.resolveRequest(context, moduleName, platform);
 };
 
-module.exports = withNativeWind(config, { input: './global.css' });
+module.exports = wrapped;

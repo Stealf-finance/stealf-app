@@ -220,10 +220,7 @@ export function MoveFlow() {
 
       try {
         if (direction === 'bank-to-shielded') {
-          // Bank ATA pays via Turnkey; receiver-claimable UTXO destined to
-          // the stealth wallet, which later claims it into encrypted balance.
-          // Stealth (the destination) must be registered for its userCommitment
-          // PDA to exist before the receiver-claimable encryption can target it.
+
           await ensureRegistered();
           const bankClient = await getBankClient();
           const create = getPublicBalanceToReceiverClaimableUtxoCreatorFunction({
@@ -239,9 +236,7 @@ export function MoveFlow() {
               }),
           );
         } else if (direction === 'shielded-to-bank') {
-          // Stealth burns its encrypted balance into a self-claimable UTXO
-          // with destinationAddress = bank. The receive menu (bank side) lists
-          // it; claiming via `claimSelfToPublic` lands public SOL on bank ATA.
+
           const stealthClient = await getStealthClient();
           const create = getEncryptedBalanceToSelfClaimableUtxoCreatorFunction({
             client: stealthClient,
@@ -256,8 +251,7 @@ export function MoveFlow() {
               }),
           );
         } else {
-          // Stealth public ATA → self-claimable UTXO with destinationAddress = bank.
-          // Same claim path as shielded-to-bank.
+
           const stealthClient = await getStealthClient();
           const create = getPublicBalanceToSelfClaimableUtxoCreatorFunction({
             client: stealthClient,
@@ -280,13 +274,6 @@ export function MoveFlow() {
         await invalidateAll();
         pendingOps.complete(opId, 'done');
 
-        // Indexer lag: Solana confirms in ~1s but the Umbra indexer needs a
-        // few more seconds to ingest the block and surface the new UTXO via
-        // the scanner. Re-invalidate at staggered offsets so the relevant
-        // claim list updates as soon as the indexer catches up, instead of
-        // waiting for the next 30s poll. Direction picks the right query:
-        // bank-to-shielded → claim lands on stealth side (`pendingClaims`);
-        // shielded/stealth-to-bank → claim lands on bank side (`pendingClaimsForCash`).
         const bankAddr = user?.bankWallet;
         const stealfAddr = user?.stealfWallet;
         const targetQueryKey =

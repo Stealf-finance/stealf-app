@@ -25,6 +25,7 @@ import { DataBootstrap } from '@/src/components/DataBootstrap';
 import { AuthGuard } from '@/src/components/AuthGuard';
 import { TelemetrySmokeTest } from '@/src/components/TelemetrySmokeTest';
 import { PendingOpsProvider } from '@/src/components/pending-ops/PendingOpsContext';
+import { AnimatedSplash } from '@/src/components/AnimatedSplash';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,6 +40,7 @@ const env = getEnv();
 const PRELOAD_IMAGES = [
   require('../assets/images/passkey.png'),
   require('../assets/images/logo.png'),
+  require('../assets/images/splash-icon.png'),
   require('../assets/images/usdc.png'),
   require('../assets/images/solana-icon.png'),
   require('../assets/images/card-stealf.png'),
@@ -103,6 +105,7 @@ function RootLayout() {
                   <Stack.Screen name="tx/[id]" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="profile/private-key" options={{ presentation: 'modal' }} />
                   </Stack>
+                  <AnimatedSplash />
                   <StatusBar style="light" />
                   </PendingOpsProvider>
                 </PrivacyModeProvider>

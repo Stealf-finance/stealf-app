@@ -1,5 +1,5 @@
 {
-  "name": "stealf-app",
+  "name": "stealf",
   "main": "./index.js",
   "version": "1.0.0",
   "scripts": {
