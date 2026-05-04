@@ -13,6 +13,7 @@ import { toAddress } from '@/src/services/solana/kit';
 import { SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
+import { FormError } from '@/src/design-system/primitives/FormError';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
@@ -282,22 +283,13 @@ export function ShieldFlow({ direction }: Props) {
         >
           ${fiat}
         </Text>
-        {insufficient ? (
-          <Text
-            style={[
-              sansation,
-              {
-                textAlign: 'center',
-                marginTop: 10,
-                fontSize: 11,
-                letterSpacing: 0.4,
-                color: T.red,
-              },
-            ]}
-          >
-            Not enough {assetSymbol} — you have {balanceLabel} {assetSymbol}
-          </Text>
-        ) : null}
+        <FormError
+          message={
+            insufficient
+              ? `Not enough ${assetSymbol} — you have ${balanceLabel} ${assetSymbol}`
+              : null
+          }
+        />
       </View>
 
       <View style={{ paddingHorizontal: 24, marginBottom: 20 }}>

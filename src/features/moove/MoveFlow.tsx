@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
+import { FormError } from '@/src/design-system/primitives/FormError';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
@@ -70,12 +71,12 @@ const CONFIG: Record<MoveDirection, DirectionConfig> = {
   'bank-to-shielded': {
     title: 'Move to private',
     fromLabel: 'Bank wallet',
-    toLabel: 'Shielded pool',
+    toLabel: 'Encrypted balance',
     cta: 'Slide to move',
   },
   'shielded-to-bank': {
     title: 'Move to bank',
-    fromLabel: 'Shielded pool',
+    fromLabel: 'Encrypted balance',
     toLabel: 'Bank wallet',
     cta: 'Slide to move',
   },
@@ -592,22 +593,13 @@ export function MoveFlow() {
             {assetSymbol}
           </Text>
         ) : null}
-        {insufficient ? (
-          <Text
-            style={[
-              sansation,
-              {
-                textAlign: 'center',
-                marginTop: 10,
-                fontSize: 11,
-                letterSpacing: 0.4,
-                color: T.red,
-              },
-            ]}
-          >
-            Not enough {assetSymbol} — you have {balanceLabel} {assetSymbol}
-          </Text>
-        ) : null}
+        <FormError
+          message={
+            insufficient
+              ? `Not enough ${assetSymbol} — you have ${balanceLabel} ${assetSymbol}`
+              : null
+          }
+        />
       </View>
 
       <View style={{ alignItems: 'center', marginBottom: 20 }}>

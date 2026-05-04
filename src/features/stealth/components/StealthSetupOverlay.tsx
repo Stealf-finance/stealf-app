@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Alert } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useQueryClient } from '@tanstack/react-query';
 import { View } from 'react-native';
 import { AccountSetupCard } from '@/src/design-system/primitives/AccountSetupCard';
 import { LoaderOverlay } from '@/src/design-system/primitives/LoaderOverlay';
+import { useToast } from '@/src/components/toast/ToastContext';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -61,6 +61,7 @@ export function StealthSetupOverlay({ onClose }: Props) {
   const [registering, setRegistering] = useState(false);
   const { register, getBankClient } = useUmbra();
   const queryClient = useQueryClient();
+  const { show: showToast } = useToast();
 
   // Hide while we don't know yet (avoids the card flashing on screens where
   // both wallets are already registered) or no stealth wallet at all.
@@ -104,7 +105,7 @@ export function StealthSetupOverlay({ onClose }: Props) {
         err?.userMessage ||
         err?.message ||
         'Registration failed. Try again in a moment.';
-      Alert.alert('Could not register', msg);
+      showToast({ kind: 'error', title: 'Could not register', message: msg });
     } finally {
       setRegistering(false);
     }

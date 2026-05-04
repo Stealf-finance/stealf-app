@@ -492,7 +492,7 @@ export function ProfileHub() {
             <Text
               style={[
                 sansation,
-                { flex: 1, fontSize: 14, color: T.red },
+                { flex: 1, fontSize: 14, color: T.error },
               ]}
             >
               {deleteAccount.isPending ? 'Deleting…' : 'Delete Account'}

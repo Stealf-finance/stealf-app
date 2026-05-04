@@ -156,7 +156,7 @@ function PillBody({ op, onDismiss }: { op: PendingOp; onDismiss: () => void }) {
   const isDone = op.phase === 'done';
   const isFailed = op.phase === 'failed';
 
-  const accent = isFailed ? T.red : isDone ? T.green : palette.accent;
+  const accent = isFailed ? T.error : isDone ? T.green : palette.accent;
   const tappable = isFailed || isDone;
   const text = formatPillText(op);
 

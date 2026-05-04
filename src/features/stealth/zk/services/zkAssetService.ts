@@ -7,6 +7,7 @@ import {
   ZK_MANIFEST_URL,
   hasVariants,
 } from '../constants';
+import { createTtlCache } from '../lib/ttlCache';
 import type {
   ClaimVariant,
   LocalZkManifest,
@@ -14,13 +15,18 @@ import type {
   ZkAssetManifest,
 } from '../types';
 
+const MANIFEST_TTL_MS = 5 * 60 * 1000;
+const manifestCache = createTtlCache<ZkAssetManifest>(MANIFEST_TTL_MS);
+
 /**
  * Bundled ZK assets — shipped inside the app and used as a fallback when
- * we can't reach the CDN. Only the most-used circuits are bundled to keep
- * the install size reasonable; everything else is downloaded on demand.
+ * we can't reach the CDN. We bundle only the hot-path public deposit zkey
+ * (~4 MB) so that creating UTXOs from the public balance works offline /
+ * on first launch. `userRegistration` (~47 MB) is fetched on demand the
+ * first time a wallet registers, which is always preceded by an
+ * authenticated network call anyway.
  */
 const BUNDLED_ZKEYS: Partial<Record<ZKeyType, number>> = {
-  userRegistration: require('@/assets/zk/userregistration.zkey'),
   createDepositWithPublicAmount: require('@/assets/zk/createdepositwithpublicamount.zkey'),
 };
 
@@ -78,12 +84,24 @@ async function saveAssetToManifest(
 }
 
 export async function fetchRemoteManifest(): Promise<ZkAssetManifest> {
+  const cached = manifestCache.get();
+  if (cached) return cached;
+
+  // Cache-busting `?t=...` keeps CDN edges from serving us a stale
+  // manifest the first time around; the in-memory TTL absorbs the cost
+  // for subsequent calls within MANIFEST_TTL_MS.
   const url = `${ZK_MANIFEST_URL}?t=${Date.now()}`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch ZK manifest: ${response.status}`);
   }
-  return response.json();
+  const manifest = (await response.json()) as ZkAssetManifest;
+  manifestCache.set(manifest);
+  return manifest;
+}
+
+export function clearManifestCache(): void {
+  manifestCache.clear();
 }
 
 function getAssetEntry(
@@ -267,6 +285,7 @@ export async function getZKey(
 }
 
 export async function clearZkAssetsCache(): Promise<void> {
+  manifestCache.clear();
   const dir = rootDir();
   if (dir.exists) await dir.delete();
 }
