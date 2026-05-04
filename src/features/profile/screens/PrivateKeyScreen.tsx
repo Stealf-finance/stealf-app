@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { scheduleClipboardClear } from '@/src/features/profile/lib/clipboardAutoClear';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTurnkey } from '@turnkey/react-native-wallet-kit';
@@ -17,6 +18,8 @@ import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
+
+const CLIPBOARD_CLEAR_DELAY_MS = 30_000;
 
 const S = txPalette('silver');
 const G = txPalette('gold');
@@ -375,12 +378,19 @@ function KeyBlock({
   revealed: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  const clearTimerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!copied) return;
-    const t = setTimeout(() => setCopied(false), 1500);
-    return () => clearTimeout(t);
+    const labelTimer = setTimeout(() => setCopied(false), CLIPBOARD_CLEAR_DELAY_MS);
+    return () => clearTimeout(labelTimer);
   }, [copied]);
+
+  useEffect(() => {
+    return () => {
+      clearTimerRef.current?.();
+    };
+  }, []);
 
   if (state.phase === 'idle') {
     return (
@@ -481,6 +491,10 @@ function KeyBlock({
 
   const handleCopy = async () => {
     await onCopy(state.value);
+    clearTimerRef.current?.();
+    clearTimerRef.current = scheduleClipboardClear(state.value, {
+      delayMs: CLIPBOARD_CLEAR_DELAY_MS,
+    });
     setCopied(true);
   };
 
@@ -526,7 +540,7 @@ function KeyBlock({
                 },
               ]}
             >
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? 'Copied — clears in 30s' : 'Copy'}
             </Text>
           </View>
         </Pressable>
