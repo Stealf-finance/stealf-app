@@ -1,5 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Share, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,8 +71,44 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   const close = () => router.replace('/(tabs)/bank');
   const [copied, setCopied] = useState(false);
 
+  // Tap feedback: a soft squish + a brief lift, plus a cross-fade between
+  // the copy icon / address and the check icon / "Copied" label. The fade
+  // is JS-driven via the `copied` state so it survives across re-renders.
+  const rowScale = useSharedValue(1);
+  const copiedProgress = useSharedValue(0);
+
+  useEffect(() => {
+    copiedProgress.value = withTiming(copied ? 1 : 0, {
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [copied, copiedProgress]);
+
+  const rowAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: rowScale.value }],
+  }));
+  const copyIconStyle = useAnimatedStyle(() => ({
+    opacity: 1 - copiedProgress.value,
+    transform: [{ scale: 1 - copiedProgress.value * 0.2 }],
+  }));
+  const checkIconStyle = useAnimatedStyle(() => ({
+    opacity: copiedProgress.value,
+    transform: [{ scale: 0.6 + copiedProgress.value * 0.4 }],
+  }));
+  const addressTextStyle = useAnimatedStyle(() => ({
+    opacity: 1 - copiedProgress.value,
+  }));
+  const copiedTextStyle = useAnimatedStyle(() => ({
+    opacity: copiedProgress.value,
+    transform: [{ translateY: (1 - copiedProgress.value) * 4 }],
+  }));
+
   const handleCopy = async () => {
     if (!fullAddress) return;
+    rowScale.value = withSequence(
+      withTiming(0.96, { duration: 90, easing: Easing.out(Easing.quad) }),
+      withSpring(1, { damping: 14, stiffness: 320, mass: 0.6 }),
+    );
     await Clipboard.setStringAsync(fullAddress);
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
@@ -208,43 +252,91 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
         </View>
       </View>
 
-      <View
-        style={{
-          paddingTop: 20,
-          paddingHorizontal: 24,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 10,
-        }}
+      <Pressable
+        onPress={handleCopy}
+        accessibilityRole="button"
+        accessibilityLabel={copied ? 'Address copied' : 'Copy address'}
+        hitSlop={8}
       >
-        <Text
+        <Animated.View
           style={[
-            mono,
             {
-              fontSize: 13,
-              color: T.ink,
-              letterSpacing: 0.26,
+              paddingTop: 20,
+              paddingHorizontal: 24,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
             },
+            rowAnimatedStyle,
           ]}
         >
-          {displayAddress}
-        </Text>
-        <Pressable
-          onPress={handleCopy}
-          accessibilityRole="button"
-          accessibilityLabel="Copy address"
-          hitSlop={6}
-          style={{
-            width: 24,
-            height: 24,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icons.copy size={14} color={T.inkDim} />
-        </Pressable>
-      </View>
+          <View style={{ position: 'relative', justifyContent: 'center' }}>
+            <Animated.Text
+              style={[
+                mono,
+                {
+                  fontSize: 13,
+                  color: T.ink,
+                  letterSpacing: 0.26,
+                },
+                addressTextStyle,
+              ]}
+            >
+              {displayAddress}
+            </Animated.Text>
+            <Animated.Text
+              style={[
+                sansation,
+                {
+                  position: 'absolute',
+                  alignSelf: 'center',
+                  fontSize: 13,
+                  letterSpacing: 0.4,
+                  color: accent,
+                  fontWeight: '600',
+                },
+                copiedTextStyle,
+              ]}
+            >
+              Copied to clipboard
+            </Animated.Text>
+          </View>
+          <View
+            style={{
+              width: 24,
+              height: 24,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                copyIconStyle,
+              ]}
+            >
+              <Icons.copy size={14} color={T.inkDim} />
+            </Animated.View>
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                checkIconStyle,
+              ]}
+            >
+              <Icons.check size={14} color={accent} strokeWidth={2.4} />
+            </Animated.View>
+          </View>
+        </Animated.View>
+      </Pressable>
 
       <View style={{ flex: 1 }} />
 
