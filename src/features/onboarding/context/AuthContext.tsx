@@ -15,7 +15,6 @@ import {
   setSecure,
   setSecureJson,
 } from '@/src/services/auth/secureStore';
-import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { UserSchema, type Session, type User } from '../types';
 
 export interface AuthContextValue {
@@ -106,10 +105,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setSessionState({ sessionToken: storedToken });
           if (__DEV__) console.log('[AuthContext] restored session token');
         }
-
-        // Pre-load the stealth signing key into RAM so the first signing op
-        // on this session doesn't pay the Keychain hit.
-        void walletKeyCache.warmup();
       } finally {
         if (!cancelled) setLoading(false);
       }
