@@ -281,6 +281,11 @@ export function StealthHub() {
 
     setUser({ ...user, stealfWallet: walletAddress });
     setRegistering(false);
+    // Land on the public side of the freshly-created wallet — its
+    // encrypted balance is empty by definition, so private mode would
+    // greet the user with $0.00 and a setup overlay. Public is the
+    // useful first view.
+    setMode('public');
   };
 
   const handleSetupComplete = async (choice: SetupChoice) => {
