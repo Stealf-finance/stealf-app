@@ -20,6 +20,7 @@ import { queryClient } from '@/src/services/queryClient';
 import { getTurnkeyConfig, TURNKEY_CALLBACKS } from '@/src/services/turnkey/config';
 import { AuthProvider } from '@/src/features/onboarding/context/AuthContext';
 import { PrivacyModeProvider } from '@/src/features/stealth/PrivacyModeContext';
+import { BalanceVisibilityProvider } from '@/src/features/wallet/BalanceVisibilityContext';
 import { SocketProvider } from '@/src/components/SocketProvider';
 import { DataBootstrap } from '@/src/components/DataBootstrap';
 import { AuthGuard } from '@/src/components/AuthGuard';
@@ -81,6 +82,7 @@ function RootLayout() {
             <AuthProvider>
               <SocketProvider>
                 <PrivacyModeProvider initial="private">
+                  <BalanceVisibilityProvider>
                   <PendingOpsProvider>
                   <DataBootstrap />
                   <AuthGuard />
@@ -108,6 +110,7 @@ function RootLayout() {
                   <AnimatedSplash />
                   <StatusBar style="light" />
                   </PendingOpsProvider>
+                  </BalanceVisibilityProvider>
                 </PrivacyModeProvider>
               </SocketProvider>
             </AuthProvider>

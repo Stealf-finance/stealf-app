@@ -67,6 +67,7 @@ import type {
   HistoryResponse,
 } from '@/src/features/bank/types';
 import { socketService } from '@/src/services/real-time/socket';
+import { useBalanceVisibility } from '@/src/features/wallet/BalanceVisibilityContext';
 
 // Mode-switch motion. The kicker / balance / action tiles live in
 // horizontal carousels; both modes are mounted side-by-side and a single
@@ -222,7 +223,8 @@ export function StealthHub() {
   const [pendingMnemonic, setPendingMnemonic] = useState<string | null>(null);
   const [pendingAddress, setPendingAddress] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
-  const [balanceHidden, setBalanceHidden] = useState(false);
+  const { hidden: balanceHidden, toggle: toggleBalanceHidden } =
+    useBalanceVisibility();
 
   const persistStealfWallet = async (
     walletAddress: string,
@@ -527,7 +529,7 @@ export function StealthHub() {
                 inkDim={SILVER.inkDim}
                 fontSize={balanceFontSize}
                 balanceHidden={balanceHidden}
-                onToggleHidden={() => setBalanceHidden((h) => !h)}
+                onToggleHidden={toggleBalanceHidden}
               />
               <View style={{ width: PAGE_GUTTER }} />
               <KickerBalancePage
@@ -539,7 +541,7 @@ export function StealthHub() {
                 inkDim={GOLD.inkDim}
                 fontSize={balanceFontSize}
                 balanceHidden={balanceHidden}
-                onToggleHidden={() => setBalanceHidden((h) => !h)}
+                onToggleHidden={toggleBalanceHidden}
               />
             </Animated.View>
           </View>

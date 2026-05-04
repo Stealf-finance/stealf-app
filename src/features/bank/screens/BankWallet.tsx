@@ -13,6 +13,8 @@ import {
   serif,
 } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
+import { T } from '@/src/design-system/tokens';
+import { useBalanceVisibility } from '@/src/features/wallet/BalanceVisibilityContext';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { getGreeting } from '@/src/lib/greeting';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
@@ -58,6 +60,8 @@ export function BankWallet() {
   const { dollars, cents } = splitBalance(balance?.totalUSD ?? 0);
   const txRows =
     history?.transactions.slice(0, HISTORY_DISPLAY_LIMIT).map(formatTxRow) ?? [];
+  const { hidden: balanceHidden, toggle: toggleBalanceHidden } =
+    useBalanceVisibility();
 
   return (
     <View style={{ flex: 1 }}>
@@ -88,59 +92,78 @@ export function BankWallet() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Kicker + balance */}
+        {/* Kicker + eye toggle. Mirrors the StealthHub header so the
+            two tabs feel like the same wallet shell. */}
+        <View
+          style={{
+            paddingTop: 12,
+            marginBottom: 18,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 18,
+          }}
+        >
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 10,
+                letterSpacing: 3.2,
+                textTransform: 'uppercase',
+                color: T.ink,
+                fontWeight: '700',
+              },
+            ]}
+          >
+            Bank Wallet
+          </Text>
+          <Pressable
+            onPress={toggleBalanceHidden}
+            accessibilityRole="button"
+            accessibilityLabel={
+              balanceHidden ? 'Show balance' : 'Hide balance'
+            }
+            hitSlop={10}
+            style={({ pressed }) => ({
+              padding: 4,
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            {balanceHidden ? (
+              <Icons.eyeOff size={22} color={T.ink} />
+            ) : (
+              <Icons.eye size={22} color={T.ink} />
+            )}
+          </Pressable>
+        </View>
+
+        {/* Balance — same vertical breathing as StealthHub
+            (marginTop 30 + marginBottom 48 around the hero). */}
         <View
           style={{
             alignItems: 'center',
-            paddingTop: 12,
-            paddingBottom: 28,
+            marginTop: 30,
+            marginBottom: 48,
           }}
         >
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              marginBottom: 18,
-            }}
-          >
-            <View
-              style={{ width: 18, height: 1, backgroundColor: S.accentDim }}
-            />
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 10,
-                  letterSpacing: 3.2,
-                  textTransform: 'uppercase',
-                  color: S.accent,
-                  fontWeight: '700',
-                },
-              ]}
-            >
-              Bank Wallet
-            </Text>
-            <View
-              style={{ width: 18, height: 1, backgroundColor: S.accentDim }}
-            />
-          </View>
-
           <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-            <Text
-              style={[
-                serif,
-                {
-                  fontSize: 36,
-                  color: S.accent,
-                  fontStyle: 'italic',
-                  lineHeight: 36,
-                  includeFontPadding: false,
-                },
-              ]}
-            >
-              $
-            </Text>
+            {balanceHidden ? null : (
+              <Text
+                style={[
+                  serif,
+                  {
+                    fontSize: 36,
+                    color: S.accent,
+                    fontStyle: 'italic',
+                    lineHeight: 36,
+                    includeFontPadding: false,
+                  },
+                ]}
+              >
+                $
+              </Text>
+            )}
             <Text
               style={[
                 sansationLight,
@@ -153,7 +176,7 @@ export function BankWallet() {
                 },
               ]}
             >
-              {dollars}
+              {balanceHidden ? '****' : dollars}
             </Text>
             <Text
               style={[
@@ -167,7 +190,7 @@ export function BankWallet() {
                 },
               ]}
             >
-              {cents}
+              {balanceHidden ? '' : cents}
             </Text>
           </View>
         </View>
