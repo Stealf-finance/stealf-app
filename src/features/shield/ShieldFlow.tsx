@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { applyAmountKey, SOL_DECIMALS } from '@/src/features/send/lib/amount';
+import {
+  applyAmountKey,
+  maxSpendableSol,
+  SOL_DECIMALS,
+} from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
@@ -76,6 +80,12 @@ export function ShieldFlow({ direction }: Props) {
   const privateSol = shielded?.sol ?? 0;
   const sourceSol = isShield ? publicSol : privateSol;
   const balanceLabel = formatSolBalance(sourceSol);
+
+  // Shield: source = stealth public ATA, fee payer = same → reserve.
+  // Unshield: source = encrypted balance, fee payer = stealth public ATA →
+  // different buckets, full balance is spendable.
+  const maxSol = maxSpendableSol(sourceSol, isShield);
+  const maxLabel = formatSolBalance(maxSol);
 
   const rate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
   const fiat = (Number(amount) * rate).toFixed(2);
@@ -293,9 +303,9 @@ export function ShieldFlow({ direction }: Props) {
 
       <View style={{ alignItems: 'center', marginBottom: 20 }}>
         <Pressable
-          onPress={() => setAmount(balanceLabel)}
+          onPress={() => setAmount(maxLabel)}
           accessibilityRole="button"
-          accessibilityLabel={`Use max balance ${balanceLabel} ${assetSymbol}`}
+          accessibilityLabel={`Use max balance ${maxLabel} ${assetSymbol}`}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -335,7 +345,7 @@ export function ShieldFlow({ direction }: Props) {
               { fontSize: 10, color: '#0a0a0a', fontWeight: '500' },
             ]}
           >
-            {balanceLabel} {assetSymbol}
+            {maxLabel} {assetSymbol}
           </Text>
         </Pressable>
       </View>

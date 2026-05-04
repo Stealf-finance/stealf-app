@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { LayoutChangeEvent, Text } from 'react-native';
 import Animated, {
   runOnJS,
@@ -9,6 +10,7 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Icons } from '@/src/design-system/icons';
+import { LoaderDots } from '@/src/design-system/primitives/LoaderDots';
 import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
@@ -18,6 +20,12 @@ type Props = {
   label?: string;
   /** Blocks the gesture and dims the track. Use when the amount is 0/invalid. */
   disabled?: boolean;
+  /**
+   * Replaces the post-swipe check with an in-thumb loader and keeps the
+   * thumb pinned at the end while the parent finishes async work. Flip
+   * back to false (or unmount the swipe via key) once the op completes.
+   */
+  loading?: boolean;
 };
 
 const THUMB = 48;
@@ -44,12 +52,19 @@ export function SwipeToSend({
   tone = 'silver',
   label = 'Swipe to send',
   disabled = false,
+  loading = false,
 }: Props) {
   const palette = txPalette(tone);
   // Shared values (not refs) so worklets read consistent UI-thread values.
   const trackW = useSharedValue(0);
   const x = useSharedValue(0);
   const successProgress = useSharedValue(0);
+  // 0 → check, 1 → loader. Flips on the JS thread when `loading` toggles.
+  const loadingProgress = useSharedValue(0);
+
+  useEffect(() => {
+    loadingProgress.value = withTiming(loading ? 1 : 0, { duration: 180 });
+  }, [loading, loadingProgress]);
 
   const thumbColors: [string, string] =
     tone === 'gold' ? ['#e6c079', '#a37b2e'] : ['#e8e8ea', '#9a9a9f'];
@@ -156,8 +171,14 @@ export function SwipeToSend({
   }));
 
   const checkStyle = useAnimatedStyle(() => ({
-    opacity: successProgress.value,
+    // Check is the post-swipe state when nothing is loading. While loading,
+    // the dots take over (loaderStyle below).
+    opacity: successProgress.value * (1 - loadingProgress.value),
     transform: [{ scale: 0.7 + successProgress.value * 0.3 }],
+  }));
+
+  const loaderStyle = useAnimatedStyle(() => ({
+    opacity: successProgress.value * loadingProgress.value,
   }));
 
   return (
@@ -281,6 +302,18 @@ export function SwipeToSend({
               ]}
             >
               <Icons.check size={22} color="#0a0a0a" strokeWidth={2.6} />
+            </Animated.View>
+            <Animated.View
+              style={[
+                {
+                  position: 'absolute',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                },
+                loaderStyle,
+              ]}
+            >
+              <LoaderDots color="#0a0a0a" size={4} gap={4} bounce={4} />
             </Animated.View>
           </LinearGradient>
         </Animated.View>

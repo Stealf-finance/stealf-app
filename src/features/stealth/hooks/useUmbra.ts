@@ -24,6 +24,7 @@ import { umbraClearSeed } from '@/src/services/umbra/seed';
 
 import { deposit } from '@/src/services/umbra/operations/deposit';
 import { withdraw } from '@/src/services/umbra/operations/withdraw';
+import { sendEncrypted } from '@/src/services/umbra/operations/sendEncrypted';
 import {
   claimReceived,
   claimSelfToPublic,
@@ -140,6 +141,15 @@ export function useUmbra() {
     withdraw: useCallback(
       (mint: Address, amount: bigint) =>
         wrap('withdraw', () => withdraw(mint, amount)),
+      [wrap],
+    ),
+
+    sendEncrypted: useCallback(
+      (destinationAddress: Address, mint: Address, amount: bigint) =>
+        wrap(
+          'getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction',
+          () => sendEncrypted(destinationAddress, mint, amount),
+        ),
       [wrap],
     ),
 

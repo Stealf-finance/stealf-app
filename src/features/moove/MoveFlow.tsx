@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { applyAmountKey, SOL_DECIMALS } from '@/src/features/send/lib/amount';
+import {
+  applyAmountKey,
+  maxSpendableSol,
+  SOL_DECIMALS,
+} from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -134,6 +138,16 @@ export function MoveFlow() {
     sourceSol = shielded?.sol ?? 0;
   }
   const balanceLabel = formatSolBalance(sourceSol);
+
+  // The source wallet pays its own fees only when source funds and fee-payer
+  // wallet are the same bucket. For shielded-to-bank, fees come out of the
+  // stealth public ATA while the source is encrypted balance — different
+  // buckets, no reserve needed.
+  const sourcePaysFees =
+    direction === 'bank-to-shielded' || direction === 'stealth-to-bank';
+  const maxSol = maxSpendableSol(sourceSol, sourcePaysFees);
+  const maxLabel = formatSolBalance(maxSol);
+
   const fiat = (Number(amount) * rate).toFixed(2);
 
   const close = () => router.back();
@@ -573,9 +587,9 @@ export function MoveFlow() {
 
       <View style={{ alignItems: 'center', marginBottom: 20 }}>
         <Pressable
-          onPress={() => setAmount(balanceLabel)}
+          onPress={() => setAmount(maxLabel)}
           accessibilityRole="button"
-          accessibilityLabel={`Use max balance ${balanceLabel} ${assetSymbol}`}
+          accessibilityLabel={`Use max balance ${maxLabel} ${assetSymbol}`}
           style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -617,7 +631,7 @@ export function MoveFlow() {
               { fontSize: 10, color: '#0a0a0a', fontWeight: '500' },
             ]}
           >
-            {balanceLabel} {assetSymbol}
+            {maxLabel} {assetSymbol}
           </Text>
         </Pressable>
       </View>

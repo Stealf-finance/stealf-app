@@ -40,6 +40,17 @@ import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from './hooks/useSolPrice';
 import { useSendSimple } from './hooks/useSendSimple';
 import { mapTokensToAssets } from './lib/mapTokenToAsset';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  shieldedBalanceQueries,
+  useShieldedSolBalance,
+} from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { historyQueries } from '@/src/features/bank/api/history';
+import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
+import { toAddress } from '@/src/services/solana/kit';
+import { SOL_MINT } from '@/src/constants/solana';
+import { SOL_DECIMALS } from '@/src/features/send/lib/amount';
+import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 
 const FADE_OUT = 160;
 const FADE_IN = 220;
@@ -86,10 +97,11 @@ function bigAmountFontSize(displayLen: number): number {
 }
 
 type WalletSource = 'bank' | 'stealth';
+type SendMode = 'public' | 'private';
 
-type Props = { tone?: Tone; wallet?: WalletSource };
+type Props = { tone?: Tone; wallet?: WalletSource; mode?: SendMode };
 
-export function SendFlow({ tone = 'silver', wallet }: Props) {
+export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const S = txPalette(tone);
@@ -102,17 +114,51 @@ export function SendFlow({ tone = 'silver', wallet }: Props) {
   // mapping when the prop isn't passed.
   const walletSource: WalletSource =
     wallet ?? (tone === 'gold' ? 'stealth' : 'bank');
+  const isPrivate = mode === 'private';
   const fromAddress =
     (walletSource === 'stealth' ? user?.stealfWallet : user?.bankWallet) ?? '';
-  const fromLabel =
-    walletSource === 'stealth' ? 'Stealth wallet' : 'Bank wallet';
+  const fromLabel = isPrivate
+    ? 'Encrypted balance'
+    : walletSource === 'stealth'
+      ? 'Stealth wallet'
+      : 'Bank wallet';
   const { data: balance } = useBalance(fromAddress);
+  const { data: shielded } = useShieldedSolBalance();
   const { data: solPrice } = useSolPrice();
   const sendMutation = useSendSimple();
+  const queryClient = useQueryClient();
+  const umbra = useUmbra();
+  const { setMode } = usePrivacyMode();
+  const [privateSending, setPrivateSending] = useState(false);
+
+  // Private mode only spends encrypted balance, which currently only holds
+  // SOL. We synthesize a single Asset entry from the shielded balance so the
+  // wizard's existing AssetPill / Max / fiat plumbing works unchanged.
+  const privateAssets: Asset[] = useMemo(() => {
+    const sol = shielded?.sol ?? 0;
+    const fiatRate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
+    const balanceStr =
+      sol === 0 ? '0' : sol.toFixed(6).replace(/\.?0+$/, '');
+    return [
+      {
+        symbol: 'SOL',
+        name: 'Solana',
+        balance: balanceStr,
+        fiat:
+          fiatRate > 0
+            ? `$${(sol * fiatRate).toFixed(2)}`
+            : '$—',
+        gradient: ['#9945FF', '#14F195'],
+        iconSource: require('@/assets/images/solana-icon.png'),
+        priceUSD: fiatRate || undefined,
+      },
+    ];
+  }, [shielded?.sol, solPrice]);
 
   const assets = useMemo(
-    () => mapTokensToAssets(balance?.tokens ?? []),
-    [balance],
+    () =>
+      isPrivate ? privateAssets : mapTokensToAssets(balance?.tokens ?? []),
+    [isPrivate, privateAssets, balance],
   );
   // Recent recipients endpoint not yet built — empty until the backend exposes it.
   const recents: Recipient[] = [];
@@ -222,8 +268,28 @@ export function SendFlow({ tone = 'silver', wallet }: Props) {
       return;
     }
     setSendError(null);
-    if (__DEV__) console.log('[SendFlow] sending', amount, asset.symbol, '→', recipient.name);
+    if (__DEV__) console.log('[SendFlow] sending', amount, asset.symbol, '→', recipient.name, isPrivate ? '(private)' : '');
     try {
+      if (isPrivate) {
+        setPrivateSending(true);
+        const amountLamports = BigInt(
+          Math.floor(Number(amount) * 10 ** SOL_DECIMALS),
+        );
+        const destination = toAddress(recipient.name.trim());
+        const mint = toAddress(SOL_MINT);
+        await umbra.sendEncrypted(destination, mint, amountLamports);
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: shieldedBalanceQueries.byStealfWallet(fromAddress),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: historyQueries.byAddress(fromAddress),
+          }),
+        ]);
+        setTxSig(null);
+        transitionTo(4, 'forward');
+        return;
+      }
       const sig = await sendMutation.mutateAsync({
         fromAddress,
         toAddress: recipient.name.trim(),
@@ -234,19 +300,33 @@ export function SendFlow({ tone = 'silver', wallet }: Props) {
       if (__DEV__) console.log('[SendFlow] success, sig=', sig);
       setTxSig(sig);
       transitionTo(4, 'forward');
-    } catch (err) {
+    } catch (err: any) {
       if (__DEV__) console.warn('[SendFlow] send failed:', err);
       const msg =
-        err instanceof Error ? err.message : 'Could not send the transaction.';
+        err?.userMessage ||
+        (err instanceof Error
+          ? err.message
+          : 'Could not send the transaction.');
       setSendError(msg);
       // Force the swipe widget to reset visually so the user can retry.
       swipeAttempt.current += 1;
+    } finally {
+      setPrivateSending(false);
     }
   };
 
   // Success owns the whole screen (its own CenterGlow + header) so we early-return
   // to avoid double-wrapping in the wizard's CenterGlow.
   if (step === 4 && asset && recipient) {
+    // Private sends originate from the stealth tab in private mode — land
+    // back there explicitly so the user sees the new (lower) shielded
+    // balance instead of relying on stack pop heuristics.
+    const finishPrivate = () => {
+      setMode('private');
+      router.replace('/(tabs)/stealth');
+    };
+    const onDone = isPrivate ? finishPrivate : close;
+    const onSuccessClose = isPrivate ? finishPrivate : close;
     return (
       <SuccessScreen
         tone={tone}
@@ -254,8 +334,8 @@ export function SendFlow({ tone = 'silver', wallet }: Props) {
         prefix="$"
         amount={fiatValue}
         subtitle={`to ${truncateAddress(recipient.name)}`}
-        onClose={close}
-        onDone={close}
+        onClose={onSuccessClose}
+        onDone={onDone}
         onNewTransfer={() => {
           setRecipient(null);
           setRecipientQuery('');
@@ -940,9 +1020,16 @@ export function SendFlow({ tone = 'silver', wallet }: Props) {
               <SwipeToSend
                 key={swipeAttempt.current}
                 tone={tone}
-                label={sendMutation.isPending ? 'Sending…' : 'Swipe to send'}
+                label={
+                  sendMutation.isPending || privateSending
+                    ? 'Sending…'
+                    : 'Swipe to send'
+                }
                 onSend={onSwipeSend}
-                disabled={!amountValid || sendMutation.isPending}
+                disabled={
+                  !amountValid || sendMutation.isPending || privateSending
+                }
+                loading={sendMutation.isPending || privateSending}
               />
             </View>
           </>

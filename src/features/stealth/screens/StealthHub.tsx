@@ -578,7 +578,9 @@ export function StealthHub() {
                 accent
                 accentTone="gold"
                 onPress={() =>
-                  router.push('/send/flow?tone=gold&wallet=stealth')
+                  router.push(
+                    '/send/flow?tone=gold&wallet=stealth&mode=private',
+                  )
                 }
               />
               <SquareActionTile
