@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-  Alert,
   Dimensions,
   Pressable,
   ScrollView,
@@ -68,6 +67,7 @@ import type {
 } from '@/src/features/bank/types';
 import { socketService } from '@/src/services/real-time/socket';
 import { useBalanceVisibility } from '@/src/features/wallet/BalanceVisibilityContext';
+import { useToast } from '@/src/components/toast/ToastContext';
 
 // Mode-switch motion. The kicker / balance / action tiles live in
 // horizontal carousels; both modes are mounted side-by-side and a single
@@ -225,13 +225,18 @@ export function StealthHub() {
   const [registering, setRegistering] = useState(false);
   const { hidden: balanceHidden, toggle: toggleBalanceHidden } =
     useBalanceVisibility();
+  const { show: showToast } = useToast();
 
   const persistStealfWallet = async (
     walletAddress: string,
     isFresh: boolean,
   ) => {
     if (!sessionToken || !user) {
-      Alert.alert('Not signed in', 'Please sign in again before continuing.');
+      showToast({
+        kind: 'error',
+        title: 'Not signed in',
+        message: 'Please sign in again before continuing.',
+      });
       return;
     }
     setRegistering(true);
@@ -240,7 +245,7 @@ export function StealthHub() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to register wallet';
       if (__DEV__) console.warn('[StealthHub] register failed:', msg);
-      Alert.alert('Could not save wallet', msg);
+      showToast({ kind: 'error', title: 'Could not save wallet', message: msg });
       setRegistering(false);
       return;
     }
@@ -300,7 +305,11 @@ export function StealthHub() {
       }
       const result = await setup.createWallet();
       if (!result.success || !result.walletAddress || !result.mnemonic) {
-        Alert.alert('Could not create wallet', result.error ?? 'Unknown error');
+        showToast({
+          kind: 'error',
+          title: 'Could not create wallet',
+          message: result.error ?? 'Unknown error',
+        });
         return;
       }
       setPendingAddress(result.walletAddress);
@@ -311,7 +320,11 @@ export function StealthHub() {
     if (choice.mode === 'import') {
       const result = await setup.importWallet(choice.mnemonic);
       if (!result.success || !result.walletAddress) {
-        Alert.alert('Could not import wallet', result.error ?? 'Unknown error');
+        showToast({
+          kind: 'error',
+          title: 'Could not import wallet',
+          message: result.error ?? 'Unknown error',
+        });
         return;
       }
       await persistStealfWallet(result.walletAddress, false);

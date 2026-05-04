@@ -26,6 +26,8 @@ import { DataBootstrap } from '@/src/components/DataBootstrap';
 import { AuthGuard } from '@/src/components/AuthGuard';
 import { TelemetrySmokeTest } from '@/src/components/TelemetrySmokeTest';
 import { PendingOpsProvider } from '@/src/components/pending-ops/PendingOpsContext';
+import { ToastProvider } from '@/src/components/toast/ToastContext';
+import { ToastHost } from '@/src/components/toast/ToastHost';
 import { AnimatedSplash } from '@/src/components/AnimatedSplash';
 
 SplashScreen.preventAutoHideAsync();
@@ -93,6 +95,7 @@ function RootLayout() {
                 <PrivacyModeProvider initial="private">
                   <BalanceVisibilityProvider>
                   <PendingOpsProvider>
+                  <ToastProvider>
                   <DataBootstrap />
                   <AuthGuard />
                   <TelemetrySmokeTest />
@@ -116,8 +119,10 @@ function RootLayout() {
                   <Stack.Screen name="tx/[id]" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="profile/private-key" options={{ presentation: 'modal' }} />
                   </Stack>
+                  <ToastHost />
                   <AnimatedSplash />
                   <StatusBar style="light" />
+                  </ToastProvider>
                   </PendingOpsProvider>
                   </BalanceVisibilityProvider>
                 </PrivacyModeProvider>
