@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,10 +33,11 @@ export function PrivateKeyScreen() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { exportWalletAccount } = useTurnkey();
+  const { exportWallet, wallets } = useTurnkey();
 
   const bankAddress = user?.bankWallet ?? null;
   const stealthAddress = user?.stealfWallet ?? null;
+  const bankWalletId = wallets?.[0]?.walletId ?? null;
 
   const [bank, setBank] = useState<RevealState>({ phase: 'idle' });
   const [stealth, setStealth] = useState<RevealState>({ phase: 'idle' });
@@ -53,18 +54,28 @@ export function PrivateKeyScreen() {
   };
 
   const revealBank = async () => {
-    if (!bankAddress) {
+    if (!bankWalletId) {
       setBank({ phase: 'error', message: 'Bank wallet not set up.' });
       return;
     }
     setBank({ phase: 'loading' });
     try {
-      const decrypted = await exportWalletAccount({ address: bankAddress });
-      const value = typeof decrypted === 'string' ? decrypted : String(decrypted);
+      const mnemonic = await exportWallet({ walletId: bankWalletId });
+      const value = typeof mnemonic === 'string' ? mnemonic : String(mnemonic);
       setBank({ phase: 'ready', value });
     } catch (err: any) {
-      const msg = err?.message || 'Export failed.';
-      if (__DEV__) console.warn('[PrivateKey] bank export failed:', msg);
+      const cause = err?.cause;
+      const msg =
+        cause?.message || err?.message || 'Export failed.';
+      if (__DEV__) {
+        console.warn('[PrivateKey] bank export failed', {
+          message: err?.message,
+          code: err?.code,
+          causeMessage: cause?.message,
+          causeStatus: cause?.statusCode,
+          causeCode: cause?.code,
+        });
+      }
       setBank({ phase: 'error', message: msg });
     }
   };
@@ -72,26 +83,23 @@ export function PrivateKeyScreen() {
   const revealStealth = async () => {
     setStealth({ phase: 'loading' });
     try {
-      const pk = await walletKeyCache.getPrivateKey();
-      if (!pk) {
+      const mnemonic = await walletKeyCache.getMnemonicPersisted();
+      if (!mnemonic) {
         setStealth({
           phase: 'error',
           message:
-            'Stealth wallet key unavailable. Set up the stealth wallet first.',
+            'Recovery phrase unavailable. Set up the stealth wallet first.',
         });
         return;
       }
-      setStealth({ phase: 'ready', value: pk });
+      setStealth({ phase: 'ready', value: mnemonic });
     } catch (err: any) {
       setStealth({
         phase: 'error',
-        message: err?.message || 'Could not load stealth key.',
+        message: err?.message || 'Could not load recovery phrase.',
       });
     }
   };
-
-  const hideBank = () => setBank({ phase: 'idle' });
-  const hideStealth = () => setStealth({ phase: 'idle' });
 
   return (
     <CenterGlow tone="silver" flat>
@@ -135,23 +143,19 @@ export function PrivateKeyScreen() {
         <KeyCard
           title="Bank wallet"
           accent={S.accent}
-          accentSoft={S.accentDim}
           address={bankAddress}
           state={bank}
           onAsk={askBank}
           onRetry={revealBank}
-          onHide={hideBank}
         />
 
         <KeyCard
           title="Stealth wallet"
           accent={G.accent}
-          accentSoft={G.accentDim}
           address={stealthAddress}
           state={stealth}
           onAsk={askStealth}
           onRetry={revealStealth}
-          onHide={hideStealth}
         />
       </ScrollView>
 
@@ -203,30 +207,35 @@ function WarningBanner() {
 function KeyCard({
   title,
   accent,
-  accentSoft,
   address,
   state,
   onAsk,
   onRetry,
-  onHide,
 }: {
   title: string;
   accent: string;
-  accentSoft: string;
   address: string | null;
   state: RevealState;
   onAsk: () => void;
   onRetry: () => void;
-  onHide: () => void;
 }) {
   const truncatedAddress =
     address && address.length > 16
       ? `${address.slice(0, 6)}…${address.slice(-6)}`
       : address ?? '—';
 
+  const [revealed, setRevealed] = useState(false);
+
+  useEffect(() => {
+    if (state.phase !== 'ready') setRevealed(false);
+  }, [state.phase]);
+
   const onCopy = async (value: string) => {
     await Clipboard.setStringAsync(value);
   };
+
+  const isReady = state.phase === 'ready';
+  const EyeIcon = revealed ? Icons.hideEye : Icons.eye;
 
   return (
     <View
@@ -262,40 +271,28 @@ function KeyCard({
           />
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            marginBottom: 4,
-          }}
+        <Text
+          style={[
+            sansation,
+            {
+              fontSize: 9,
+              letterSpacing: 2.52,
+              textTransform: 'uppercase',
+              color: accent,
+              fontWeight: '700',
+              marginBottom: 4,
+            },
+          ]}
         >
-          <View
-            style={{ width: 14, height: 1, backgroundColor: accentSoft }}
-          />
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 9,
-                letterSpacing: 2.52,
-                textTransform: 'uppercase',
-                color: accent,
-                fontWeight: '700',
-              },
-            ]}
-          >
-            {title}
-          </Text>
-        </View>
+          {title}
+        </Text>
 
         <View
           style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
             marginTop: 12,
             marginBottom: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
           }}
         >
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -328,22 +325,34 @@ function KeyCard({
               {truncatedAddress}
             </Text>
           </View>
-          {address ? (
-            <SmallBtn
-              label="Copy"
-              icon="copy"
-              onPress={() => void onCopy(address)}
-            />
-          ) : null}
+          {isReady && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                revealed ? 'Hide recovery phrase' : 'Reveal recovery phrase'
+              }
+              onPress={() => setRevealed((v) => !v)}
+              hitSlop={12}
+              style={({ pressed }) => ({
+                width: 36,
+                height: 36,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <EyeIcon size={20} color={T.ink} strokeWidth={1.6} />
+            </Pressable>
+          )}
         </View>
 
         <KeyBlock
           state={state}
           onAsk={onAsk}
           onRetry={onRetry}
-          onHide={onHide}
           onCopy={onCopy}
           accent={accent}
+          revealed={revealed}
         />
       </LinearGradient>
     </View>
@@ -354,17 +363,25 @@ function KeyBlock({
   state,
   onAsk,
   onRetry,
-  onHide,
   onCopy,
   accent,
+  revealed,
 }: {
   state: RevealState;
   onAsk: () => void;
   onRetry: () => void;
-  onHide: () => void;
   onCopy: (value: string) => Promise<void>;
   accent: string;
+  revealed: boolean;
 }) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(t);
+  }, [copied]);
+
   if (state.phase === 'idle') {
     return (
       <Pressable
@@ -383,7 +400,7 @@ function KeyBlock({
           gap: 8,
         }}
       >
-        <Icons.eye size={14} color={T.ink} strokeWidth={1.6} />
+        <Icons.eye size={18} color={T.ink} strokeWidth={1.6} />
         <Text
           style={[
             sansation,
@@ -460,47 +477,122 @@ function KeyBlock({
     );
   }
 
+  const CopyIcon = copied ? Icons.check : Icons.copy;
+
+  const handleCopy = async () => {
+    await onCopy(state.value);
+    setCopied(true);
+  };
+
   return (
     <View>
-      <View
-        style={{
-          padding: 12,
-          borderRadius: 12,
-          backgroundColor: 'rgba(0,0,0,0.35)',
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.06)',
-        }}
-      >
-        <Text
-          style={[
-            mono,
-            {
-              fontSize: 12,
-              color: T.ink,
-              letterSpacing: 0.3,
-              lineHeight: 18,
-            },
-          ]}
-          selectable
+      <MnemonicGrid value={state.value} hidden={!revealed} />
+
+      <View style={{ alignItems: 'center', marginTop: 14 }}>
+        <Pressable
+          onPress={handleCopy}
+          accessibilityRole="button"
+          accessibilityLabel="Copy recovery phrase"
+          style={({ pressed }) => ({
+            paddingVertical: 10,
+            paddingHorizontal: 18,
+            opacity: pressed ? 0.7 : 1,
+          })}
         >
-          {state.value}
-        </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <CopyIcon
+              size={14}
+              color={copied ? accent : T.inkDim}
+              strokeWidth={copied ? 2.4 : 1.6}
+            />
+            <Text
+              style={[
+                sansation,
+                {
+                  fontSize: 11,
+                  lineHeight: 14,
+                  letterSpacing: 2.4,
+                  textTransform: 'uppercase',
+                  fontWeight: '700',
+                  color: copied ? accent : T.inkDim,
+                  includeFontPadding: false,
+                  textAlignVertical: 'center',
+                },
+              ]}
+            >
+              {copied ? 'Copied' : 'Copy'}
+            </Text>
+          </View>
+        </Pressable>
       </View>
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: 8,
-          marginTop: 10,
-        }}
-      >
-        <SmallBtn
-          label="Copy"
-          icon="copy"
-          flex
-          onPress={() => void onCopy(state.value)}
-        />
-        <SmallBtn label="Hide" icon="hideEye" flex onPress={onHide} />
-      </View>
+    </View>
+  );
+}
+
+function MnemonicGrid({
+  value,
+  hidden,
+}: {
+  value: string;
+  hidden?: boolean;
+}) {
+  const words = hidden
+    ? Array.from({ length: 12 }, () => '••••••')
+    : value.trim().split(/\s+/);
+  return (
+    <View
+      style={{
+        borderRadius: 12,
+        backgroundColor: 'rgba(0,0,0,0.35)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)',
+        paddingVertical: 12,
+        paddingHorizontal: 8,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+      }}
+    >
+      {words.map((w, i) => (
+        <View
+          key={`${i}-${w}`}
+          style={{
+            width: '33.333%',
+            paddingHorizontal: 4,
+            paddingVertical: 6,
+            flexDirection: 'row',
+            alignItems: 'baseline',
+            gap: 6,
+          }}
+        >
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 10,
+                color: T.inkFaint,
+                width: 16,
+                textAlign: 'right',
+              },
+            ]}
+          >
+            {i + 1}
+          </Text>
+          <Text
+            style={[
+              mono,
+              { fontSize: 13, color: T.ink, includeFontPadding: false },
+            ]}
+          >
+            {w}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -710,27 +802,25 @@ function ConfirmExportSheet({
               accessibilityLabel="Continue"
               style={({ pressed }) => ({
                 width: '100%',
-                paddingVertical: 16,
+                paddingVertical: 12,
                 borderRadius: 100,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: acknowledged ? '#ffffff' : 'transparent',
+                backgroundColor: 'rgba(255,255,255,0.05)',
                 borderWidth: 1,
-                borderColor: acknowledged
-                  ? '#ffffff'
-                  : 'rgba(255,255,255,0.25)',
-                opacity: pressed && acknowledged ? 0.85 : 1,
+                borderColor: 'rgba(255,255,255,0.10)',
+                opacity: pressed ? 0.85 : 1,
               })}
             >
               <Text
                 style={[
                   sansation,
                   {
-                    fontSize: 12,
-                    letterSpacing: 2.6,
+                    textAlign: 'center',
+                    fontSize: 11,
+                    letterSpacing: 2.4,
                     textTransform: 'uppercase',
-                    color: acknowledged ? '#0a0a0a' : T.ink,
+                    color: T.ink,
                     fontWeight: '700',
+                    opacity: acknowledged ? 1 : 0.4,
                   },
                 ]}
               >
@@ -816,7 +906,7 @@ function SmallBtn({
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Icon size={14} color={T.ink} strokeWidth={1.6} />
+      <Icon size={18} color={T.ink} strokeWidth={1.6} />
     </Pressable>
   );
 }

@@ -111,6 +111,7 @@ export function ProfileHub() {
   const publicPct = totalUSD > 0 ? publicUSD / totalUSD : 0;
 
   const username = user?.username ?? '';
+  const email = user?.email ?? '';
   const avatarLetter = (username[0] ?? '·').toUpperCase();
   const points = user?.points ?? 0;
 
@@ -124,78 +125,55 @@ export function ProfileHub() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Avatar with concentric rings */}
+        {/* Avatar */}
         <View
           style={{
-            width: 240,
-            height: 200,
             alignSelf: 'center',
+            marginTop: 24,
+            marginBottom: 16,
+            width: 96,
+            height: 96,
+            borderRadius: 48,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.08)',
+            overflow: 'hidden',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: 4,
+            shadowColor: '#000',
+            shadowOpacity: 0.5,
+            shadowRadius: 30,
+            shadowOffset: { width: 0, height: 10 },
           }}
         >
-          {[220, 180, 140].map((d, i) => (
-            <View
-              key={d}
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                width: d,
-                height: d,
-                borderRadius: d / 2,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.06)',
-                opacity: 1 - i * 0.2,
-              }}
-            />
-          ))}
-          <View
+          <LinearGradient
+            colors={['rgba(30,30,34,0.95)', 'rgba(14,14,18,0.98)']}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 0.8, y: 1 }}
             style={{
-              width: 96,
-              height: 96,
-              borderRadius: 48,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.08)',
-              overflow: 'hidden',
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#000',
-              shadowOpacity: 0.5,
-              shadowRadius: 30,
-              shadowOffset: { width: 0, height: 10 },
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
             }}
+          />
+          <Text
+            style={[
+              serif,
+              {
+                fontStyle: 'italic',
+                fontSize: 44,
+                lineHeight: 48,
+                color: S.accent,
+                includeFontPadding: false,
+              },
+            ]}
           >
-            <LinearGradient
-              colors={['rgba(30,30,34,0.95)', 'rgba(14,14,18,0.98)']}
-              start={{ x: 0.2, y: 0 }}
-              end={{ x: 0.8, y: 1 }}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-              }}
-            />
-            <Text
-              style={[
-                serif,
-                {
-                  fontStyle: 'italic',
-                  fontSize: 44,
-                  lineHeight: 48,
-                  color: S.accent,
-                  includeFontPadding: false,
-                },
-              ]}
-            >
-              {avatarLetter}
-            </Text>
-          </View>
+            {avatarLetter}
+          </Text>
         </View>
 
-        {/* Name + handle */}
+        {/* Name + email */}
         <View style={{ alignItems: 'center', marginBottom: 22 }}>
           <Text
             style={[
@@ -209,13 +187,13 @@ export function ProfileHub() {
               },
             ]}
           >
-            {username || '—'}
+            {username ? `@${username}` : '—'}
           </Text>
-          {username ? (
+          {email ? (
             <Text
               style={{ fontSize: 12, color: S.inkDim, letterSpacing: 0.2 }}
             >
-              @{username}
+              {email}
             </Text>
           ) : null}
         </View>
