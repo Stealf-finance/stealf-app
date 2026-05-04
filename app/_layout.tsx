@@ -36,16 +36,19 @@ initSentry();
 
 const env = getEnv();
 
-// Hot path images shipped with the bundle. Preloaded at boot so they're
-// in the asset cache before any screen renders — no flash on first paint.
+// Hot-path images preloaded at boot so they're in the asset cache before
+// the (tabs) Hub mounts — no flash on first paint of the wallet view.
+// `passkey.png` (Login) and `logo.png` (Receive) live behind a navigation
+// step, so we let `expo-image` lazy-load them from the bundle on first
+// mount instead of blocking the splash for them.
 const PRELOAD_IMAGES = [
-  require('../assets/images/passkey.png'),
-  require('../assets/images/logo.png'),
   require('../assets/images/splash-icon.png'),
   require('../assets/images/usdc.png'),
   require('../assets/images/solana-icon.png'),
   require('../assets/images/card-stealf.png'),
 ];
+
+const BOOT_START = Date.now();
 
 function RootLayout() {
   const [imagesLoaded, setImagesLoaded] = useState(false);
@@ -69,7 +72,13 @@ function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if ((fontsLoaded || fontError) && imagesLoaded) SplashScreen.hideAsync();
+    if ((fontsLoaded || fontError) && imagesLoaded) {
+      // Logged in both Dev and Release builds. View in Xcode console
+      // when running `expo run:ios --configuration Release` to compare
+      // splash-hide latency across changes to PRELOAD_IMAGES / fonts.
+      console.log(`[boot-timing] splash-hide=${Date.now() - BOOT_START}ms`);
+      SplashScreen.hideAsync();
+    }
   }, [fontsLoaded, fontError, imagesLoaded]);
 
   if ((!fontsLoaded && !fontError) || !imagesLoaded) return null;
