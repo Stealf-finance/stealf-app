@@ -187,7 +187,7 @@ function WarningBanner() {
       }}
     >
       <View style={{ marginTop: 2 }}>
-        <Icons.info size={14} color={T.red} />
+        <Icons.info size={14} color={T.error} />
       </View>
       <Text
         style={[
@@ -458,7 +458,7 @@ function KeyBlock({
         <Text
           style={[
             sansation,
-            { fontSize: 12, color: T.red, lineHeight: 17 },
+            { fontSize: 12, color: T.error, lineHeight: 17 },
           ]}
         >
           {state.message}

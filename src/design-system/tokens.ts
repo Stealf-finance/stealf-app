@@ -21,7 +21,7 @@ export const T = {
   goldGlow: 'rgba(201,168,106,0.28)',
 
   green: '#7ea688',
-  red: '#d1604a',
+  error: '#d1604a',
 } as const;
 
 export type Token = keyof typeof T;
