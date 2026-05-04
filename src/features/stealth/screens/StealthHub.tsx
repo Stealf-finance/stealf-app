@@ -20,6 +20,7 @@ import Animated, {
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
 import { PrivacyGauge } from '@/src/design-system/primitives/PrivacyGauge';
+import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { SquareActionTile } from '@/src/design-system/primitives/SquareActionTile';
 import {
   sansation,
@@ -676,6 +677,8 @@ export function StealthHub() {
         </View>
       </ScrollView>
       </Animated.View>
+
+      {isPrivate ? <StealthSetupOverlay onClose={() => setMode('public')} /> : null}
     </TonalBackground>
   );
 }

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { applyAmountKey, SOL_DECIMALS } from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
+import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { DirectionRow } from '@/src/features/send/components/DirectionRow';
@@ -50,8 +52,6 @@ export type MoveDirection =
   | 'bank-to-shielded'
   | 'shielded-to-bank'
   | 'stealth-to-bank';
-
-const SOL_DECIMALS = 9;
 
 type DirectionConfig = {
   title: string;
@@ -137,11 +137,23 @@ export function MoveFlow() {
   const fiat = (Number(amount) * rate).toFixed(2);
 
   const close = () => router.back();
-  const onKey = (k: string) => {
-    if (k === '⌫') setAmount((a) => (a.length > 1 ? a.slice(0, -1) : '0'));
-    else if (k === '.') setAmount((a) => (a.includes('.') ? a : a + '.'));
-    else setAmount((a) => (a === '0' ? k : a + k));
-  };
+  const onKey = (k: string) => setAmount((a) => applyAmountKey(a, k));
+
+  // Block bank → shielded the moment the user lands here without a stealth
+  // wallet. No amount entry, no swipe, no chance to type into a flow that's
+  // guaranteed to fail.
+  const stealthMissingForBankToShielded =
+    direction === 'bank-to-shielded' && !!user && !user.stealfWallet;
+
+  const numericAmount = Number(amount);
+  const insufficient = numericAmount > sourceSol;
+  const swipeDisabled = numericAmount <= 0 || insufficient;
+
+  // Scale the amount type down as digits accumulate so very long values stay
+  // on one line. The decimal point doesn't count as a digit.
+  const digitCount = amount.replace('.', '').length;
+  const amountFontSize =
+    digitCount >= 12 ? 36 : digitCount >= 10 ? 48 : digitCount >= 8 ? 60 : 72;
 
   const invalidateAll = async () => {
     const keys: Promise<unknown>[] = [
@@ -174,9 +186,9 @@ export function MoveFlow() {
     const num = Number(amount);
     if (!num || num <= 0) return;
 
-    // Pre-flight: surface auth/wallet gaps as failed pills + close the modal.
-    // The user gets the explanation on the destination screen instead of an
-    // intrusive Alert that traps them in the modal.
+    // Pre-flight: surface auth/wallet/balance gaps as failed pills + close
+    // the modal. The user gets the explanation on the destination screen
+    // instead of an intrusive Alert that traps them in the modal.
     const failPre = (msg: string) => {
       const id = pendingOps.enqueue({
         kind: kindForDirection(direction),
@@ -189,13 +201,24 @@ export function MoveFlow() {
 
     if (!user) return failPre('Please sign in again before continuing.');
     if (direction === 'bank-to-shielded' && !user.stealfWallet) {
-      return failPre('Stealth wallet not set up. Open the Stealth tab once first.');
+      return failPre(
+        'Set up your stealth wallet first. Open the Stealth tab to create or import one.',
+      );
     }
     if (direction === 'shielded-to-bank' && !user.bankWallet) {
-      return failPre('Bank wallet missing.');
+      return failPre('Bank wallet missing. Sign out and back in to restore it.');
     }
     if (direction === 'stealth-to-bank' && (!user.bankWallet || !user.stealfWallet)) {
-      return failPre('Wallets missing.');
+      return failPre(
+        !user.stealfWallet
+          ? 'Set up your stealth wallet first.'
+          : 'Bank wallet missing. Sign out and back in to restore it.',
+      );
+    }
+    if (num > sourceSol) {
+      return failPre(
+        `Not enough ${assetSymbol}. You have ${formatSolBalance(sourceSol)} ${assetSymbol} available.`,
+      );
     }
 
     const lamportsBig = BigInt(Math.floor(num * 10 ** SOL_DECIMALS));
@@ -220,8 +243,19 @@ export function MoveFlow() {
 
       try {
         if (direction === 'bank-to-shielded') {
-
-          await ensureRegistered();
+          // Stealth (the destination) needs its EncryptedUserAccount PDA
+          // before the receiver-claimable encryption can target it. This is
+          // idempotent on subsequent moves.
+          try {
+            await ensureRegistered();
+          } catch (regErr: any) {
+            const reason = regErr?.userMessage || regErr?.message || '';
+            throw Object.assign(new Error('Privacy registration failed'), {
+              userMessage: `Couldn't register your stealth wallet with the privacy protocol${
+                reason ? `: ${reason}` : '.'
+              } Try again in a moment.`,
+            });
+          }
           const bankClient = await getBankClient();
           const create = getPublicBalanceToReceiverClaimableUtxoCreatorFunction({
             client: bankClient,
@@ -302,6 +336,131 @@ export function MoveFlow() {
 
   const ctaLabel = config.cta;
 
+  if (stealthMissingForBankToShielded) {
+    return (
+      <CenterGlow tone={tone}>
+        <View
+          style={{
+            paddingTop: insets.top,
+            paddingHorizontal: 20,
+            paddingBottom: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+          }}
+        >
+          <View style={{ width: 36 }} />
+          <Text
+            style={[
+              serif,
+              {
+                flex: 1,
+                textAlign: 'center',
+                fontSize: 17,
+                color: T.ink,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {config.title}
+          </Text>
+          <CloseBtn onPress={close} />
+        </View>
+
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 32,
+            gap: 14,
+          }}
+        >
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 9,
+                letterSpacing: 2.52,
+                textTransform: 'uppercase',
+                color: palette.accent,
+                fontWeight: '700',
+              },
+            ]}
+          >
+            Stealth wallet required
+          </Text>
+          <Text
+            style={[
+              sansationLight,
+              {
+                fontSize: 26,
+                color: T.ink,
+                textAlign: 'center',
+                letterSpacing: -0.78,
+                lineHeight: 32,
+              },
+            ]}
+          >
+            Set up your stealth wallet first
+          </Text>
+          <Text
+            style={[
+              serif,
+              {
+                fontSize: 14,
+                fontStyle: 'italic',
+                color: palette.inkDim,
+                textAlign: 'center',
+                lineHeight: 21,
+                paddingHorizontal: 12,
+              },
+            ]}
+          >
+            You need a stealth wallet to receive funds privately. Open the
+            Stealth tab to create or import one, then come back here.
+          </Text>
+          <Pressable
+            onPress={() => {
+              close();
+              router.replace('/(tabs)/stealth');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Open stealth setup"
+            style={{
+              marginTop: 12,
+              paddingVertical: 12,
+              paddingHorizontal: 22,
+              borderRadius: 100,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.2)',
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <Text
+              style={[
+                sansation,
+                {
+                  fontSize: 11,
+                  letterSpacing: 2.4,
+                  textTransform: 'uppercase',
+                  fontWeight: '700',
+                  color: T.ink,
+                },
+              ]}
+            >
+              Set up stealth wallet
+            </Text>
+            <Icons.arrRight size={12} color={T.ink} />
+          </Pressable>
+        </View>
+      </CenterGlow>
+    );
+  }
+
   return (
     <CenterGlow tone={tone}>
       <View
@@ -354,10 +513,10 @@ export function MoveFlow() {
             style={[
               sansationLight,
               {
-                fontSize: 72,
-                letterSpacing: -3.6,
+                fontSize: amountFontSize,
+                letterSpacing: amountFontSize * -0.05,
                 color: palette.ink,
-                lineHeight: 72,
+                lineHeight: amountFontSize,
                 includeFontPadding: false,
               },
             ]}
@@ -394,6 +553,22 @@ export function MoveFlow() {
         >
           ≈ ${fiat}
         </Text>
+        {insufficient ? (
+          <Text
+            style={[
+              sansation,
+              {
+                textAlign: 'center',
+                marginTop: 10,
+                fontSize: 11,
+                letterSpacing: 0.4,
+                color: T.red,
+              },
+            ]}
+          >
+            Not enough {assetSymbol} — you have {balanceLabel} {assetSymbol}
+          </Text>
+        ) : null}
       </View>
 
       <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -460,9 +635,11 @@ export function MoveFlow() {
           tone={tone}
           label={ctaLabel}
           onSend={onSubmit}
-          disabled={Number(amount) <= 0}
+          disabled={swipeDisabled}
         />
       </View>
+
+      <StealthSetupOverlay onClose={close} />
     </CenterGlow>
   );
 }

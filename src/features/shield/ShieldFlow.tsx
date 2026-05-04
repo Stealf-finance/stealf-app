@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
+import { applyAmountKey, SOL_DECIMALS } from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,6 +9,7 @@ import { toAddress } from '@/src/services/solana/kit';
 import { SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
+import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { Icons } from '@/src/design-system/icons';
@@ -29,9 +31,6 @@ import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 type Direction = 'shield' | 'unshield';
 
 type Props = { direction: Direction };
-
-
-const SOL_DECIMALS = 9;
 
 const PILL_GRADIENTS: Record<Tone, [string, string]> = {
   silver: ['#e8e8ea', '#9a9a9f'],
@@ -82,29 +81,39 @@ export function ShieldFlow({ direction }: Props) {
   const fiat = (Number(amount) * rate).toFixed(2);
 
   const close = () => router.back();
-  const onKey = (k: string) => {
-    if (k === '⌫') setAmount((a) => (a.length > 1 ? a.slice(0, -1) : '0'));
-    else if (k === '.') setAmount((a) => (a.includes('.') ? a : a + '.'));
-    else setAmount((a) => (a === '0' ? k : a + k));
-  };
+  const onKey = (k: string) => setAmount((a) => applyAmountKey(a, k));
+
+  const numericAmount = Number(amount);
+  const insufficient = numericAmount > sourceSol;
+  const swipeDisabled = numericAmount <= 0 || insufficient;
+
+  const digitCount = amount.replace('.', '').length;
+  const amountFontSize =
+    digitCount >= 12 ? 36 : digitCount >= 10 ? 48 : digitCount >= 8 ? 60 : 72;
 
   const onSubmit = () => {
     const num = Number(amount);
     if (!num || num <= 0) return;
-    if (isShield && !user?.stealfWallet) {
 
+    const failPre = (msg: string) => {
       const id = pendingOps.enqueue({
-        kind: 'shield',
+        kind: isShield ? 'shield' : 'unshield',
         tone,
         amountSol: num,
       });
-      pendingOps.complete(
-        id,
-        'failed',
-        'Stealth wallet not set up. Open it once before shielding.',
-      );
+      pendingOps.complete(id, 'failed', msg);
       close();
-      return;
+    };
+
+    if (!user?.stealfWallet) {
+      return failPre(
+        'Set up your stealth wallet first. Open the Stealth tab to create or import one.',
+      );
+    }
+    if (num > sourceSol) {
+      return failPre(
+        `Not enough ${assetSymbol}. You have ${formatSolBalance(sourceSol)} ${assetSymbol} available.`,
+      );
     }
 
     const amountBigInt = BigInt(Math.floor(num * 10 ** SOL_DECIMALS));
@@ -224,10 +233,10 @@ export function ShieldFlow({ direction }: Props) {
             style={[
               sansationLight,
               {
-                fontSize: 72,
-                letterSpacing: -3.6,
+                fontSize: amountFontSize,
+                letterSpacing: amountFontSize * -0.05,
                 color: palette.ink,
-                lineHeight: 72,
+                lineHeight: amountFontSize,
                 includeFontPadding: false,
               },
             ]}
@@ -264,6 +273,22 @@ export function ShieldFlow({ direction }: Props) {
         >
           ≈ ${fiat}
         </Text>
+        {insufficient ? (
+          <Text
+            style={[
+              sansation,
+              {
+                textAlign: 'center',
+                marginTop: 10,
+                fontSize: 11,
+                letterSpacing: 0.4,
+                color: T.red,
+              },
+            ]}
+          >
+            Not enough {assetSymbol} — you have {balanceLabel} {assetSymbol}
+          </Text>
+        ) : null}
       </View>
 
       <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -328,9 +353,11 @@ export function ShieldFlow({ direction }: Props) {
           tone={tone}
           label={ctaLabel}
           onSend={onSubmit}
-          disabled={Number(amount) <= 0}
+          disabled={swipeDisabled}
         />
       </View>
+
+      <StealthSetupOverlay onClose={close} />
     </CenterGlow>
   );
 }
