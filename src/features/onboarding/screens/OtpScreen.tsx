@@ -13,6 +13,7 @@ import {
 } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { useToast } from '@/src/components/toast/ToastContext';
 import { useAuthFlow } from '../hooks/useAuthFlow';
 
 const S = txPalette('silver');
@@ -27,11 +28,15 @@ type Props = {
 export function OtpScreen({ email, otpId: initialOtpId, onBack }: Props) {
   const insets = useSafeAreaInsets();
   const { verifyEmailCode, resendEmailCode, isLoading } = useAuthFlow();
+  const { show: showToast } = useToast();
 
   const [otpId, setOtpId] = useState(initialOtpId);
 
   const [code, setCode] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  // Field-level error only. Verify failures stay inline next to the
+  // 6-digit input ("Invalid code") because the recovery action is to
+  // retype. Resend / network failures route through Toast.
+  const [verifyError, setVerifyError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S);
 
   useEffect(() => {
@@ -42,25 +47,34 @@ export function OtpScreen({ email, otpId: initialOtpId, onBack }: Props) {
 
   const onSubmit = async () => {
     if (code.length !== 6 || isLoading) return;
-    setError(null);
+    setVerifyError(null);
     try {
       await verifyEmailCode(otpId, code, email);
       // AuthGuard handles routing once setUser fires.
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid code');
+      setVerifyError(err instanceof Error ? err.message : 'Invalid code');
       setCode('');
     }
   };
 
   const onResend = async () => {
     if (cooldown > 0 || isLoading) return;
-    setError(null);
+    setVerifyError(null);
     try {
       const r = await resendEmailCode(email);
       setOtpId(r.otpId);
       setCooldown(RESEND_COOLDOWN_S);
+      showToast({
+        kind: 'success',
+        title: 'Code sent',
+        message: `A new 6-digit code is on its way to ${email}.`,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resend');
+      showToast({
+        kind: 'error',
+        title: 'Could not resend',
+        message: err instanceof Error ? err.message : 'Please try again.',
+      });
     }
   };
 
@@ -151,7 +165,7 @@ export function OtpScreen({ email, otpId: initialOtpId, onBack }: Props) {
             onChange={setCode}
             onSubmit={onSubmit}
             disabled={isLoading}
-            errored={error != null}
+            errored={verifyError != null}
           />
         </View>
 
@@ -182,7 +196,7 @@ export function OtpScreen({ email, otpId: initialOtpId, onBack }: Props) {
           )}
         </Text>
 
-        <FormError message={error} />
+        <FormError message={verifyError} />
       </View>
 
       <View

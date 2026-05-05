@@ -110,6 +110,25 @@ Side-effects in `onSuccess` (invalidate queries) and `onError` (toast).
 - Domain-specific error classes (`UmbraError`) carry a `code` so the UI
   can branch.
 
+### Error display: Toast vs FormError
+
+Two surfaces, two scopes — never mix them inside the same flow.
+
+- **`<FormError>` (inline, below the field)** — *field-level validation*
+  failures the user fixes by retyping. "Invalid format", "Code is
+  wrong", "Username taken". The recovery action is local to the field.
+
+- **Toast (top banner)** — *transient / global* failures the user can't
+  fix by editing the form. Network errors, OAuth provider errors, rate
+  limits, "Code expired, please request a new one", server 5xx, resend
+  failures. Non-blocking; auto-dismisses for info/success, persists for
+  errors until tapped.
+
+If two errors can show on the same screen, route them through different
+surfaces — never two FormErrors and never two Toasts competing. Auth
+flow as the canonical example: `verifyEmailCode` → `<FormError>`,
+`sendEmailCode` / `resendEmailCode` / OAuth errors → Toast.
+
 ## Logging
 
 - Dev only: `if (__DEV__) console.log(...)`. Strip everything else.
