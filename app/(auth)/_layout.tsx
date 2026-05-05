@@ -11,8 +11,11 @@ export default function AuthLayout() {
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: 'transparent' },
-            animation: 'fade',
-            animationDuration: 500,
+            // AuthFlow owns the intra-flow fade between auth/email/otp;
+            // an Expo Router screen-level fade on top of that produces
+            // a competing crossfade that reads as ghosting. Disable
+            // here — there is only one route in this stack anyway.
+            animation: 'none',
           }}
         />
       </CenterGlow>

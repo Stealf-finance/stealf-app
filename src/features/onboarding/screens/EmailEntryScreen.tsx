@@ -5,7 +5,6 @@ import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StepBar } from '@/src/design-system/primitives/StepBar';
 import { UnderlineField } from '@/src/design-system/primitives/UnderlineField';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
-import { FormError } from '@/src/design-system/primitives/FormError';
 import { Icons } from '@/src/design-system/icons';
 import {
   sansation,
@@ -14,6 +13,7 @@ import {
 } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { useToast } from '@/src/components/toast/ToastContext';
 import { useAuthFlow } from '../hooks/useAuthFlow';
 
 const S = txPalette('silver');
@@ -30,21 +30,27 @@ type Props = {
 export function EmailEntryScreen({ onBack, onSent }: Props) {
   const insets = useSafeAreaInsets();
   const { sendEmailCode, isLoading } = useAuthFlow();
+  const { show: showToast } = useToast();
 
   const [email, setEmail] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
   const valid = isValidEmail(email);
 
+  // Send failures are transient (network / Turnkey 5xx / rate limit) —
+  // not something the user fixes by retyping the email. Toast pattern
+  // per docs/conventions.md "Error display".
   const onSubmit = async () => {
     if (!valid || isLoading) return;
-    setError(null);
     try {
       const trimmed = email.trim();
       const { otpId } = await sendEmailCode(trimmed);
       onSent(trimmed, otpId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send code');
+      showToast({
+        kind: 'error',
+        title: 'Could not send code',
+        message: err instanceof Error ? err.message : 'Please try again.',
+      });
     }
   };
 
@@ -131,10 +137,7 @@ export function EmailEntryScreen({ onBack, onSent }: Props) {
 
         <UnderlineField
           value={email}
-          onChangeText={(v) => {
-            setEmail(v.trim());
-            if (error) setError(null);
-          }}
+          onChangeText={(v) => setEmail(v.trim())}
           placeholder="you@example.com"
           keyboardType="email-address"
           autoCapitalize="none"
@@ -143,8 +146,6 @@ export function EmailEntryScreen({ onBack, onSent }: Props) {
             valid ? <Icons.check size={18} color={SOLANA_GREEN} /> : null
           }
         />
-
-        <FormError message={error} />
       </View>
 
       <View

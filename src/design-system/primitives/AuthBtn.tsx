@@ -19,13 +19,12 @@ type Props = {
   accessibilityLabel?: string;
 };
 
-const PRIMARY_BG = '#f1ece1';
-const PRIMARY_INK = '#0a0a0a';
-
 /**
  * Auth provider button (Apple / Google / Email). Two variants:
- *  - `primary`: cream slab — used for the recommended provider.
- *  - `glass`: subtle semi-transparent slab with hairline border.
+ *  - `primary`: cream slab (T.ink bg) — used for the recommended provider
+ *    on the current platform (Apple on iOS, Google on Android).
+ *  - `glass`: subtle semi-transparent slab (T.bgCardStrong) with hairline
+ *    border (T.hairlineStrong).
  *
  * Pressable is the event surface; an inner View carries all visuals.
  * That split is deliberate — applying `borderRadius` + `backgroundColor`
@@ -43,7 +42,9 @@ export function AuthBtn({
   accessibilityLabel,
 }: Props) {
   const isPrimary = variant === 'primary';
-  const inkColor = isPrimary ? PRIMARY_INK : T.ink;
+  // Primary inverts ink/bg: cream slab with dark text + dark loader dots.
+  // Glass keeps cream ink on dark surface so the spinner stays visible.
+  const inkColor = isPrimary ? T.bg : T.ink;
 
   return (
     <Pressable
@@ -52,7 +53,7 @@ export function AuthBtn({
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       accessibilityLabel={accessibilityLabel ?? label}
-      style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }, style]}
+      style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }, style]}
     >
       <View
         style={{
@@ -66,10 +67,10 @@ export function AuthBtn({
           alignItems: 'center',
           justifyContent: 'center',
           gap: 12,
-          backgroundColor: isPrimary ? PRIMARY_BG : 'rgba(255,255,255,0.06)',
+          backgroundColor: isPrimary ? T.ink : T.bgCardStrong,
           borderWidth: isPrimary ? 0 : 1,
-          borderColor: 'rgba(255,255,255,0.14)',
-          shadowColor: '#000',
+          borderColor: T.hairlineStrong,
+          shadowColor: T.shadow,
           shadowOpacity: isPrimary ? 0.4 : 0,
           shadowRadius: 24,
           shadowOffset: { width: 0, height: 8 },

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTurnkey, ClientState } from '@turnkey/react-native-wallet-kit';
 import { OtpType } from '@turnkey/core';
+import * as Sentry from '@sentry/react-native';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { useAuth, readPersistedStealfWallet } from '../context/AuthContext';
 import { finalizeOAuthAuth, type AuthMethod } from '../api/onboarding';
@@ -110,7 +111,6 @@ export function useAuthFlow() {
       console.log('[useAuthFlow] starting finalize', {
         method,
         hasEmail: !!email,
-        emailValue: email,
       });
     }
     finalizePostAuth({ authMethod: method, sessionToken, email })
@@ -228,9 +228,15 @@ export function useAuthFlow() {
 
 function pseudoFromEmail(email: string): string {
   const local = email.split('@')[0] ?? '';
-  const sanitized = local.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20);
-  if (sanitized.length >= 3) return sanitized;
-  return `user${Math.floor(Math.random() * 1_000_000)}`;
+  const sanitized = local.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 14);
+  // Always append a random suffix so two users with the same local part
+  // (john@a.com, john@b.com) don't collide on the backend pseudo unique
+  // index. 14 + 1 + 4 = 19 chars max, under the backend Zod cap of 20.
+  const suffix = Math.floor(Math.random() * 0x10000)
+    .toString(16)
+    .padStart(4, '0');
+  const base = sanitized.length >= 1 ? sanitized : 'user';
+  return `${base}_${suffix}`;
 }
 
 function toMessage(err: unknown): string {
@@ -239,13 +245,24 @@ function toMessage(err: unknown): string {
 }
 
 function isCancellationError(err: unknown): boolean {
-  const msg = String((err as Error | undefined)?.message ?? '').toLowerCase();
-
-  if (msg.includes('did not complete successfully')) return true;
-  return (
+  const rawMsg = String((err as Error | undefined)?.message ?? '');
+  const msg = rawMsg.toLowerCase();
+  const matches =
+    msg.includes('did not complete successfully') ||
     msg.includes('cancel') ||
     msg.includes('dismiss') ||
     msg.includes('interrupt') ||
-    msg.includes('user closed')
-  );
+    msg.includes('user closed');
+  if (matches) {
+    // Loose substring matching means a backend "server cancelled the request"
+    // would also be silenced. Drop a breadcrumb so a real error masquerading
+    // as a cancel still leaves a trail in Sentry.
+    Sentry.addBreadcrumb({
+      category: 'auth.cancel',
+      level: 'info',
+      message: 'OAuth flow swallowed as cancellation',
+      data: { rawMessage: rawMsg.slice(0, 200) },
+    });
+  }
+  return matches;
 }
