@@ -47,7 +47,7 @@ class SocketService {
     this.socket.on('connect', () => {
       if (__DEV__)
         console.log(
-          '[Socket] ✅ connected',
+          '[Socket] connected',
           this.socket?.id,
           '— resubscribing wallets:',
           Array.from(this.subscribedWallets),
@@ -62,9 +62,7 @@ class SocketService {
         this.socket?.emit('subscribe:yield', this.yieldChannel);
       }
 
-      // First connect = nothing to catch up. Subsequent connects mean we
-      // dropped and reconnected, so fire reconnect listeners for callers
-      // (e.g. RQ invalidation) to refetch what they may have missed.
+
       if (this.hasConnectedOnce) {
         if (__DEV__)
           console.log(

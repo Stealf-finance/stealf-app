@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,8 +24,21 @@ type Props = {
 export function AuthScreen({ onEmail }: Props) {
   const insets = useSafeAreaInsets();
   const { show: showToast } = useToast();
-  const { signInWithApple, signInWithGoogle, isLoading, isClientReady } =
-    useAuthFlow();
+  const {
+    signInWithApple,
+    signInWithGoogle,
+    isLoading,
+    isClientReady,
+    error,
+  } = useAuthFlow();
+
+  // OAuth errors raised inside the post-auth effect can't reach the
+  // try/catch around signInWith*, so we surface them via a toast as soon as
+  // the hook's `error` state changes.
+  useEffect(() => {
+    if (!error) return;
+    showToast({ kind: 'error', title: 'Error', message: error });
+  }, [error, showToast]);
 
   if (__DEV__) {
     console.log(
@@ -35,30 +49,18 @@ export function AuthScreen({ onEmail }: Props) {
     );
   }
 
-  const onApple = async () => {
+  // The hook surfaces every non-cancellation error via its `error` state,
+  // which we mirror to a toast in the effect above. We don't need a local
+  // try/catch — runOAuth swallows cancels and absorbs other errors into
+  // state, so just calling it is enough.
+  const onApple = () => {
     if (__DEV__) console.log('[AuthScreen] tap Apple');
-    try {
-      await signInWithApple();
-    } catch (err) {
-      if (__DEV__) console.error('[AuthScreen] Apple error:', err);
-      const msg = err instanceof Error ? err.message : 'Sign in failed';
-      if (!isQuietCancel(err)) {
-        showToast({ kind: 'error', title: 'Could not sign in', message: msg });
-      }
-    }
+    void signInWithApple();
   };
 
-  const onGoogle = async () => {
+  const onGoogle = () => {
     if (__DEV__) console.log('[AuthScreen] tap Google');
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      if (__DEV__) console.error('[AuthScreen] Google error:', err);
-      const msg = err instanceof Error ? err.message : 'Sign in failed';
-      if (!isQuietCancel(err)) {
-        showToast({ kind: 'error', title: 'Could not sign in', message: msg });
-      }
-    }
+    void signInWithGoogle();
   };
 
   // Only block during an in-flight auth — not while Turnkey boots. If
@@ -216,12 +218,3 @@ export function AuthScreen({ onEmail }: Props) {
   );
 }
 
-function isQuietCancel(err: unknown): boolean {
-  const msg = String((err as Error | undefined)?.message ?? '').toLowerCase();
-  return (
-    msg.includes('cancel') ||
-    msg.includes('dismiss') ||
-    msg.includes('interrupt') ||
-    msg.includes('user closed')
-  );
-}

@@ -12,6 +12,7 @@ import {
 } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { useTurnkey } from '@turnkey/react-native-wallet-kit';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useLogout } from '@/src/features/onboarding/hooks/useLogout';
 import { useDeleteAccount } from '@/src/features/onboarding/hooks/useDeleteAccount';
@@ -62,6 +63,7 @@ export function ProfileHub() {
   const insets = useSafeAreaInsets();
   const router = useSafeRouter();
   const { user } = useAuth();
+  const turnkey = useTurnkey();
   const logout = useLogout();
   const deleteAccount = useDeleteAccount();
 
@@ -111,7 +113,8 @@ export function ProfileHub() {
   const publicPct = totalUSD > 0 ? publicUSD / totalUSD : 0;
 
   const username = user?.username ?? '';
-  const email = user?.email ?? '';
+  // Backend never holds plaintext email; pull it from Turnkey's user record.
+  const email = turnkey.user?.userEmail ?? '';
   const avatarLetter = (username[0] ?? '·').toUpperCase();
   const points = user?.points ?? 0;
 

@@ -17,7 +17,7 @@ import { PostHogProvider } from 'posthog-react-native';
 import { validateEnv, getEnv } from '@/src/services/env';
 import { initSentry, Sentry } from '@/src/services/observability/sentry';
 import { queryClient } from '@/src/services/queryClient';
-import { getTurnkeyConfig, TURNKEY_CALLBACKS } from '@/src/services/turnkey/config';
+import { TURNKEY_CONFIG, TURNKEY_CALLBACKS } from '@/src/services/turnkey/config';
 import { AuthProvider } from '@/src/features/onboarding/context/AuthContext';
 import { PrivacyModeProvider } from '@/src/features/stealth/PrivacyModeContext';
 import { BalanceVisibilityProvider } from '@/src/features/wallet/BalanceVisibilityContext';
@@ -38,11 +38,6 @@ initSentry();
 
 const env = getEnv();
 
-// Hot-path images preloaded at boot so they're in the asset cache before
-// the (tabs) Hub mounts — no flash on first paint of the wallet view.
-// `passkey.png` (Login) and `logo.png` (Receive) live behind a navigation
-// step, so we let `expo-image` lazy-load them from the bundle on first
-// mount instead of blocking the splash for them.
 const PRELOAD_IMAGES = [
   require('../assets/images/splash-icon.png'),
   require('../assets/images/usdc.png'),
@@ -75,9 +70,7 @@ function RootLayout() {
 
   useEffect(() => {
     if ((fontsLoaded || fontError) && imagesLoaded) {
-      // Logged in both Dev and Release builds. View in Xcode console
-      // when running `expo run:ios --configuration Release` to compare
-      // splash-hide latency across changes to PRELOAD_IMAGES / fonts.
+
       console.log(`[boot-timing] splash-hide=${Date.now() - BOOT_START}ms`);
       SplashScreen.hideAsync();
     }
@@ -89,7 +82,7 @@ function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <TurnkeyProvider config={getTurnkeyConfig()} callbacks={TURNKEY_CALLBACKS}>
+          <TurnkeyProvider config={TURNKEY_CONFIG} callbacks={TURNKEY_CALLBACKS}>
             <AuthProvider>
               <SocketProvider>
                 <PrivacyModeProvider initial="public">

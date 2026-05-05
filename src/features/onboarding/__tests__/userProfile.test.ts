@@ -46,7 +46,6 @@ describe('fetchUserProfile', () => {
     mockFetchOk({
       data: {
         user: {
-          email: 'thomas@stealf.xyz',
           username: 'thomas',
           bank_wallet: SAMPLE_BANK_WALLET,
           stealf_wallet: null,
@@ -58,7 +57,6 @@ describe('fetchUserProfile', () => {
 
     const user = await fetchUserProfile('session-token', SAMPLE_BANK_WALLET);
 
-    expect(user.email).toBe('thomas@stealf.xyz');
     expect(user.username).toBe('thomas');
     expect(user.bankWallet).toBe(SAMPLE_BANK_WALLET);
     expect(user.stealfWallet).toBeNull();
@@ -70,7 +68,6 @@ describe('fetchUserProfile', () => {
     mockFetchOk({
       data: {
         user: {
-          email: 'thomas@stealf.xyz',
           pseudo: 'thomas-pseudo',
           bank_wallet: SAMPLE_BANK_WALLET,
           subOrgId: 'sub-123',
@@ -94,7 +91,6 @@ describe('fetchUserProfile', () => {
     mockFetchOk({
       data: {
         user: {
-          email: 'thomas@stealf.xyz',
           username: 'thomas',
           bank_wallet: 'not-a-real-address',
           subOrgId: 'sub-123',

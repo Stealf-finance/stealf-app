@@ -7,7 +7,6 @@ const SolanaAddress = z
   .regex(/^[1-9A-HJ-NP-Za-km-z]+$/, 'invalid Solana base58 address');
 
 export const UserSchema = z.object({
-  email: z.string().email(),
   username: z.string().min(1),
   bankWallet: SolanaAddress,
   stealfWallet: SolanaAddress.optional().nullable(),
@@ -23,8 +22,10 @@ export const SessionSchema = z.object({
 });
 export type Session = z.infer<typeof SessionSchema>;
 
+// Backend stores email hashed + encrypted only — it never returns the
+// plaintext. The display email comes from Turnkey's user record on the
+// client (`useTurnkey().user?.userEmail`).
 const BackendUserSchema = z.object({
-  email: z.string().email(),
   username: z.string().nullish(),
   pseudo: z.string().nullish(),
   bank_wallet: SolanaAddress,
@@ -37,7 +38,6 @@ export const UserProfileResponseSchema = z
   .object({ user: BackendUserSchema })
   .or(BackendUserSchema.transform((user) => ({ user })))
   .transform(({ user }) => UserSchema.parse({
-    email: user.email,
     username: user.username ?? user.pseudo ?? '',
     bankWallet: user.bank_wallet,
     stealfWallet: user.stealf_wallet ?? null,

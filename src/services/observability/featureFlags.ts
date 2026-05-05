@@ -1,18 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getPostHog } from './posthog';
 
-/**
- * Per-slice feature flag with a killswitch path.
- *
- * - In `__DEV__`, always returns `defaultValue` (so the dev workspace stays
- *   editable without depending on PostHog). Override by hard-coding `false`
- *   locally if you specifically want to test a "slice off" path.
- * - In production, reads the flag from PostHog (lazy: returns `defaultValue`
- *   until PostHog has loaded the flag set).
- *
- * Convention: each slice is gated behind `slice-<name>-enabled` so we can
- * disable a buggy slice from the PostHog dashboard without shipping a build.
- */
+
 export function useFeatureFlag(name: string, defaultValue = false): boolean {
   const [enabled, setEnabled] = useState(defaultValue);
 

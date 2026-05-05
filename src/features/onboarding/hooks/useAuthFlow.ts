@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTurnkey, ClientState } from '@turnkey/react-native-wallet-kit';
 import { OtpType } from '@turnkey/core';
@@ -9,6 +9,11 @@ import { userProfileQueries } from '../api/userProfile';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
 
+type FinalizeArgs = {
+  authMethod: AuthMethod;
+  sessionToken: string;
+  email: string | undefined;
+};
 
 export function useAuthFlow() {
   const turnkey = useTurnkey();
@@ -21,24 +26,16 @@ export function useAuthFlow() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [pendingOauth, setPendingOauth] = useState<AuthMethod | null>(null);
+
+  const finalizingRef = useRef(false);
+
   const isClientReady = turnkey.clientState === ClientState.Ready;
 
   const finalizePostAuth = useCallback(
-    async (authMethod: AuthMethod, emailOverride?: string) => {
+    async ({ authMethod, sessionToken, email }: FinalizeArgs) => {
       const tk = turnkeyRef.current;
 
-      const sessionToken = tk.session?.token;
-      if (!sessionToken) {
-        throw new Error('Turnkey session missing after authentication');
-      }
-
-      const email = emailOverride ?? tk.user?.userEmail;
-      if (!email) {
-        throw new Error('No email returned by the auth provider');
-      }
-
-      // OAuth providers create the wallet during auth; if it isn't already
-      // mirrored in the context, refresh once before reading.
       const wallets = tk.wallets.length
         ? tk.wallets
         : await tk.refreshWallets();
@@ -47,25 +44,19 @@ export function useAuthFlow() {
         throw new Error('Bank wallet not provisioned');
       }
 
-      const pseudo = pseudoFromEmail(email);
-
-      // Idempotent upsert. Returning users get their existing record back.
       const profile = await finalizeOAuthAuth({
         sessionToken,
         email,
-        pseudo,
+        pseudo: email ? pseudoFromEmail(email) : undefined,
         cashWallet,
         authMethod,
       });
 
-      // Hydrate locally-persisted stealth wallet (the backend doesn't track
-      // it) so AuthContext is whole on first paint.
       const persistedStealf = await readPersistedStealfWallet();
       const enriched = persistedStealf
         ? { ...profile, stealfWallet: persistedStealf }
         : profile;
 
-      // Drop any stale cache so post-login fetches always hit the network.
       queryClient.removeQueries({
         queryKey: balanceQueries.byAddress(cashWallet),
       });
@@ -73,8 +64,6 @@ export function useAuthFlow() {
         queryKey: historyQueries.byAddress(cashWallet),
       });
 
-      // Warm balance + history so the Bank tab paints fresh data with no
-      // spinner on first frame.
       void Promise.all([
         queryClient.prefetchQuery({
           queryKey: balanceQueries.byAddress(cashWallet),
@@ -100,37 +89,55 @@ export function useAuthFlow() {
     [queryClient, setSession, setUser],
   );
 
+  useEffect(() => {
+    if (!pendingOauth) return;
+    if (finalizingRef.current) return;
+    const sessionToken = turnkey.session?.token;
+    if (!sessionToken) return;
+    if (turnkey.wallets.length === 0) return;
+
+    const email = turnkey.user?.userEmail;
+    finalizingRef.current = true;
+    const method = pendingOauth;
+    setPendingOauth(null);
+    finalizePostAuth({ authMethod: method, sessionToken, email })
+      .catch((err) => {
+        if (__DEV__) console.error('[useAuthFlow] finalize failed:', err);
+        setError(toMessage(err));
+      })
+      .finally(() => {
+        finalizingRef.current = false;
+        setIsLoading(false);
+      });
+  }, [
+    pendingOauth,
+    turnkey.session?.token,
+    turnkey.user?.userEmail,
+    turnkey.wallets.length,
+    finalizePostAuth,
+  ]);
+
   const runOAuth = useCallback(
     async (provider: 'google' | 'apple') => {
       const tk = turnkeyRef.current;
       const handler =
         provider === 'google' ? tk.handleGoogleOauth : tk.handleAppleOauth;
-      if (__DEV__) {
-        console.log(
-          `[useAuthFlow] runOAuth ${provider} start, clientState=`,
-          tk.clientState,
-          'handler=',
-          typeof handler,
-        );
-      }
       setIsLoading(true);
       setError(null);
       try {
+
+        setPendingOauth(provider);
         await handler();
-        if (__DEV__) console.log(`[useAuthFlow] ${provider} OAuth resolved`);
-        await finalizePostAuth(provider);
-        if (__DEV__) console.log(`[useAuthFlow] ${provider} finalize done`);
+
       } catch (err) {
-        if (__DEV__) console.error(`[useAuthFlow] ${provider} threw:`, err);
-        if (!isCancellationError(err)) {
-          setError(toMessage(err));
-        }
-        throw err;
-      } finally {
+        setPendingOauth(null);
         setIsLoading(false);
+
+        if (isCancellationError(err)) return;
+        setError(toMessage(err));
       }
     },
-    [finalizePostAuth],
+    [],
   );
 
   const signInWithGoogle = useCallback(() => runOAuth('google'), [runOAuth]);
@@ -164,13 +171,21 @@ export function useAuthFlow() {
       setIsLoading(true);
       setError(null);
       try {
-        await turnkeyRef.current.completeOtp({
+        const result = await turnkeyRef.current.completeOtp({
           otpId,
           otpCode,
           contact: email,
           otpType: OtpType.Email,
         });
-        await finalizePostAuth('email', email);
+        const sessionToken = result?.sessionToken;
+        if (!sessionToken) {
+          throw new Error('OTP verification did not return a session');
+        }
+        await finalizePostAuth({
+          authMethod: 'email',
+          sessionToken,
+          email,
+        });
       } catch (err) {
         setError(toMessage(err));
         throw err;
@@ -193,10 +208,6 @@ export function useAuthFlow() {
   };
 }
 
-// Pseudo derived from the email local-part. Matches the User schema's
-// `username` regex (alphanumeric + underscore, 3-20 chars). Fallback to a
-// random suffix if the local-part doesn't survive sanitization (e.g. only
-// punctuation, very rare).
 function pseudoFromEmail(email: string): string {
   const local = email.split('@')[0] ?? '';
   const sanitized = local.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 20);
@@ -211,6 +222,8 @@ function toMessage(err: unknown): string {
 
 function isCancellationError(err: unknown): boolean {
   const msg = String((err as Error | undefined)?.message ?? '').toLowerCase();
+
+  if (msg.includes('did not complete successfully')) return true;
   return (
     msg.includes('cancel') ||
     msg.includes('dismiss') ||

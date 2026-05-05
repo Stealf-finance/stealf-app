@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -7,7 +7,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 import { T } from '@/src/design-system/tokens';
 import { Icons } from '@/src/design-system/icons';
@@ -17,10 +17,13 @@ import { useToast, useTopToast } from './ToastContext';
 import type { Toast, ToastKind } from './ToastContext';
 
 const HORIZONTAL_PAD = 16;
-const MAX_WIDTH = 340;
-// Sits below the PendingOpsPill (top + 8 + 44 height) so a concurrent
-// transaction pill doesn't overlap with a wallet-management toast.
-const TOP_OFFSET = 60;
+const MAX_WIDTH = 380;
+// Sit just under the dynamic island / status bar. The PendingOpsPill is
+// only visible inside the authenticated tabs (top + 8 + 44 height); on
+// auth screens this offset gives the toast a clean banner-like position
+// at the top of the view, and inside the app the pill nudges it down
+// only a bit.
+const TOP_OFFSET = 8;
 
 export function ToastHost() {
   const top = useTopToast();
@@ -93,28 +96,6 @@ function accentFor(kind: ToastKind): string {
   }
 }
 
-function borderFor(kind: ToastKind): string {
-  switch (kind) {
-    case 'error':
-      return 'rgba(209,96,74,0.35)';
-    case 'success':
-      return 'rgba(126,166,136,0.32)';
-    case 'info':
-      return 'rgba(201,168,106,0.32)';
-  }
-}
-
-function badgeFor(kind: ToastKind): string {
-  switch (kind) {
-    case 'error':
-      return 'rgba(209,96,74,0.16)';
-    case 'success':
-      return 'rgba(126,166,136,0.16)';
-    case 'info':
-      return 'rgba(201,168,106,0.16)';
-  }
-}
-
 function ToastBody({
   toast,
   onDismiss,
@@ -123,8 +104,6 @@ function ToastBody({
   onDismiss: () => void;
 }) {
   const accent = accentFor(toast.kind);
-  const border = borderFor(toast.kind);
-  const badge = badgeFor(toast.kind);
 
   const Icon =
     toast.kind === 'error'
@@ -140,44 +119,66 @@ function ToastBody({
       accessibilityLabel={`${toast.title}${toast.message ? `. ${toast.message}` : ''}. Tap to dismiss.`}
       style={{
         alignSelf: 'center',
+        width: '100%',
         maxWidth: MAX_WIDTH,
-        minHeight: 52,
-        borderRadius: 14,
+        borderRadius: 18,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: border,
+        borderColor: 'rgba(255,255,255,0.10)',
         shadowColor: '#000',
-        shadowOpacity: 0.45,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.55,
+        shadowRadius: 24,
+        shadowOffset: { width: 0, height: 12 },
       }}
     >
-      <LinearGradient
-        colors={['rgba(20,20,22,0.96)', 'rgba(12,12,14,0.96)']}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      {/* Glassmorphism: blur + dark wash. iOS gets the native blur; on
+          Android we fall back to a translucent solid because BlurView is
+          spotty there. */}
+      <BlurView
+        intensity={Platform.OS === 'ios' ? 50 : 0}
+        tint="dark"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor:
+            Platform.OS === 'ios'
+              ? 'rgba(12,12,14,0.55)'
+              : 'rgba(12,12,14,0.92)',
+        }}
       />
       <View
         style={{
           flexDirection: 'row',
-          alignItems: 'flex-start',
-          paddingVertical: 12,
-          paddingLeft: 12,
-          paddingRight: 14,
-          gap: 10,
+          alignItems: 'center',
+          paddingVertical: 16,
+          paddingLeft: 16,
+          paddingRight: 18,
+          gap: 14,
         }}
       >
         <View
           style={{
-            width: 22,
-            height: 22,
-            borderRadius: 11,
-            backgroundColor: badge,
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            backgroundColor: accent,
             alignItems: 'center',
             justifyContent: 'center',
-            marginTop: 1,
           }}
         >
-          <Icon size={12} color={accent} />
+          <Icon size={14} color="#FFFFFF" />
         </View>
 
         <View style={{ flex: 1 }}>
@@ -185,7 +186,7 @@ function ToastBody({
             style={[
               sansationBold,
               {
-                fontSize: 13,
+                fontSize: 16,
                 color: T.ink,
                 includeFontPadding: false,
               },
@@ -199,10 +200,10 @@ function ToastBody({
               style={[
                 sansation,
                 {
-                  marginTop: 2,
-                  fontSize: 12,
+                  marginTop: 4,
+                  fontSize: 14,
                   color: T.inkDim,
-                  lineHeight: 16,
+                  lineHeight: 18,
                   includeFontPadding: false,
                 },
               ]}

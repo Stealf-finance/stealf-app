@@ -96,21 +96,29 @@ async function request<T extends object>(
     unknown
   >;
   const payload = (json.data ?? json) as unknown;
-  return schema.parse(payload);
+  // Zod's verbose JSON error.message would otherwise leak straight onto the
+  // OTP/auth screen via the surrounding catch — keep it short and human.
+  const result = schema.safeParse(payload);
+  if (!result.success) {
+    throw new Error('Unexpected response from server');
+  }
+  return result.data;
 }
 
 export type AuthMethod = 'google' | 'apple' | 'email';
 
 /**
- * Idempotent upsert: takes a Turnkey session token + the wallet address
- * Turnkey generated for the user, and returns the Stealf user record
- * (creating it if this is the user's first sign-in). The endpoint trusts
- * the Turnkey JWT and uses it to authenticate the caller.
+ * Idempotent upsert: hits the backend with the Turnkey session JWT (used
+ * to identify the sub-org) plus the wallet Turnkey just generated. Email
+ * + pseudo are required at first sign-in but absent on returning Apple
+ * users — Apple drops the email claim from the id_token after the first
+ * authorization, and we don't need it because the backend looks the user
+ * up by their Turnkey sub-org ID.
  */
 export async function finalizeOAuthAuth(input: {
   sessionToken: string;
-  email: string;
-  pseudo: string;
+  email: string | undefined;
+  pseudo: string | undefined;
   cashWallet: string;
   authMethod: AuthMethod;
 }): Promise<User> {
