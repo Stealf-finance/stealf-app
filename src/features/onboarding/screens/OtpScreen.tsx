@@ -199,6 +199,7 @@ export function OtpScreen({ email, otpId: initialOtpId, onBack }: Props) {
           onPress={onSubmit}
         />
       </View>
+
     </View>
   );
 }

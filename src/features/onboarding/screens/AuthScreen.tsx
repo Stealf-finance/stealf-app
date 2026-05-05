@@ -27,8 +27,8 @@ export function AuthScreen({ onEmail }: Props) {
   const {
     signInWithApple,
     signInWithGoogle,
-    isLoading,
-    isClientReady,
+    isAuthenticating,
+    pendingProvider,
     error,
   } = useAuthFlow();
 
@@ -40,33 +40,17 @@ export function AuthScreen({ onEmail }: Props) {
     showToast({ kind: 'error', title: 'Error', message: error });
   }, [error, showToast]);
 
-  if (__DEV__) {
-    console.log(
-      '[AuthScreen] render, isClientReady=',
-      isClientReady,
-      'isLoading=',
-      isLoading,
-    );
-  }
 
-  // The hook surfaces every non-cancellation error via its `error` state,
-  // which we mirror to a toast in the effect above. We don't need a local
-  // try/catch — runOAuth swallows cancels and absorbs other errors into
-  // state, so just calling it is enough.
   const onApple = () => {
-    if (__DEV__) console.log('[AuthScreen] tap Apple');
     void signInWithApple();
   };
 
   const onGoogle = () => {
-    if (__DEV__) console.log('[AuthScreen] tap Google');
     void signInWithGoogle();
   };
 
-  // Only block during an in-flight auth — not while Turnkey boots. If
-  // `clientState` never becomes Ready (missing env vars, bad config), users
-  // would be stuck staring at unresponsive buttons forever.
-  const disabled = isLoading;
+
+  const disabled = isAuthenticating;
 
   return (
     <View style={{ flex: 1 }}>
@@ -175,6 +159,7 @@ export function AuthScreen({ onEmail }: Props) {
           icon={<AppleGlyph size={18} color="#0a0a0a" />}
           label="Continue with Apple"
           disabled={disabled}
+          loading={pendingProvider === 'apple'}
           onPress={onApple}
         />
         <AuthBtn
@@ -182,6 +167,7 @@ export function AuthScreen({ onEmail }: Props) {
           icon={<GoogleGlyph size={18} />}
           label="Continue with Google"
           disabled={disabled}
+          loading={pendingProvider === 'google'}
           onPress={onGoogle}
         />
         <AuthBtn
@@ -214,6 +200,7 @@ export function AuthScreen({ onEmail }: Props) {
           </Text>
         </Text>
       </View>
+
     </View>
   );
 }

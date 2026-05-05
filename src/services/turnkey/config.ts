@@ -19,6 +19,12 @@ export const TURNKEY_CONFIG: TurnkeyProviderConfig = {
   organizationId: process.env.EXPO_PUBLIC_ORGANIZATION_ID!,
   authProxyConfigId: process.env.EXPO_PUBLIC_AUTH_PROXY_CONFIG_ID!,
 
+  // Tells the provider to refresh `user` + `wallets` automatically after
+  // every auth event. Without it the provider sets the session but
+  // leaves user/wallets empty, so our post-auth effect can't read the
+  // user's email and the backend rejects the signup.
+  autoRefreshManagedState: true,
+
   auth: {
     otp: { email: true },
     oauth: {

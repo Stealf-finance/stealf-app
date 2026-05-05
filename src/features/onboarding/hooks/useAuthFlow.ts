@@ -95,23 +95,41 @@ export function useAuthFlow() {
     const sessionToken = turnkey.session?.token;
     if (!sessionToken) return;
     if (turnkey.wallets.length === 0) return;
-
-    const email = turnkey.user?.userEmail;
+    // Turnkey's post-auth pipeline is setSession → refreshWallets →
+    // refreshUser. Gating only on session+wallets fires us between the
+    // 2nd and 3rd step, when user.userEmail isn't loaded yet — and Apple
+    // first-signups need that email for the backend to create the
+    // record. userId is the cheapest "user is fully loaded" signal.
+    if (!turnkey.user?.userId) return;
     finalizingRef.current = true;
+
+    setIsLoading(true);
     const method = pendingOauth;
-    setPendingOauth(null);
+    const email = turnkey.user?.userEmail;
+    if (__DEV__) {
+      console.log('[useAuthFlow] starting finalize', {
+        method,
+        hasEmail: !!email,
+        emailValue: email,
+      });
+    }
     finalizePostAuth({ authMethod: method, sessionToken, email })
       .catch((err) => {
-        if (__DEV__) console.error('[useAuthFlow] finalize failed:', err);
+        if (__DEV__) {
+          const data = (err as { data?: unknown })?.data;
+          console.error('[useAuthFlow] finalize failed:', err, 'body:', data);
+        }
         setError(toMessage(err));
       })
       .finally(() => {
         finalizingRef.current = false;
         setIsLoading(false);
+        setPendingOauth(null);
       });
   }, [
     pendingOauth,
     turnkey.session?.token,
+    turnkey.user?.userId,
     turnkey.user?.userEmail,
     turnkey.wallets.length,
     finalizePostAuth,
@@ -122,17 +140,13 @@ export function useAuthFlow() {
       const tk = turnkeyRef.current;
       const handler =
         provider === 'google' ? tk.handleGoogleOauth : tk.handleAppleOauth;
-      setIsLoading(true);
       setError(null);
+      setPendingOauth(provider);
       try {
-
-        setPendingOauth(provider);
         await handler();
 
       } catch (err) {
         setPendingOauth(null);
-        setIsLoading(false);
-
         if (isCancellationError(err)) return;
         setError(toMessage(err));
       }
@@ -203,6 +217,10 @@ export function useAuthFlow() {
     verifyEmailCode,
     resendEmailCode: sendEmailCode,
     isLoading,
+    isAuthenticating: isLoading || pendingOauth !== null,
+    // Which OAuth provider the user just tapped, if any. Drives the
+    // per-button spinner so only the tapped provider shows feedback.
+    pendingProvider: pendingOauth,
     error,
     isClientReady,
   };
