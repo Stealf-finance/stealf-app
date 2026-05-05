@@ -9,7 +9,7 @@ import { finalizeOAuthAuth, type AuthMethod } from '../api/onboarding';
 import { userProfileQueries } from '../api/userProfile';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
-import { decodeOidcEmail } from '../lib/oidc';
+import { consumeLastOauthEmail } from '../lib/oauthEmailStore';
 
 type FinalizeArgs = {
   authMethod: AuthMethod;
@@ -29,11 +29,6 @@ export function useAuthFlow() {
   const [error, setError] = useState<string | null>(null);
 
   const [pendingOauth, setPendingOauth] = useState<AuthMethod | null>(null);
-  // Email captured from the OIDC id_token during runOAuth; preferred over
-  // turnkey.user.userEmail because the SDK doesn't always populate it
-  // (Apple private relay, scope variations). Source of truth = the signed
-  // claim from the OAuth provider, decoded once and stashed here.
-  const [oauthEmail, setOauthEmail] = useState<string | undefined>(undefined);
 
   const finalizingRef = useRef(false);
 
@@ -112,7 +107,12 @@ export function useAuthFlow() {
 
     setIsLoading(true);
     const method = pendingOauth;
-    const email = oauthEmail ?? turnkey.user?.userEmail;
+    // Drained-on-read: the store is populated by the Turnkey provider's
+    // onAuthenticationSuccess callback (config.ts) just before React
+    // commits the post-auth state that unblocks this effect. Consuming
+    // here clears the slot so a follow-up attempt can't pick up a stale
+    // email if the previous finalize aborted before reading.
+    const email = consumeLastOauthEmail() ?? turnkey.user?.userEmail;
     if (__DEV__) {
       console.log('[useAuthFlow] starting finalize', {
         method,
@@ -131,7 +131,6 @@ export function useAuthFlow() {
         finalizingRef.current = false;
         setIsLoading(false);
         setPendingOauth(null);
-        setOauthEmail(undefined);
       });
   }, [
     pendingOauth,
@@ -139,7 +138,6 @@ export function useAuthFlow() {
     turnkey.user?.userId,
     turnkey.user?.userEmail,
     turnkey.wallets.length,
-    oauthEmail,
     finalizePostAuth,
   ]);
 
@@ -149,49 +147,18 @@ export function useAuthFlow() {
       const handler =
         provider === 'google' ? tk.handleGoogleOauth : tk.handleAppleOauth;
       setError(null);
-      setOauthEmail(undefined);
       setPendingOauth(provider);
       try {
-        // Provide an onOauthSuccess callback so we can decode the email
-        // claim from the OIDC token before the SDK completes auth. The
-        // callback's contract (per @turnkey/react-native-wallet-kit
-        // docstring) short-circuits the SDK's internal completeOauth, so
-        // we must call it ourselves to keep session creation working.
-        await handler({
-          onOauthSuccess: async ({
-            oidcToken,
-            providerName,
-            publicKey,
-            sessionKey,
-          }) => {
-            const email = decodeOidcEmail(oidcToken);
-            if (email) {
-              setOauthEmail(email);
-            } else {
-              Sentry.addBreadcrumb({
-                category: 'auth.oauth',
-                level: 'warning',
-                message: 'OIDC token had no email claim',
-                data: { provider: providerName },
-              });
-            }
-            // publicKey is typed optional on the callback (shared with PKCE
-            // providers) but Google/Apple flows always populate it.
-            if (!publicKey) {
-              throw new Error('OAuth completion missing publicKey');
-            }
-            await tk.completeOauth({
-              oidcToken,
-              publicKey,
-              providerName,
-              sessionKey,
-            });
-          },
-        });
-
+        // The SDK's `params.onOauthSuccess` is declared on the handler's
+        // type signature but never forwarded to completeOAuthFlow for
+        // Google / Apple (cf. TurnkeyProvider.mjs handleGoogleOauth /
+        // handleAppleOauth — only the closure `callbacks` is passed).
+        // We let the SDK drive the flow and capture the OIDC email
+        // through the provider-level `onAuthenticationSuccess` callback
+        // wired in services/turnkey/config.ts.
+        await handler({});
       } catch (err) {
         setPendingOauth(null);
-        setOauthEmail(undefined);
         if (isCancellationError(err)) return;
         setError(toMessage(err));
       }
