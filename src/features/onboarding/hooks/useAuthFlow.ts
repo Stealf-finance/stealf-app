@@ -9,6 +9,7 @@ import { finalizeOAuthAuth, type AuthMethod } from '../api/onboarding';
 import { userProfileQueries } from '../api/userProfile';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
+import { consumeLastOauthEmail } from '../lib/oauthEmailStore';
 
 type FinalizeArgs = {
   authMethod: AuthMethod;
@@ -106,7 +107,12 @@ export function useAuthFlow() {
 
     setIsLoading(true);
     const method = pendingOauth;
-    const email = turnkey.user?.userEmail;
+    // Drained-on-read: the store is populated by the Turnkey provider's
+    // onAuthenticationSuccess callback (config.ts) just before React
+    // commits the post-auth state that unblocks this effect. Consuming
+    // here clears the slot so a follow-up attempt can't pick up a stale
+    // email if the previous finalize aborted before reading.
+    const email = consumeLastOauthEmail() ?? turnkey.user?.userEmail;
     if (__DEV__) {
       console.log('[useAuthFlow] starting finalize', {
         method,
@@ -119,7 +125,7 @@ export function useAuthFlow() {
           const data = (err as { data?: unknown })?.data;
           console.error('[useAuthFlow] finalize failed:', err, 'body:', data);
         }
-        setError(toMessage(err));
+        setError(softenMissingEmailError(method, email, err));
       })
       .finally(() => {
         finalizingRef.current = false;
@@ -143,8 +149,14 @@ export function useAuthFlow() {
       setError(null);
       setPendingOauth(provider);
       try {
-        await handler();
-
+        // The SDK's `params.onOauthSuccess` is declared on the handler's
+        // type signature but never forwarded to completeOAuthFlow for
+        // Google / Apple (cf. TurnkeyProvider.mjs handleGoogleOauth /
+        // handleAppleOauth — only the closure `callbacks` is passed).
+        // We let the SDK drive the flow and capture the OIDC email
+        // through the provider-level `onAuthenticationSuccess` callback
+        // wired in services/turnkey/config.ts.
+        await handler({});
       } catch (err) {
         setPendingOauth(null);
         if (isCancellationError(err)) return;
@@ -242,6 +254,31 @@ function pseudoFromEmail(email: string): string {
 function toMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   return 'Authentication failed';
+}
+
+// Apple's "Hide My Email" + private relay can return an OIDC token with no
+// email claim, and Turnkey doesn't synthesize one. Backend rightly rejects
+// new-user creation without email ("Email and pseudo are required for new
+// users"), but the raw message is jargon for end users. Soften the surface
+// only when we have signal that the missing email is the actual cause.
+function softenMissingEmailError(
+  method: AuthMethod,
+  email: string | undefined,
+  err: unknown,
+): string {
+  const raw = toMessage(err);
+  if (
+    method === 'apple' &&
+    !email &&
+    /email and pseudo are required/i.test(raw)
+  ) {
+    Sentry.captureMessage(
+      'OAuth Apple new-user signup missing email (private relay?)',
+      { level: 'warning' },
+    );
+    return "We couldn't get your email from Apple. Try signing in with Email or Google instead.";
+  }
+  return raw;
 }
 
 function isCancellationError(err: unknown): boolean {
