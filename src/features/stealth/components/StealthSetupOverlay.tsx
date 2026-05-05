@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,11 +14,11 @@ import {
   useUmbraRegistration,
 } from '@/src/features/stealth/hooks/useUmbraRegistration';
 import { ensureRegisteredFor } from '@/src/features/stealth/lib/registration';
+import type { User } from '@/src/features/onboarding/types';
 
 const REGISTRATION_COST_SOL = 0.012;
 
 type Props = {
-  /** Called when the user taps the "Go back" CTA in the insufficient state. */
   onClose?: () => void;
 };
 
@@ -29,17 +29,43 @@ type Props = {
  * operation in the app, so we register both in a single click.
  */
 export function StealthSetupOverlay({ onClose }: Props) {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const stealfWallet = user?.stealfWallet ?? null;
   const bankWallet = user?.bankWallet ?? null;
 
-  const { data: stealthRegistered, isLoading: stealthChecking } =
-    useUmbraRegistration(stealfWallet);
-  const { data: bankRegistered, isLoading: bankChecking } =
-    useUmbraRegistration(bankWallet);
+  const persistedStealth = user?.stealthRegistered;
+  const persistedBank = user?.bankRegistered;
+  const needsProbe =
+    persistedStealth === undefined || persistedBank === undefined;
 
-  const { data: stealthBalanceData } = useBalance(stealfWallet);
-  const { data: bankBalanceData } = useBalance(bankWallet);
+  const { data: probedStealth, isLoading: stealthChecking } =
+    useUmbraRegistration(needsProbe ? stealfWallet : null);
+  const { data: probedBank, isLoading: bankChecking } =
+    useUmbraRegistration(needsProbe ? bankWallet : null);
+
+  const stealthRegistered = persistedStealth ?? probedStealth;
+  const bankRegistered = persistedBank ?? probedBank;
+
+  // One-shot persist: when the chain probe resolves for a legacy user,
+  // write the result onto the user object so we never have to probe again.
+  useEffect(() => {
+    if (!user) return;
+    const updates: Partial<User> = {};
+    if (persistedStealth === undefined && typeof probedStealth === 'boolean') {
+      updates.stealthRegistered = probedStealth;
+    }
+    if (persistedBank === undefined && typeof probedBank === 'boolean') {
+      updates.bankRegistered = probedBank;
+    }
+    if (Object.keys(updates).length > 0) {
+      setUser({ ...user, ...updates });
+    }
+  }, [user, persistedStealth, persistedBank, probedStealth, probedBank, setUser]);
+
+  const { data: stealthBalanceData, isLoading: stealthBalLoading } =
+    useBalance(stealfWallet);
+  const { data: bankBalanceData, isLoading: bankBalLoading } =
+    useBalance(bankWallet);
 
   const stealthSol =
     stealthBalanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ??
@@ -50,9 +76,6 @@ export function StealthSetupOverlay({ onClose }: Props) {
   const needStealthRegistration = stealthRegistered === false;
   const needBankRegistration = bankRegistered === false;
 
-  // Insufficient if any of the wallets that still need registration doesn't
-  // have enough SOL to cover its own protocol fee. A wallet that's already
-  // registered doesn't need any SOL — it just sits.
   const stealthShort =
     needStealthRegistration && stealthSol < REGISTRATION_COST_SOL;
   const bankShort = needBankRegistration && bankSol < REGISTRATION_COST_SOL;
@@ -63,10 +86,28 @@ export function StealthSetupOverlay({ onClose }: Props) {
   const queryClient = useQueryClient();
   const { show: showToast } = useToast();
 
-  // Hide while we don't know yet (avoids the card flashing on screens where
-  // both wallets are already registered) or no stealth wallet at all.
   if (!stealfWallet) return null;
-  if (stealthChecking || bankChecking) return null;
+
+  const regUnknown =
+    (stealthChecking && stealthRegistered === undefined) ||
+    (bankChecking && bankRegistered === undefined);
+  const balanceUnknown =
+    (stealthRegistered === false &&
+      stealthBalLoading &&
+      stealthBalanceData === undefined) ||
+    (bankRegistered === false &&
+      bankBalLoading &&
+      bankBalanceData === undefined);
+  if (regUnknown || balanceUnknown) {
+    return (
+      <LoaderOverlay
+        tone="gold"
+        label="Checking your private setup…"
+        sub="Verifying registration with the privacy protocol."
+      />
+    );
+  }
+
   if (!needStealthRegistration && !needBankRegistration) return null;
 
   const handlePress = async () => {
@@ -86,6 +127,14 @@ export function StealthSetupOverlay({ onClose }: Props) {
       if (needBankRegistration) {
         const bankClient = await getBankClient();
         await ensureRegisteredFor(bankClient);
+      }
+
+      if (user) {
+        setUser({
+          ...user,
+          stealthRegistered: true,
+          bankRegistered: true,
+        });
       }
 
       await Promise.all([

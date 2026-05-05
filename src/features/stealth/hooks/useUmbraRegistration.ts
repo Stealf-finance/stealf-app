@@ -7,21 +7,22 @@ export const umbraRegistrationQueries = {
   byAddress: (addr: string) => ['umbra', 'registration', addr] as const,
 };
 
-/**
- * Reads the on-chain `EncryptedUserAccount` PDA for any wallet address to
- * decide whether that wallet is registered with the Umbra protocol. The
- * query is read-only and runs through the stealth RPC client (any client
- * works for the lookup — only the queried `address` matters).
- */
+
+export async function fetchUmbraRegistration(
+  walletAddress: string,
+): Promise<boolean> {
+  const client = await getStealthClient();
+  const querier = getUserAccountQuerierFunction({ client });
+  const result = await querier(toAddress(walletAddress));
+  return result.state === 'exists';
+}
+
 export function useUmbraRegistration(walletAddress: string | null | undefined) {
   return useQuery({
     queryKey: umbraRegistrationQueries.byAddress(walletAddress ?? ''),
-    queryFn: async () => {
+    queryFn: () => {
       if (!walletAddress) return false;
-      const client = await getStealthClient();
-      const querier = getUserAccountQuerierFunction({ client });
-      const result = await querier(toAddress(walletAddress));
-      return result.state === 'exists';
+      return fetchUmbraRegistration(walletAddress);
     },
     enabled: !!walletAddress,
     staleTime: 60_000,

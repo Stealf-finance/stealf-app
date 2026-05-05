@@ -47,6 +47,7 @@ import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
 import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { umbraRegistrationQueries } from '@/src/features/stealth/hooks/useUmbraRegistration';
 import {
   StealfWalletSetup,
   type SetupChoice,
@@ -69,34 +70,17 @@ import { socketService } from '@/src/services/real-time/socket';
 import { useBalanceVisibility } from '@/src/features/wallet/BalanceVisibilityContext';
 import { useToast } from '@/src/components/toast/ToastContext';
 
-// Mode-switch motion. The kicker / balance / action tiles live in
-// horizontal carousels; both modes are mounted side-by-side and a single
-// translateX (driven by `modeProgress`) glides between them. No fade —
-// what's off-screen is genuinely off-screen. EASE_INOUT covers
-// programmatic toggles (dot taps); EASE_RELEASE is snappier and is used
-// when the user releases mid-drag, so the snap doesn't feel decelerated
-// after their finger already gave the carousel momentum.
+
 const MORPH_DUR = 480;
 const EASE_INOUT = Easing.bezier(0.25, 0.1, 0.25, 1);
 const EASE_RELEASE = Easing.out(Easing.cubic);
-// ScrollView paddingHorizontal: 24 on each side, so the visible content
-// width is the screen width minus those gutters.
 const PAGE_WIDTH = Dimensions.get('window').width - 48;
-// Buffer between the two carousel pages — without this, tiles from the
-// outgoing page sit flush against tiles from the incoming page and read
-// as overlapping during the swipe. The gutter is fully clipped by the
-// parent's `overflow: 'hidden'` at rest.
 const PAGE_GUTTER = 32;
 const SLIDE_DIST = PAGE_WIDTH + PAGE_GUTTER;
 
 const SILVER = txPalette('silver');
 const GOLD = txPalette('gold');
 
-// Inlined replicas of TonalBackground's gradient stops. Rendering the two
-// tone-flavoured gradients side-by-side and cross-fading them via opacity
-// avoids the costly `LinearGradient` re-render that happens when the
-// `tone` prop on TonalBackground changes — that was the main source of
-// the perceived stutter on mode switch.
 const TONAL_STOP_LOCATIONS = [0, 0.08, 0.18, 0.28, 0.4, 1];
 const SILVER_GRADIENT: [string, string, ...string[]] = [
   'rgba(220,220,225,0.18)',
@@ -124,8 +108,6 @@ export function StealthHub() {
   const { user, session, setUser } = useAuth();
   const sessionToken = session?.sessionToken ?? null;
 
-  // Killswitch: hide the slice if the flag is flipped off in PostHog.
-  // Default-on so design work in DEV is unaffected.
   const stealthEnabled = useFeatureFlag('slice-stealth-enabled', true);
 
   const { data: pendingClaims } = usePendingClaims();
@@ -271,6 +253,14 @@ export function StealthHub() {
         historyQueries.byAddress(walletAddress),
         emptyHistory,
       );
+      // A freshly-created wallet is unregistered with Umbra by definition.
+      // Prime the cache so StealthSetupOverlay can render the setup card
+      // instantly when the user navigates to private mode, instead of
+      // waiting on a round-trip to confirm what we already know.
+      queryClient.setQueryData(
+        umbraRegistrationQueries.byAddress(walletAddress),
+        false,
+      );
     } else {
       void queryClient.prefetchQuery({
         queryKey: balanceQueries.byAddress(walletAddress),
@@ -284,7 +274,14 @@ export function StealthHub() {
       });
     }
 
-    setUser({ ...user, stealfWallet: walletAddress });
+    setUser({
+      ...user,
+      stealfWallet: walletAddress,
+      // Fresh wallets are never registered with Umbra yet. Imports might be —
+      // leave the flag undefined so the overlay does a one-time chain probe
+      // and persists the result.
+      ...(isFresh ? { stealthRegistered: false } : {}),
+    });
     setRegistering(false);
     // Land on the public side of the freshly-created wallet — its
     // encrypted balance is empty by definition, so private mode would

@@ -13,6 +13,8 @@ export const UserSchema = z.object({
   stealfWallet: SolanaAddress.optional().nullable(),
   subOrgId: z.string().min(1),
   points: z.number().int().nonnegative().default(0),
+  stealthRegistered: z.boolean().optional(),
+  bankRegistered: z.boolean().optional(),
 });
 export type User = z.infer<typeof UserSchema>;
 

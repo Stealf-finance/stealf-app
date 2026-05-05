@@ -5,6 +5,7 @@ const TTL_MS = 15 * 60 * 1000;
 let cachedPrivateKey: string | null = null;
 let cachedMnemonic: string | null = null;
 let expiresAt = 0;
+let inFlightKeyRead: Promise<string | null> | null = null;
 
 function isExpired(): boolean {
   return Date.now() >= expiresAt;
@@ -28,18 +29,27 @@ export const walletKeyCache = {
   /** RAM (if not expired) → Keychain fallback. */
   async getPrivateKey(): Promise<string | null> {
     if (cachedPrivateKey && !isExpired()) return cachedPrivateKey;
+    if (inFlightKeyRead) return inFlightKeyRead;
+
+    inFlightKeyRead = (async () => {
+      try {
+        const val = await getSecure(SECURE_STORE_KEYS.STEALF_PRIVATE_KEY);
+        if (val) {
+          cachedPrivateKey = val;
+          refreshTTL();
+          return val;
+        }
+      } catch {
+        // ignore — return null
+      }
+      return null;
+    })();
 
     try {
-      const val = await getSecure(SECURE_STORE_KEYS.STEALF_PRIVATE_KEY);
-      if (val) {
-        cachedPrivateKey = val;
-        refreshTTL();
-        return val;
-      }
-    } catch {
-      // ignore — return null
+      return await inFlightKeyRead;
+    } finally {
+      inFlightKeyRead = null;
     }
-    return null;
   },
 
   /** RAM only (never re-read from Keychain). Respects TTL. */
@@ -82,6 +92,7 @@ export const walletKeyCache = {
     cachedPrivateKey = null;
     cachedMnemonic = null;
     expiresAt = 0;
+    inFlightKeyRead = null;
     await Promise.all([
       deleteSecure(SECURE_STORE_KEYS.STEALF_PRIVATE_KEY).catch(() => undefined),
       deleteSecure(SECURE_STORE_KEYS.STEALF_MNEMONIC).catch(() => undefined),
@@ -94,6 +105,7 @@ export const walletKeyCache = {
     cachedPrivateKey = null;
     cachedMnemonic = null;
     expiresAt = 0;
+    inFlightKeyRead = null;
   },
 
   hasKeys(): boolean {

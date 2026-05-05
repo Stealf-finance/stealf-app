@@ -92,7 +92,7 @@ function RootLayout() {
           <TurnkeyProvider config={getTurnkeyConfig()} callbacks={TURNKEY_CALLBACKS}>
             <AuthProvider>
               <SocketProvider>
-                <PrivacyModeProvider initial="private">
+                <PrivacyModeProvider initial="public">
                   <BalanceVisibilityProvider>
                   <PendingOpsProvider>
                   <ToastProvider>

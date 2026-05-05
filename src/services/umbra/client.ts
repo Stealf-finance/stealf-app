@@ -26,17 +26,16 @@ export type UmbraClient = Awaited<ReturnType<typeof getUmbraClient>>;
 
 let cachedClient: UmbraClient | null = null;
 let cachedSignerKey: string | null = null;
+// Single in-flight build shared across parallel callers — without this,
+// two parallel `getStealthClient()` calls (e.g. fanning Umbra registration
+// queries at boot) each run a full SDK init independently.
+let inFlightClient: Promise<UmbraClient> | null = null;
 
 export function getCachedSignerKey(): string | null {
   return cachedSignerKey;
 }
 
-/**
- * Build (or fetch from cache) an `UmbraClient` whose signer is the user's
- * stealth wallet (local ed25519 key from walletKeyCache). Cached per private
- * key — if the active key changes, the client is rebuilt.
- */
-export async function getStealthClient(): Promise<UmbraClient> {
+async function buildStealthClient(): Promise<UmbraClient> {
   const privateKeyB58 = await walletKeyCache.getPrivateKey();
   if (!privateKeyB58) {
     throw new Error('No stealth wallet key — wallet setup required');
@@ -90,12 +89,30 @@ export async function getStealthClient(): Promise<UmbraClient> {
 }
 
 /**
+ * Build (or fetch from cache) an `UmbraClient` whose signer is the user's
+ * stealth wallet (local ed25519 key from walletKeyCache). Cached per private
+ * key — if the active key changes, the client is rebuilt. Parallel callers
+ * share the same in-flight build instead of racing.
+ */
+export async function getStealthClient(): Promise<UmbraClient> {
+  if (cachedClient) return cachedClient;
+  if (inFlightClient) return inFlightClient;
+  inFlightClient = buildStealthClient();
+  try {
+    return await inFlightClient;
+  } finally {
+    inFlightClient = null;
+  }
+}
+
+/**
  * Reset the stealth client cache. Called on logout / wallet switch so the
  * next `getStealthClient()` rebuilds with the new keys.
  */
 export function clearStealthClient(): void {
   cachedClient = null;
   cachedSignerKey = null;
+  inFlightClient = null;
 }
 
 const bankClientCache = new Map<string, UmbraClient>();
