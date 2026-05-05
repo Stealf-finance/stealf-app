@@ -233,9 +233,15 @@ export function StealfWalletSetup({
           label={
             step === 'importWallet'
               ? 'Restoring your wallet…'
-              : 'Setting up your stealth wallet…'
+              : step === 'showMnemonic'
+                ? 'Registering on chain…'
+                : 'Generating wallet…'
           }
-          sub="This can take a moment. Hang tight."
+          sub={
+            step === 'showMnemonic'
+              ? 'Saving your wallet to your account.'
+              : 'This can take a moment. Hang tight.'
+          }
         />
       ) : null}
     </CenterGlow>

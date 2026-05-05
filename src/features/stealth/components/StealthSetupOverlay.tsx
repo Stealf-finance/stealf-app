@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useQueryClient } from '@tanstack/react-query';
-import { View } from 'react-native';
+import { InteractionManager, View } from 'react-native';
 import { AccountSetupCard } from '@/src/design-system/primitives/AccountSetupCard';
 import { LoaderOverlay } from '@/src/design-system/primitives/LoaderOverlay';
 import { useToast } from '@/src/components/toast/ToastContext';
@@ -86,6 +86,15 @@ export function StealthSetupOverlay({ onClose }: Props) {
   const queryClient = useQueryClient();
   const { show: showToast } = useToast();
 
+  // Set on unmount so any in-flight register() that resolves later doesn't
+  // try to setState on a dead component. The Umbra ZK proof itself can't
+  // be cancelled (SDK limitation) — we just stop awaiting it on the React
+  // side, freeing the UI immediately when the user navigates away.
+  const cancelledRef = useRef(false);
+  useEffect(() => () => {
+    cancelledRef.current = true;
+  }, []);
+
   if (!stealfWallet) return null;
 
   const regUnknown =
@@ -117,17 +126,29 @@ export function StealthSetupOverlay({ onClose }: Props) {
     }
 
     setRegistering(true);
+    cancelledRef.current = false;
     try {
+      // Yield to the FadeIn loader frame before kicking off the heavy ZK
+      // proof + RPC sequence — without this, the loader paint is starved
+      // by the synchronous prologue of register() and the user sees the
+      // tap with no visible feedback for ~300ms.
+      await new Promise<void>((resolve) =>
+        InteractionManager.runAfterInteractions(() => resolve()),
+      );
+
       // Register sequentially so each transaction sees a clean blockhash and
       // we don't race two activities on the same RPC. `ensureRegistered` is
       // idempotent so already-registered wallets are no-ops.
       if (needStealthRegistration) {
         await register();
       }
+      if (cancelledRef.current) return;
+
       if (needBankRegistration) {
         const bankClient = await getBankClient();
         await ensureRegisteredFor(bankClient);
       }
+      if (cancelledRef.current) return;
 
       if (user) {
         setUser({
@@ -150,13 +171,14 @@ export function StealthSetupOverlay({ onClose }: Props) {
           : Promise.resolve(),
       ]);
     } catch (err: any) {
+      if (cancelledRef.current) return;
       const msg =
         err?.userMessage ||
         err?.message ||
         'Registration failed. Try again in a moment.';
       showToast({ kind: 'error', title: 'Could not register', message: msg });
     } finally {
-      setRegistering(false);
+      if (!cancelledRef.current) setRegistering(false);
     }
   };
 
@@ -164,7 +186,10 @@ export function StealthSetupOverlay({ onClose }: Props) {
     <Animated.View
       entering={FadeIn.duration(220)}
       exiting={FadeOut.duration(220)}
-      pointerEvents="auto"
+      // box-none so the empty backdrop doesn't physically swallow taps —
+      // the AccountSetupCard child still catches its own. Lets a cancel
+      // gesture pass through to whatever is mounted underneath.
+      pointerEvents="box-none"
       style={{
         position: 'absolute',
         top: 0,
