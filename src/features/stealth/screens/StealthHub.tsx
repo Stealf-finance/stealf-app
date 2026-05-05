@@ -261,6 +261,17 @@ export function StealthHub() {
         umbraRegistrationQueries.byAddress(walletAddress),
         false,
       );
+      // Mirror the same priming for the bank wallet — StealthSetupOverlay
+      // probes BOTH wallets via a single needsProbe gate, so leaving bank
+      // undefined still triggers a cold stealth client init (multi-second
+      // freeze on first private-mode entry). Bank is fresh from Turnkey
+      // signup so it's never registered yet.
+      if (user?.bankWallet && user?.bankRegistered === undefined) {
+        queryClient.setQueryData(
+          umbraRegistrationQueries.byAddress(user.bankWallet),
+          false,
+        );
+      }
     } else {
       void queryClient.prefetchQuery({
         queryKey: balanceQueries.byAddress(walletAddress),
@@ -281,6 +292,10 @@ export function StealthHub() {
       // leave the flag undefined so the overlay does a one-time chain probe
       // and persists the result.
       ...(isFresh ? { stealthRegistered: false } : {}),
+      // Persist bankRegistered too on first persist. Without this, the
+      // overlay's needsProbe gate (stealth=undef OR bank=undef) re-fires
+      // and triggers the cold stealth-client init we just paid to avoid.
+      ...(user.bankRegistered === undefined ? { bankRegistered: false } : {}),
     });
     setRegistering(false);
     // Land on the public side of the freshly-created wallet — its

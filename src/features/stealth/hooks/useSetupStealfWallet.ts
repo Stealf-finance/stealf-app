@@ -12,9 +12,10 @@ export interface SetupResult {
 }
 
 // Local key derivation can finish in <500ms which makes the loader flash by.
-// Hold the loader visible long enough that the create/import action feels
-// intentional rather than instant.
-const MIN_LOADER_MS = 1500;
+// Hold the loader visible just long enough that the create/import action
+// reads as intentional. Phased copy in StealfWalletSetup carries perceived
+// progress past this floor — 600ms is enough for the FadeIn to land cleanly.
+const MIN_LOADER_MS = 600;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 

@@ -24,7 +24,11 @@ export function LoaderOverlay({
     <Animated.View
       entering={FadeIn.duration(140)}
       exiting={FadeOut.duration(220)}
-      pointerEvents="auto"
+      // box-none so a BackBtn or cancel gesture sitting underneath stays
+      // tappable during the loader. Inputs that need to be guarded should
+      // use editable={!loading} explicitly — relying on the overlay to
+      // physically block was the cause of the freeze regression.
+      pointerEvents="box-none"
       style={{
         position: 'absolute',
         top: 0,
