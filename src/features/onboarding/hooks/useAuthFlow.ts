@@ -125,7 +125,7 @@ export function useAuthFlow() {
           const data = (err as { data?: unknown })?.data;
           console.error('[useAuthFlow] finalize failed:', err, 'body:', data);
         }
-        setError(toMessage(err));
+        setError(softenMissingEmailError(method, email, err));
       })
       .finally(() => {
         finalizingRef.current = false;
@@ -287,6 +287,31 @@ function pseudoFromEmail(email: string): string {
 function toMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   return 'Authentication failed';
+}
+
+// Apple's "Hide My Email" + private relay can return an OIDC token with no
+// email claim, and Turnkey doesn't synthesize one. Backend rightly rejects
+// new-user creation without email ("Email and pseudo are required for new
+// users"), but the raw message is jargon for end users. Soften the surface
+// only when we have signal that the missing email is the actual cause.
+function softenMissingEmailError(
+  method: AuthMethod,
+  email: string | undefined,
+  err: unknown,
+): string {
+  const raw = toMessage(err);
+  if (
+    method === 'apple' &&
+    !email &&
+    /email and pseudo are required/i.test(raw)
+  ) {
+    Sentry.captureMessage(
+      'OAuth Apple new-user signup missing email (private relay?)',
+      { level: 'warning' },
+    );
+    return "We couldn't get your email from Apple. Try signing in with Email or Google instead.";
+  }
+  return raw;
 }
 
 function isCancellationError(err: unknown): boolean {
