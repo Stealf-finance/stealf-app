@@ -22,6 +22,8 @@ export const T = {
 
   green: '#7ea688',
   error: '#d1604a',
+
+  shadow: '#000',
 } as const;
 
 export type Token = keyof typeof T;
