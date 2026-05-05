@@ -49,7 +49,7 @@ des responsabilités, error handling cohérent).
 - **Turnkey SDK** : `userId`, `email`, `cashWallet` (jamais persisté manuellement)
 - **SecureStore** : `stealfWallet` (clé privée locale), `subOrgId` (bootstrap rapide)
 - **Backend (via React Query)** : `username`, `points`, KYC, etc. — fetché au login via `useUserProfile()`, jamais persisté manuellement
-- **Backend serveur** : continue de stocker `cash_wallet`, `subOrgId`, `email` côté DB (besoin propre, ne change rien au client)
+- **Backend serveur** : continue de stocker `bank_wallet`, `subOrgId`, `email` côté DB (besoin propre, ne change rien au client)
 
 ---
 
@@ -284,7 +284,7 @@ Briques utilisées par **toutes** les slices. Aucune logique métier ici.
 - [ ] `services/real-time/socket.ts` — singleton Socket.io + types events
 - [ ] `services/solana/kit.ts` — RPC singletons + utils (`getRpc`, `getRpcSubscriptions`, `LAMPORTS_PER_SOL`, `solToLamports`, `lamportsToSol`, `createSignerFromBase58`)
 - [ ] `services/solana/transactionsGuard.ts` — `validateAddress/Amount/Balance/Mnemonic`, `guardTransaction`
-- [ ] `services/turnkey/config.ts` — `TURNKEY_CONFIG`, `TURNKEY_CALLBACKS`, `CASH_WALLET_CONFIG`
+- [ ] `services/turnkey/config.ts` — `TURNKEY_CONFIG`, `TURNKEY_CALLBACKS`, `BANK_WALLET_CONFIG`
 - [ ] `services/env.ts` — `validateEnv()` appelé au démarrage (var manquante → throw clair)
 - [ ] `constants/solana.ts` — `SOL_MINT`, `USDC_MINT`, `STEALF_JITO_VAULT`
 - [ ] `app/_layout.tsx` — providers (QueryClient + Turnkey + Auth squelette + Socket squelette) + `validateEnv()` + auth guard
@@ -577,7 +577,7 @@ docs/
 ├── pipeline.md                # Critical end-to-end flows (sequence diagrams)
 ├── conventions.md             # Coding conventions, naming, imports, patterns
 ├── decisions.md               # Append-only ADR log (why we made choices)
-├── glossary.md                # Stealf-specific terms (cash_wallet, MXE, claim, moove…)
+├── glossary.md                # Stealf-specific terms (bank_wallet, MXE, claim, moove…)
 ├── audit-security.md          # Sensitive surfaces + mitigations
 └── services-migration-plan.md # This document
 ```

@@ -123,7 +123,7 @@ underlying types/symbols *mean*, not what they should be called on screen.
 **Stealf** — The product. Solana neobank with built-in privacy primitives.
 Stylized as "stealth + DeFi".
 
-**bankWallet** (`cash_wallet` server-side) — Turnkey-managed Solana wallet.
+**bankWallet** (`bank_wallet` server-side) — Turnkey-managed Solana wallet.
 Signing happens via passkey + Turnkey backend signing service. This is the
 "public" wallet visible on-chain explorers.
 

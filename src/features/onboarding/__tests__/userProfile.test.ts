@@ -48,7 +48,7 @@ describe('fetchUserProfile', () => {
         user: {
           email: 'thomas@stealf.xyz',
           username: 'thomas',
-          cash_wallet: SAMPLE_BANK_WALLET,
+          bank_wallet: SAMPLE_BANK_WALLET,
           stealf_wallet: null,
           subOrgId: 'sub-123',
           points: 42,
@@ -72,7 +72,7 @@ describe('fetchUserProfile', () => {
         user: {
           email: 'thomas@stealf.xyz',
           pseudo: 'thomas-pseudo',
-          cash_wallet: SAMPLE_BANK_WALLET,
+          bank_wallet: SAMPLE_BANK_WALLET,
           subOrgId: 'sub-123',
         },
       },
@@ -96,7 +96,7 @@ describe('fetchUserProfile', () => {
         user: {
           email: 'thomas@stealf.xyz',
           username: 'thomas',
-          cash_wallet: 'not-a-real-address',
+          bank_wallet: 'not-a-real-address',
           subOrgId: 'sub-123',
         },
       },

@@ -6,33 +6,11 @@ import {
   type User,
 } from '../types';
 
-/**
- * The new onboarding flow uses a stateful Redis-backed session.
- * Once `startOnboarding` returns a sessionId, every subsequent step
- * sends it back via the `X-Onboarding-Session` header. Backend enforces
- * in-order step transitions and a 15-minute TTL.
- *
- * Session is kept in memory only (never persisted to SecureStore):
- * the TTL matches the duration of the flow, and persisting would risk
- * leaving the client and Redis state diverged across app restarts.
- */
-
-const SESSION_HEADER = 'X-Onboarding-Session';
-
 const OnboardingErrorCodeSchema = z.enum([
-  'INVALID_INVITE',
-  'INVITE_ALREADY_USED',
   'PSEUDO_TAKEN',
   'PSEUDO_INVALID',
   'EMAIL_INVALID',
   'EMAIL_TAKEN',
-  'INVALID_CODE',
-  'CODE_EXPIRED',
-  'CODE_ALREADY_USED',
-  'TOO_MANY_ATTEMPTS',
-  'ONBOARDING_SESSION_MISSING',
-  'ONBOARDING_SESSION_EXPIRED',
-  'STEP_OUT_OF_ORDER',
   'UNKNOWN',
 ]);
 export type OnboardingErrorCode = z.infer<typeof OnboardingErrorCodeSchema>;
@@ -68,17 +46,13 @@ async function request<T extends object>(
   init: {
     method: 'GET' | 'POST';
     body?: object;
-    sessionId?: string | null;
     sessionToken?: string | null;
-    preauthHeader?: string | null;
   },
   schema: z.ZodType<T>,
 ): Promise<T> {
   const { EXPO_PUBLIC_API_URL } = getEnv();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (init.sessionId) headers[SESSION_HEADER] = init.sessionId;
   if (init.sessionToken) headers.Authorization = `Bearer ${init.sessionToken}`;
-  if (init.preauthHeader) headers['X-Preauth-Token'] = init.preauthHeader;
 
   const response = await fetch(`${EXPO_PUBLIC_API_URL}${path}`, {
     method: init.method,
@@ -125,106 +99,31 @@ async function request<T extends object>(
   return schema.parse(payload);
 }
 
-const InviteOkSchema = z.object({
-  onboardingSessionId: z.string().min(1),
-});
-
-const EmptyOkSchema = z.object({}).passthrough();
-
-/** Step 1 — submit invite code, receive a fresh onboarding session. */
-export async function submitInviteCode(input: {
-  inviteCode: string;
-}): Promise<{ sessionId: string }> {
-  const data = await request(
-    '/api/users/onboarding/invite-code',
-    { method: 'POST', body: { inviteCode: input.inviteCode } },
-    InviteOkSchema,
-  );
-  return { sessionId: data.onboardingSessionId };
-}
-
-/** Step 2 — register the desired pseudo against the session. */
-export async function submitName(input: {
-  sessionId: string;
-  pseudo: string;
-}): Promise<void> {
-  await request(
-    '/api/users/onboarding/name',
-    {
-      method: 'POST',
-      body: { pseudo: input.pseudo },
-      sessionId: input.sessionId,
-    },
-    EmptyOkSchema,
-  );
-}
-
-/** Step 3 — submit email and trigger 6-digit code dispatch. */
-export async function submitEmail(input: {
-  sessionId: string;
-  email: string;
-}): Promise<void> {
-  await request(
-    '/api/users/onboarding/email',
-    {
-      method: 'POST',
-      body: { email: input.email },
-      sessionId: input.sessionId,
-    },
-    EmptyOkSchema,
-  );
-}
-
-/** Re-issue a fresh 6-digit code for the current session (same email). */
-export async function resendCode(input: { sessionId: string }): Promise<void> {
-  await request(
-    '/api/users/onboarding/resend-code',
-    {
-      method: 'POST',
-      sessionId: input.sessionId,
-    },
-    EmptyOkSchema,
-  );
-}
-
-/** Step 4 — submit the 6-digit code received by email. */
-export async function submitVerifyCode(input: {
-  sessionId: string;
-  code: string;
-}): Promise<void> {
-  await request(
-    '/api/users/onboarding/verify-code',
-    {
-      method: 'POST',
-      body: { code: input.code },
-      sessionId: input.sessionId,
-    },
-    EmptyOkSchema,
-  );
-}
+export type AuthMethod = 'google' | 'apple' | 'email';
 
 /**
- * Final step — exchange the verified onboarding session and the Turnkey
- * session token for a backend user record, with the bank wallet address
- * created during the passkey step.
+ * Idempotent upsert: takes a Turnkey session token + the wallet address
+ * Turnkey generated for the user, and returns the Stealf user record
+ * (creating it if this is the user's first sign-in). The endpoint trusts
+ * the Turnkey JWT and uses it to authenticate the caller.
  */
-export async function finalizeAuth(input: {
+export async function finalizeOAuthAuth(input: {
   sessionToken: string;
-  sessionId: string;
   email: string;
   pseudo: string;
-  bankWallet: string;
+  cashWallet: string;
+  authMethod: AuthMethod;
 }): Promise<User> {
   return request(
-    '/api/users/auth',
+    '/api/users/auth/login',
     {
       method: 'POST',
       body: {
         email: input.email,
         pseudo: input.pseudo,
-        cash_wallet: input.bankWallet,
+        bank_wallet: input.cashWallet,
+        authMethod: input.authMethod,
       },
-      sessionId: input.sessionId,
       sessionToken: input.sessionToken,
     },
     UserProfileResponseSchema,

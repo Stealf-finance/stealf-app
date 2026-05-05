@@ -12,7 +12,7 @@ export default function AuthLayout() {
             headerShown: false,
             contentStyle: { backgroundColor: 'transparent' },
             animation: 'fade',
-            animationDuration: 280,
+            animationDuration: 500,
           }}
         />
       </CenterGlow>

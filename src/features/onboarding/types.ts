@@ -27,7 +27,7 @@ const BackendUserSchema = z.object({
   email: z.string().email(),
   username: z.string().nullish(),
   pseudo: z.string().nullish(),
-  cash_wallet: SolanaAddress,
+  bank_wallet: SolanaAddress,
   stealf_wallet: SolanaAddress.optional().nullable(),
   subOrgId: z.string().min(1),
   points: z.number().int().nonnegative().nullish(),
@@ -39,32 +39,9 @@ export const UserProfileResponseSchema = z
   .transform(({ user }) => UserSchema.parse({
     email: user.email,
     username: user.username ?? user.pseudo ?? '',
-    bankWallet: user.cash_wallet,
+    bankWallet: user.bank_wallet,
     stealfWallet: user.stealf_wallet ?? null,
     subOrgId: user.subOrgId,
     points: user.points ?? 0,
   }));
 
-export const CheckAvailabilityResponseSchema = z.object({
-  canProceed: z.boolean(),
-  preAuthToken: z.string().optional(),
-  unavailable: z.array(z.number()).optional(),
-  errors: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
-});
-export type CheckAvailabilityResponse = z.infer<typeof CheckAvailabilityResponseSchema>;
-
-export const VerificationStatusSchema = z.object({
-  verified: z.boolean(),
-  email: z.string().email().optional(),
-  pseudo: z.string().optional(),
-});
-export type VerificationStatus = z.infer<typeof VerificationStatusSchema>;
-
-export const OnboardingDraftSchema = z.object({
-  invite: z.string(),
-  handle: z.string(),
-  email: z.string().email(),
-  preAuthToken: z.string(),
-  createdAt: z.number().int().positive(),
-});
-export type OnboardingDraft = z.infer<typeof OnboardingDraftSchema>;

@@ -88,9 +88,6 @@ export function ClaimPendingScreen() {
           });
         };
         invalidate();
-        // Indexer + RPC take a few seconds to reflect the burn and the
-        // encrypted-balance credit; stagger refetches so the stealth screen
-        // updates as soon as either side catches up.
         [3000, 8000, 15000].forEach((d) => setTimeout(invalidate, d));
 
         pendingOps.complete(opId, 'done');

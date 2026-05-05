@@ -15,10 +15,6 @@ import type {
 
 const PendingOpsContext = createContext<PendingOpsApi | null>(null);
 
-// `done` ops live for this long in the list so the pill can show a success
-// state before sliding away. `failed` ops stay until dismissed manually.
-const DONE_LINGER_MS = 2500;
-
 let counter = 0;
 function nextId(): string {
   counter += 1;
@@ -59,6 +55,18 @@ export function PendingOpsProvider({ children }: { children: ReactNode }) {
 
   const complete = useCallback<PendingOpsApi['complete']>(
     (id, outcome, errorMessage) => {
+      if (outcome === 'done') {
+        // No success banner — the user already sees the balance + history
+        // update on the affected screen, so we drop the op immediately.
+        const t = timers.current.get(id);
+        if (t) {
+          clearTimeout(t);
+          timers.current.delete(id);
+        }
+        setOps((cur) => cur.filter((o) => o.id !== id));
+        return;
+      }
+      // 'failed' lingers until user dismisses or app teardown.
       setOps((cur) =>
         cur.map((o) =>
           o.id === id
@@ -71,14 +79,6 @@ export function PendingOpsProvider({ children }: { children: ReactNode }) {
             : o,
         ),
       );
-      if (outcome === 'done') {
-        const t = setTimeout(() => {
-          timers.current.delete(id);
-          setOps((cur) => cur.filter((o) => o.id !== id));
-        }, DONE_LINGER_MS);
-        timers.current.set(id, t);
-      }
-      // 'failed' lingers until user dismisses or app teardown.
     },
     [],
   );
