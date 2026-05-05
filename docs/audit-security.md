@@ -329,6 +329,45 @@ attacks).
 mitigates the largest leak vector. A biometric re-auth on reveal could be
 added if compliance / threat model requires. Not implemented this sprint.
 
+### 6.12 Deferred — `bank_wallet` hijack via client-asserted body field (backend)
+**Severity**: 🔴 high in absolute terms / 🟡 low blast radius in practice (see below)
+**Status**: deferred per CEO/Thomas decision — Option C selected on 2026-05-05.
+**Surface**: `backend-stealf` `src/controllers/authController.ts` `oauthAuth`
+handler, `src/utils/validations.ts` `authUserSchema.bank_wallet` field.
+
+`POST /api/users/auth/login` accepts `bank_wallet` as a Solana address from
+the request body, validated by Zod for format only. The backend never
+cross-checks that the address actually belongs to the Turnkey sub-org
+authenticated by the bearer JWT. A malicious signup can therefore claim a
+wallet address it does not own — the resulting account is wired to that
+address, attributing future faucet drops, yield ops, Helius webhook
+side-effects, and DM hooks (`FaucetController.ts:118` keys off
+`user.bank_wallet`).
+
+**Why deferred** (rationale captured here so we don't relitigate):
+- DB drop on `feat/auth-hardening` deploy means **0 user existing** to
+  hijack as victim. The exploit requires the attacker to know in advance
+  the wallet address of someone who will sign up later — high-effort,
+  low-reward in current state.
+- Faucet is devnet (no real cash at stake). Yield is not in stable prod.
+- Real fix requires Turnkey root-org API credentials
+  (`TURNKEY_API_BASE_URL`, `TURNKEY_API_PUBLIC_KEY`,
+  `TURNKEY_API_PRIVATE_KEY`, `TURNKEY_DEFAULT_ORGANIZATION_ID`) which need
+  proper provisioning, not a rush.
+
+**Fix when ready** (Option B preferred, more defensive than A):
+- **A** — keep `bank_wallet` in body, server-side cross-check via
+  `@turnkey/sdk-server` `apiClient().getWallets({ organizationId })` →
+  return 403 if mismatch.
+- **B** — drop `bank_wallet` from body entirely, derive 100% server-side
+  from the same Turnkey API call. No client trust at all.
+
+Either option requires the four env vars above. Sprint to be scheduled
+once Thomas provisions the credentials.
+
+**Tracking**: revisit before opening signups beyond closed beta, before
+faucet goes mainnet, or before yield ships real funds — whichever first.
+
 ---
 
 ## 5. Glossary
