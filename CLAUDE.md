@@ -8,7 +8,7 @@ non-trivial change.
 Stealf is a privacy-first neobank on Solana. Two wallets per user:
 
 - **Bank wallet** — Turnkey-custodied Solana account, bridged to EUR
-  IBAN + Stealf card. Signing via passkey + Turnkey backend.
+  IBAN + Stealf card. Signing via Turnkey remote signing (custodial).
 - **Stealth wallet** — Local ED25519 wallet, private key in
   SecureStore (Keychain on iOS, Keystore on Android). Holds a public
   ATA *and* an Umbra-encrypted balance. Signing happens locally.
@@ -85,9 +85,9 @@ TEEs; the client never sees it).
 
 ### 5. Branches
 
-- `main` is not the active branch. **`phase-0-foundation` is.**
-- All work happens on `feat/*` branches stacked on
-  `phase-0-foundation`, PR'd back into it.
+- `main` is not the active branch. **`mainnet` is.**
+- All work happens on `feat/*` branches stacked on `mainnet`, PR'd
+  back into it.
 - `main` only catches up when stealf-app is ready to replace
   `front-stealf` in prod — that decision sits with Thomas.
 
@@ -95,7 +95,7 @@ TEEs; the client never sees it).
 
 The app is built in vertical slices. Current state:
 
-- ✅ Onboarding (Welcome, InviteCode, Handle, Email)
+- ✅ Onboarding (single OAuth + Email-OTP `AuthFlow`)
 - ✅ Bank (balance, history, send simple, receive)
 - ✅ Stealth (Umbra wallet setup, shield, unshield, private send,
   claims, encrypted balance)
@@ -136,12 +136,13 @@ during development.
 
 ## Mopro / ZK FFI
 
-The `modules/mopro-ffi/` native module bundles the Rust ZK provers
-into an iOS xcframework + Android `.so`. Don't touch it unless you've
-read `docs/spike-mopro.md`. The provers are loaded from a
-Metro-bundled `.zkey` asset (49.5 MB for `userregistration`); changes
-to the asset path or loading strategy ripple into `metro.config.js`
-and the splash gate.
+ZK provers come from `@umbra-privacy/rn-zk-prover` (Mopro-bundled
+native xcframework distributed via npm). Don't touch the package source
+unless you've read `docs/spike-mopro.md`. The provers consume zkey
+assets — one (`createdepositwithpublicamount.zkey`, ~4.0 MB) is shipped
+in-bundle at `assets/zk/`; others are lazy-fetched at first use via
+`src/features/stealth/zk/services/zkAssetService.ts`. Changes to the
+zkey loading strategy ripple into `metro.config.js` and the splash gate.
 
 ## When in doubt, defer to docs/
 
