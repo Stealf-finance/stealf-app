@@ -1,23 +1,17 @@
-import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import {
-  applyAmountKey,
-  maxSpendableSol,
-  PROTOCOL_FEE_RATE,
-  protocolFeeSol,
-  SOL_DECIMALS,
-} from '@/src/features/send/lib/amount';
+import { maxSpendableSol, SOL_DECIMALS } from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
-import { FormError } from '@/src/design-system/primitives/FormError';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { DirectionRow } from '@/src/features/send/components/DirectionRow';
-import { AssetCard } from '@/src/features/send/components/AssetCard';
+import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
+import { PercentageChips } from '@/src/features/send/components/PercentageChips';
+import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import { Icons } from '@/src/design-system/icons';
 import { sansation, sansationLight, serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -109,8 +103,6 @@ export function MoveFlow() {
   // SOL otherwise. Keeps the user oriented on what they're spending.
   const assetSymbol = direction === 'shielded-to-bank' ? 'WSOL' : 'SOL';
 
-  const [amount, setAmount] = useState('0');
-
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
@@ -140,7 +132,6 @@ export function MoveFlow() {
   } else {
     sourceSol = shielded?.sol ?? 0;
   }
-  const balanceLabel = formatSolBalance(sourceSol);
 
   // The source wallet pays its own fees only when source funds and fee-payer
   // wallet are the same bucket. For shielded-to-bank, fees come out of the
@@ -153,12 +144,30 @@ export function MoveFlow() {
   // so no protocol fee.
   const hasProtocolFee = direction !== 'stealth-to-bank';
   const maxSol = maxSpendableSol(sourceSol, sourcePaysFees, hasProtocolFee);
-  const maxLabel = formatSolBalance(maxSol);
 
-  const fiat = (Number(amount) * rate).toFixed(2);
+  const {
+    inputMode,
+    solAmount,
+    fiatAmount,
+    primaryDisplay,
+    onKey,
+    onPressPercent,
+    onToggleMode,
+  } = useAmountInput({ rate, maxSol });
+
+  // Asset mode → fiat at the bottom (2 decimals: "$0.00").
+  // Fiat mode → SOL at the bottom (4 decimals: "0.0000 SOL").
+  const secondaryAmount =
+    inputMode === 'asset'
+      ? `$${fiatAmount.toFixed(2)}`
+      : `${solAmount.toFixed(4)} ${assetSymbol}`;
+
+  const maxBalanceLabel =
+    inputMode === 'fiat'
+      ? `$${(maxSol * rate).toFixed(2)}`
+      : `${maxSol.toFixed(4)} ${assetSymbol}`;
 
   const close = () => router.back();
-  const onKey = (k: string) => setAmount((a) => applyAmountKey(a, k));
 
   // Block bank → shielded the moment the user lands here without a stealth
   // wallet. No amount entry, no swipe, no chance to type into a flow that's
@@ -166,15 +175,8 @@ export function MoveFlow() {
   const stealthMissingForBankToShielded =
     direction === 'bank-to-shielded' && !!user && !user.stealfWallet;
 
-  const numericAmount = Number(amount);
-  const insufficient = numericAmount > sourceSol;
-  const swipeDisabled = numericAmount <= 0 || insufficient;
-
-  // Scale the amount type down as digits accumulate so very long values stay
-  // on one line. The decimal point doesn't count as a digit.
-  const digitCount = amount.replace('.', '').length;
-  const amountFontSize =
-    digitCount >= 12 ? 36 : digitCount >= 10 ? 48 : digitCount >= 8 ? 60 : 72;
+  const insufficient = solAmount > sourceSol;
+  const swipeDisabled = solAmount <= 0 || insufficient;
 
   const invalidateAll = async () => {
     const keys: Promise<unknown>[] = [
@@ -204,7 +206,7 @@ export function MoveFlow() {
   };
 
   const onSubmit = () => {
-    const num = Number(amount);
+    const num = solAmount;
     if (!num || num <= 0) return;
 
     // Pre-flight: surface auth/wallet/balance gaps as failed pills + close
@@ -520,99 +522,25 @@ export function MoveFlow() {
         />
       </View>
 
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'baseline',
-            justifyContent: 'center',
-            paddingHorizontal: 28,
-            gap: 6,
-          }}
-        >
-          <Text
-            style={[
-              sansationLight,
-              {
-                fontSize: amountFontSize,
-                letterSpacing: amountFontSize * -0.05,
-                color: palette.ink,
-                lineHeight: amountFontSize,
-                includeFontPadding: false,
-              },
-            ]}
-            numberOfLines={1}
-          >
-            {amount}
-          </Text>
-          <Text
-            style={[
-              serif,
-              {
-                fontSize: 28,
-                color: palette.accent,
-                fontStyle: 'italic',
-                lineHeight: 28,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            {assetSymbol}
-          </Text>
-        </View>
-        <Text
-          style={[
-            serif,
-            {
-              textAlign: 'center',
-              marginTop: 12,
-              fontStyle: 'italic',
-              fontSize: 30,
-              color: palette.inkDim,
-            },
-          ]}
-        >
-          ≈ ${fiat}
-        </Text>
-        {hasProtocolFee && numericAmount > 0 ? (
-          <Text
-            style={[
-              sansation,
-              {
-                textAlign: 'center',
-                marginTop: 6,
-                fontSize: 10.5,
-                letterSpacing: 1.2,
-                textTransform: 'uppercase',
-                color: palette.inkFaint,
-              },
-            ]}
-          >
-            Privacy fee {(PROTOCOL_FEE_RATE * 100).toFixed(2)}% ·{' '}
-            {protocolFeeSol(numericAmount).toFixed(4).replace(/\.?0+$/, '')}{' '}
-            {assetSymbol}
-          </Text>
-        ) : null}
-        <FormError
-          message={
-            insufficient
-              ? `Not enough ${assetSymbol} — you have ${balanceLabel} ${assetSymbol}`
-              : null
-          }
+      <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
+        <SourceAssetCard
+          label="From"
+          iconSource={require('@/assets/images/solana-icon.png')}
+          tokenLabel={assetSymbol}
+          primaryAmount={primaryDisplay}
+          secondaryAmount={secondaryAmount}
+          inputMode={inputMode}
+          onPressTokenPill={() => router.push('/asset-picker')}
+          onToggleMode={onToggleMode}
+          toggleDisabled={rate <= 0}
+          maxLabel={maxBalanceLabel}
         />
       </View>
 
-      <View style={{ marginBottom: 20 }}>
-        <AssetCard
-          iconSource={require('@/assets/images/solana-icon.png')}
-          name={assetSymbol === 'WSOL' ? 'Wrapped SOL' : 'Solana'}
-          symbol={assetSymbol}
-          balanceLabel={balanceLabel}
-          maxLabel={maxLabel}
-          onPressCard={() => router.push('/asset-picker')}
-          onPressMax={() => setAmount(maxLabel)}
-        />
-      </View>
+      <PercentageChips
+        onPressPercent={onPressPercent}
+        disabled={maxSol <= 0}
+      />
 
       <Numpad onKey={onKey} tone={tone} />
 
@@ -625,7 +553,7 @@ export function MoveFlow() {
       >
         <SwipeToSend
           tone={tone}
-          label={ctaLabel}
+          label={insufficient ? 'Insufficient balance' : ctaLabel}
           onSend={onSubmit}
           disabled={swipeDisabled}
         />

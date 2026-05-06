@@ -49,8 +49,6 @@ export function AssetCard({
           style={{
             width: 36,
             height: 36,
-            borderRadius: 18,
-            backgroundColor: '#0a0a0a',
           }}
         />
         <View style={{ flex: 1, marginLeft: 12 }}>

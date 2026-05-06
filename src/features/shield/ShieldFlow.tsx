@@ -1,21 +1,18 @@
-import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import {
-  applyAmountKey,
-  SOL_DECIMALS,
-} from '@/src/features/send/lib/amount';
+import { maxSpendableSol, SOL_DECIMALS } from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
-import { FormError } from '@/src/design-system/primitives/FormError';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
-import { SourceAssetCard, type InputMode } from '@/src/features/send/components/SourceAssetCard';
+import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
+import { PercentageChips } from '@/src/features/send/components/PercentageChips';
+import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import { serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
@@ -43,8 +40,6 @@ function formatSolBalance(sol: number): string {
 export function ShieldFlow({ direction }: Props) {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
-  const [amount, setAmount] = useState('0');
-  const [inputMode, setInputMode] = useState<InputMode>('asset');
 
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
@@ -73,38 +68,36 @@ export function ShieldFlow({ direction }: Props) {
   const publicSol = stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
   const privateSol = shielded?.sol ?? 0;
   const sourceSol = isShield ? publicSol : privateSol;
-  const balanceLabel = formatSolBalance(sourceSol);
-
   const rate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
 
-  // The Numpad writes a single string. What it represents depends on
-  // inputMode: SOL when 'asset', USD when 'fiat'. Downstream tx logic
-  // always needs SOL, so derive it.
-  const typedNum = Number(amount) || 0;
-  const solAmount = inputMode === 'asset' ? typedNum : (rate > 0 ? typedNum / rate : 0);
-  const fiatAmount = inputMode === 'asset' ? typedNum * rate : typedNum;
+  // Shield: source = stealth public ATA, fee payer = same → reserve fees.
+  // Unshield: source = encrypted balance, fee payer = stealth public ATA →
+  // different buckets, full balance is spendable.
+  const maxSol = maxSpendableSol(sourceSol, isShield);
 
+  const {
+    inputMode,
+    solAmount,
+    fiatAmount,
+    primaryDisplay,
+    onKey,
+    onPressPercent,
+    onToggleMode,
+  } = useAmountInput({ rate, maxSol });
+
+  // Asset mode → fiat at the bottom (2 decimals: "$0.00").
+  // Fiat mode → SOL at the bottom (4 decimals: "0.0000 SOL").
   const secondaryAmount =
     inputMode === 'asset'
       ? `$${fiatAmount.toFixed(2)}`
-      : `${formatSolBalance(solAmount)} ${assetSymbol}`;
+      : `${solAmount.toFixed(4)} ${assetSymbol}`;
+
+  const maxBalanceLabel =
+    inputMode === 'fiat'
+      ? `$${(maxSol * rate).toFixed(2)}`
+      : `${maxSol.toFixed(4)} ${assetSymbol}`;
 
   const close = () => router.back();
-  const onKey = (k: string) => setAmount((a) => applyAmountKey(a, k));
-
-  const onToggleMode = () => {
-    if (rate <= 0) return;
-    if (inputMode === 'asset') {
-      // Promote fiat to primary: type the dollar value going forward.
-      const converted = (typedNum * rate).toFixed(2);
-      setAmount(converted === '0.00' ? '0' : converted);
-      setInputMode('fiat');
-    } else {
-      const converted = (typedNum / rate).toFixed(4).replace(/\.?0+$/, '');
-      setAmount(converted === '' ? '0' : converted);
-      setInputMode('asset');
-    }
-  };
 
   const insufficient = solAmount > sourceSol;
   const swipeDisabled = solAmount <= 0 || insufficient;
@@ -242,23 +235,20 @@ export function ShieldFlow({ direction }: Props) {
           label={isShield ? 'Shielding' : 'Unshielding'}
           iconSource={require('@/assets/images/solana-icon.png')}
           tokenLabel={assetSymbol}
-          primaryAmount={amount}
+          primaryAmount={primaryDisplay}
           secondaryAmount={secondaryAmount}
           inputMode={inputMode}
           onPressTokenPill={() => router.push('/asset-picker')}
           onToggleMode={onToggleMode}
           toggleDisabled={rate <= 0}
+          maxLabel={maxBalanceLabel}
         />
-        <View style={{ paddingHorizontal: 24 }}>
-          <FormError
-            message={
-              insufficient
-                ? `Not enough ${assetSymbol} — you have ${balanceLabel} ${assetSymbol}`
-                : null
-            }
-          />
-        </View>
       </View>
+
+      <PercentageChips
+        onPressPercent={onPressPercent}
+        disabled={maxSol <= 0}
+      />
 
       <Numpad onKey={onKey} tone={tone} />
 
@@ -271,7 +261,7 @@ export function ShieldFlow({ direction }: Props) {
       >
         <SwipeToSend
           tone={tone}
-          label={ctaLabel}
+          label={insufficient ? 'Insufficient balance' : ctaLabel}
           onSend={onSubmit}
           disabled={swipeDisabled}
         />
