@@ -21,7 +21,6 @@ export function useLogout() {
       try {
         await turnkeyLogout();
       } catch {
-        // Turnkey may throw if no session — keep going to ensure local cleanup
       }
       await purgeTurnkeyState();
       queryClient.clear();

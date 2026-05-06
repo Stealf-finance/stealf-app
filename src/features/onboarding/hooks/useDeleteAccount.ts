@@ -36,7 +36,6 @@ export function useDeleteAccount() {
       try {
         await turnkeyLogout();
       } catch {
-        // ignore — state cleanup must still happen
       }
       await purgeTurnkeyState();
       queryClient.clear();

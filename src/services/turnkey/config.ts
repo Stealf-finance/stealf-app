@@ -56,19 +56,19 @@ export const TURNKEY_CALLBACKS: TurnkeyCallbacks = {
     if (__DEV__) console.log('[Turnkey] Session expired');
   },
   onAuthenticationSuccess: ({ session, action, method, identifier }) => {
-    if (__DEV__) console.log('[Turnkey] Auth success:', { action, method });
-    // For OAuth flows the SDK passes the raw OIDC id_token through
-    // `identifier` (cf. TurnkeyProvider.mjs handlePostAuth call sites).
-    // The SDK's `params.onOauthSuccess` callback on handleGoogleOauth /
-    // handleAppleOauth is declared in the type signature but never
-    // forwarded to completeOAuthFlow, so this provider-config callback
-    // is the only OAuth-relevant hook that actually fires. We emit a
-    // subscriber event from here — see oauthAuthEvents.ts for why this
-    // can't be a React-state-gated effect (callback fires AFTER React
-    // commits the session/user/wallets state, so any effect gated on
-    // those values would run before the callback and miss the email).
     if (method === AuthMethod.Oauth && session?.token) {
       const email = decodeOidcEmail(identifier);
+      if (__DEV__) {
+        const tokenParts = (identifier ?? '').split('.');
+        console.log('[Turnkey] Auth success:', {
+          action,
+          method,
+          hasIdentifier: !!identifier,
+          tokenSegments: tokenParts.length,
+          tokenLen: identifier?.length ?? 0,
+          decodedEmail: email ?? '(none)',
+        });
+      }
       Sentry.addBreadcrumb({
         category: 'auth.oauth',
         level: email ? 'info' : 'warning',
@@ -81,6 +81,12 @@ export const TURNKEY_CALLBACKS: TurnkeyCallbacks = {
         email,
         sessionToken: session.token,
         identifier,
+      });
+    } else if (__DEV__) {
+      console.log('[Turnkey] Auth success (non-OAuth or no session):', {
+        action,
+        method,
+        hasSession: !!session?.token,
       });
     }
   },

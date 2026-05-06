@@ -24,16 +24,6 @@ type Props = {
   errored?: boolean;
 };
 
-/**
- * 6-digit verification code input.
- *
- * Visually shows 6 cells; underneath, a single hidden TextInput captures
- * keystrokes (paste-friendly, native keyboard, autofill from email/SMS).
- * Tapping any cell focuses the hidden input.
- *
- * iOS number-pad has no return key, so we attach a Done accessory bar that
- * dismisses the keyboard explicitly. Android shows a system back arrow.
- */
 export function CodeInput({
   value,
   onChange,

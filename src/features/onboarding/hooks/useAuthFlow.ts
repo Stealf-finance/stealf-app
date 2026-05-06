@@ -93,16 +93,7 @@ export function useAuthFlow() {
 
   useEffect(() => {
     if (!pendingOauth) return;
-    // Subscribe-on-pending: we only listen while an OAuth attempt is in
-    // flight. The Turnkey provider's `onAuthenticationSuccess` callback
-    // emits the event AFTER its full post-auth pipeline (setSession →
-    // refreshWallets → refreshUser) is done — i.e. at the only point
-    // where session/wallets/user are all settled and the OIDC `email`
-    // claim is decodable from `identifier`. Driving finalize from the
-    // callback (instead of gating a React effect on user state) avoids
-    // the race where the effect fires before the callback because React
-    // commits the SDK's intermediate state changes during the awaits
-    // inside handlePostAuth.
+
     const method = pendingOauth;
     const unsubscribe = subscribeOauthAuthSuccess(({ email, sessionToken }) => {
       if (finalizingRef.current) return;
@@ -119,6 +110,8 @@ export function useAuthFlow() {
         console.log('[useAuthFlow] starting finalize', {
           method,
           hasEmail: !!email,
+          email: email ?? '(none)',
+          hasSessionToken: !!sessionToken,
         });
       }
 
@@ -147,13 +140,7 @@ export function useAuthFlow() {
       setError(null);
       setPendingOauth(provider);
       try {
-        // The SDK's `params.onOauthSuccess` is declared on the handler's
-        // type signature but never forwarded to completeOAuthFlow for
-        // Google / Apple (cf. TurnkeyProvider.mjs handleGoogleOauth /
-        // handleAppleOauth — only the closure `callbacks` is passed).
-        // We let the SDK drive the flow and capture the OIDC email
-        // through the provider-level `onAuthenticationSuccess` callback
-        // wired in services/turnkey/config.ts.
+
         await handler({});
       } catch (err) {
         setPendingOauth(null);
@@ -228,8 +215,6 @@ export function useAuthFlow() {
     resendEmailCode: sendEmailCode,
     isLoading,
     isAuthenticating: isLoading || pendingOauth !== null,
-    // Which OAuth provider the user just tapped, if any. Drives the
-    // per-button spinner so only the tapped provider shows feedback.
     pendingProvider: pendingOauth,
     error,
     isClientReady,
@@ -239,9 +224,6 @@ export function useAuthFlow() {
 function pseudoFromEmail(email: string): string {
   const local = email.split('@')[0] ?? '';
   const sanitized = local.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 14);
-  // Always append a random suffix so two users with the same local part
-  // (john@a.com, john@b.com) don't collide on the backend pseudo unique
-  // index. 14 + 1 + 4 = 19 chars max, under the backend Zod cap of 20.
   const suffix = Math.floor(Math.random() * 0x10000)
     .toString(16)
     .padStart(4, '0');
@@ -254,11 +236,7 @@ function toMessage(err: unknown): string {
   return 'Authentication failed';
 }
 
-// Apple's "Hide My Email" + private relay can return an OIDC token with no
-// email claim, and Turnkey doesn't synthesize one. Backend rightly rejects
-// new-user creation without email ("Email and pseudo are required for new
-// users"), but the raw message is jargon for end users. Soften the surface
-// only when we have signal that the missing email is the actual cause.
+
 function softenMissingEmailError(
   method: AuthMethod,
   email: string | undefined,
@@ -289,9 +267,7 @@ function isCancellationError(err: unknown): boolean {
     msg.includes('interrupt') ||
     msg.includes('user closed');
   if (matches) {
-    // Loose substring matching means a backend "server cancelled the request"
-    // would also be silenced. Drop a breadcrumb so a real error masquerading
-    // as a cancel still leaves a trail in Sentry.
+
     Sentry.addBreadcrumb({
       category: 'auth.cancel',
       level: 'info',
