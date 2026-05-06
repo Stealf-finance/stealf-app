@@ -7,27 +7,32 @@ type Props = {
   strokeWidth?: number;
 };
 
-const make =
-  (
-    children: ReactNode | ((color: string) => ReactNode),
-    vbW = 24,
-    vbH = 24,
-  ) =>
-  ({ size = 18, color = 'currentColor', strokeWidth = 1.5 }: Props) =>
-    (
-      <Svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${vbW} ${vbH}`}
-        fill="none"
-        stroke={color}
-        strokeWidth={strokeWidth}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {typeof children === 'function' ? children(color) : children}
-      </Svg>
-    );
+const make = (
+  children: ReactNode | ((color: string) => ReactNode),
+  vbW = 24,
+  vbH = 24,
+) => {
+  const Icon = ({
+    size = 18,
+    color = 'currentColor',
+    strokeWidth = 1.5,
+  }: Props) => (
+    <Svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${vbW} ${vbH}`}
+      fill="none"
+      stroke={color}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {typeof children === 'function' ? children(color) : children}
+    </Svg>
+  );
+  Icon.displayName = 'Icon';
+  return Icon;
+};
 
 export const Icons = {
   arrUp: make(<Path d="M12 19V5M5 12l7-7 7 7" />),
