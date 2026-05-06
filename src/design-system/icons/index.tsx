@@ -97,6 +97,7 @@ export const Icons = {
   ),
   bolt: make(<Path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />),
   swap: make(<Path d="M7 10l-4-4 4-4M3 6h14M17 14l4 4-4 4M21 18H7" />),
+  swapV: make(<Path d="M10 7L7 4 4 7M7 4v14M14 17l3 3 3-3M17 20V6" />),
   invest: make(<Path d="M3 17l5-5 4 4 9-9M15 7h6v6" />),
   home: make(
     <>

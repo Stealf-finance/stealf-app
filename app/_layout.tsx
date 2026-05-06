@@ -111,6 +111,7 @@ function RootLayout() {
                   <Stack.Screen name="transactions" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="tx/[id]" options={{ presentation: 'modal' }} />
                   <Stack.Screen name="profile/private-key" options={{ presentation: 'modal' }} />
+                  <Stack.Screen name="asset-picker" options={{ presentation: 'modal' }} />
                   </Stack>
                   <ToastHost />
                   <AnimatedSplash />

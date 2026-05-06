@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { Image } from 'expo-image';
+import { Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import {
   applyAmountKey,
-  maxSpendableSol,
   SOL_DECIMALS,
 } from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,13 +15,8 @@ import { FormError } from '@/src/design-system/primitives/FormError';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
-import { Icons } from '@/src/design-system/icons';
-import {
-  sansation,
-  sansationBold,
-  sansationLight,
-  serif,
-} from '@/src/design-system/typography';
+import { SourceAssetCard, type InputMode } from '@/src/features/send/components/SourceAssetCard';
+import { serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -51,6 +44,7 @@ export function ShieldFlow({ direction }: Props) {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const [amount, setAmount] = useState('0');
+  const [inputMode, setInputMode] = useState<InputMode>('asset');
 
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
@@ -81,28 +75,42 @@ export function ShieldFlow({ direction }: Props) {
   const sourceSol = isShield ? publicSol : privateSol;
   const balanceLabel = formatSolBalance(sourceSol);
 
-  // Shield: source = stealth public ATA, fee payer = same → reserve.
-  // Unshield: source = encrypted balance, fee payer = stealth public ATA →
-  // different buckets, full balance is spendable.
-  const maxSol = maxSpendableSol(sourceSol, isShield);
-  const maxLabel = formatSolBalance(maxSol);
-
   const rate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
-  const fiat = (Number(amount) * rate).toFixed(2);
+
+  // The Numpad writes a single string. What it represents depends on
+  // inputMode: SOL when 'asset', USD when 'fiat'. Downstream tx logic
+  // always needs SOL, so derive it.
+  const typedNum = Number(amount) || 0;
+  const solAmount = inputMode === 'asset' ? typedNum : (rate > 0 ? typedNum / rate : 0);
+  const fiatAmount = inputMode === 'asset' ? typedNum * rate : typedNum;
+
+  const secondaryAmount =
+    inputMode === 'asset'
+      ? `$${fiatAmount.toFixed(2)}`
+      : `${formatSolBalance(solAmount)} ${assetSymbol}`;
 
   const close = () => router.back();
   const onKey = (k: string) => setAmount((a) => applyAmountKey(a, k));
 
-  const numericAmount = Number(amount);
-  const insufficient = numericAmount > sourceSol;
-  const swipeDisabled = numericAmount <= 0 || insufficient;
+  const onToggleMode = () => {
+    if (rate <= 0) return;
+    if (inputMode === 'asset') {
+      // Promote fiat to primary: type the dollar value going forward.
+      const converted = (typedNum * rate).toFixed(2);
+      setAmount(converted === '0.00' ? '0' : converted);
+      setInputMode('fiat');
+    } else {
+      const converted = (typedNum / rate).toFixed(4).replace(/\.?0+$/, '');
+      setAmount(converted === '' ? '0' : converted);
+      setInputMode('asset');
+    }
+  };
 
-  const digitCount = amount.replace('.', '').length;
-  const amountFontSize =
-    digitCount >= 12 ? 36 : digitCount >= 10 ? 48 : digitCount >= 8 ? 60 : 72;
+  const insufficient = solAmount > sourceSol;
+  const swipeDisabled = solAmount <= 0 || insufficient;
 
   const onSubmit = () => {
-    const num = Number(amount);
+    const num = solAmount;
     if (!num || num <= 0) return;
 
     const failPre = (msg: string) => {
@@ -229,151 +237,26 @@ export function ShieldFlow({ direction }: Props) {
         {subtitle}
       </Text>
 
-      <View style={{ flex: 1, justifyContent: 'center' }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'baseline',
-            justifyContent: 'center',
-            paddingHorizontal: 28,
-            gap: 6,
-          }}
-        >
-          <Text
-            style={[
-              sansationLight,
-              {
-                fontSize: amountFontSize,
-                letterSpacing: amountFontSize * -0.05,
-                color: palette.ink,
-                lineHeight: amountFontSize,
-                includeFontPadding: false,
-              },
-            ]}
-            numberOfLines={1}
-          >
-            {amount}
-          </Text>
-          <Text
-            style={[
-              serif,
-              {
-                fontSize: 28,
-                color: palette.accent,
-                fontStyle: 'italic',
-                lineHeight: 28,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            {assetSymbol}
-          </Text>
-        </View>
-        <Text
-          style={[
-            serif,
-            {
-              textAlign: 'center',
-              marginTop: 12,
-              fontStyle: 'italic',
-              fontSize: 30,
-              color: T.ink,
-            },
-          ]}
-        >
-          ${fiat}
-        </Text>
-        <FormError
-          message={
-            insufficient
-              ? `Not enough ${assetSymbol} — you have ${balanceLabel} ${assetSymbol}`
-              : null
-          }
+      <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
+        <SourceAssetCard
+          label={isShield ? 'Shielding' : 'Unshielding'}
+          iconSource={require('@/assets/images/solana-icon.png')}
+          tokenLabel={assetSymbol}
+          primaryAmount={amount}
+          secondaryAmount={secondaryAmount}
+          inputMode={inputMode}
+          onPressTokenPill={() => router.push('/asset-picker')}
+          onToggleMode={onToggleMode}
+          toggleDisabled={rate <= 0}
         />
-      </View>
-
-      <View style={{ paddingHorizontal: 24, marginBottom: 20 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingVertical: 14,
-            paddingLeft: 12,
-            paddingRight: 10,
-            borderRadius: 18,
-            backgroundColor: 'rgba(255,255,255,0.04)',
-            borderWidth: 1,
-            borderColor: T.hairline,
-          }}
-        >
-          <Image
-            source={require('@/assets/images/solana-icon.png')}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: '#0a0a0a',
-            }}
+        <View style={{ paddingHorizontal: 24 }}>
+          <FormError
+            message={
+              insufficient
+                ? `Not enough ${assetSymbol} — you have ${balanceLabel} ${assetSymbol}`
+                : null
+            }
           />
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-            >
-              <Text
-                style={[
-                  sansation,
-                  { fontSize: 14, color: T.ink, fontWeight: '600' },
-                ]}
-              >
-                {isShield ? 'Solana' : 'Wrapped SOL'}
-              </Text>
-              <Icons.chevD size={12} color={T.inkDim} strokeWidth={2} />
-            </View>
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 11,
-                  color: T.inkFaint,
-                  marginTop: 2,
-                  letterSpacing: 0.2,
-                },
-              ]}
-            >
-              {balanceLabel} {assetSymbol}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => setAmount(maxLabel)}
-            accessibilityRole="button"
-            accessibilityLabel={`Use max balance ${maxLabel} ${assetSymbol}`}
-            hitSlop={6}
-            style={({ pressed }) => ({
-              marginRight: 6,
-              paddingVertical: 9,
-              paddingHorizontal: 16,
-              borderRadius: 12,
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              borderWidth: 1.5,
-              borderColor: 'rgba(255,255,255,0.55)',
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <Text
-              style={[
-                sansationBold,
-                {
-                  fontSize: 11,
-                  color: T.ink,
-                  letterSpacing: 0.6,
-                },
-              ]}
-            >
-              Use Max
-            </Text>
-          </Pressable>
         </View>
       </View>
 

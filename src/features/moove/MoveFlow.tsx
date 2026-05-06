@@ -10,7 +10,6 @@ import {
 } from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
 import { FormError } from '@/src/design-system/primitives/FormError';
@@ -18,6 +17,7 @@ import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSe
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { DirectionRow } from '@/src/features/send/components/DirectionRow';
+import { AssetCard } from '@/src/features/send/components/AssetCard';
 import { Icons } from '@/src/design-system/icons';
 import { sansation, sansationLight, serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -567,7 +567,7 @@ export function MoveFlow() {
               textAlign: 'center',
               marginTop: 12,
               fontStyle: 'italic',
-              fontSize: 22,
+              fontSize: 30,
               color: palette.inkDim,
             },
           ]}
@@ -602,55 +602,16 @@ export function MoveFlow() {
         />
       </View>
 
-      <View style={{ alignItems: 'center', marginBottom: 20 }}>
-        <Pressable
-          onPress={() => setAmount(maxLabel)}
-          accessibilityRole="button"
-          accessibilityLabel={`Use max balance ${maxLabel} ${assetSymbol}`}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingVertical: 8,
-            paddingHorizontal: 14,
-            borderRadius: 100,
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.2)',
-            overflow: 'hidden',
-          }}
-        >
-          <LinearGradient
-            colors={
-              tone === 'gold' ? ['#e6c079', '#a37b2e'] : ['#e8e8ea', '#9a9a9f']
-            }
-            start={{ x: 0.2, y: 0 }}
-            end={{ x: 0.8, y: 1 }}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 2.2,
-                textTransform: 'uppercase',
-                fontWeight: '700',
-                color: '#0a0a0a',
-              },
-            ]}
-          >
-            Max
-          </Text>
-          <View style={{ width: 1, height: 10, backgroundColor: 'rgba(0,0,0,0.2)' }} />
-          <Text
-            style={[
-              sansation,
-              { fontSize: 10, color: '#0a0a0a', fontWeight: '500' },
-            ]}
-          >
-            {maxLabel} {assetSymbol}
-          </Text>
-        </Pressable>
+      <View style={{ marginBottom: 20 }}>
+        <AssetCard
+          iconSource={require('@/assets/images/solana-icon.png')}
+          name={assetSymbol === 'WSOL' ? 'Wrapped SOL' : 'Solana'}
+          symbol={assetSymbol}
+          balanceLabel={balanceLabel}
+          maxLabel={maxLabel}
+          onPressCard={() => router.push('/asset-picker')}
+          onPressMax={() => setAmount(maxLabel)}
+        />
       </View>
 
       <Numpad onKey={onKey} tone={tone} />
