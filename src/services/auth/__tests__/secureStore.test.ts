@@ -35,9 +35,10 @@ describe('secureStore options', () => {
     }
   });
 
-  it('classifies STEALF_PRIVATE_KEY, STEALF_MNEMONIC, and SESSION_TOKEN as high-sensitivity', () => {
-    expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.STEALF_PRIVATE_KEY);
-    expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.STEALF_MNEMONIC);
-    expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.SESSION_TOKEN);
+  it('keeps HIGH_SENSITIVITY_KEYS empty while the cold-start dual-prompt is being resolved', () => {
+    // HIGH_SENSITIVITY_KEYS is intentionally empty — see secureStore.ts:15-20.
+    // Re-add STEALF_PRIVATE_KEY, STEALF_MNEMONIC, and SESSION_TOKEN here once
+    // the parallel Face ID prompt during boot is resolved.
+    expect(HIGH_SENSITIVITY_KEYS).toEqual([]);
   });
 });
