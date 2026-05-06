@@ -19,7 +19,12 @@ const ACCESSORY_ID = 'code-input-accessory';
 type Props = {
   value: string;
   onChange: (next: string) => void;
-  onSubmit: () => void;
+  // Receives the freshly-typed value rather than relying on a parent
+  // closure: when the 6th digit lands, `onChange` schedules a re-render
+  // but doesn't apply synchronously, so any closure-captured `code`
+  // would still be 5 chars long and the parent's length guard would
+  // bail before hitting Turnkey.
+  onSubmit: (code: string) => void;
   disabled?: boolean;
   errored?: boolean;
 };
@@ -43,7 +48,7 @@ export function CodeInput({
     const cleaned = raw.replace(/\D/g, '').slice(0, CELL);
     onChange(cleaned);
     if (cleaned.length === CELL) {
-      onSubmit();
+      onSubmit(cleaned);
     }
   };
 

@@ -45,11 +45,12 @@ export function OtpScreen({ email, otpId: initialOtpId, onBack }: Props) {
     return () => clearInterval(t);
   }, [cooldown]);
 
-  const onSubmit = async () => {
-    if (code.length !== 6 || isLoading) return;
+  const onSubmit = async (override?: string) => {
+    const submitted = override ?? code;
+    if (submitted.length !== 6 || isLoading) return;
     setVerifyError(null);
     try {
-      await verifyEmailCode(otpId, code, email);
+      await verifyEmailCode(otpId, submitted, email);
       // AuthGuard handles routing once setUser fires.
     } catch (err) {
       setVerifyError(err instanceof Error ? err.message : 'Invalid code');
