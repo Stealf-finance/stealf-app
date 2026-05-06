@@ -42,7 +42,6 @@ type Props = {
   onComplete: (choice: SetupChoice) => void;
   onCancel?: () => void;
   loading: boolean;
-  /** When set, jumps to showMnemonic step (after createWallet has run). */
   generatedMnemonic?: string;
 };
 
@@ -234,14 +233,10 @@ export function StealfWalletSetup({
             step === 'importWallet'
               ? 'Restoring your wallet…'
               : step === 'showMnemonic'
-                ? 'Registering on chain…'
+                ? 'Setting up your stealth wallet…'
                 : 'Generating wallet…'
           }
-          sub={
-            step === 'showMnemonic'
-              ? 'Saving your wallet to your account.'
-              : 'This can take a moment. Hang tight.'
-          }
+          sub="This can take a moment. Hang tight."
         />
       ) : null}
     </CenterGlow>
@@ -416,6 +411,11 @@ function ShowMnemonicStep({
   loading,
 }: ShowMnemonicProps) {
   const wordsArr = mnemonic.trim().split(/\s+/);
+  const [revealed, setRevealed] = useState(false);
+  const EyeIcon = revealed ? Icons.hideEye : Icons.eye;
+  const displayWords = revealed
+    ? wordsArr
+    : Array(WORD_COUNT).fill('******');
   return (
     <View style={{ paddingTop: 8 }}>
       <Text
@@ -480,13 +480,15 @@ function ShowMnemonicStep({
           start={{ x: 0.2, y: 0 }}
           end={{ x: 0.8, y: 1 }}
           style={{
-            paddingVertical: 18,
-            paddingHorizontal: 14,
+            paddingTop: 18,
+            paddingBottom: 18,
+            paddingLeft: 14,
+            paddingRight: 44,
             flexDirection: 'row',
             flexWrap: 'wrap',
           }}
         >
-          {wordsArr.map((w, i) => (
+          {displayWords.map((w, i) => (
             <View
               key={i}
               style={{
@@ -522,6 +524,36 @@ function ShowMnemonicStep({
             </View>
           ))}
         </LinearGradient>
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: 44,
+            height: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Pressable
+            onPress={() => setRevealed((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              revealed ? 'Hide recovery phrase' : 'Reveal recovery phrase'
+            }
+            hitSlop={8}
+            style={({ pressed }) => ({
+              width: 32,
+              height: 32,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <EyeIcon size={18} color={T.ink} strokeWidth={1.6} />
+          </Pressable>
+        </View>
       </View>
 
       <Pressable

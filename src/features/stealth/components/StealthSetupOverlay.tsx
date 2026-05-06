@@ -186,9 +186,7 @@ export function StealthSetupOverlay({ onClose }: Props) {
     <Animated.View
       entering={FadeIn.duration(220)}
       exiting={FadeOut.duration(220)}
-      // box-none so the empty backdrop doesn't physically swallow taps —
-      // the AccountSetupCard child still catches its own. Lets a cancel
-      // gesture pass through to whatever is mounted underneath.
+
       pointerEvents="box-none"
       style={{
         position: 'absolute',
@@ -224,7 +222,7 @@ export function StealthSetupOverlay({ onClose }: Props) {
         <LoaderOverlay
           tone="gold"
           label="Registering your accounts…"
-          sub="Submitting transactions to the privacy protocol."
+          sub="Setting up your encrypted balance"
         />
       ) : null}
     </Animated.View>
