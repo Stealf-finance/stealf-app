@@ -28,6 +28,9 @@ import { Tone, txPalette } from '@/src/design-system/palettes';
 import { TxHeader } from '@/src/features/send/components/TxHeader';
 import { TxTitleBlock } from '@/src/features/send/components/TxTitleBlock';
 import { AssetPill, Asset } from '@/src/features/send/components/AssetPill';
+import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
+import { PercentageChips } from '@/src/features/send/components/PercentageChips';
+import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
   RecipientRow,
   Recipient,
@@ -59,11 +62,6 @@ import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 const FADE_OUT = 160;
 const FADE_IN = 220;
 
-const MAX_GRADIENTS: Record<Tone, [string, string]> = {
-  silver: ['#e8e8ea', '#9a9a9f'],
-  gold: ['#e6c079', '#a37b2e'],
-};
-
 // Solana base fee = 5,000 lamports per signature. Single-sig transfer = 5,000.
 const NETWORK_FEE_SOL = 0.000005;
 
@@ -85,21 +83,6 @@ function truncateAddress(input: string, head = 6, tail = 4): string {
   return `${s.slice(0, head)}…${s.slice(-tail)}`;
 }
 
-// Big-number display shrinks as digits accumulate so the layout below
-// (fiat hint, Max chip, Numpad) never moves. Hand-tuned breakpoints to
-// keep the typography readable from 1 char through the 12-char ceiling
-// reachable when toggling to fiat on a high-balance wallet.
-function bigAmountFontSize(displayLen: number): number {
-  if (displayLen <= 5) return 84;
-  if (displayLen === 6) return 72;
-  if (displayLen === 7) return 62;
-  if (displayLen === 8) return 54;
-  if (displayLen === 9) return 48;
-  if (displayLen === 10) return 44;
-  if (displayLen === 11) return 40;
-  return 36;
-}
-
 type WalletSource = 'bank' | 'stealth';
 type SendMode = 'public' | 'private';
 
@@ -109,7 +92,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const S = txPalette(tone);
-  const maxGradient = MAX_GRADIENTS[tone];
   const { user, isAuthenticated } = useAuth();
   // `wallet` decides which account signs and what balance is shown. It's
   // orthogonal to `tone` (visual styling) — the Stealth public tab uses
@@ -170,8 +152,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const [step, setStep] = useState(0);
   const [asset, setAsset] = useState<Asset | null>(null);
   const [recipient, setRecipient] = useState<Recipient | null>(null);
-  const [amount, setAmount] = useState('0');
-  const [inToken, setInToken] = useState(true);
   const [recipientQuery, setRecipientQuery] = useState('');
   const [assetQuery, setAssetQuery] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
@@ -205,21 +185,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     else transitionTo(step - 1, 'back');
   };
 
-  const onKey = (k: string) => {
-    if (k === '⌫') {
-      setAmount((a) => (a.length > 1 ? a.slice(0, -1) : '0'));
-    } else if (k === '.') {
-      setAmount((a) => (a.includes('.') ? a : a + '.'));
-    } else {
-      // Cap at 9 chars so the giant amount typography never overflows
-      // the screen and shifts the layout (matches Apple Pay / Revolut).
-      setAmount((a) => {
-        if (a.length >= 9) return a;
-        return a === '0' ? k : a + k;
-      });
-    }
-  };
-
   // SOL → live price from the dedicated endpoint (fresher than wallet snapshot).
   // Other tokens → per-unit price derived from the wallet balance/balanceUSD pair
   // (or stable parity for USDC/EURC/USDT). 0 if we genuinely don't know.
@@ -228,21 +193,32 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       ? solPrice
       : (asset.priceUSD ?? 0)
     : 0;
-  const fiatValue = (Number(amount) * rate).toFixed(2);
-  const amountNum = Number(amount);
   const balanceNum = asset ? Number(asset.balance) : 0;
   // Private sends pay a 0.30% Umbra protocol fee on the encrypted balance,
   // so Max has to leave that wedge unspent — otherwise the create-UTXO tx
-  // fails at submit time.
-  const privateMaxNum = isPrivate
-    ? Math.max(0, balanceNum * (1 - PROTOCOL_FEE_RATE))
-    : balanceNum;
-  const maxAmountStr = isPrivate
-    ? privateMaxNum === 0
-      ? '0'
-      : privateMaxNum.toFixed(6).replace(/\.?0+$/, '')
-    : asset?.balance ?? '0';
-  // Reserve the network fee on top of the amount when the asset is the gas token.
+  // fails at submit time. SOL also reserves the network fee.
+  const networkFeeReserve =
+    !isPrivate && asset?.symbol === 'SOL' ? NETWORK_FEE_SOL : 0;
+  const protocolFeeMultiplier = isPrivate ? 1 - PROTOCOL_FEE_RATE : 1;
+  const maxSpendable = Math.max(
+    0,
+    balanceNum * protocolFeeMultiplier - networkFeeReserve,
+  );
+
+  const {
+    amount,
+    setAmount,
+    inputMode,
+    solAmount: typedAssetAmount,
+    fiatAmount,
+    primaryDisplay,
+    onKey,
+    onPressPercent,
+    onToggleMode,
+  } = useAmountInput({ rate, maxSol: maxSpendable });
+
+  const fiatValue = fiatAmount.toFixed(2);
+  const amountNum = typedAssetAmount;
   const exceedsBalance =
     asset?.symbol === 'SOL'
       ? amountNum + NETWORK_FEE_SOL > balanceNum
@@ -252,6 +228,12 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     amountNum > 0 && exceedsBalance
       ? `Insufficient balance · max ${asset?.balance ?? 0} ${asset?.symbol ?? ''}`
       : null;
+  const tokenAmountLabel =
+    amountNum === 0 ? '0' : amountNum.toFixed(6).replace(/\.?0+$/, '');
+  const maxBalanceLabel =
+    inputMode === 'fiat'
+      ? `$${(maxSpendable * rate).toFixed(2)}`
+      : `${maxSpendable.toFixed(4).replace(/\.?0+$/, '') || '0'} ${asset?.symbol ?? ''}`;
   const feeUSD =
     typeof solPrice === 'number' && solPrice > 0
       ? NETWORK_FEE_SOL * solPrice
@@ -283,12 +265,12 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       return;
     }
     setSendError(null);
-    if (__DEV__) console.log('[SendFlow] sending', amount, asset.symbol, '→', recipient.name, isPrivate ? '(private)' : '');
+    if (__DEV__) console.log('[SendFlow] sending', typedAssetAmount, asset.symbol, '→', recipient.name, isPrivate ? '(private)' : '');
     try {
       if (isPrivate) {
         setPrivateSending(true);
         const amountLamports = BigInt(
-          Math.floor(Number(amount) * 10 ** SOL_DECIMALS),
+          Math.floor(typedAssetAmount * 10 ** SOL_DECIMALS),
         );
         const destination = toAddress(recipient.name.trim());
         const mint = toAddress(SOL_MINT);
@@ -308,7 +290,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       const sig = await sendMutation.mutateAsync({
         fromAddress,
         toAddress: recipient.name.trim(),
-        amountSol: Number(amount),
+        amountSol: typedAssetAmount,
         walletSource,
         balanceSol: balanceNum,
       });
@@ -622,205 +604,43 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
           <>
             <TxTitleBlock
               kicker="Step 3 of 4"
-              title={`For ${truncateAddress(recipient.name)}`}
-              subtitle="Enter the amount to send"
+              title={
+                isPrivate
+                  ? 'Send privately'
+                  : `For ${truncateAddress(recipient.name)}`
+              }
+              subtitle={
+                isPrivate
+                  ? `To ${truncateAddress(recipient.name)}`
+                  : 'Enter the amount to send'
+              }
             />
 
-            <View style={{ flex: 1, justifyContent: 'center' }}>
-              <Pressable
-                onPress={() => setInToken((v) => !v)}
-                accessibilityRole="button"
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'baseline',
-                  justifyContent: 'center',
-                  paddingHorizontal: 28,
-                  gap: 4,
-                }}
-              >
-                {inToken ? (
-                  (() => {
-                    const size = bigAmountFontSize(amount.length);
-                    return (
-                      <>
-                        <Text
-                          numberOfLines={1}
-                          style={[
-                            sansationLight,
-                            {
-                              fontSize: size,
-                              letterSpacing: size * -0.05,
-                              color: S.ink,
-                              lineHeight: size,
-                              includeFontPadding: false,
-                            },
-                          ]}
-                        >
-                          {amount}
-                        </Text>
-                        <Text
-                          style={[
-                            serif,
-                            {
-                              fontSize: Math.max(20, size * 0.36),
-                              color: S.accent,
-                              fontStyle: 'italic',
-                              lineHeight: Math.max(20, size * 0.36),
-                              includeFontPadding: false,
-                              marginLeft: 6,
-                            },
-                          ]}
-                        >
-                          {asset.symbol}
-                        </Text>
-                      </>
-                    );
-                  })()
-                ) : (
-                  (() => {
-                    const size = bigAmountFontSize(fiatValue.length);
-                    return (
-                      <>
-                        <Text
-                          style={[
-                            serif,
-                            {
-                              fontSize: Math.max(22, size * 0.45),
-                              color: S.accent,
-                              fontStyle: 'italic',
-                              lineHeight: Math.max(22, size * 0.45),
-                              includeFontPadding: false,
-                            },
-                          ]}
-                        >
-                          $
-                        </Text>
-                        <Text
-                          numberOfLines={1}
-                          style={[
-                            sansationLight,
-                            {
-                              fontSize: size,
-                              letterSpacing: size * -0.05,
-                              color: S.ink,
-                              lineHeight: size,
-                              includeFontPadding: false,
-                            },
-                          ]}
-                        >
-                          {fiatValue}
-                        </Text>
-                      </>
-                    );
-                  })()
-                )}
-              </Pressable>
-              <Text
-                style={[
-                  serif,
-                  {
-                    textAlign: 'center',
-                    marginTop: 10,
-                    fontStyle: 'italic',
-                    fontSize: 18,
-                    color: S.inkDim,
-                  },
-                ]}
-              >
-                ≈ {inToken ? `$${fiatValue}` : `${amount} ${asset.symbol}`}
-              </Text>
+            <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
+              <SourceAssetCard
+                label={isPrivate ? 'Sending privately' : 'Sending'}
+                iconSource={
+                  asset.iconSource ?? require('@/assets/images/solana-icon.png')
+                }
+                tokenLabel={asset.symbol}
+                primaryAmount={primaryDisplay}
+                secondaryAmount={
+                  inputMode === 'asset'
+                    ? `$${fiatAmount.toFixed(2)}`
+                    : `${tokenAmountLabel} ${asset.symbol}`
+                }
+                inputMode={inputMode}
+                onPressTokenPill={() => transitionTo(0, 'back')}
+                onToggleMode={onToggleMode}
+                toggleDisabled={rate <= 0}
+                maxLabel={maxBalanceLabel}
+              />
             </View>
 
-            <View
-              style={{
-                alignItems: 'center',
-                marginBottom: 28,
-              }}
-            >
-              <Pressable
-                onPress={() => setAmount(maxAmountStr)}
-                accessibilityRole="button"
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 8,
-                  paddingVertical: 9,
-                  paddingHorizontal: 16,
-                  borderRadius: 100,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.25)',
-                  overflow: 'hidden',
-                  shadowColor: '#000',
-                  shadowOpacity: 0.3,
-                  shadowRadius: 14,
-                  shadowOffset: { width: 0, height: 4 },
-                }}
-              >
-                <LinearGradient
-                  colors={maxGradient}
-                  start={{ x: 0.2, y: 0 }}
-                  end={{ x: 0.8, y: 1 }}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                  }}
-                />
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 10,
-                      letterSpacing: 2.2,
-                      textTransform: 'uppercase',
-                      fontWeight: '700',
-                      color: '#0a0a0a',
-                    },
-                  ]}
-                >
-                  Max
-                </Text>
-                <View
-                  style={{
-                    width: 1,
-                    height: 10,
-                    backgroundColor: 'rgba(0,0,0,0.2)',
-                  }}
-                />
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 10,
-                      color: '#0a0a0a',
-                      fontWeight: '500',
-                    },
-                  ]}
-                >
-                  {maxAmountStr} {asset.symbol}
-                </Text>
-              </Pressable>
-              {isPrivate && amountNum > 0 ? (
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      marginTop: 10,
-                      fontSize: 10.5,
-                      letterSpacing: 1.2,
-                      textTransform: 'uppercase',
-                      color: S.inkFaint,
-                    },
-                  ]}
-                >
-                  Privacy fee {(PROTOCOL_FEE_RATE * 100).toFixed(2)}% ·{' '}
-                  {protocolFeeSol(amountNum).toFixed(4).replace(/\.?0+$/, '')}{' '}
-                  {asset.symbol}
-                </Text>
-              ) : null}
-            </View>
+            <PercentageChips
+              onPressPercent={onPressPercent}
+              disabled={maxSpendable <= 0}
+            />
 
             <Numpad onKey={onKey} tone={tone} />
 
@@ -868,8 +688,12 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
           <>
             <TxTitleBlock
               kicker="Step 4 of 4"
-              title="Confirm"
-              subtitle="Review and swipe to send"
+              title={isPrivate ? 'Confirm private send' : 'Confirm'}
+              subtitle={
+                isPrivate
+                  ? 'Create an unlinkable transfer claimable by the receiver.'
+                  : 'Review and swipe to send'
+              }
             />
 
             <ScrollView
@@ -960,7 +784,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                         },
                       ]}
                     >
-                      ≈ {amount} {asset.symbol}
+                      ≈ {tokenAmountLabel} {asset.symbol}
                     </Text>
                   </View>
 

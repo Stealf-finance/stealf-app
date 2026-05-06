@@ -55,18 +55,9 @@ export function PendingOpsProvider({ children }: { children: ReactNode }) {
 
   const complete = useCallback<PendingOpsApi['complete']>(
     (id, outcome, errorMessage) => {
-      if (outcome === 'done') {
-        // No success banner — the user already sees the balance + history
-        // update on the affected screen, so we drop the op immediately.
-        const t = timers.current.get(id);
-        if (t) {
-          clearTimeout(t);
-          timers.current.delete(id);
-        }
-        setOps((cur) => cur.filter((o) => o.id !== id));
-        return;
-      }
-      // 'failed' lingers until user dismisses or app teardown.
+      // 'done' shows the success state ("Shielded 1.23 SOL" + green check) for
+      // a short dwell, then auto-dismisses. 'failed' lingers until the user
+      // taps to dismiss so the error message doesn't disappear unread.
       setOps((cur) =>
         cur.map((o) =>
           o.id === id
@@ -79,6 +70,16 @@ export function PendingOpsProvider({ children }: { children: ReactNode }) {
             : o,
         ),
       );
+
+      if (outcome === 'done') {
+        const prev = timers.current.get(id);
+        if (prev) clearTimeout(prev);
+        const timer = setTimeout(() => {
+          timers.current.delete(id);
+          setOps((cur) => cur.filter((o) => o.id !== id));
+        }, 2400);
+        timers.current.set(id, timer);
+      }
     },
     [],
   );
