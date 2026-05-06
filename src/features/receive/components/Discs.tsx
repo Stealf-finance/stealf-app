@@ -72,10 +72,16 @@ export function UsdFlagDisc() {
   );
 }
 
+// Same canonical CDN-hosted logo the backend's WELL_KNOWN map points at
+// (solana-labs/token-list registry), so this disc visually matches what
+// the assets list renders for the live USDC token row.
+const USDC_OFFICIAL_LOGO =
+  'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png';
+
 export function UsdcDisc({ size = USDC_DEFAULT_SIZE }: { size?: number } = {}) {
   return (
     <Image
-      source={require('@/assets/images/usdc.png')}
+      source={{ uri: USDC_OFFICIAL_LOGO }}
       contentFit="contain"
       cachePolicy="memory-disk"
       style={{

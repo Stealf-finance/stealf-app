@@ -18,17 +18,15 @@ import {
   type TurnkeyWalletAccount,
 } from './turnkeySigner';
 
-export const NETWORK = 'devnet' as const;
-export const RELAYER_API = 'https://relayer.api-devnet.umbraprivacy.com';
-export const INDEXER_API = 'https://utxo-indexer.api-devnet.umbraprivacy.com';
+export const NETWORK = 'mainnet' as const;
+export const RELAYER_API = 'https://relayer.api.umbraprivacy.com';
+export const INDEXER_API = 'https://utxo-indexer.api.umbraprivacy.com';
 
 export type UmbraClient = Awaited<ReturnType<typeof getUmbraClient>>;
 
 let cachedClient: UmbraClient | null = null;
 let cachedSignerKey: string | null = null;
-// Single in-flight build shared across parallel callers — without this,
-// two parallel `getStealthClient()` calls (e.g. fanning Umbra registration
-// queries at boot) each run a full SDK init independently.
+
 let inFlightClient: Promise<UmbraClient> | null = null;
 
 export function getCachedSignerKey(): string | null {
@@ -55,8 +53,7 @@ async function buildStealthClient(): Promise<UmbraClient> {
   if (keyBytes.length === 64) {
     signer = await createSignerFromPrivateKeyBytes(keyBytes);
   } else {
-    // Some legacy keys are stored as the 32-byte seed only; reconstruct the
-    // full 64-byte ed25519 secret key by deriving the public half.
+  
     const { createKeyPairFromPrivateKeyBytes } = await import('@solana/kit');
     const cryptoKeyPair = await createKeyPairFromPrivateKeyBytes(keyBytes);
     const pubKeyRaw = new Uint8Array(

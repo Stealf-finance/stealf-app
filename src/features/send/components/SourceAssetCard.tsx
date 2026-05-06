@@ -180,6 +180,7 @@ export function SourceAssetCard({
                 style={{
                   width: 26,
                   height: 26,
+                  borderRadius: 13,
                   marginRight: 8,
                 }}
               />

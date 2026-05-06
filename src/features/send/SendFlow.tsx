@@ -127,6 +127,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       sol === 0 ? '0' : sol.toFixed(6).replace(/\.?0+$/, '');
     return [
       {
+        mint: null,
         symbol: 'SOL',
         name: 'Solana',
         balance: balanceStr,
@@ -429,7 +430,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                   )
                   .map((a) => (
                     <AssetPill
-                      key={a.symbol}
+                      key={a.mint ?? a.symbol}
                       {...a}
                       tone={tone}
                       onPress={() => {

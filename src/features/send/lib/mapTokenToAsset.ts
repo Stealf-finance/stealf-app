@@ -51,13 +51,23 @@ export function mapTokenToAsset(token: TokenBalance): Asset {
     token.balance > 0 ? token.balanceUSD / token.balance : undefined;
   const priceUSD = STABLE_PRICES[token.tokenSymbol] ?? derivedPrice;
 
+  // Prefer backend-resolved metadata (name from Jupiter, icon URI from
+  // the token registry). Fall back to the hardcoded maps for tokens the
+  // backend can't resolve, then to the symbol itself / gradient placeholder.
+  const name =
+    token.tokenName ?? DISPLAY_NAMES[token.tokenSymbol] ?? token.tokenSymbol;
+  const iconSource = token.tokenIcon
+    ? { uri: token.tokenIcon }
+    : ICONS[token.tokenSymbol];
+
   return {
+    mint: token.tokenMint,
     symbol: token.tokenSymbol,
-    name: DISPLAY_NAMES[token.tokenSymbol] ?? token.tokenSymbol,
+    name,
     balance: formatBalance(token.balance, token.tokenDecimals),
     fiat: formatFiat(token.balanceUSD),
     gradient: GRADIENTS[token.tokenSymbol] ?? FALLBACK_GRADIENT,
-    iconSource: ICONS[token.tokenSymbol],
+    iconSource,
     priceUSD,
   };
 }

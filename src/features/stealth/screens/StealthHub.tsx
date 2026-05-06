@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
+import { Image, type ImageSource } from 'expo-image';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -800,49 +800,107 @@ export function StealthHub() {
         </Text>
 
         <View style={{ paddingTop: 6 }}>
-          <View
-            style={{
-              paddingVertical: 14,
-              borderBottomWidth: 1,
-              borderBottomColor: SILVER.hairline,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 14,
-            }}
-          >
-            <Image
-              source={require('@/assets/images/solana-icon.png')}
-              style={{ width: 40, height: 40, borderRadius: 20 }}
-              contentFit="contain"
-              cachePolicy="memory-disk"
+          {isPrivate ? (
+            <AssetRow
+              iconSource={require('@/assets/images/solana-icon.png')}
+              symbol="WSOL"
+              caption={
+                solBalance > 0
+                  ? `${solBalance.toFixed(4)} · encrypted`
+                  : 'encrypted'
+              }
+              priceLabel={`$${solUSD.toFixed(2)}`}
             />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, color: SILVER.ink }}>
-                {isPrivate ? 'WSOL' : 'SOL'}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 11,
-                  color: SILVER.inkFaint,
-                  marginTop: 2,
-                }}
-              >
-                {solBalance > 0
-                  ? `${solBalance.toFixed(4)} · ${isPrivate ? 'encrypted' : 'on-chain'}`
-                  : isPrivate
-                    ? 'encrypted'
-                    : 'on-chain'}
-              </Text>
-            </View>
-            <Text style={{ fontSize: 15, color: SILVER.ink }}>
-              {`$${solUSD.toFixed(2)}`}
-            </Text>
-          </View>
+          ) : (
+            (balanceData?.tokens ?? []).map((t) => (
+              <AssetRow
+                key={t.tokenMint ?? t.tokenSymbol}
+                iconSource={
+                  t.tokenIcon
+                    ? { uri: t.tokenIcon }
+                    : t.tokenSymbol === 'SOL'
+                      ? require('@/assets/images/solana-icon.png')
+                      : undefined
+                }
+                symbol={t.tokenSymbol}
+                caption={
+                  t.balance > 0
+                    ? `${t.balance.toFixed(4).replace(/\.?0+$/, '')} · on-chain`
+                    : 'on-chain'
+                }
+                priceLabel={`$${t.balanceUSD.toFixed(2)}`}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
       </Animated.View>
 
       {isPrivate ? <StealthSetupOverlay onClose={() => setMode('public')} /> : null}
+    </View>
+  );
+}
+
+function AssetRow({
+  iconSource,
+  symbol,
+  caption,
+  priceLabel,
+}: {
+  iconSource: ImageSource | number | undefined;
+  symbol: string;
+  caption: string;
+  priceLabel: string;
+}) {
+  return (
+    <View
+      style={{
+        paddingVertical: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: SILVER.hairline,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+      }}
+    >
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          overflow: 'hidden',
+          backgroundColor: 'rgba(255,255,255,0.04)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {iconSource ? (
+          <Image
+            source={iconSource}
+            style={{ width: 40, height: 40 }}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+          />
+        ) : null}
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontSize: 15, color: SILVER.ink }} numberOfLines={1}>
+          {symbol}
+        </Text>
+        <Text
+          style={{
+            fontSize: 11,
+            color: SILVER.inkFaint,
+            marginTop: 2,
+          }}
+          numberOfLines={1}
+        >
+          {caption}
+        </Text>
+      </View>
+      <Text style={{ fontSize: 15, color: SILVER.ink }} numberOfLines={1}>
+        {priceLabel}
+      </Text>
     </View>
   );
 }

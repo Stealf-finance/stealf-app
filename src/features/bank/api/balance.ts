@@ -4,6 +4,10 @@ import { apiGet } from '@/src/services/api/client';
 export const TokenBalanceSchema = z.object({
   tokenMint: z.string().nullable(),
   tokenSymbol: z.string(),
+  // Optional for back-compat with stale caches that predate the metadata
+  // expansion — drops out cleanly to fallback behavior on the frontend.
+  tokenName: z.string().optional(),
+  tokenIcon: z.string().nullable().optional(),
   tokenDecimals: z.number(),
   balance: z.number(),
   balanceUSD: z.number(),

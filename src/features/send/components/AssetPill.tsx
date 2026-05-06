@@ -5,6 +5,9 @@ import { serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
 export type Asset = {
+  /** SPL mint or null for native SOL — the only globally-unique id (symbols
+   * collide on mainnet for unresolved tokens that all surface as 'UNKNOWN'). */
+  mint: string | null;
   symbol: string;
   name: string;
   balance: string;
