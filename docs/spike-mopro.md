@@ -5,10 +5,10 @@ before committing to slices that depend on it (Slice 5 — Stealth/Umbra).
 
 ## Background
 
-`front-stealf` ships `modules/mopro-ffi/` (~82 MB, prebuilt
-`MoproFfiFramework.xcframework`). That folder is the **build source**
-for the npm package `@umbra-privacy/rn-zk-prover` — it is *not* what
-runs in production. Production resolves the pod via:
+`front-stealf` historically vendored the Rust FFI directly (~82 MB,
+prebuilt `MoproFfiFramework.xcframework`) as the **build source** for
+the npm package `@umbra-privacy/rn-zk-prover` — that vendored folder is
+*not* what runs in production. Production resolves the pod via:
 
 ```
 # front-stealf/ios/Podfile.lock
