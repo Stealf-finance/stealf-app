@@ -9,7 +9,7 @@ import { finalizeOAuthAuth, type AuthMethod } from '../api/onboarding';
 import { userProfileQueries } from '../api/userProfile';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
-import { consumeLastOauthEmail } from '../lib/oauthEmailStore';
+import { subscribeOauthAuthSuccess } from '@/src/services/turnkey/oauthAuthEvents';
 
 type FinalizeArgs = {
   authMethod: AuthMethod;
@@ -93,53 +93,51 @@ export function useAuthFlow() {
 
   useEffect(() => {
     if (!pendingOauth) return;
-    if (finalizingRef.current) return;
-    const sessionToken = turnkey.session?.token;
-    if (!sessionToken) return;
-    if (turnkey.wallets.length === 0) return;
-    // Turnkey's post-auth pipeline is setSession → refreshWallets →
-    // refreshUser. Gating only on session+wallets fires us between the
-    // 2nd and 3rd step, when user.userEmail isn't loaded yet — and Apple
-    // first-signups need that email for the backend to create the
-    // record. userId is the cheapest "user is fully loaded" signal.
-    if (!turnkey.user?.userId) return;
-    finalizingRef.current = true;
-
-    setIsLoading(true);
+    // Subscribe-on-pending: we only listen while an OAuth attempt is in
+    // flight. The Turnkey provider's `onAuthenticationSuccess` callback
+    // emits the event AFTER its full post-auth pipeline (setSession →
+    // refreshWallets → refreshUser) is done — i.e. at the only point
+    // where session/wallets/user are all settled and the OIDC `email`
+    // claim is decodable from `identifier`. Driving finalize from the
+    // callback (instead of gating a React effect on user state) avoids
+    // the race where the effect fires before the callback because React
+    // commits the SDK's intermediate state changes during the awaits
+    // inside handlePostAuth.
     const method = pendingOauth;
-    // Drained-on-read: the store is populated by the Turnkey provider's
-    // onAuthenticationSuccess callback (config.ts) just before React
-    // commits the post-auth state that unblocks this effect. Consuming
-    // here clears the slot so a follow-up attempt can't pick up a stale
-    // email if the previous finalize aborted before reading.
-    const email = consumeLastOauthEmail() ?? turnkey.user?.userEmail;
-    if (__DEV__) {
-      console.log('[useAuthFlow] starting finalize', {
-        method,
-        hasEmail: !!email,
+    const unsubscribe = subscribeOauthAuthSuccess(({ email, sessionToken }) => {
+      if (finalizingRef.current) return;
+      finalizingRef.current = true;
+      setIsLoading(true);
+
+      Sentry.addBreadcrumb({
+        category: 'auth.oauth',
+        level: 'info',
+        message: 'useAuthFlow subscriber received OAuth event',
+        data: { method, hasEmail: !!email },
       });
-    }
-    finalizePostAuth({ authMethod: method, sessionToken, email })
-      .catch((err) => {
-        if (__DEV__) {
-          const data = (err as { data?: unknown })?.data;
-          console.error('[useAuthFlow] finalize failed:', err, 'body:', data);
-        }
-        setError(softenMissingEmailError(method, email, err));
-      })
-      .finally(() => {
-        finalizingRef.current = false;
-        setIsLoading(false);
-        setPendingOauth(null);
-      });
-  }, [
-    pendingOauth,
-    turnkey.session?.token,
-    turnkey.user?.userId,
-    turnkey.user?.userEmail,
-    turnkey.wallets.length,
-    finalizePostAuth,
-  ]);
+      if (__DEV__) {
+        console.log('[useAuthFlow] starting finalize', {
+          method,
+          hasEmail: !!email,
+        });
+      }
+
+      finalizePostAuth({ authMethod: method, sessionToken, email })
+        .catch((err) => {
+          if (__DEV__) {
+            const data = (err as { data?: unknown })?.data;
+            console.error('[useAuthFlow] finalize failed:', err, 'body:', data);
+          }
+          setError(softenMissingEmailError(method, email, err));
+        })
+        .finally(() => {
+          finalizingRef.current = false;
+          setIsLoading(false);
+          setPendingOauth(null);
+        });
+    });
+    return unsubscribe;
+  }, [pendingOauth, finalizePostAuth]);
 
   const runOAuth = useCallback(
     async (provider: 'google' | 'apple') => {

@@ -5,7 +5,7 @@ import {
 } from '@turnkey/react-native-wallet-kit';
 import * as Sentry from '@sentry/react-native';
 import { decodeOidcEmail } from '@/src/features/onboarding/lib/oidc';
-import { setLastOauthEmail } from '@/src/features/onboarding/lib/oauthEmailStore';
+import { emitOauthAuthSuccess } from './oauthAuthEvents';
 
 export const BANK_WALLET_CONFIG = {
   walletName: 'Cash Wallet',
@@ -55,27 +55,33 @@ export const TURNKEY_CALLBACKS: TurnkeyCallbacks = {
   onSessionExpired: () => {
     if (__DEV__) console.log('[Turnkey] Session expired');
   },
-  onAuthenticationSuccess: ({ action, method, identifier }) => {
+  onAuthenticationSuccess: ({ session, action, method, identifier }) => {
     if (__DEV__) console.log('[Turnkey] Auth success:', { action, method });
     // For OAuth flows the SDK passes the raw OIDC id_token through
     // `identifier` (cf. TurnkeyProvider.mjs handlePostAuth call sites).
     // The SDK's `params.onOauthSuccess` callback on handleGoogleOauth /
     // handleAppleOauth is declared in the type signature but never
     // forwarded to completeOAuthFlow, so this provider-config callback
-    // is the only OAuth-relevant hook that actually fires. Decode the
-    // email claim here and stash it for `useAuthFlow` to consume during
-    // its post-auth finalize effect.
-    if (method === AuthMethod.Oauth) {
+    // is the only OAuth-relevant hook that actually fires. We emit a
+    // subscriber event from here — see oauthAuthEvents.ts for why this
+    // can't be a React-state-gated effect (callback fires AFTER React
+    // commits the session/user/wallets state, so any effect gated on
+    // those values would run before the callback and miss the email).
+    if (method === AuthMethod.Oauth && session?.token) {
       const email = decodeOidcEmail(identifier);
-      setLastOauthEmail(email);
-      if (!email) {
-        Sentry.addBreadcrumb({
-          category: 'auth.oauth',
-          level: 'warning',
-          message: 'OIDC token had no email claim',
-          data: { action },
-        });
-      }
+      Sentry.addBreadcrumb({
+        category: 'auth.oauth',
+        level: email ? 'info' : 'warning',
+        message: email
+          ? 'OAuth callback fired with decoded email'
+          : 'OIDC token had no email claim',
+        data: { action, hasEmail: !!email },
+      });
+      emitOauthAuthSuccess({
+        email,
+        sessionToken: session.token,
+        identifier,
+      });
     }
   },
   onError: (error) => {
