@@ -66,7 +66,7 @@ export const TURNKEY_CALLBACKS: TurnkeyCallbacks = {
           hasIdentifier: !!identifier,
           tokenSegments: tokenParts.length,
           tokenLen: identifier?.length ?? 0,
-          decodedEmail: email ?? '(none)',
+          hasDecodedEmail: !!email,
         });
       }
       Sentry.addBreadcrumb({
