@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { maxSpendableSol, SOL_DECIMALS } from '@/src/features/send/lib/amount';
@@ -12,12 +13,16 @@ import { DirectionRow } from '@/src/features/send/components/DirectionRow';
 import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
 import { PercentageChips } from '@/src/features/send/components/PercentageChips';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
+import {
+  setSelectedAsset,
+  useSelectedAsset,
+} from '@/src/features/send/lib/selectedAssetStore';
 import { Icons } from '@/src/design-system/icons';
 import { sansation, sansationLight, serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { toAddress } from '@/src/services/solana/kit';
-import { SOL_MINT } from '@/src/constants/solana';
+import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
@@ -82,9 +87,9 @@ const CONFIG: Record<MoveDirection, DirectionConfig> = {
   },
 };
 
-function formatSolBalance(sol: number): string {
-  if (sol === 0) return '0';
-  return sol.toFixed(4).replace(/\.?0+$/, '');
+function formatBalance(amount: number): string {
+  if (amount === 0) return '0';
+  return amount.toFixed(4).replace(/\.?0+$/, '');
 }
 
 export function MoveFlow() {
@@ -95,19 +100,23 @@ export function MoveFlow() {
   const config = CONFIG[direction];
 
   // Tone follows the source side: silver when moving out of a public wallet,
-  // gold when moving out of the shielded pool. Anchors the screen on where
-  // the funds are leaving from.
+  // gold when moving out of the shielded pool.
   const tone: Tone = direction === 'shielded-to-bank' ? 'gold' : 'silver';
   const palette = txPalette(tone);
-  // Source-side asset symbol — WSOL when leaving the encrypted balance,
-  // SOL otherwise. Keeps the user oriented on what they're spending.
-  const assetSymbol = direction === 'shielded-to-bank' ? 'WSOL' : 'SOL';
+
+  // Multi-token is meaningful only when the source is a public ATA. The
+  // encrypted balance side stays SOL-only (the SDK exposes a single SOL
+  // balance for encrypted accounts), so shielded-to-bank stays pinned WSOL.
+  const supportsMultiToken =
+    direction === 'bank-to-shielded' || direction === 'stealth-to-bank';
+  // For the picker, the wallet whose tokens we list depends on the direction.
+  const pickerWalletParam: 'bank' | 'stealth' =
+    direction === 'bank-to-shielded' ? 'bank' : 'stealth';
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
   const { data: solPrice } = useSolPrice();
-  const rate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
 
   const {
     wrap,
@@ -124,28 +133,56 @@ export function MoveFlow() {
   );
   const { data: shielded } = useShieldedSolBalance();
 
-  let sourceSol = 0;
+  // Asset selection — only honored when the direction supports multi-token.
+  const selected = useSelectedAsset();
+  const isSolSelected =
+    !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
+  const selectionActive = supportsMultiToken && !isSolSelected && !!selected;
+
+  const assetSymbol = supportsMultiToken
+    ? selected?.symbol ?? 'SOL'
+    : 'WSOL';
+  const decimals = selectionActive ? selected!.decimals : SOL_DECIMALS;
+  const iconUri = selectionActive ? selected!.iconUri ?? SOL_ICON_URI : SOL_ICON_URI;
+
+  // Resolve the source token row to read the spendable balance. For
+  // bank-to-shielded, source = bank ATA; for stealth-to-bank, source =
+  // stealth ATA; otherwise the encrypted SOL balance.
+  let sourceBalance = 0;
   if (direction === 'bank-to-shielded') {
-    sourceSol = bankBalanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+    const tokens = bankBalanceData?.tokens ?? [];
+    sourceBalance = selectionActive
+      ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
+      : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
   } else if (direction === 'stealth-to-bank') {
-    sourceSol = stealthBalanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+    const tokens = stealthBalanceData?.tokens ?? [];
+    sourceBalance = selectionActive
+      ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
+      : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
   } else {
-    sourceSol = shielded?.sol ?? 0;
+    sourceBalance = shielded?.sol ?? 0;
   }
 
-  // The source wallet pays its own fees only when source funds and fee-payer
-  // wallet are the same bucket. For shielded-to-bank, fees come out of the
-  // stealth public ATA while the source is encrypted balance — different
-  // buckets, no reserve needed.
+  // Price feed: SOL has a live oracle; SPL tokens use the per-token rate
+  // Helius DAS embedded in the picker payload.
+  const rate = selectionActive
+    ? selected!.price
+    : typeof solPrice === 'number' && solPrice > 0
+      ? solPrice
+      : 0;
+
+  // Fee logic stays anchored on SOL — that's where gas is paid regardless
+  // of which token is moved. Reserve only when source = SOL bucket *and*
+  // pays its own fees. Protocol fee (0.30%) still applies to anything
+  // touching the encrypted balance, regardless of mint.
   const sourcePaysFees =
     direction === 'bank-to-shielded' || direction === 'stealth-to-bank';
-  // Umbra protocol fee (0.30%) applies to anything touching the encrypted
-  // balance. stealth-to-bank is a plain SOL transfer between public ATAs,
-  // so no protocol fee.
   const hasProtocolFee = direction !== 'stealth-to-bank';
-  const maxSol = maxSpendableSol(sourceSol, sourcePaysFees, hasProtocolFee);
+  const reserveFees = sourcePaysFees && !selectionActive;
+  const maxSol = maxSpendableSol(sourceBalance, reserveFees, hasProtocolFee);
 
   const {
+    setAmount,
     inputMode,
     solAmount,
     fiatAmount,
@@ -153,10 +190,21 @@ export function MoveFlow() {
     onKey,
     onPressPercent,
     onToggleMode,
-  } = useAmountInput({ rate, maxSol });
+  } = useAmountInput({ rate, maxSol, decimals });
 
-  // Asset mode → fiat at the bottom (2 decimals: "$0.00").
-  // Fiat mode → SOL at the bottom (4 decimals: "0.0000 SOL").
+  // Reset typed amount when user switches asset — fiat-mode display would
+  // silently misrepresent the new token's amount otherwise.
+  useEffect(() => {
+    setAmount('0');
+  }, [selected?.mint, setAmount]);
+
+  // Wipe selection on unmount so re-entering the modal starts at SOL.
+  useEffect(() => {
+    return () => {
+      setSelectedAsset(null);
+    };
+  }, []);
+
   const secondaryAmount =
     inputMode === 'asset'
       ? `$${fiatAmount.toFixed(2)}`
@@ -175,7 +223,7 @@ export function MoveFlow() {
   const stealthMissingForBankToShielded =
     direction === 'bank-to-shielded' && !!user && !user.stealfWallet;
 
-  const insufficient = solAmount > sourceSol;
+  const insufficient = solAmount > sourceBalance;
   const swipeDisabled = solAmount <= 0 || insufficient;
 
   const invalidateAll = async () => {
@@ -238,14 +286,15 @@ export function MoveFlow() {
           : 'Bank wallet missing. Sign out and back in to restore it.',
       );
     }
-    if (num > sourceSol) {
+    if (num > sourceBalance) {
       return failPre(
-        `Not enough ${assetSymbol}. You have ${formatSolBalance(sourceSol)} ${assetSymbol} available.`,
+        `Not enough ${assetSymbol}. You have ${formatBalance(sourceBalance)} ${assetSymbol} available.`,
       );
     }
 
-    const lamportsBig = BigInt(Math.floor(num * 10 ** SOL_DECIMALS));
-    const mint = toAddress(SOL_MINT);
+    const mintAddr = selectionActive ? selected!.mint : SOL_MINT;
+    const lamportsBig = BigInt(Math.floor(num * 10 ** decimals));
+    const mint = toAddress(mintAddr);
     const stealfWallet = user.stealfWallet ?? null;
     const bankWallet = user.bankWallet ?? null;
 
@@ -525,12 +574,16 @@ export function MoveFlow() {
       <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
         <SourceAssetCard
           label="From"
-          iconSource={require('@/assets/images/solana-icon.png')}
+          iconSource={{ uri: iconUri }}
           tokenLabel={assetSymbol}
           primaryAmount={primaryDisplay}
           secondaryAmount={secondaryAmount}
           inputMode={inputMode}
-          onPressTokenPill={() => router.push('/asset-picker')}
+          onPressTokenPill={
+            supportsMultiToken
+              ? () => router.push(`/asset-picker?wallet=${pickerWalletParam}`)
+              : undefined
+          }
           onToggleMode={onToggleMode}
           toggleDisabled={rate <= 0}
           maxLabel={maxBalanceLabel}

@@ -3,21 +3,23 @@ import { applyAmountKey } from '@/src/features/send/lib/amount';
 import type { InputMode } from '@/src/features/send/components/SourceAssetCard';
 
 type Params = {
-  /** SOL → USD rate. 0 disables the fiat toggle. */
+  /** Asset → USD rate. 0 disables the fiat toggle. */
   rate: number;
-  /** Spendable SOL after fee/protocol-fee carve-outs. Drives the percent shortcuts. */
+  /** Spendable balance after fee/protocol-fee carve-outs. Drives percent shortcuts. */
   maxSol: number;
+  /** On-chain token decimals (SOL=9, USDC=6, BONK=5…). Caps fractional input. */
+  decimals?: number;
 };
 
 /**
- * Centralizes the dual-mode (SOL / USD) amount-entry behavior shared
+ * Centralizes the dual-mode (asset / USD) amount-entry behavior shared
  * between Shield, Unshield, and Move flows.
  *
  * The Numpad writes a single string; what it represents depends on
- * `inputMode`. `solAmount` is always SOL — that's what tx logic should
- * consume regardless of how the user typed.
+ * `inputMode`. `solAmount` is always in token units — historically named
+ * for the SOL-only past; today it carries whichever asset is selected.
  */
-export function useAmountInput({ rate, maxSol }: Params) {
+export function useAmountInput({ rate, maxSol, decimals = 9 }: Params) {
   const [amount, setAmount] = useState('0');
   const [inputMode, setInputMode] = useState<InputMode>('asset');
 
@@ -26,9 +28,6 @@ export function useAmountInput({ rate, maxSol }: Params) {
     inputMode === 'asset' ? typedNum : rate > 0 ? typedNum / rate : 0;
   const fiatAmount = inputMode === 'asset' ? typedNum * rate : typedNum;
 
-  // Fiat primary always reads as currency — '$0.00' for the empty state,
-  // '$<typed>' once the user starts entering digits. The state itself
-  // stays a plain numeric string so applyAmountKey works unchanged.
   const primaryDisplay =
     inputMode === 'fiat'
       ? amount === '0'
@@ -36,7 +35,7 @@ export function useAmountInput({ rate, maxSol }: Params) {
         : `$${amount}`
       : amount;
 
-  const onKey = (k: string) => setAmount((a) => applyAmountKey(a, k));
+  const onKey = (k: string) => setAmount((a) => applyAmountKey(a, k, decimals));
 
   const onPressPercent = (pct: number) => {
     const sol = maxSol * pct;

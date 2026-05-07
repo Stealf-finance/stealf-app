@@ -66,11 +66,12 @@
       "expo-secure-store",
       "@sentry/react-native",
       "expo-localization",
-      "expo-asset"
+      "expo-asset",
+      "./plugins/withMoproExcludedArchs"
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false
     }
   }
 }

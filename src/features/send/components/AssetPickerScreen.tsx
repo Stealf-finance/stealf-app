@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
@@ -8,41 +9,69 @@ import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { sansation, serif } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
-
-// Stub picker: today only SOL is the live asset, USDC sits as a teaser.
-// Mainnet rollout will widen this list and propagate the choice back to
-// the calling Move/Shield flow.
-type TokenRow = {
-  symbol: string;
-  name: string;
-  iconSource: number;
-  price: number | null;
-};
+import { setSelectedAsset } from '@/src/features/send/lib/selectedAssetStore';
+import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 
 const palette = txPalette('silver');
+
+const TOKEN_DECIMALS: Record<string, number> = {
+  SOL: 9,
+  WSOL: 9,
+  USDC: 6,
+  USDT: 6,
+  JUP: 6,
+  BONK: 5,
+};
+
+const TOKEN_NAMES: Record<string, string> = {
+  SOL: 'Solana',
+  USDC: 'USD Coin',
+  USDT: 'Tether',
+  JUP: 'Jupiter',
+  BONK: 'Bonk',
+};
 
 export function AssetPickerScreen() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  // Caller picks which wallet to source tokens from. Defaults to stealth so
+  // existing /asset-picker pushes (Shield) keep working unchanged.
+  const params = useLocalSearchParams<{ wallet?: 'bank' | 'stealth' }>();
+  const sourceAddress =
+    params.wallet === 'bank'
+      ? user?.bankWallet ?? null
+      : user?.stealfWallet ?? null;
+  const { data: walletBalance } = useBalance(sourceAddress);
   const { data: solPrice } = useSolPrice();
 
   const close = () => router.back();
 
-  const tokens: TokenRow[] = [
-    {
-      symbol: 'SOL',
-      name: 'Solana',
-      iconSource: require('@/assets/images/solana-icon.png'),
-      price: typeof solPrice === 'number' ? solPrice : null,
-    },
-    {
-      symbol: 'USDC',
-      name: 'Solana',
-      iconSource: require('@/assets/images/usdc.png'),
-      price: 1,
-    },
-  ];
+  const tokens = (walletBalance?.tokens ?? []).map((t) => {
+    const isSol = t.tokenMint === null || t.tokenSymbol === 'SOL';
+    const symbol = t.tokenSymbol;
+    const decimals = TOKEN_DECIMALS[symbol] ?? 6;
+    const price =
+      isSol && typeof solPrice === 'number' && solPrice > 0
+        ? solPrice
+        : t.balance > 0
+          ? t.balanceUSD / t.balance
+          : 0;
+    return {
+      mint: isSol ? SOL_MINT : (t.tokenMint as string),
+      symbol,
+      name: TOKEN_NAMES[symbol] ?? symbol,
+      decimals,
+      iconSource: undefined,
+      iconUri: isSol ? SOL_ICON_URI : t.tokenIcon ?? undefined,
+      balance: t.balance,
+      balanceUSD: t.balanceUSD,
+      price,
+    };
+  });
 
   return (
     <CenterGlow tone="silver" flat>
@@ -81,20 +110,52 @@ export function AssetPickerScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
+        {tokens.length === 0 ? (
+          <Text
+            style={[
+              sansation,
+              {
+                textAlign: 'center',
+                marginTop: 24,
+                color: palette.inkFaint,
+                fontSize: 13,
+              },
+            ]}
+          >
+            No tokens in this wallet yet.
+          </Text>
+        ) : null}
+
         {tokens.map((t) => {
-          const priceLabel =
-            t.price !== null
-              ? `$${t.price.toLocaleString('en-US', {
+          const valueLabel =
+            t.balanceUSD > 0
+              ? `$${t.balanceUSD.toLocaleString('en-US', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`
               : '—';
+          const balanceLabel =
+            t.balance > 0
+              ? `${t.balance.toFixed(4).replace(/\.?0+$/, '')} ${t.symbol}`
+              : `0 ${t.symbol}`;
           return (
             <Pressable
-              key={t.symbol}
-              onPress={close}
+              key={t.mint}
+              onPress={() => {
+                setSelectedAsset({
+                  mint: t.mint,
+                  symbol: t.symbol,
+                  decimals: t.decimals,
+                  iconSource: t.iconSource,
+                  iconUri: t.iconUri,
+                  balance: t.balance,
+                  balanceUSD: t.balanceUSD,
+                  price: t.price,
+                });
+                close();
+              }}
               accessibilityRole="button"
-              accessibilityLabel={`Select ${t.symbol} on ${t.name}`}
+              accessibilityLabel={`Select ${t.symbol}`}
               style={{
                 width: '100%',
                 marginBottom: 8,
@@ -117,10 +178,15 @@ export function AssetPickerScreen() {
                 }}
               >
                 <Image
-                  source={t.iconSource}
-                  contentFit="contain"
+                  source={t.iconUri ? { uri: t.iconUri } : undefined}
+                  contentFit="cover"
                   cachePolicy="memory-disk"
-                  style={{ width: 44, height: 44 }}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                  }}
                 />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text
@@ -148,7 +214,7 @@ export function AssetPickerScreen() {
                     ]}
                     numberOfLines={1}
                   >
-                    {t.name}
+                    {balanceLabel}
                   </Text>
                 </View>
                 <Text
@@ -163,7 +229,7 @@ export function AssetPickerScreen() {
                   ]}
                   numberOfLines={1}
                 >
-                  {priceLabel}
+                  {valueLabel}
                 </Text>
               </LinearGradient>
             </Pressable>

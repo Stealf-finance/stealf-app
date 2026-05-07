@@ -1,6 +1,7 @@
 import type { ImageSourcePropType } from 'react-native';
 import type { Asset } from '@/src/features/send/components/AssetPill';
 import type { TokenBalance } from '@/src/features/bank/types';
+import { SOL_ICON_URI } from '@/src/constants/solana';
 
 const GRADIENTS: Record<string, [string, string]> = {
   SOL: ['#9945FF', '#14F195'],
@@ -12,7 +13,7 @@ const GRADIENTS: Record<string, [string, string]> = {
 };
 
 const ICONS: Record<string, ImageSourcePropType> = {
-  SOL: require('@/assets/images/solana-icon.png'),
+  SOL: { uri: SOL_ICON_URI },
 };
 
 const FALLBACK_GRADIENT: [string, string] = ['#9a9a9f', '#5a5a5e'];

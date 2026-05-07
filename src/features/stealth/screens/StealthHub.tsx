@@ -36,6 +36,7 @@ import {
 } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { SOL_ICON_URI } from '@/src/constants/solana';
 import {
   PrivacyMode,
   usePrivacyMode,
@@ -764,55 +765,46 @@ export function StealthHub() {
         </GestureDetector>
         {/* /swipe-toggle zone */}
 
-        {/* Assets */}
-        <Text
-          style={[
-            sansationLight,
-            {
-              fontSize: 22,
-              letterSpacing: -0.44,
-              color: SILVER.ink,
-              marginBottom: 4,
-            },
-          ]}
-        >
-          Assets
-        </Text>
+        {/* Assets — hidden in private mode (no real encrypted holdings to list yet) */}
+        {!isPrivate ? (
+          <>
+            <Text
+              style={[
+                sansationLight,
+                {
+                  fontSize: 22,
+                  letterSpacing: -0.44,
+                  color: SILVER.ink,
+                  marginBottom: 4,
+                },
+              ]}
+            >
+              Assets
+            </Text>
 
-        <View style={{ paddingTop: 6 }}>
-          {isPrivate ? (
-            <AssetRow
-              iconSource={require('@/assets/images/solana-icon.png')}
-              symbol="WSOL"
-              caption={
-                solBalance > 0
-                  ? `${solBalance.toFixed(4)} · encrypted`
-                  : 'encrypted'
-              }
-              priceLabel={`$${solUSD.toFixed(2)}`}
-            />
-          ) : (
-            (balanceData?.tokens ?? []).map((t) => (
-              <AssetRow
-                key={t.tokenMint ?? t.tokenSymbol}
-                iconSource={
-                  t.tokenIcon
-                    ? { uri: t.tokenIcon }
-                    : t.tokenSymbol === 'SOL'
-                      ? require('@/assets/images/solana-icon.png')
-                      : undefined
-                }
-                symbol={t.tokenSymbol}
-                caption={
-                  t.balance > 0
-                    ? `${t.balance.toFixed(4).replace(/\.?0+$/, '')} · on-chain`
-                    : 'on-chain'
-                }
-                priceLabel={`$${t.balanceUSD.toFixed(2)}`}
-              />
-            ))
-          )}
-        </View>
+            <View style={{ paddingTop: 6 }}>
+              {(balanceData?.tokens ?? []).map((t) => (
+                <AssetRow
+                  key={t.tokenMint ?? t.tokenSymbol}
+                  iconSource={
+                    t.tokenIcon
+                      ? { uri: t.tokenIcon }
+                      : t.tokenSymbol === 'SOL'
+                        ? { uri: SOL_ICON_URI }
+                        : undefined
+                  }
+                  symbol={t.tokenSymbol}
+                  caption={
+                    t.balance > 0
+                      ? `${t.balance.toFixed(4).replace(/\.?0+$/, '')} · on-chain`
+                      : 'on-chain'
+                  }
+                  priceLabel={`$${t.balanceUSD.toFixed(2)}`}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
       </ScrollView>
       </Animated.View>
 

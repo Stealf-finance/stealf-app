@@ -51,7 +51,7 @@ import {
 import { historyQueries } from '@/src/features/bank/api/history';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { toAddress } from '@/src/services/solana/kit';
-import { SOL_MINT } from '@/src/constants/solana';
+import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import {
   PROTOCOL_FEE_RATE,
   protocolFeeSol,
@@ -136,7 +136,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             ? `$${(sol * fiatRate).toFixed(2)}`
             : '$—',
         gradient: ['#9945FF', '#14F195'],
-        iconSource: require('@/assets/images/solana-icon.png'),
+        iconSource: { uri: SOL_ICON_URI },
         priceUSD: fiatRate || undefined,
       },
     ];
@@ -619,9 +619,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
               <SourceAssetCard
                 label={isPrivate ? 'Sending privately' : 'Sending'}
-                iconSource={
-                  asset.iconSource ?? require('@/assets/images/solana-icon.png')
-                }
+                iconSource={asset.iconSource ?? { uri: SOL_ICON_URI }}
                 tokenLabel={asset.symbol}
                 primaryAmount={primaryDisplay}
                 secondaryAmount={

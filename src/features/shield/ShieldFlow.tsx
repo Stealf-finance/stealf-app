@@ -1,10 +1,11 @@
+import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { maxSpendableSol, SOL_DECIMALS } from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
-import { SOL_MINT } from '@/src/constants/solana';
+import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
@@ -13,6 +14,10 @@ import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
 import { PercentageChips } from '@/src/features/send/components/PercentageChips';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
+import {
+  setSelectedAsset,
+  useSelectedAsset,
+} from '@/src/features/send/lib/selectedAssetStore';
 import { serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
@@ -32,9 +37,9 @@ type Direction = 'shield' | 'unshield';
 
 type Props = { direction: Direction };
 
-function formatSolBalance(sol: number): string {
-  if (sol === 0) return '0';
-  return sol.toFixed(4).replace(/\.?0+$/, '');
+function formatBalance(amount: number): string {
+  if (amount === 0) return '0';
+  return amount.toFixed(4).replace(/\.?0+$/, '');
 }
 
 export function ShieldFlow({ direction }: Props) {
@@ -44,7 +49,6 @@ export function ShieldFlow({ direction }: Props) {
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
   const palette = txPalette(tone);
-  const assetSymbol = isShield ? 'SOL' : 'WSOL';
 
   const title = isShield ? 'Shield' : 'Unshield';
   const ctaLabel = isShield ? 'Slide to shield' : 'Slide to unshield';
@@ -59,23 +63,63 @@ export function ShieldFlow({ direction }: Props) {
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
 
-
   // - unshield: stealth encrypted → stealth public ATA
   const { data: stealthBalance } = useBalance(
     isShield ? user?.stealfWallet ?? null : null,
   );
   const { data: shielded } = useShieldedSolBalance();
-  const publicSol = stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
-  const privateSol = shielded?.sol ?? 0;
-  const sourceSol = isShield ? publicSol : privateSol;
-  const rate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
 
-  // Shield: source = stealth public ATA, fee payer = same → reserve fees.
-  // Unshield: source = encrypted balance, fee payer = stealth public ATA →
-  // different buckets, full balance is spendable.
-  const maxSol = maxSpendableSol(sourceSol, isShield);
+  // Asset selection — only meaningful in shield direction (encrypted balance
+  // is SOL-only on the SDK side today, so unshield stays pinned to WSOL).
+  const selected = useSelectedAsset();
+  const isSolSelected =
+    !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
+
+  const assetSymbol = isShield
+    ? selected?.symbol ?? 'SOL'
+    : 'WSOL';
+  const decimals = isShield ? selected?.decimals ?? SOL_DECIMALS : SOL_DECIMALS;
+  // Icon resolution: prefer the URI baked into the selection (the picker
+  // writes the official CDN URL for SOL). Fallback to the official SOL CDN
+  // for the unshield direction and the unselected default.
+  const iconUri =
+    isShield && !isSolSelected
+      ? selected?.iconUri
+      : selected?.iconUri ?? SOL_ICON_URI;
+
+  const publicAssetBalance = isShield
+    ? selected
+      ? stealthBalance?.tokens?.find((t) => {
+          if (isSolSelected) return t.tokenSymbol === 'SOL';
+          return t.tokenMint === selected.mint;
+        })?.balance ?? 0
+      : stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0
+    : 0;
+  const privateSol = shielded?.sol ?? 0;
+  const sourceBalance = isShield ? publicAssetBalance : privateSol;
+
+  // Price: SOL has a live feed, others use the per-token rate Helius DAS
+  // already returns (balanceUSD / balance). Falls back to 0 for tokens with
+  // no balance (toggle disabled in that case).
+  const rate = isShield
+    ? isSolSelected
+      ? typeof solPrice === 'number' && solPrice > 0
+        ? solPrice
+        : 0
+      : selected?.price ?? 0
+    : typeof solPrice === 'number' && solPrice > 0
+      ? solPrice
+      : 0;
+
+  // Shield+SOL: source = stealth public ATA, fee payer = same → reserve SOL.
+  // Shield+SPL: fees still paid in SOL, but the SOL bucket is separate from
+  // the SPL bucket — the SPL balance is fully spendable.
+  // Unshield: source = encrypted balance, fee payer = stealth public ATA.
+  const reserveFees = isShield && isSolSelected;
+  const maxSol = maxSpendableSol(sourceBalance, reserveFees);
 
   const {
+    setAmount,
     inputMode,
     solAmount,
     fiatAmount,
@@ -83,10 +127,23 @@ export function ShieldFlow({ direction }: Props) {
     onKey,
     onPressPercent,
     onToggleMode,
-  } = useAmountInput({ rate, maxSol });
+  } = useAmountInput({ rate, maxSol, decimals });
 
-  // Asset mode → fiat at the bottom (2 decimals: "$0.00").
-  // Fiat mode → SOL at the bottom (4 decimals: "0.0000 SOL").
+  // Reset typed amount when user picks a different token: rate changes, so
+  // any previously typed fiat value would silently misrepresent the new
+  // token amount.
+  useEffect(() => {
+    setAmount('0');
+  }, [selected?.mint, setAmount]);
+
+  // Wipe selection on unmount so the next time the modal opens it starts
+  // fresh (default = SOL).
+  useEffect(() => {
+    return () => {
+      setSelectedAsset(null);
+    };
+  }, []);
+
   const secondaryAmount =
     inputMode === 'asset'
       ? `$${fiatAmount.toFixed(2)}`
@@ -99,7 +156,7 @@ export function ShieldFlow({ direction }: Props) {
 
   const close = () => router.back();
 
-  const insufficient = solAmount > sourceSol;
+  const insufficient = solAmount > sourceBalance;
   const swipeDisabled = solAmount <= 0 || insufficient;
 
   const onSubmit = () => {
@@ -121,14 +178,17 @@ export function ShieldFlow({ direction }: Props) {
         'Set up your stealth wallet first. Open the Stealth tab to create or import one.',
       );
     }
-    if (num > sourceSol) {
+    if (num > sourceBalance) {
       return failPre(
-        `Not enough ${assetSymbol}. You have ${formatSolBalance(sourceSol)} ${assetSymbol} available.`,
+        `Not enough ${assetSymbol}. You have ${formatBalance(sourceBalance)} ${assetSymbol} available.`,
       );
     }
 
-    const amountBigInt = BigInt(Math.floor(num * 10 ** SOL_DECIMALS));
-    const mint = toAddress(SOL_MINT);
+    const mintAddr = isShield && !isSolSelected && selected
+      ? selected.mint
+      : SOL_MINT;
+    const amountBigInt = BigInt(Math.floor(num * 10 ** decimals));
+    const mint = toAddress(mintAddr);
     const stealfWallet = user?.stealfWallet ?? null;
 
     const opId = pendingOps.enqueue({
@@ -233,12 +293,14 @@ export function ShieldFlow({ direction }: Props) {
       <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
         <SourceAssetCard
           label={isShield ? 'Shielding' : 'Unshielding'}
-          iconSource={require('@/assets/images/solana-icon.png')}
+          iconSource={{ uri: iconUri ?? SOL_ICON_URI }}
           tokenLabel={assetSymbol}
           primaryAmount={primaryDisplay}
           secondaryAmount={secondaryAmount}
           inputMode={inputMode}
-          onPressTokenPill={() => router.push('/asset-picker')}
+          onPressTokenPill={
+            isShield ? () => router.push('/asset-picker') : undefined
+          }
           onToggleMode={onToggleMode}
           toggleDisabled={rate <= 0}
           maxLabel={maxBalanceLabel}

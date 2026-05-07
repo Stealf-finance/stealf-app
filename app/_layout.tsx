@@ -40,8 +40,6 @@ const env = getEnv();
 
 const PRELOAD_IMAGES = [
   require('../assets/images/splash-icon.png'),
-  require('../assets/images/usdc.png'),
-  require('../assets/images/solana-icon.png'),
   require('../assets/images/card-stealf.png'),
 ];
 
@@ -138,7 +136,7 @@ function RootLayout() {
         enableSessionReplay: false,
         captureAppLifecycleEvents: true,
       }}
-      autocapture
+      autocapture={false}
     >
       {tree}
     </PostHogProvider>
