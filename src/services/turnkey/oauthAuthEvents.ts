@@ -1,15 +1,6 @@
-// Subscriber-pattern bridge between Turnkey's `onAuthenticationSuccess`
-// provider callback and useAuthFlow's finalize step.
-//
-// We can't gate finalize on React state (`turnkey.user?.userId` etc.)
-// because Turnkey's `handlePostAuth` (TurnkeyProvider.mjs:363-396) awaits
-// `setSession` / `setAllSessions` / `maybeRefreshWallets` /
-// `maybeRefreshUser` BEFORE invoking `onAuthenticationSuccess`. By the
-// time that synchronous callback fires, React has already committed the
-// session/user/wallets state — so any effect gated on those values would
-// run BEFORE the callback and miss the email decoded from the OIDC
-// token. Making the callback the trigger (not React state) eliminates
-// the race.
+// Bridge from Turnkey's `onAuthenticationSuccess` callback to useAuthFlow.
+// Callback-as-trigger (not React-state-gated) avoids racing the SDK's
+// post-auth state commits.
 type OauthAuthSuccess = {
   email: string | undefined;
   sessionToken: string;

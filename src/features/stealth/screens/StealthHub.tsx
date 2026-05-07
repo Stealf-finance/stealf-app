@@ -152,22 +152,13 @@ export function StealthHub() {
 
 
   const modeProgress = useSharedValue(isPrivate ? 1 : 0);
-  // Snapshot of `modeProgress` taken at the start of each pan so the
-  // gesture's translation is computed relative to where the carousel was
-  // when the finger landed (not always 0 or 1). Lets a partial drag from
-  // mid-transition still feel correct.
+  // Pan baseline — lets a partial drag from mid-transition still feel correct.
   const baseProgress = useSharedValue(isPrivate ? 1 : 0);
-  // Carousel slider — both modes mount side-by-side; this drives the
-  // horizontal offset between them. translateX = -modeProgress * SLIDE_DIST
-  // (page width + gutter) so 0 = public visible, 1 = private visible, and
-  // the gutter sits invisibly inside the parent's overflow:hidden window.
+  // Carousel slider: both modes stay mounted, transitions are opacity-only on
+  // the UI thread (no re-render on JS-thread setMode).
   const sliderStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: -modeProgress.value * SLIDE_DIST }],
   }));
-  // Two background layers, opacity inverted: silver fades out as gold
-  // fades in. Both stay mounted, so the LinearGradients never re-render
-  // when the React `mode` flips — the entire transition is opacity-only
-  // on the UI thread.
   const silverBgStyle = useAnimatedStyle(() => ({
     opacity: 1 - modeProgress.value,
   }));
@@ -261,11 +252,8 @@ export function StealthHub() {
         umbraRegistrationQueries.byAddress(walletAddress),
         false,
       );
-      // Mirror the same priming for the bank wallet — StealthSetupOverlay
-      // probes BOTH wallets via a single needsProbe gate, so leaving bank
-      // undefined still triggers a cold stealth client init (multi-second
-      // freeze on first private-mode entry). Bank is fresh from Turnkey
-      // signup so it's never registered yet.
+      // Prime bank flag too — overlay's needsProbe gate fires on either
+      // undef and triggers a cold stealth-client init (multi-second freeze).
       if (user?.bankWallet && user?.bankRegistered === undefined) {
         queryClient.setQueryData(
           umbraRegistrationQueries.byAddress(user.bankWallet),
@@ -298,10 +286,7 @@ export function StealthHub() {
       ...(user.bankRegistered === undefined ? { bankRegistered: false } : {}),
     });
     setRegistering(false);
-    // Land on the public side of the freshly-created wallet — its
-    // encrypted balance is empty by definition, so private mode would
-    // greet the user with $0.00 and a setup overlay. Public is the
-    // useful first view.
+    // Fresh wallet's encrypted balance is empty — public is the useful first view.
     setMode('public');
   };
 
@@ -413,13 +398,8 @@ export function StealthHub() {
     setMode(target);
   };
 
-  // Continuous drag: track finger movement and update modeProgress in
-  // real time so the carousel follows the finger. On release, decide
-  // between snap-forward and snap-back based on travel distance + flick
-  // velocity. activeOffsetX/failOffsetY hand the gesture back to the
-  // ScrollView for any predominantly-vertical pan. The activation
-  // threshold is small so the carousel responds immediately rather than
-  // sitting in a 12-px "deadzone" before catching up to the finger.
+  // Carousel pan — small activation threshold + vertical fail-offsets so
+  // vertical scrolls fall through to the parent ScrollView.
   const pan = Gesture.Pan()
     .activeOffsetX([-6, 6])
     .failOffsetY([-14, 14])
@@ -905,12 +885,6 @@ function AssetRow({
   );
 }
 
-/**
- * One slide of the kicker / balance carousel. Each page owns its own
- * tone-tinted balance hero and a duplicate eye toggle (cheap — both call
- * the same setter). Width is fixed by the parent so the slider can compute
- * its translateX cleanly on the UI thread.
- */
 function KickerBalancePage({
   width,
   kicker,
@@ -1031,12 +1005,6 @@ function KickerBalancePage({
   );
 }
 
-/**
- * Animated mode dot — width + color + glow opacity all interpolate from
- * `modeProgress`, so the capsule morphs continuously rather than flipping
- * states on JS-thread setMode. The Pressable wraps an Animated.View so the
- * tap target stays generous (hitSlop) while the visual styles run on UI.
- */
 function ModeDot({
   mode,
   modeProgress,

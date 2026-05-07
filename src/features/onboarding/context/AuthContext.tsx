@@ -29,11 +29,7 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-/**
- * Read the persisted stealf wallet address from SecureStore. Pattern mirrors
- * front-stealf where `userData.stealf_wallet` lives in storage and is merged
- * back into the auth user on next sign-in.
- */
+// Reads the persisted stealth-wallet address so it survives sign-out → sign-in.
 export async function readPersistedStealfWallet(): Promise<string | null> {
   try {
     return await getSecure(SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS);

@@ -11,22 +11,8 @@ import type {
 } from '@umbra-privacy/sdk/interfaces';
 import type { SignedTransaction } from '@umbra-privacy/sdk/types';
 
-/**
- * Turnkey-backed implementation of `IUmbraSigner`.
- *
- * Umbra SDK normally expects a local-key signer (`createSignerFromPrivateKeyBytes`),
- * which is fine for the stealth wallet (we hold the key locally) but not for
- * the bank wallet — that one is custodied by Turnkey and we never see its
- * private key. This wrapper bridges Umbra's `IUmbraSigner` interface to
- * Turnkey's `signTransaction` API so we can build an `UmbraClient` whose fee
- * payer / signer is the bank wallet.
- *
- * Per signature:
- *   1. Umbra builds a `SignableTransaction` using OUR address as fee payer.
- *   2. We serialise it to Solana wire format (signatures map with null placeholder).
- *   3. We hand the hex bytes to Turnkey, which signs them remotely.
- *   4. We decode the response back into a `SignedTransaction` and return it.
- */
+// Bridges Umbra's `IUmbraSigner` to Turnkey's remote signing for the bank
+// wallet (no local key).
 
 export type TurnkeyWalletAccount = {
   address: string;
