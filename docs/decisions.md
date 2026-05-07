@@ -165,13 +165,13 @@ should *guide* the design, not validate it after the fact.
 
 Create `docs/audit-security.md` v0 in Phase 0 with:
 
-- **Sensitive surfaces**: passkeys, SecureStore, walletKeyCache,
-  signing flows.
+- **Sensitive surfaces**: OAuth/OTP credentials, SecureStore,
+  walletKeyCache, signing flows.
 - **Secrets map**: what's stored where, with TTL and rotation policy.
 - **Light threat model**: who attacks what, how.
 
-Each slice extends the doc at its end: Auth adds passkey/biometric
-threats, Bank adds RPC trust assumptions, Send adds tx-replay/dedup,
+Each slice extends the doc at its end: Auth adds OAuth/OTP threats,
+Bank adds RPC trust assumptions, Send adds tx-replay/dedup,
 Grow adds Arcium memo-encryption guarantees, Stealth adds the full
 Umbra threat model.
 
@@ -236,7 +236,8 @@ migrate to `app.config.js` then — it's a 5-minute change.
 ---
 
 ## ADR-007 — `/api/users/check-availability` shape (split rejected)
-2026-04-28 · Rejected by CEO 2026-04-28
+2026-04-28 · Rejected by CEO 2026-04-28 · **Superseded by ADR-008** (entire
+preAuthToken / magic-link / invite-code flow retired)
 
 ### Context
 
@@ -315,4 +316,53 @@ A future micro-improvement (out of scope for Slice 1): add a
 debounced live pseudo check to step 1 by posting
 `{ pseudo: handle }` and surfacing "✓ available" / "✗ taken"
 inline. Frontend-only, ~30 min.
+
+---
+
+## ADR-008 — Auth: OAuth (Google/Apple) + Email-OTP via Turnkey
+2026-05-02 · Accepted
+
+### Context
+
+The Phase-0 onboarding flow (`/check-availability` + magic-link email +
+preAuthToken polling + invite-code gate) was retired. The new auth surface
+delegates identity to Turnkey: Google/Apple OAuth or Email-OTP, both via
+`@turnkey/react-native-wallet-kit`.
+
+### Decision
+
+- **OAuth path**: `tk.handleGoogleOauth` / `tk.handleAppleOauth`. The
+  provider-level `onAuthenticationSuccess` callback (configured at
+  `<TurnkeyProvider>` mount, not per-call) decodes the OIDC `email` claim
+  client-side and emits it via `oauthAuthEvents` — `useAuthFlow` subscribes
+  and finalises signup with the bank wallet derived from the Turnkey session.
+- **Email-OTP path**: standard Turnkey OTP flow, no client-side decode.
+- **Backend signup payload**: `{ authMethod, sessionToken, email,
+  bankWallet, pseudo }`. `authMethod` collapses to `oauth | email`,
+  inferred server-side from the Turnkey session type — never client-asserted.
+- **Returning user**: backend short-circuits via `subOrgId` lookup before
+  any `email`/`pseudo` check; OAuth providers that don't re-emit the email
+  claim (Apple private relay) still resolve to the existing account.
+
+### Supersedes
+
+- The atomic `/check-availability` endpoint and ADR-007 split debate.
+- The `magicLinkController` / preAuthToken polling flow.
+- The invite-code gate (currently gated behind a placeholder; not part of
+  the auth path itself).
+- All `passkey`-as-user-facing-credential framing.
+
+### Consequences
+
+- **Pro**: zero custom auth surface — Turnkey owns the identity round-trip.
+- **Pro**: bank wallet derives 1-to-1 from the Turnkey sub-org, no extra
+  binding required.
+- **Pro**: no email enumeration via signup endpoint (returning short-circuit
+  hides the conflict signal).
+- **Con**: callback-as-trigger pattern requires careful documentation —
+  the SDK's `params.onOauthSuccess` is dead code for Google/Apple; only
+  `callbacks.onAuthenticationSuccess` fires (cf. `oauthAuthEvents.ts`).
+- **Con**: Apple private relay returning users without an email claim
+  surface a softened error UX ("Try Email or Google") rather than a
+  resolution path. Acceptable until production data shows otherwise.
 

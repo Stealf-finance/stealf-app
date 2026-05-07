@@ -4,8 +4,8 @@ Living document. Each slice extends this with its own threat model and
 mitigations at slice DoD time. v0 is the seed — bare-bones surface map
 + lightweight threats, no exhaustive review.
 
-**Status**: v0, seeded in Phase 0. Next update: end of Slice 1 (Auth
-adds passkey/biometric threats).
+**Status**: v0, seeded in Phase 0. Updated post-Auth-refactor for OAuth
+(Google/Apple) + Email-OTP via Turnkey.
 
 ---
 
@@ -14,14 +14,21 @@ adds passkey/biometric threats).
 Areas where a defect or attacker action causes loss of funds, loss of
 privacy, or impersonation.
 
-### 1.1 Passkey & Turnkey signing (Slice 1)
-- Passkey is the root of authority for `bankWallet`. Loss of all
-  passkeys = loss of bank funds (no recovery without server-side
-  social recovery, not implemented).
+### 1.1 OAuth / Email-OTP & Turnkey signing
+- Auth root: Google/Apple OAuth or Email-OTP, both via Turnkey. The
+  Turnkey session token is the bearer for all server-authenticated
+  ops; it authorises Turnkey to sign for `bankWallet`. Loss of access
+  to the OAuth account or email inbox = loss of access to bank funds
+  (no server-side social recovery implemented).
 - Signing is brokered by Turnkey. Trust assumption: Turnkey's TEE
   honesty.
-- Surface: `services/turnkey/config.ts`, `services/turnkey/signer.ts`,
-  `features/onboarding/hooks/useSignIn.ts`, `useSignUp.ts`.
+- OIDC token email claim is decoded client-side for signup payload
+  only — never used for authentication decisions; Turnkey verifies the
+  token server-side.
+- Surface: `services/turnkey/config.ts`,
+  `services/turnkey/oauthAuthEvents.ts`,
+  `features/onboarding/hooks/useAuthFlow.ts`,
+  `features/onboarding/lib/oidc.ts`.
 
 ### 1.2 SecureStore (`expo-secure-store`)
 - Stores: `stealfWallet` private key (ED25519 32-byte seed), `subOrgId`.
@@ -48,8 +55,8 @@ privacy, or impersonation.
   category as 1.2.
 
 ### 1.4 Signing flows
-- **Bank send** (Turnkey): client builds tx, Turnkey signs after
-  passkey assertion. Tx is broadcast by client.
+- **Bank send** (Turnkey): client builds tx, Turnkey signs in its TEE
+  using the active session. Tx is broadcast by client.
 - **Stealf send** (local): walletKeyCache → ED25519 sign → broadcast.
 - **Yield deposit**: stealfWallet signs a transfer + memo
   instruction; memo is encrypted Arcium-side.
@@ -97,7 +104,7 @@ privacy, or impersonation.
 | `subOrgId`                         | SecureStore                              | Until logout                 | Cached for cold-start; authoritative = Turnkey.  |
 | Turnkey session token              | Turnkey SDK in-memory                    | Per Turnkey policy           | Refreshed by Turnkey lifecycle.                  |
 | API bearer (JWT)                   | Same as Turnkey session                  | Same                         | Re-signed when needed.                           |
-| Passkey credential                 | Platform passkey storage (iCloud / Google)| Per OS policy                | Out of our control.                              |
+| OAuth identity (Google/Apple)      | Provider session at OS level             | Per provider policy          | Out of our control. Email-OTP path bypasses this.|
 | Master seed (Umbra, Slice 5)       | Keychain (separate item)                 | Until logout / uninstall     | Derives all Umbra-side keys.                     |
 | Sentry DSN                         | `.env` (`EXPO_PUBLIC_SENTRY_DSN`)        | Manual rotation              | Public-ish; meant to be embedded.                |
 | PostHog API key                    | `.env`                                    | Manual rotation              | Public-ish; meant to be embedded.                |
@@ -133,7 +140,7 @@ Sketched for v0. Each slice fleshes out its own quadrant.
 | A1        | Biometric prompt on signing actions (Turnkey + walletKeyCache).                                              | Slice 1        |
 | A2        | None for v0. SecureStore alone (hardware-backed where available). TBD: jailbreak detection.                  | Slice 1 / TBD  |
 | A3        | TLS only. No cert pinning.                                                                                   | Slice 2 / TBD  |
-| A4        | Limited: even a malicious backend can't sign without a fresh passkey assertion. `stealfWallet` unaffected.   | Slice 1        |
+| A4        | Limited: even a malicious backend can't sign without a valid Turnkey session. `stealfWallet` unaffected.    | Post-refactor  |
 | A5        | Out of our control. `bankWallet` exposure = full. `stealfWallet` unaffected.                                 | n/a            |
 | A6        | Deep-link routing only goes through `app/` Expo Router routes — no eval / dynamic code.                      | Slice 1        |
 | A7        | Single RPC config. Acceptable for v0; multi-RPC fallback later.                                              | Slice 2 / TBD  |
@@ -145,8 +152,9 @@ Sketched for v0. Each slice fleshes out its own quadrant.
 
 Updated at slice DoD time.
 
-- [ ] Slice 1 — extend §1.1 with full passkey lifecycle (creation,
-      multi-passkey, recovery), add §A1 mitigation details, log out
+- [ ] Future — extend §1.1 with full OAuth/OTP lifecycle (account
+      recovery, session expiry, provider revocation), §A1 mitigation
+      details, log out
       checklist test.
 - [ ] Slice 1 — decide on jailbreak/root detection (`react-native-jail-monkey`?).
 - [ ] Slice 1 — consent flow for PostHog session replay.
@@ -172,7 +180,7 @@ Tracked here so they don't slip; status updated at fix time.
 **Severity**: 🔴 high (loss-of-funds confusion)
 **Status**: ✅ resolved — `SendFlow` now takes a `wallet: 'bank' | 'stealth'`
 prop orthogonal to `tone`. `useSendSimple` branches the signer:
-Turnkey (passkey) for bank, local ED25519 (`walletKeyCache`) for stealth
+Turnkey (OAuth/OTP session) for bank, local ED25519 (`walletKeyCache`) for stealth
 — ported from front-stealf's `transactionSimple` path. Stealth Send
 routes (`/send?wallet=stealth`) confirmed wiring the stealfWallet
 balance + signing key.
@@ -252,8 +260,7 @@ keys.
 ### 6.5 `'#E5484D'` raw hex in 5+ places instead of token
 **Severity**: 🟢 low (cosmetic / DS hygiene)
 **Status**: open, ~10 min
-**Surface**: `src/features/send/SendFlow.tsx` (4 occurrences),
-`src/features/onboarding/OnboardWizard.tsx` (1 occurrence)
+**Surface**: `src/features/send/SendFlow.tsx` (4 occurrences)
 
 Error red is hardcoded as `'#E5484D'`. Should be promoted to a
 shared token (e.g. `T.danger` or `palette.danger`) so a future
