@@ -8,7 +8,7 @@ import { decodeOidcEmail } from '@/src/features/onboarding/lib/oidc';
 import { emitOauthAuthSuccess } from './oauthAuthEvents';
 
 export const BANK_WALLET_CONFIG = {
-  walletName: 'Cash Wallet',
+  walletName: 'Bank Wallet',
   walletAccounts: [
     {
       curve: 'CURVE_ED25519' as const,
@@ -66,7 +66,7 @@ export const TURNKEY_CALLBACKS: TurnkeyCallbacks = {
           hasIdentifier: !!identifier,
           tokenSegments: tokenParts.length,
           tokenLen: identifier?.length ?? 0,
-          decodedEmail: email ?? '(none)',
+          hasDecodedEmail: !!email,
         });
       }
       Sentry.addBreadcrumb({

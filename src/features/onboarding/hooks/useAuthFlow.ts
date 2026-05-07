@@ -110,7 +110,6 @@ export function useAuthFlow() {
         console.log('[useAuthFlow] starting finalize', {
           method,
           hasEmail: !!email,
-          email: email ?? '(none)',
           hasSessionToken: !!sessionToken,
         });
       }
@@ -119,7 +118,11 @@ export function useAuthFlow() {
         .catch((err) => {
           if (__DEV__) {
             const data = (err as { data?: unknown })?.data;
-            console.error('[useAuthFlow] finalize failed:', err, 'body:', data);
+            const bodyKeys =
+              typeof data === 'object' && data !== null
+                ? Object.keys(data)
+                : '(non-object)';
+            console.error('[useAuthFlow] finalize failed:', err, 'bodyKeys:', bodyKeys);
           }
           setError(softenMissingEmailError(method, email, err));
         })

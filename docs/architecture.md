@@ -221,7 +221,6 @@ app boots fine.
 | Top-level `globalQueryClient` referenced from non-React code | `useQueryClient()` inside `subscribeXxx`, passed by `<DataBootstrap />` |
 | Duplicate type definitions (Zod schema + standalone interface)| `z.infer<typeof Schema>` only                                 |
 | Service code reading React state                             | Inputs as fn args; React state stays in hooks/components       |
-| `useSignUp.ts` 327-line spaghetti                            | Reducer file + helpers + thin orchestrator hook               |
 | `prefetchYieldData` bypassing the api client                 | All fetches go through `apiGet/apiPost`                       |
 | No env validation                                            | `validateEnv()` at boot, fails fast                            |
 | No telemetry until after release                             | Sentry + PostHog from Phase 0                                  |

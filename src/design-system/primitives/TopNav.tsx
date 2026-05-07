@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 import { T } from '@/src/design-system/tokens';
-import { sansation, sansationBold, sansationLight } from '@/src/design-system/typography';
+import { sansationBold, sansationLight } from '@/src/design-system/typography';
 
 type Props = {
   active: 'bank' | 'stealth';

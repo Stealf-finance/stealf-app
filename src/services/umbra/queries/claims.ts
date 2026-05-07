@@ -10,11 +10,8 @@ async function ensureBlacklistLoaded(): Promise<void> {
   if (key) await loadBurntUtxosForCurrentWallet(key);
 }
 
-/**
- * UTXOs received by the current stealth wallet, claimable into encrypted balance.
- * Merges both the encrypted-balance bucket (`received`) and the public-balance
- * bucket (`publicReceived`) — the latter is what bank → shielded creates.
- */
+// Merges `received` (encrypted-balance bucket) and `publicReceived` (what
+// bank → shielded creates) into the pending-claims set for this stealth wallet.
 export async function fetchPendingClaims(): Promise<any[]> {
   const client = await getStealthClient();
   await ensureBlacklistLoaded();
@@ -32,11 +29,8 @@ export async function fetchPendingClaims(): Promise<any[]> {
   return all.filter((u: any) => !isBurnt(u));
 }
 
-/**
- * Self-claimable UTXOs whose `destinationAddress` matches `bankWalletAddress`.
- * Merges encrypted-balance bucket (shielded → bank via `selfShield`) and
- * public-balance bucket (stealth → bank via the public-balance creator).
- */
+// Self-claimable UTXOs targeting `bankWalletAddress` (covers both shielded →
+// bank and stealth-public → bank flows).
 export async function fetchPendingClaimsForCash(
   bankWalletAddress: string,
 ): Promise<any[]> {

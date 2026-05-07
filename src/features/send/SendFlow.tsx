@@ -207,7 +207,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   );
 
   const {
-    amount,
     setAmount,
     inputMode,
     solAmount: typedAssetAmount,

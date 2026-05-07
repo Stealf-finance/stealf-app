@@ -124,8 +124,8 @@ underlying types/symbols *mean*, not what they should be called on screen.
 Stylized as "stealth + DeFi".
 
 **bankWallet** (`bank_wallet` server-side) — Turnkey-managed Solana wallet.
-Signing happens via passkey + Turnkey backend signing service. This is the
-"public" wallet visible on-chain explorers.
+Signing happens via Turnkey's TEE using the active session (OAuth or
+Email-OTP). This is the "public" wallet visible on-chain explorers.
 
 **stealfWallet** — Local ED25519 wallet. Private key stored in
 `expo-secure-store` (Keychain on iOS, Keystore on Android). Used for
@@ -134,9 +134,9 @@ non-Turnkey signing paths (privacy ops, mempool obfuscation).
 **subOrgId** — Turnkey sub-organization identifier. Persisted client-side in
 SecureStore for cold-start hydration. Source of truth: Turnkey SDK.
 
-**passkey** — WebAuthn credential bound to the device. Biometric-protected.
-Used by Turnkey to authorize signing on `bankWallet`. One sub-org has one or
-more passkeys; loss of all passkeys = loss of `bankWallet`.
+**passkey** — Internal Turnkey credential, **not user-facing**. The UI auth
+surface is Google OAuth / Apple OAuth / Email-OTP. Earlier docs that frame
+passkey as a user-visible primitive are pre-refactor history.
 
 **walletKeyCache** — In-memory cache (15-minute TTL) for the `stealfWallet`
 private key, backed by Keychain. Avoids re-prompting biometrics on every op.

@@ -85,12 +85,7 @@ async function buildStealthClient(): Promise<UmbraClient> {
   return cachedClient;
 }
 
-/**
- * Build (or fetch from cache) an `UmbraClient` whose signer is the user's
- * stealth wallet (local ed25519 key from walletKeyCache). Cached per private
- * key — if the active key changes, the client is rebuilt. Parallel callers
- * share the same in-flight build instead of racing.
- */
+// Cached per private key; parallel callers share the in-flight build.
 export async function getStealthClient(): Promise<UmbraClient> {
   if (cachedClient) return cachedClient;
   if (inFlightClient) return inFlightClient;
@@ -102,10 +97,6 @@ export async function getStealthClient(): Promise<UmbraClient> {
   }
 }
 
-/**
- * Reset the stealth client cache. Called on logout / wallet switch so the
- * next `getStealthClient()` rebuilds with the new keys.
- */
 export function clearStealthClient(): void {
   cachedClient = null;
   cachedSignerKey = null;
@@ -120,10 +111,7 @@ export interface GetBankClientArgs {
   signMessage: TurnkeySignMessageFn;
 }
 
-/**
- * Build (or fetch from cache) an `UmbraClient` whose signer is the user's
- * bank wallet via Turnkey. Cached per bank wallet address.
- */
+// Cached per bank wallet address.
 export async function getBankClient(
   args: GetBankClientArgs,
 ): Promise<UmbraClient> {
