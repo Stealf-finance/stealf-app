@@ -8,7 +8,7 @@ import { decodeOidcEmail } from '@/src/features/onboarding/lib/oidc';
 import { emitOauthAuthSuccess } from './oauthAuthEvents';
 
 export const BANK_WALLET_CONFIG = {
-  walletName: 'Cash Wallet',
+  walletName: 'Bank Wallet',
   walletAccounts: [
     {
       curve: 'CURVE_ED25519' as const,
