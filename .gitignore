@@ -50,3 +50,6 @@ app-example
 
 # Claude Code local skill cache & settings
 .claude/
+
+# Superpowers working notes (plans, specs) — kept locally, not in submission
+docs/superpowers/

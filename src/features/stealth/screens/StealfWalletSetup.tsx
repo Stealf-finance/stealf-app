@@ -463,7 +463,7 @@ function ShowMnemonicStep({
         ]}
       >
         Anyone with these words owns the wallet. Write them down somewhere
-        safe — we can't recover them for you.
+        safe — we can&apos;t recover them for you.
       </Text>
 
       <View

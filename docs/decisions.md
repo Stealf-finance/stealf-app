@@ -122,10 +122,11 @@ configs).
 
 ### Decision
 
-Run a **Mopro spike in Phase 0**: copy `modules/mopro-ffi/` from
-front-stealf to stealf-app, run `expo prebuild --clean`, build the iOS
-app, and execute one existing proof end-to-end (e.g., the simplest
-Umbra prover available).
+Run a **Mopro spike in Phase 0**: vendor the Rust ZK FFI from
+front-stealf to stealf-app (later superseded by the standalone npm
+package `@umbra-privacy/rn-zk-prover`), run `expo prebuild --clean`,
+build the iOS app, and execute one existing proof end-to-end (e.g., the
+simplest Umbra prover available).
 
 **Goal**: prove the ZK stack builds and runs on the new repo before
 committing 12 days of architecture decisions on top of it.

@@ -187,8 +187,9 @@ front-stealf.
 
 ## Native modules
 
-- `modules/mopro-ffi/` — Rust ZK provers, copied from front-stealf.
-  Required for Slice 5 (Stealth). Validated end-to-end in Phase 0 spike.
+- ZK provers come from `@umbra-privacy/rn-zk-prover` (Mopro-bundled
+  native xcframework distributed via npm). Required for Slice 5
+  (Stealth). Validated end-to-end in Phase 0 spike.
 - Polyfills (`polyfills.ts`) loaded **before** anything else via the
   custom `index.js` (replaces `expo-router/entry` as `package.json`'s
   `main`).
