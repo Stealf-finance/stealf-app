@@ -29,6 +29,7 @@ import {
   shieldedBalanceQueries,
   useShieldedSolBalance,
 } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -63,59 +64,60 @@ export function ShieldFlow({ direction }: Props) {
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
 
-  // - unshield: stealth encrypted → stealth public ATA
+  // - shield:   stealth public ATA → stealth encrypted balance
+  // - unshield: stealth encrypted balance → stealth public ATA
   const { data: stealthBalance } = useBalance(
     isShield ? user?.stealfWallet ?? null : null,
   );
   const { data: shielded } = useShieldedSolBalance();
+  const { data: encrypted } = useEncryptedBalances();
 
-  // Asset selection — only meaningful in shield direction (encrypted balance
-  // is SOL-only on the SDK side today, so unshield stays pinned to WSOL).
+  // Asset selection works in both directions. The picker source differs:
+  // shield reads tokens from the public ATA, unshield from the encrypted
+  // balance (Umbra multi-mint querier).
   const selected = useSelectedAsset();
   const isSolSelected =
     !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
+  const selectionActive = !isSolSelected && !!selected;
 
-  const assetSymbol = isShield
-    ? selected?.symbol ?? 'SOL'
-    : 'WSOL';
-  const decimals = isShield ? selected?.decimals ?? SOL_DECIMALS : SOL_DECIMALS;
-  // Icon resolution: prefer the URI baked into the selection (the picker
-  // writes the official CDN URL for SOL). Fallback to the official SOL CDN
-  // for the unshield direction and the unselected default.
+  // Source-side asset symbol — defaults to WSOL when unshielding without a
+  // selection (matches the legacy convention that encrypted SOL surfaces as
+  // WSOL in the UI), SOL elsewhere.
+  const assetSymbol = selected?.symbol ?? (isShield ? 'SOL' : 'WSOL');
+  const decimals = selectionActive ? selected!.decimals : SOL_DECIMALS;
   const iconUri =
-    isShield && !isSolSelected
-      ? selected?.iconUri
-      : selected?.iconUri ?? SOL_ICON_URI;
+    selectionActive ? selected!.iconUri ?? SOL_ICON_URI : SOL_ICON_URI;
 
-  const publicAssetBalance = isShield
-    ? selected
-      ? stealthBalance?.tokens?.find((t) => {
-          if (isSolSelected) return t.tokenSymbol === 'SOL';
-          return t.tokenMint === selected.mint;
-        })?.balance ?? 0
-      : stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0
-    : 0;
-  const privateSol = shielded?.sol ?? 0;
-  const sourceBalance = isShield ? publicAssetBalance : privateSol;
+  // Resolve the spendable source balance per direction + selection.
+  let sourceBalance = 0;
+  if (isShield) {
+    const tokens = stealthBalance?.tokens ?? [];
+    sourceBalance = selectionActive
+      ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
+      : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+  } else {
+    // Unshield: read from the encrypted balance for the chosen mint, falling
+    // back to encrypted SOL when no selection is made.
+    sourceBalance = selectionActive
+      ? encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ?? 0
+      : shielded?.sol ?? 0;
+  }
 
-  // Price: SOL has a live feed, others use the per-token rate Helius DAS
-  // already returns (balanceUSD / balance). Falls back to 0 for tokens with
-  // no balance (toggle disabled in that case).
-  const rate = isShield
-    ? isSolSelected
-      ? typeof solPrice === 'number' && solPrice > 0
-        ? solPrice
-        : 0
-      : selected?.price ?? 0
+  // Price: SOL has a live oracle feed, SPL tokens use the per-token rate
+  // baked into the selection (Helius DAS-derived for shield, encrypted-side
+  // ratio for unshield). Falls back to 0 → fiat toggle disabled.
+  const rate = selectionActive
+    ? selected!.price
     : typeof solPrice === 'number' && solPrice > 0
       ? solPrice
       : 0;
 
-  // Shield+SOL: source = stealth public ATA, fee payer = same → reserve SOL.
+  // Shield+SOL: source = stealth public ATA, fee payer = same bucket → reserve SOL.
   // Shield+SPL: fees still paid in SOL, but the SOL bucket is separate from
-  // the SPL bucket — the SPL balance is fully spendable.
-  // Unshield: source = encrypted balance, fee payer = stealth public ATA.
-  const reserveFees = isShield && isSolSelected;
+  // the SPL bucket → the SPL balance is fully spendable.
+  // Unshield: source = encrypted balance, fee payer = stealth public ATA →
+  // different buckets, no reserve.
+  const reserveFees = isShield && !selectionActive;
   const maxSol = maxSpendableSol(sourceBalance, reserveFees);
 
   const {
@@ -168,6 +170,7 @@ export function ShieldFlow({ direction }: Props) {
         kind: isShield ? 'shield' : 'unshield',
         tone,
         amountSol: num,
+        assetSymbol,
       });
       pendingOps.complete(id, 'failed', msg);
       close();
@@ -184,9 +187,7 @@ export function ShieldFlow({ direction }: Props) {
       );
     }
 
-    const mintAddr = isShield && !isSolSelected && selected
-      ? selected.mint
-      : SOL_MINT;
+    const mintAddr = selectionActive ? selected!.mint : SOL_MINT;
     const amountBigInt = BigInt(Math.floor(num * 10 ** decimals));
     const mint = toAddress(mintAddr);
     const stealfWallet = user?.stealfWallet ?? null;
@@ -195,6 +196,7 @@ export function ShieldFlow({ direction }: Props) {
       kind: isShield ? 'shield' : 'unshield',
       tone,
       amountSol: num,
+      assetSymbol,
     });
 
     close();
@@ -222,6 +224,11 @@ export function ShieldFlow({ direction }: Props) {
         await Promise.all([
           queryClient.invalidateQueries({
             queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet ?? ''),
+          }),
+          // Multi-mint encrypted query — key includes the mint list so we
+          // invalidate by prefix to catch every active variant.
+          queryClient.invalidateQueries({
+            queryKey: ['stealth', 'encrypted-balances', stealfWallet ?? ''],
           }),
           stealfWallet
             ? queryClient.invalidateQueries({
@@ -298,8 +305,10 @@ export function ShieldFlow({ direction }: Props) {
           primaryAmount={primaryDisplay}
           secondaryAmount={secondaryAmount}
           inputMode={inputMode}
-          onPressTokenPill={
-            isShield ? () => router.push('/asset-picker') : undefined
+          onPressTokenPill={() =>
+            router.push(
+              isShield ? '/asset-picker?wallet=stealth' : '/asset-picker?wallet=encrypted',
+            )
           }
           onToggleMode={onToggleMode}
           toggleDisabled={rate <= 0}

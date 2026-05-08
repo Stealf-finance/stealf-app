@@ -44,10 +44,8 @@ import { useSolPrice } from './hooks/useSolPrice';
 import { useSendSimple } from './hooks/useSendSimple';
 import { mapTokensToAssets } from './lib/mapTokenToAsset';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  shieldedBalanceQueries,
-  useShieldedSolBalance,
-} from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { toAddress } from '@/src/services/solana/kit';
@@ -109,7 +107,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       ? 'Stealth wallet'
       : 'Bank wallet';
   const { data: balance } = useBalance(fromAddress);
-  const { data: shielded } = useShieldedSolBalance();
+  const { data: encrypted } = useEncryptedBalances();
   const { data: solPrice } = useSolPrice();
   const sendMutation = useSendSimple();
   const queryClient = useQueryClient();
@@ -117,30 +115,45 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const { setMode } = usePrivacyMode();
   const [privateSending, setPrivateSending] = useState(false);
 
-  // Private mode only spends encrypted balance, which currently only holds
-  // SOL. We synthesize a single Asset entry from the shielded balance so the
-  // wizard's existing AssetPill / Max / fiat plumbing works unchanged.
+  // Private mode spends from the encrypted balance, which now supports any
+  // mint. We map every encrypted token (with non-zero balance) to an Asset
+  // entry so the existing AssetPill / Max / fiat plumbing keeps working.
   const privateAssets: Asset[] = useMemo(() => {
-    const sol = shielded?.sol ?? 0;
-    const fiatRate = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
-    const balanceStr =
-      sol === 0 ? '0' : sol.toFixed(6).replace(/\.?0+$/, '');
-    return [
-      {
-        mint: null,
-        symbol: 'SOL',
-        name: 'Solana',
+    const tokens = (encrypted?.tokens ?? []).filter((t) => t.amount > 0);
+    if (tokens.length === 0) {
+      // Fallback to a 0 SOL placeholder so the wizard still has an asset
+      // entry to render the "Encrypted balance is empty" empty state from.
+      return [
+        {
+          mint: null,
+          symbol: 'SOL',
+          name: 'Solana',
+          balance: '0',
+          fiat: '$0.00',
+          gradient: ['#9945FF', '#14F195'],
+          iconSource: { uri: SOL_ICON_URI },
+          priceUSD: undefined,
+          decimals: 9,
+        },
+      ];
+    }
+    return tokens.map((t) => {
+      const isSol = t.mint === SOL_MINT || t.symbol === 'SOL';
+      const pricePerUnit = t.amount > 0 ? t.amountUSD / t.amount : 0;
+      const balanceStr = t.amount.toFixed(6).replace(/\.?0+$/, '') || '0';
+      return {
+        mint: isSol ? null : t.mint,
+        symbol: t.symbol,
+        name: t.symbol,
         balance: balanceStr,
-        fiat:
-          fiatRate > 0
-            ? `$${(sol * fiatRate).toFixed(2)}`
-            : '$—',
-        gradient: ['#9945FF', '#14F195'],
-        iconSource: { uri: SOL_ICON_URI },
-        priceUSD: fiatRate || undefined,
-      },
-    ];
-  }, [shielded?.sol, solPrice]);
+        fiat: pricePerUnit > 0 ? `$${t.amountUSD.toFixed(2)}` : '$—',
+        gradient: isSol ? ['#9945FF', '#14F195'] : ['#c9c9cc', '#5a5a5e'],
+        iconSource: t.iconUri ? { uri: t.iconUri } : undefined,
+        priceUSD: pricePerUnit > 0 ? pricePerUnit : undefined,
+        decimals: t.decimals,
+      };
+    });
+  }, [encrypted]);
 
   const assets = useMemo(
     () =>
@@ -269,15 +282,20 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     try {
       if (isPrivate) {
         setPrivateSending(true);
-        const amountLamports = BigInt(
-          Math.floor(typedAssetAmount * 10 ** SOL_DECIMALS),
+        const txDecimals = asset.decimals ?? SOL_DECIMALS;
+        const amountRaw = BigInt(
+          Math.floor(typedAssetAmount * 10 ** txDecimals),
         );
         const destination = toAddress(recipient.name.trim());
-        const mint = toAddress(SOL_MINT);
-        await umbra.sendEncrypted(destination, mint, amountLamports);
+        const mintAddr = asset.mint ?? SOL_MINT;
+        const mint = toAddress(mintAddr);
+        await umbra.sendEncrypted(destination, mint, amountRaw);
         await Promise.all([
           queryClient.invalidateQueries({
             queryKey: shieldedBalanceQueries.byStealfWallet(fromAddress),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: ['stealth', 'encrypted-balances', fromAddress],
           }),
           queryClient.invalidateQueries({
             queryKey: historyQueries.byAddress(fromAddress),

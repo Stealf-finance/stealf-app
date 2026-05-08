@@ -30,6 +30,7 @@ import {
   useShieldedSolBalance,
   shieldedBalanceQueries,
 } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import {
   useUmbra,
   getEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
@@ -104,14 +105,19 @@ export function MoveFlow() {
   const tone: Tone = direction === 'shielded-to-bank' ? 'gold' : 'silver';
   const palette = txPalette(tone);
 
-  // Multi-token is meaningful only when the source is a public ATA. The
-  // encrypted balance side stays SOL-only (the SDK exposes a single SOL
-  // balance for encrypted accounts), so shielded-to-bank stays pinned WSOL.
-  const supportsMultiToken =
-    direction === 'bank-to-shielded' || direction === 'stealth-to-bank';
-  // For the picker, the wallet whose tokens we list depends on the direction.
-  const pickerWalletParam: 'bank' | 'stealth' =
-    direction === 'bank-to-shielded' ? 'bank' : 'stealth';
+  // Every direction supports multi-token now: public-side via on-chain ATAs
+  // (Helius DAS), encrypted-side via the multi-mint Umbra querier.
+  const supportsMultiToken = true;
+  // The picker's source depends on direction:
+  //   bank-to-shielded → bank ATA (paying side)
+  //   stealth-to-bank  → stealth ATA (paying side)
+  //   shielded-to-bank → encrypted balances (debiting the shielded side)
+  const pickerWalletParam: 'bank' | 'stealth' | 'encrypted' =
+    direction === 'bank-to-shielded'
+      ? 'bank'
+      : direction === 'shielded-to-bank'
+        ? 'encrypted'
+        : 'stealth';
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -132,22 +138,23 @@ export function MoveFlow() {
     direction === 'stealth-to-bank' ? user?.stealfWallet ?? null : null,
   );
   const { data: shielded } = useShieldedSolBalance();
+  const { data: encrypted } = useEncryptedBalances();
 
-  // Asset selection — only honored when the direction supports multi-token.
+  // Asset selection — every direction now supports multi-token.
   const selected = useSelectedAsset();
   const isSolSelected =
     !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
-  const selectionActive = supportsMultiToken && !isSolSelected && !!selected;
+  const selectionActive = !isSolSelected && !!selected;
+  const isShieldedSource = direction === 'shielded-to-bank';
 
-  const assetSymbol = supportsMultiToken
-    ? selected?.symbol ?? 'SOL'
-    : 'WSOL';
+  // Source-side asset symbol: encrypted positions render as the underlying
+  // token (no "WSOL" wrapper exposed in the picker today), public sides use
+  // the chosen symbol.
+  const assetSymbol = selected?.symbol ?? (isShieldedSource ? 'WSOL' : 'SOL');
   const decimals = selectionActive ? selected!.decimals : SOL_DECIMALS;
   const iconUri = selectionActive ? selected!.iconUri ?? SOL_ICON_URI : SOL_ICON_URI;
 
-  // Resolve the source token row to read the spendable balance. For
-  // bank-to-shielded, source = bank ATA; for stealth-to-bank, source =
-  // stealth ATA; otherwise the encrypted SOL balance.
+  // Resolve the spendable source balance per direction + selection.
   let sourceBalance = 0;
   if (direction === 'bank-to-shielded') {
     const tokens = bankBalanceData?.tokens ?? [];
@@ -160,7 +167,14 @@ export function MoveFlow() {
       ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
       : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
   } else {
-    sourceBalance = shielded?.sol ?? 0;
+    // shielded-to-bank: source is the encrypted balance for the chosen mint,
+    // falling back to the encrypted SOL balance when no selection is made.
+    if (selectionActive) {
+      sourceBalance =
+        encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ?? 0;
+    } else {
+      sourceBalance = shielded?.sol ?? 0;
+    }
   }
 
   // Price feed: SOL has a live oracle; SPL tokens use the per-token rate
@@ -231,6 +245,11 @@ export function MoveFlow() {
       queryClient.invalidateQueries({
         queryKey: shieldedBalanceQueries.byStealfWallet(user?.stealfWallet ?? ''),
       }),
+      // Multi-mint encrypted query — prefix invalidation catches every
+      // mint-list variant cached.
+      queryClient.invalidateQueries({
+        queryKey: ['stealth', 'encrypted-balances', user?.stealfWallet ?? ''],
+      }),
     ];
     if (user?.bankWallet) {
       keys.push(
@@ -265,6 +284,7 @@ export function MoveFlow() {
         kind: kindForDirection(direction),
         tone,
         amountSol: num,
+        assetSymbol,
       });
       pendingOps.complete(id, 'failed', msg);
       close();
@@ -302,6 +322,7 @@ export function MoveFlow() {
       kind: kindForDirection(direction),
       tone,
       amountSol: num,
+      assetSymbol,
     });
 
     // Eager close — pill takes over the status surface from here. Balances

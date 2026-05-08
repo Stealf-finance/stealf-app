@@ -12,6 +12,7 @@ import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { setSelectedAsset } from '@/src/features/send/lib/selectedAssetStore';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 
@@ -38,40 +39,65 @@ export function AssetPickerScreen() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  // Caller picks which wallet to source tokens from. Defaults to stealth so
-  // existing /asset-picker pushes (Shield) keep working unchanged.
-  const params = useLocalSearchParams<{ wallet?: 'bank' | 'stealth' }>();
-  const sourceAddress =
-    params.wallet === 'bank'
+  // Caller picks which source to list tokens from:
+  //   - bank      → bank wallet's public ATA
+  //   - stealth   → stealth wallet's public ATA (default)
+  //   - encrypted → stealth encrypted balances (Umbra-shielded tokens)
+  const params = useLocalSearchParams<{
+    wallet?: 'bank' | 'stealth' | 'encrypted';
+  }>();
+  const isEncrypted = params.wallet === 'encrypted';
+  const publicSourceAddress = isEncrypted
+    ? null
+    : params.wallet === 'bank'
       ? user?.bankWallet ?? null
       : user?.stealfWallet ?? null;
-  const { data: walletBalance } = useBalance(sourceAddress);
+  const { data: walletBalance } = useBalance(publicSourceAddress);
+  const { data: encrypted } = useEncryptedBalances();
   const { data: solPrice } = useSolPrice();
 
   const close = () => router.back();
 
-  const tokens = (walletBalance?.tokens ?? []).map((t) => {
-    const isSol = t.tokenMint === null || t.tokenSymbol === 'SOL';
-    const symbol = t.tokenSymbol;
-    const decimals = TOKEN_DECIMALS[symbol] ?? 6;
-    const price =
-      isSol && typeof solPrice === 'number' && solPrice > 0
-        ? solPrice
-        : t.balance > 0
-          ? t.balanceUSD / t.balance
-          : 0;
-    return {
-      mint: isSol ? SOL_MINT : (t.tokenMint as string),
-      symbol,
-      name: TOKEN_NAMES[symbol] ?? symbol,
-      decimals,
-      iconSource: undefined,
-      iconUri: isSol ? SOL_ICON_URI : t.tokenIcon ?? undefined,
-      balance: t.balance,
-      balanceUSD: t.balanceUSD,
-      price,
-    };
-  });
+  const tokens = isEncrypted
+    ? (encrypted?.tokens ?? [])
+        .filter((t) => t.amount > 0)
+        .map((t) => {
+          const isSol = t.mint === SOL_MINT || t.symbol === 'SOL';
+          const pricePerUnit = t.amount > 0 ? t.amountUSD / t.amount : 0;
+          return {
+            mint: t.mint,
+            symbol: t.symbol,
+            name: TOKEN_NAMES[t.symbol] ?? t.symbol,
+            decimals: t.decimals,
+            iconSource: undefined,
+            iconUri: isSol ? SOL_ICON_URI : t.iconUri,
+            balance: t.amount,
+            balanceUSD: t.amountUSD,
+            price: pricePerUnit,
+          };
+        })
+    : (walletBalance?.tokens ?? []).map((t) => {
+        const isSol = t.tokenMint === null || t.tokenSymbol === 'SOL';
+        const symbol = t.tokenSymbol;
+        const decimals = TOKEN_DECIMALS[symbol] ?? 6;
+        const price =
+          isSol && typeof solPrice === 'number' && solPrice > 0
+            ? solPrice
+            : t.balance > 0
+              ? t.balanceUSD / t.balance
+              : 0;
+        return {
+          mint: isSol ? SOL_MINT : (t.tokenMint as string),
+          symbol,
+          name: TOKEN_NAMES[symbol] ?? symbol,
+          decimals,
+          iconSource: undefined,
+          iconUri: isSol ? SOL_ICON_URI : t.tokenIcon ?? undefined,
+          balance: t.balance,
+          balanceUSD: t.balanceUSD,
+          price,
+        };
+      });
 
   return (
     <CenterGlow tone="silver" flat>

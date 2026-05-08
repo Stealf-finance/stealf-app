@@ -22,7 +22,12 @@ export type PendingOp = {
   id: string;
   kind: PendingOpKind;
   tone: Tone;
+  /** Humanized amount in token units (despite the legacy "Sol" suffix the
+   * field carries the asset's amount, not strictly SOL). */
   amountSol: number;
+  /** Optional asset symbol — overrides the kind-based SOL/WSOL fallback so
+   * a USDC/JUP/etc. shield surfaces the right token in the pill text. */
+  assetSymbol?: string;
   phase: PendingOpPhase;
   errorMessage?: string;
   startedAt: number;

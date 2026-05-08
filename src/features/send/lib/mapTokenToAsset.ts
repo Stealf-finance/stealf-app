@@ -70,6 +70,7 @@ export function mapTokenToAsset(token: TokenBalance): Asset {
     gradient: GRADIENTS[token.tokenSymbol] ?? FALLBACK_GRADIENT,
     iconSource,
     priceUSD,
+    decimals: token.tokenDecimals,
   };
 }
 

@@ -17,6 +17,9 @@ export type Asset = {
   iconSource?: ImageSourcePropType;
   /** Per-unit USD price, used to convert the typed amount to fiat in real time. */
   priceUSD?: number;
+  /** On-chain token decimals (SOL=9, USDC=6, BONK=5…). Required to convert
+   * the typed humanized amount back to raw units when building the tx. */
+  decimals?: number;
 };
 
 type Props = Asset & {

@@ -46,8 +46,7 @@ import { useFeatureFlag } from '@/src/services/observability/featureFlags';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
-import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
-import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { umbraRegistrationQueries } from '@/src/features/stealth/hooks/useUmbraRegistration';
 import {
   StealfWalletSetup,
@@ -116,15 +115,14 @@ export function StealthHub() {
 
   const stealfWallet = user?.stealfWallet ?? null;
   const { data: balanceData } = useBalance(stealfWallet);
-  // History is prefetched here so it's warm by the time the user opens
-  // a future "see all" on the stealth tab.
+
   useHistory(stealfWallet);
-  const { data: shielded } = useShieldedSolBalance();
-  const { data: solPrice } = useSolPrice();
+  const { data: encrypted } = useEncryptedBalances();
 
   const publicUSD = balanceData?.totalUSD ?? 0;
-  const privateUSD =
-    shielded && typeof solPrice === 'number' ? shielded.sol * solPrice : 0;
+
+  const privateUSD = encrypted?.totalUSD ?? 0;
+  const privateTokens = (encrypted?.tokens ?? []).filter((t) => t.amount > 0);
 
   const formatBalance = (usd: number) => {
     const safe = Math.max(0, usd);
@@ -133,30 +131,19 @@ export function StealthHub() {
       dec: `.${(safe % 1).toFixed(2).slice(2)}`,
     };
   };
-  // Both modes' balances are pre-formatted because they're rendered side
-  // by side in the carousel — nothing toggles based on `isPrivate` here.
+
   const publicBalance = formatBalance(publicUSD);
   const privateBalance = formatBalance(privateUSD);
-  // Match the BankWallet hero exactly so toggling tabs doesn't shift the
-  // amount typography. Static sizes mirror BankWallet.tsx:134/148/162.
+
   const balanceFontSize = { int: 76, dec: 32, dollar: 36 } as const;
 
-  const solRow = balanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL');
-  const solBalance = isPrivate ? (shielded?.sol ?? 0) : (solRow?.balance ?? 0);
-  const solUSD = isPrivate ? privateUSD : (solRow?.balanceUSD ?? 0);
-
-  // Public / private split — each side proportional to its share of the
-  // wallet's total dollar value. Drives the horizontal bar below the
-  // balance; falls to 0 cleanly when the wallet is empty.
   const totalUSD = publicUSD + privateUSD;
   const publicValue = totalUSD > 0 ? publicUSD / totalUSD : 0;
 
 
   const modeProgress = useSharedValue(isPrivate ? 1 : 0);
-  // Pan baseline — lets a partial drag from mid-transition still feel correct.
   const baseProgress = useSharedValue(isPrivate ? 1 : 0);
-  // Carousel slider: both modes stay mounted, transitions are opacity-only on
-  // the UI thread (no re-render on JS-thread setMode).
+
   const sliderStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: -modeProgress.value * SLIDE_DIST }],
   }));
@@ -167,9 +154,7 @@ export function StealthHub() {
     opacity: modeProgress.value,
   }));
 
-  // Fade the main hub in when the user just finished wallet setup. Initialize
-  // to 1 if the wallet was already set on first mount (cold-start case) so we
-  // don't flash an empty screen behind the splash.
+
   const enterOpacity = useSharedValue(stealfWallet ? 1 : 0);
   const enterStyle = useAnimatedStyle(() => ({
     opacity: enterOpacity.value,
@@ -180,10 +165,7 @@ export function StealthHub() {
     }
   }, [stealfWallet, enterOpacity]);
 
-  // Drive the carousel from `mode` (the React state). Skips the timing
-  // when `modeProgress` is already at (or very near) the target — the
-  // gesture release path animates on the UI thread first, so by the time
-  // setMode flushes here we'd otherwise re-animate a no-op snap.
+
   useEffect(() => {
     const target = isPrivate ? 1 : 0;
     if (Math.abs(modeProgress.value - target) < 0.001) return;
@@ -245,10 +227,7 @@ export function StealthHub() {
         historyQueries.byAddress(walletAddress),
         emptyHistory,
       );
-      // A freshly-created wallet is unregistered with Umbra by definition.
-      // Prime the cache so StealthSetupOverlay can render the setup card
-      // instantly when the user navigates to private mode, instead of
-      // waiting on a round-trip to confirm what we already know.
+
       queryClient.setQueryData(
         umbraRegistrationQueries.byAddress(walletAddress),
         false,
@@ -277,24 +256,17 @@ export function StealthHub() {
     setUser({
       ...user,
       stealfWallet: walletAddress,
-      // Fresh wallets are never registered with Umbra yet. Imports might be —
-      // leave the flag undefined so the overlay does a one-time chain probe
-      // and persists the result.
       ...(isFresh ? { stealthRegistered: false } : {}),
-      // Persist bankRegistered too on first persist. Without this, the
-      // overlay's needsProbe gate (stealth=undef OR bank=undef) re-fires
-      // and triggers the cold stealth-client init we just paid to avoid.
+
       ...(user.bankRegistered === undefined ? { bankRegistered: false } : {}),
     });
     setRegistering(false);
-    // Fresh wallet's encrypted balance is empty — public is the useful first view.
     setMode('public');
   };
 
   const handleSetupComplete = async (choice: SetupChoice) => {
     if (choice.mode === 'create') {
-      // Two-phase: first call generates+caches the mnemonic and shows it;
-      // second call (after the user confirms they saved it) registers it.
+
       if (pendingMnemonic && pendingAddress) {
         await persistStealfWallet(pendingAddress, true);
         setPendingMnemonic(null);
@@ -393,48 +365,38 @@ export function StealthHub() {
 
   const switchMode = (target: PrivacyMode) => {
     if (target === mode) return;
-    // Just flip the React state — the useEffect on `isPrivate` animates
-    // `modeProgress` to the new value, which drives the carousel slider
-    // and the dot indicators in lockstep.
+
     setMode(target);
   };
 
-  // Carousel pan — small activation threshold + vertical fail-offsets so
-  // vertical scrolls fall through to the parent ScrollView.
+
   const pan = Gesture.Pan()
     .activeOffsetX([-6, 6])
     .failOffsetY([-14, 14])
     .minDistance(0)
     .onBegin(() => {
       'worklet';
-      // Stop any in-flight snap animation so the finger gets immediate
-      // control instead of fighting the easing curve.
+
       cancelAnimation(modeProgress);
       baseProgress.value = modeProgress.value;
     })
     .onUpdate((e) => {
       'worklet';
       const next = baseProgress.value - e.translationX / SLIDE_DIST;
-      // Hard clamp at the edges — there are only two pages, so any
-      // resistance past 0 or 1 reads as drag-lag. Snapping to the bound
-      // keeps the response 1:1 with the finger inside the valid range.
+
       modeProgress.value = next < 0 ? 0 : next > 1 ? 1 : next;
     })
     .onEnd((e) => {
       'worklet';
       const dragged = baseProgress.value - e.translationX / SLIDE_DIST;
-      // Velocity-aware snap: a fast flick commits the swap even if the
-      // user only dragged a sliver; otherwise snap to whichever side
-      // they ended past the midpoint.
+
       let target: 0 | 1;
       if (Math.abs(e.velocityX) > 500) {
         target = e.velocityX < 0 ? 1 : 0;
       } else {
         target = dragged > 0.5 ? 1 : 0;
       }
-      // Adaptive duration: when the finger left the carousel near the
-      // target the snap should be quick, otherwise scale up. Caps at
-      // MORPH_DUR for the worst case (full half-page to cross).
+
       const remaining = Math.abs(target - modeProgress.value);
       const dur = Math.max(160, Math.round(MORPH_DUR * remaining));
       const startedAt = baseProgress.value < 0.5 ? 0 : 1;
@@ -445,9 +407,7 @@ export function StealthHub() {
           easing: EASE_RELEASE,
         });
       } else {
-        // Mode change — drive the snap on the UI thread first (snappy
-        // post-release curve), then flush React state. The useEffect
-        // guards on near-equality so it won't re-animate when it fires.
+
         modeProgress.value = withTiming(target, {
           duration: dur,
           easing: EASE_RELEASE,
@@ -765,8 +725,9 @@ export function StealthHub() {
         </GestureDetector>
         {/* /swipe-toggle zone */}
 
-        {/* Assets — hidden in private mode (no real encrypted holdings to list yet) */}
-        {!isPrivate ? (
+        {/* Assets — public mode lists on-chain holdings; private mode lists
+            encrypted holdings (only rendered if there's at least one). */}
+        {isPrivate && privateTokens.length === 0 ? null : (
           <>
             <Text
               style={[
@@ -774,7 +735,7 @@ export function StealthHub() {
                 {
                   fontSize: 22,
                   letterSpacing: -0.44,
-                  color: SILVER.ink,
+                  color: isPrivate ? GOLD.ink : SILVER.ink,
                   marginBottom: 4,
                 },
               ]}
@@ -783,28 +744,42 @@ export function StealthHub() {
             </Text>
 
             <View style={{ paddingTop: 6 }}>
-              {(balanceData?.tokens ?? []).map((t) => (
-                <AssetRow
-                  key={t.tokenMint ?? t.tokenSymbol}
-                  iconSource={
-                    t.tokenIcon
-                      ? { uri: t.tokenIcon }
-                      : t.tokenSymbol === 'SOL'
-                        ? { uri: SOL_ICON_URI }
-                        : undefined
-                  }
-                  symbol={t.tokenSymbol}
-                  caption={
-                    t.balance > 0
-                      ? `${t.balance.toFixed(4).replace(/\.?0+$/, '')} · on-chain`
-                      : 'on-chain'
-                  }
-                  priceLabel={`$${t.balanceUSD.toFixed(2)}`}
-                />
-              ))}
+              {isPrivate
+                ? privateTokens.map((t) => (
+                    <AssetRow
+                      key={t.mint}
+                      iconSource={t.iconUri ? { uri: t.iconUri } : undefined}
+                      symbol={t.symbol}
+                      caption={
+                        t.amount > 0
+                          ? `${t.amount.toFixed(4).replace(/\.?0+$/, '')} · encrypted`
+                          : 'encrypted'
+                      }
+                      priceLabel={`$${t.amountUSD.toFixed(2)}`}
+                    />
+                  ))
+                : (balanceData?.tokens ?? []).map((t) => (
+                    <AssetRow
+                      key={t.tokenMint ?? t.tokenSymbol}
+                      iconSource={
+                        t.tokenIcon
+                          ? { uri: t.tokenIcon }
+                          : t.tokenSymbol === 'SOL'
+                            ? { uri: SOL_ICON_URI }
+                            : undefined
+                      }
+                      symbol={t.tokenSymbol}
+                      caption={
+                        t.balance > 0
+                          ? `${t.balance.toFixed(4).replace(/\.?0+$/, '')} · on-chain`
+                          : 'on-chain'
+                      }
+                      priceLabel={`$${t.balanceUSD.toFixed(2)}`}
+                    />
+                  ))}
             </View>
           </>
-        ) : null}
+        )}
       </ScrollView>
       </Animated.View>
 

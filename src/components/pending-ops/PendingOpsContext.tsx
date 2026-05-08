@@ -177,7 +177,7 @@ export function formatPillText(op: import('./types').PendingOp): string {
     if (op.phase === 'failed') return `${v.noun} failed`;
     return `${v.ing}…`;
   }
-  const amount = `${formatSolShort(op.amountSol)} ${sourceAssetSymbol(op.kind)}`;
+  const amount = `${formatSolShort(op.amountSol)} ${op.assetSymbol ?? sourceAssetSymbol(op.kind)}`;
   if (op.phase === 'done') return `${v.ed} ${amount}`;
   if (op.phase === 'failed') return `${v.noun} failed`;
   return `${v.ing} ${amount}…`;

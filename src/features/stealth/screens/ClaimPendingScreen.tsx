@@ -86,6 +86,9 @@ export function ClaimPendingScreen() {
           queryClient.invalidateQueries({
             queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),
           });
+          queryClient.invalidateQueries({
+            queryKey: ['stealth', 'encrypted-balances', stealfWallet],
+          });
         };
         invalidate();
         [3000, 8000, 15000].forEach((d) => setTimeout(invalidate, d));
