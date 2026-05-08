@@ -27,6 +27,16 @@ export type EncryptedBalances = {
   totalUSD: number;
 };
 
+/** Raw on-chain data the cached query holds. USD/symbol/etc. are derived
+ *  outside the cache so price refreshes flow through render without forcing
+ *  a refetch (and don't leave stale fiat in the cached payload). */
+type RawEncryptedToken = {
+  mint: string;
+  amountRaw: bigint;
+  state: string | null;
+};
+type RawEncryptedBalances = { tokens: RawEncryptedToken[] };
+
 // Anything above 1B SOL/equivalent is garbage (corrupted account or wrong keys).
 const MAX_PLAUSIBLE_RAW = 1_000_000_000n * BigInt(LAMPORTS_PER_SOL);
 
@@ -37,6 +47,16 @@ const TOKEN_DECIMALS: Record<string, number> = {
   USDT: 6,
   JUP: 6,
   BONK: 5,
+};
+
+// Stablecoins floor — backend may report 0 balance + 0 balanceUSD when the
+// public ATA is empty (typical right after shielding the full position),
+// which would otherwise collapse the derived per-unit price to 0 and zero
+// out fiat for the encrypted side. Mirrors mapTokenToAsset.STABLE_PRICES.
+const STABLE_PRICES: Record<string, number> = {
+  USDC: 1,
+  USDT: 1,
+  EURC: 1,
 };
 
 export const encryptedBalancesQueries = {
@@ -68,7 +88,9 @@ export function useEncryptedBalances() {
 
   // Per-mint metadata derived from the public balance — labels encrypted
   // entries with the same icon/symbol the user sees publicly, instead of
-  // bare addresses.
+  // bare addresses. Recomputes when solPrice or public balance changes,
+  // and the derivation in the wrapper memo below picks the new values up
+  // immediately without invalidating the cached on-chain query.
   const metaByMint = useMemo(() => {
     const map = new Map<
       string,
@@ -81,12 +103,13 @@ export function useEncryptedBalances() {
       const decimals =
         TOKEN_DECIMALS[symbol] ??
         (typeof t.tokenDecimals === 'number' ? t.tokenDecimals : 6);
-      const price =
+      const derivedPrice =
         isSol && typeof solPrice === 'number' && solPrice > 0
           ? solPrice
           : t.balance > 0
             ? t.balanceUSD / t.balance
             : 0;
+      const price = STABLE_PRICES[symbol] ?? derivedPrice;
       map.set(mint, {
         symbol,
         decimals,
@@ -105,23 +128,12 @@ export function useEncryptedBalances() {
     return map;
   }, [publicBalance, solPrice]);
 
-  return useQuery<EncryptedBalances>({
+  const baseQuery = useQuery<RawEncryptedBalances>({
     queryKey: encryptedBalancesQueries.byStealfWallet(wallet, mints),
     queryFn: async () => {
       const raw = await fetchEncryptedBalances(mints as Address[]);
-
-      const tokens: EncryptedTokenBalance[] = [];
-      let totalUSD = 0;
-
-      mints.forEach((mint) => {
+      const tokens: RawEncryptedToken[] = mints.map((mint) => {
         const entry = raw.get(mint as Address);
-        const meta = metaByMint.get(mint) ?? {
-          symbol: mint.slice(0, 4),
-          decimals: 6,
-          iconUri: undefined,
-          price: 0,
-        };
-
         let amountRaw = 0n;
         if (
           entry?.state === 'shared' &&
@@ -131,27 +143,47 @@ export function useEncryptedBalances() {
         ) {
           amountRaw = entry.balance as bigint;
         }
-
-        const amount = Number(amountRaw) / 10 ** meta.decimals;
-        const amountUSD = amount * meta.price;
-        totalUSD += amountUSD;
-
-        tokens.push({
-          mint,
-          symbol: meta.symbol,
-          decimals: meta.decimals,
-          amount,
-          amountRaw,
-          amountUSD,
-          iconUri: meta.iconUri,
-          state: entry?.state ?? null,
-        });
+        return { mint, amountRaw, state: entry?.state ?? null };
       });
-
-      return { tokens, totalUSD };
+      return { tokens };
     },
     enabled: !!wallet && mints.length > 0,
     staleTime: 30_000,
     refetchOnReconnect: true,
   });
+
+  const derived = useMemo<EncryptedBalances | undefined>(() => {
+    if (!baseQuery.data) return undefined;
+    const tokens: EncryptedTokenBalance[] = [];
+    let totalUSD = 0;
+    baseQuery.data.tokens.forEach((t) => {
+      const meta = metaByMint.get(t.mint) ?? {
+        symbol: t.mint.slice(0, 4),
+        decimals: 6,
+        iconUri: undefined,
+        price: 0,
+      };
+      const amount = Number(t.amountRaw) / 10 ** meta.decimals;
+      const amountUSD = amount * meta.price;
+      totalUSD += amountUSD;
+      tokens.push({
+        mint: t.mint,
+        symbol: meta.symbol,
+        decimals: meta.decimals,
+        amount,
+        amountRaw: t.amountRaw,
+        amountUSD,
+        iconUri: meta.iconUri,
+        state: t.state,
+      });
+    });
+    return { tokens, totalUSD };
+  }, [baseQuery.data, metaByMint]);
+
+  // Reshape the query result so the cached payload's data type doesn't leak
+  // out — callers expect EncryptedBalances on `.data`, not the raw on-chain
+  // shape we hold in the cache.
+  return { ...baseQuery, data: derived } as Omit<typeof baseQuery, 'data'> & {
+    data: EncryptedBalances | undefined;
+  };
 }

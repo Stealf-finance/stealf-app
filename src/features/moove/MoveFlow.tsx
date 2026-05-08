@@ -145,14 +145,12 @@ export function MoveFlow() {
   const isSolSelected =
     !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
   const selectionActive = !isSolSelected && !!selected;
-  const isShieldedSource = direction === 'shielded-to-bank';
 
-  // Source-side asset symbol: encrypted positions render as the underlying
-  // token (no "WSOL" wrapper exposed in the picker today), public sides use
-  // the chosen symbol.
-  const assetSymbol = selected?.symbol ?? (isShieldedSource ? 'WSOL' : 'SOL');
+  // Source-side asset symbol: every direction renders the underlying token
+  // symbol the picker emits (encrypted SOL is 'SOL', not 'WSOL').
+  const assetSymbol = selected?.symbol ?? 'SOL';
   const decimals = selectionActive ? selected!.decimals : SOL_DECIMALS;
-  const iconUri = selectionActive ? selected!.iconUri ?? SOL_ICON_URI : SOL_ICON_URI;
+  const iconUri = selectionActive ? selected!.iconUri : SOL_ICON_URI;
 
   // Resolve the spendable source balance per direction + selection.
   let sourceBalance = 0;

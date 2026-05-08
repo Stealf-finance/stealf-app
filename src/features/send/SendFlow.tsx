@@ -228,7 +228,11 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     onKey,
     onPressPercent,
     onToggleMode,
-  } = useAmountInput({ rate, maxSol: maxSpendable });
+  } = useAmountInput({
+    rate,
+    maxSol: maxSpendable,
+    decimals: asset?.decimals ?? SOL_DECIMALS,
+  });
 
   const fiatValue = fiatAmount.toFixed(2);
   const amountNum = typedAssetAmount;

@@ -8,7 +8,7 @@ one mobile app.
 Expo / React Native / TypeScript. iOS-first, Android compatible.
 
 For the deeper Umbra integration spec (architecture, primitives,
-deployment), see [`UMBRA.md`](UMBRA.md).
+deployment), see [`umbra.md`](umbra.md).
 
 ## Stack
 

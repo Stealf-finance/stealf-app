@@ -154,19 +154,11 @@ function formatSolShort(sol: number): string {
 }
 
 
-function sourceAssetSymbol(kind: import('./types').PendingOpKind): string {
-  switch (kind) {
-    case 'unshield':
-    case 'move-shielded-to-bank':
-    case 'send-private':
-      return 'WSOL';
-    case 'shield':
-    case 'move-bank-to-shielded':
-    case 'move-stealth-to-bank':
-    case 'claim-to-bank':
-    case 'claim-to-shielded':
-      return 'SOL';
-  }
+function sourceAssetSymbol(_kind: import('./types').PendingOpKind): string {
+  // Default fallback when an op was enqueued without an explicit assetSymbol.
+  // Every flow now passes one through, so this only fires for legacy/edge
+  // paths — render plain SOL rather than the old WSOL wrapper.
+  return 'SOL';
 }
 
 

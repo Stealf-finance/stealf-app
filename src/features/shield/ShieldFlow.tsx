@@ -80,13 +80,11 @@ export function ShieldFlow({ direction }: Props) {
     !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
   const selectionActive = !isSolSelected && !!selected;
 
-  // Source-side asset symbol — defaults to WSOL when unshielding without a
-  // selection (matches the legacy convention that encrypted SOL surfaces as
-  // WSOL in the UI), SOL elsewhere.
-  const assetSymbol = selected?.symbol ?? (isShield ? 'SOL' : 'WSOL');
+  // Encrypted SOL surfaces as plain "SOL" (the picker emits 'SOL' for it),
+  // so the unshield fallback matches.
+  const assetSymbol = selected?.symbol ?? 'SOL';
   const decimals = selectionActive ? selected!.decimals : SOL_DECIMALS;
-  const iconUri =
-    selectionActive ? selected!.iconUri ?? SOL_ICON_URI : SOL_ICON_URI;
+  const iconUri = selectionActive ? selected!.iconUri : SOL_ICON_URI;
 
   // Resolve the spendable source balance per direction + selection.
   let sourceBalance = 0;
@@ -116,9 +114,11 @@ export function ShieldFlow({ direction }: Props) {
   // Shield+SPL: fees still paid in SOL, but the SOL bucket is separate from
   // the SPL bucket → the SPL balance is fully spendable.
   // Unshield: source = encrypted balance, fee payer = stealth public ATA →
-  // different buckets, no reserve.
+  // different buckets, no SOL reserve.
+  // Both directions touch the encrypted balance, so the 0.30% protocol fee
+  // applies — Max has to leave that wedge unspent or the on-chain tx reverts.
   const reserveFees = isShield && !selectionActive;
-  const maxSol = maxSpendableSol(sourceBalance, reserveFees);
+  const maxSol = maxSpendableSol(sourceBalance, reserveFees, true);
 
   const {
     setAmount,
