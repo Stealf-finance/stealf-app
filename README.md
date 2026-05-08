@@ -113,10 +113,8 @@ to a public account for IBAN off-ramp via the Stealf card.
 
 ## Branches
 
-- `main` — historical default
-- `mainnet` — **active branch**, all sprints stack on this and PR back
-  into it
-- `feat/*` — short-lived feature branches
+- `main` — **active branch**, GitHub default
+- `feat/*` — short-lived feature branches PR'd back into `main`
 
 ## Scripts
 

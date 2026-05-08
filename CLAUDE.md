@@ -85,11 +85,9 @@ TEEs; the client never sees it).
 
 ### 5. Branches
 
-- `main` is not the active branch. **`mainnet` is.**
-- All work happens on `feat/*` branches stacked on `mainnet`, PR'd
-  back into it.
-- `main` only catches up when stealf-app is ready to replace
-  `front-stealf` in prod — that decision sits with Thomas.
+- `main` is the active branch and GitHub default.
+- All work happens on `feat/*` branches stacked on `main`, PR'd back
+  into it.
 
 ## Slice status (what's wired vs. what isn't)
 

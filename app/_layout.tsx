@@ -68,8 +68,7 @@ function RootLayout() {
 
   useEffect(() => {
     if ((fontsLoaded || fontError) && imagesLoaded) {
-
-      console.log(`[boot-timing] splash-hide=${Date.now() - BOOT_START}ms`);
+      if (__DEV__) console.log(`[boot-timing] splash-hide=${Date.now() - BOOT_START}ms`);
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError, imagesLoaded]);
