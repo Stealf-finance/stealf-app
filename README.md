@@ -1,25 +1,11 @@
 # Stealf — privacy-first neobank on Solana
 
-Bank wallet (Turnkey custody, EUR IBAN + Stealf card) and a Stealth wallet
+Bank wallet (Turnkey custody, virtual bank account + Stealf card) and a Stealth wallet
 (local ED25519 + Umbra encrypted balance) in the same app. Private send,
 shield, unshield, and IBAN cash-out from an encrypted balance — all from
 one mobile app.
 
 Expo / React Native / TypeScript. iOS-first, Android compatible.
-
-## Why
-
-- **Problem.** Public chains expose payroll, savings, and transfers to
-  anyone with a block explorer. There's no privacy-preserving Solana
-  experience that keeps custody self-managed and adds a real banking layer
-  on top.
-- **Target users.** EU users who want a Solana-native neobank with
-  optional encrypted balance per transaction — without leaving the
-  Solana ecosystem and without trusting a centralized mixer.
-- **Use cases.** Private payroll into a shielded balance; IBAN cash-out
-  from the encrypted balance via the Stealf card; P2P private sends
-  between Stealf users where amounts and recipients are not on-chain
-  visible.
 
 For the deeper Umbra integration spec (architecture, primitives,
 deployment), see [`umbra.md`](umbra.md).
