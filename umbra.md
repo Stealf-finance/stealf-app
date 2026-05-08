@@ -231,5 +231,3 @@ and indexer endpoints are mainnet-only.
 
 ---
 
-For the security posture, deferred mitigations, and threat model, see
-[`docs/audit-security.md`](docs/audit-security.md).
