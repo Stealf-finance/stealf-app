@@ -1,36 +1,34 @@
 # Umbra integration in Stealf
 
-This document covers the three Colosseum requirements: Problem & target users, How Stealf uses the Umbra SDK, and Build/test/use. For the higher-level project pitch, see [`README.md`](README.md).
-
 ---
 
-## 1. Problem, target users, use cases
+## 1. Intro
 
-### Problem
+### What are you building, and who is it for?
 
-On-chain balances on Solana are public by default. In 2020, this was livable. Blockchain analytics was expensive, manual, and reserved for high-stakes investigations. The average user was effectively anonymous through obscurity.
+We're building Stealf, a privacy-first neobank on Solana with a dual-wallet architecture that gives users back what cash always offered by default: financial privacy.
 
-In 2026, that calculus is gone.
+Bank Wallet — managed via Turnkey (TEE), your bridge to the real world. Connected to banking infrastructure (virtual bank account, card payments, transfers), KYC-compliant by design.
 
-AI agents scrape, index, and correlate every transaction at zero marginal cost. They don't distinguish between sensitive and trivial. They ingest everything. A wallet address, an ENS record, a Twitter handle, a leaked KYC dataset: five seconds and an LLM links them all. Your salary, your trading P&L, your medical payments, your counterparties: all public, all permanent, all instantly searchable.
+Stealth Wallet — self-custodial, created locally, powered by the Umbra Privacy SDK. You hold the keys, control what you share, and invest privately.
 
-Privacy on Solana isn't optional anymore. It's table stakes for any product that handles real money.
+Killer feature: move funds between your two wallets in two taps, privately. There's no direct on-chain link between them.
 
-Users moving cash on Solana need a privacy layer that doesn't force them to give up self-custody and doesn't route through a centralized mixer. That's where Umbra comes in.
+Stealf is for crypto-native users — traders, freelancers, founders whose financial life lives onchain. People who need a mobile-first interface to manage their money, keep full control, and stay private by default — without losing access to the real-world rails (cards, bank accounts, payments) they still rely on every day.
 
-### Target users
+### Why did you decide to build this, and why build it now?
 
-Crypto-native users whose entire financial life runs on-chain. Traders who don't want every position broadcast on Arkham. Founders and builders paid in stablecoins who need to receive a salary, spend it, and save it without exposing their entire treasury. Remote workers and freelancers paid in USDC who treat their Solana wallet as their primary bank account.
+We started using crypto cards and loved the idea — but the experience is broken: you juggle two apps (banking + wallet), you don't really own your keys, and privacy means a third app on top. We wanted a single interface where you actually own your money, keep it private by default, and still spend it in the real world.
 
-These users already self-custody. They already use their wallet daily. What they don't have is a way to plug it into real-world banking (card payments, bank transfers, fiat off-ramp) without making their on-chain life public to anyone with their address.
+Why now:
 
-### Use cases
+Crypto cards are exploding — onchain spending is going mainstream, but the privacy gap widens with every transaction.
 
-1. **Private payroll → savings.** Receive salary into the Bank wallet (USDC on a public Solana account) → Shield into the Stealth wallet's encrypted balance → savings sit off-chain-readable. Block explorers no longer see the running balance.
+Arcium on Solana gives privacy-chain-level confidentiality without leaving a fast, scalable, DeFi-rich ecosystem. You no longer have to choose between privacy and utility — Zcash and Monero solved privacy but lack the protocol depth Solana has.
 
-2. **Private off-ramp.** Unshield from the encrypted balance back to the Bank wallet's public balance → off-ramp to fiat via card or bank transfer. The on-chain trail breaks at the encrypted balance: the cash-out is uncorrelated with the original inflow.
+AI changes the threat model. Blockchain is public by default; your full financial history is trivially mineable at scale. Privacy stops being a preference and becomes a structural need.
 
-3. **P2P private send between Stealf users.** Stealth wallet A holds encrypted USDC → sends to Stealth wallet B's encrypted balance via an Umbra UTXO transfer. Amount and recipient identity are not on-chain visible. The Umbra relayer pays the fee, so neither party needs SOL on the involved address.
+The infrastructure is finally ready. The demand is finally there. The risk is finally tangible.
 
 ---
 
