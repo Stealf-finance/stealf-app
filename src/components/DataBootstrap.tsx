@@ -7,8 +7,8 @@ import {
   userProfileQueries,
 } from '@/src/features/onboarding/api/userProfile';
 import { subscribeToWalletUpdates } from '@/src/features/bank/api/subscriptions';
-import { balanceQueries } from '@/src/features/bank/api/balance';
-import { historyQueries } from '@/src/features/bank/api/history';
+import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
+import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
 
 /**
  * Orchestrates per-feature subscriptions (sockets, prefetches) once the user
@@ -40,6 +40,24 @@ export function DataBootstrap() {
       queryFn: () => fetchUserProfile(session.sessionToken, user.bankWallet),
       staleTime: 60_000,
     });
+
+
+    const HISTORY_LIMIT = 10;
+    const warmWallet = (address: string) => {
+      void queryClient.prefetchQuery({
+        queryKey: balanceQueries.byAddress(address),
+        queryFn: () => fetchBalance(session.sessionToken, address),
+        staleTime: Infinity,
+      });
+      void queryClient.prefetchQuery({
+        queryKey: historyQueries.byAddress(address),
+        queryFn: () =>
+          fetchHistory(session.sessionToken, address, HISTORY_LIMIT),
+        staleTime: Infinity,
+      });
+    };
+    if (user.bankWallet) warmWallet(user.bankWallet);
+    if (user.stealfWallet) warmWallet(user.stealfWallet);
 
     const cleanups: (() => void)[] = [];
     if (user.bankWallet) {
