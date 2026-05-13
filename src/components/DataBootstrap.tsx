@@ -12,6 +12,8 @@ import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { getStealthClient } from '@/src/services/umbra/client';
 import { prefetchEncryptedBalancesFor } from '@/src/features/stealth/hooks/useEncryptedBalances';
+import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
+import { fetchClaimScan } from '@/src/services/umbra/queries/claims';
 
 /**
  * Orchestrates per-feature subscriptions (sockets, prefetches) once the user
@@ -89,6 +91,17 @@ export function DataBootstrap() {
             stealfWallet,
             publicBalance,
           );
+
+          // Boot-time claim scan: warms the cache so the stealth badge has
+          // a count to render without ever triggering its own scan. The
+          // scan itself crawls the full Merkle tree (~tens of seconds) but
+          // uses chunked yields so it runs in the background without
+          // freezing the JS thread — see `fetchClaimScan`.
+          void queryClient.prefetchQuery({
+            queryKey: claimScanQueries.byStealfWallet(stealfWallet),
+            queryFn: fetchClaimScan,
+            staleTime: Infinity,
+          });
 
           if (__DEV__) console.log('[DataBootstrap] stealth warmup done');
         } catch (err) {

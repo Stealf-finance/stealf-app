@@ -43,7 +43,10 @@ export function ClaimsScreen() {
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
   const { claimSelfToPublic } = useUmbra();
-  const { data: pendingUtxos } = usePendingClaimsForCash();
+  // Force a fresh scan on screen mount — this screen owns the truth of
+  // self-claimable UTXOs targeting bank. The bank tab's pending-pill
+  // count reads the cached result.
+  const { data: pendingUtxos } = usePendingClaimsForCash({ fetch: true });
 
   const items: Item[] = (pendingUtxos ?? []).map(utxoToItem);
   const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
