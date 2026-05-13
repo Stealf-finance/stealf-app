@@ -59,9 +59,11 @@ const STABLE_PRICES: Record<string, number> = {
   EURC: 1,
 };
 
+// `mints` MUST be pre-sorted by the caller — the hook below guarantees this
+// via its memoized signature so we can drop the per-call `.slice().sort()`.
 export const encryptedBalancesQueries = {
   byStealfWallet: (wallet: string, mints: readonly string[]) =>
-    ['stealth', 'encrypted-balances', wallet, ...mints.slice().sort()] as const,
+    ['stealth', 'encrypted-balances', wallet, ...mints] as const,
 };
 
 /**
@@ -76,15 +78,23 @@ export function useEncryptedBalances() {
   const { data: publicBalance } = useBalance(user?.stealfWallet ?? null);
   const { data: solPrice } = useSolPrice();
 
-  // Build the mint set from public ATA + SOL. Memoized on identity so the
-  // query key stays stable across unrelated re-renders.
-  const mints = useMemo(() => {
+  // Two-step memo so the `mints` array reference stays stable when the
+  // mint *set* hasn't actually changed, even if publicBalance refetches
+  // for unrelated reasons (balance amount updates, refetchOnFocus, etc.).
+  // Without this, every refetch would yield a new mints reference → new
+  // query key → cache miss on the encrypted-balances query.
+  const mintsSignature = useMemo(() => {
     const set = new Set<string>([SOL_MINT]);
     (publicBalance?.tokens ?? []).forEach((t) => {
       if (t.tokenMint) set.add(t.tokenMint);
     });
-    return Array.from(set);
+    return Array.from(set).sort().join('|');
   }, [publicBalance]);
+  const mints = useMemo(() => mintsSignature.split('|'), [mintsSignature]);
+  const queryKey = useMemo(
+    () => encryptedBalancesQueries.byStealfWallet(wallet, mints),
+    [wallet, mints],
+  );
 
   // Per-mint metadata derived from the public balance — labels encrypted
   // entries with the same icon/symbol the user sees publicly, instead of
@@ -129,7 +139,7 @@ export function useEncryptedBalances() {
   }, [publicBalance, solPrice]);
 
   const baseQuery = useQuery<RawEncryptedBalances>({
-    queryKey: encryptedBalancesQueries.byStealfWallet(wallet, mints),
+    queryKey,
     queryFn: async () => {
       const raw = await fetchEncryptedBalances(mints as Address[]);
       const tokens: RawEncryptedToken[] = mints.map((mint) => {
