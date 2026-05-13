@@ -10,53 +10,45 @@ async function ensureBlacklistLoaded(): Promise<void> {
   if (key) await loadBurntUtxosForCurrentWallet(key);
 }
 
-// Merges `received` (encrypted-balance bucket) and `publicReceived` (what
-// bank → shielded creates) into the pending-claims set for this stealth wallet.
-export async function fetchPendingClaims(): Promise<any[]> {
-  const client = await getStealthClient();
-  await ensureBlacklistLoaded();
-  const scan = getClaimableUtxoScannerFunction({ client });
-  const result = await scan(0n as any, 0n as any);
-  const all = [...(result.received ?? []), ...(result.publicReceived ?? [])];
-  if (__DEV__) {
-    console.log(
-      '[claims] incoming scan: received=' +
-        (result.received?.length ?? 0) +
-        ' publicReceived=' +
-        (result.publicReceived?.length ?? 0),
-    );
-  }
-  return all.filter((u: any) => !isBurnt(u));
-}
+/** Raw 4-bucket result of a stealth-wallet UTXO scan, already filtered
+ *  against the local "burnt" blacklist. Consumers slice this into UX-specific
+ *  views (inbound to encrypted balance vs. self-burnable for cash). */
+export type ClaimScanResult = {
+  /** Encrypted balance: received from someone else's private send. */
+  received: any[];
+  /** Encrypted balance: created by a shield (bank → stealth) op. */
+  publicReceived: any[];
+  /** Self-claimable to a public address you control (typically bank). */
+  selfBurnable: any[];
+  /** Public variant of selfBurnable. */
+  publicSelfBurnable: any[];
+};
 
-// Self-claimable UTXOs targeting `bankWalletAddress` (covers both shielded →
-// bank and stealth-public → bank flows).
-export async function fetchPendingClaimsForCash(
-  bankWalletAddress: string,
-): Promise<any[]> {
+/**
+ * Single scan call against the indexer. Heavy: derives stealth keys and
+ * decrypts UTXO commitments on the JS thread. Run once and let consumers
+ * slice the result via React Query `select` — see `useClaimScan`.
+ */
+export async function fetchClaimScan(): Promise<ClaimScanResult> {
   const client = await getStealthClient();
   await ensureBlacklistLoaded();
   const scan = getClaimableUtxoScannerFunction({ client });
   const result = await scan(0n as any, 0n as any);
-  const all = [
-    ...(result.selfBurnable ?? []),
-    ...(result.publicSelfBurnable ?? []),
-  ];
+  const notBurnt = (u: any) => !isBurnt(u);
+  const out: ClaimScanResult = {
+    received: (result.received ?? []).filter(notBurnt),
+    publicReceived: (result.publicReceived ?? []).filter(notBurnt),
+    selfBurnable: (result.selfBurnable ?? []).filter(notBurnt),
+    publicSelfBurnable: (result.publicSelfBurnable ?? []).filter(notBurnt),
+  };
   if (__DEV__) {
     console.log(
-      '[claims] coming scan: selfBurnable=' +
-        (result.selfBurnable?.length ?? 0) +
-        ' publicSelfBurnable=' +
-        (result.publicSelfBurnable?.length ?? 0) +
-        ' bankAddr=' +
-        bankWalletAddress,
+      '[claims] scan:' +
+        ` received=${out.received.length}` +
+        ` publicReceived=${out.publicReceived.length}` +
+        ` selfBurnable=${out.selfBurnable.length}` +
+        ` publicSelfBurnable=${out.publicSelfBurnable.length}`,
     );
   }
-  return all.filter((u: any) => {
-    if (isBurnt(u)) return false;
-    const dest =
-      u?.destinationAddress?.toString?.() ??
-      String(u?.destinationAddress ?? '');
-    return dest === bankWalletAddress;
-  });
+  return out;
 }

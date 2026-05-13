@@ -17,10 +17,8 @@ import { mono, sansation, serif } from '@/src/design-system/typography';
 import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
-import {
-  usePendingClaims,
-  pendingClaimsQueries,
-} from '@/src/features/stealth/hooks/usePendingClaims';
+import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
+import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -81,7 +79,7 @@ export function ClaimPendingScreen() {
         const invalidate = () => {
           if (!stealfWallet) return;
           queryClient.invalidateQueries({
-            queryKey: pendingClaimsQueries.byStealfWallet(stealfWallet),
+            queryKey: claimScanQueries.byStealfWallet(stealfWallet),
           });
           queryClient.invalidateQueries({
             queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),
