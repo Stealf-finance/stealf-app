@@ -1,28 +1,21 @@
-import { useQuery } from '@tanstack/react-query';
-import { useAuth } from '@/src/features/onboarding/context/AuthContext';
-import { fetchPendingClaims } from '@/src/services/umbra/queries/claims';
+import { useClaimScan, type UseClaimScanOptions } from './useClaimScan';
+import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
 
-export const pendingClaimsQueries = {
-  byStealfWallet: (wallet: string) =>
-    ['stealth', 'pending-claims', wallet] as const,
-};
+// Stable module-level reference so React Query can memoize the select result.
+const selectInbound = (r: ClaimScanResult) => [
+  ...r.received,
+  ...r.publicReceived,
+];
 
 /**
- * Scan the indexer for UTXOs received by the current stealth wallet that are
- * still claimable into encrypted balance. Polled every 30s while focused.
+ * UTXOs received by the current stealth wallet that are still claimable into
+ * encrypted balance — i.e. inbound private transfers + shields-in-flight.
+ * Derived slice of `useClaimScan` so the underlying scan runs once.
+ *
+ * Auto-fetch is opt-in: pass `{ fetch: true }` from screens that own the
+ * pending-claims truth (`ClaimPendingScreen`). Defaults to cache-only read,
+ * which is what the StealthHub badge wants — see `useClaimScan` docs.
  */
-export function usePendingClaims() {
-  const { user } = useAuth();
-  const wallet = user?.stealfWallet ?? '';
-
-  return useQuery({
-    queryKey: pendingClaimsQueries.byStealfWallet(wallet),
-    queryFn: () => fetchPendingClaims(),
-    enabled: !!wallet,
-    staleTime: 20_000,
-    refetchInterval: 30_000,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-  });
+export function usePendingClaims(options?: UseClaimScanOptions) {
+  return useClaimScan(selectInbound, options);
 }

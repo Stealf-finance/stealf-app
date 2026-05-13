@@ -19,8 +19,8 @@ import {
 } from './turnkeySigner';
 
 export const NETWORK = 'mainnet' as const;
-export const RELAYER_API = 'https://relayer.api.umbraprivacy.com';
-export const INDEXER_API = 'https://utxo-indexer.api.umbraprivacy.com';
+export const RELAYER_API = 'https://relayer.api-devnet.umbraprivacy.com';
+export const INDEXER_API = 'https://utxo-indexer.api-devnet.umbraprivacy.com';
 
 export type UmbraClient = Awaited<ReturnType<typeof getUmbraClient>>;
 

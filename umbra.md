@@ -53,10 +53,42 @@ The bank-wallet signer adapter is a custom bridge: `createTurnkeyUmbraSigner` (`
 - **Registration.** `getUserRegistrationFunction` paired with a custom prover from `@umbra-privacy/rn-zk-prover` (see `src/features/stealth/lib/registration.ts:1-49`). Both wallets get registered on Umbra's `EncryptedUserAccount` PDA on first use.
 - **Deposit (public → encrypted).** `getPublicBalanceToEncryptedBalanceDirectDepositorFunction` — `src/services/umbra/operations/deposit.ts`.
 - **Withdraw (encrypted → public).** `getEncryptedBalanceToPublicBalanceDirectWithdrawerFunction` — `src/services/umbra/operations/withdraw.ts`.
-- **Create UTXO (4 variants).** `getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction`, `getEncryptedBalanceToSelfClaimableUtxoCreatorFunction`, `getPublicBalanceToReceiverClaimableUtxoCreatorFunction`, `getPublicBalanceToSelfClaimableUtxoCreatorFunction` — used in `src/services/umbra/operations/{transfer,sendEncrypted,claim}.ts`.
+- **Create UTXO (4 variants).** `getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction`, `getEncryptedBalanceToSelfClaimableUtxoCreatorFunction`, `getPublicBalanceToReceiverClaimableUtxoCreatorFunction`, `getPublicBalanceToSelfClaimableUtxoCreatorFunction` — defined in `src/services/umbra/operations/transfer.ts` and invoked inline from `useUmbra` (`src/features/stealth/hooks/useUmbra.ts`) and from the relevant flow screens (`MoveFlow`, `ShieldFlow`).
 - **Claim.** `getReceiverClaimableUtxoToEncryptedBalanceClaimerFunction` + `getSelfClaimableUtxoToPublicBalanceClaimerFunction` — `src/services/umbra/operations/claim.ts`.
-- **Scan pending UTXOs.** `getClaimableUtxoScannerFunction` — `src/services/umbra/queries/claims.ts`.
+- **Scan pending UTXOs.** `getClaimableUtxoScannerFunction` — wrapped by `fetchClaimScan` in `src/services/umbra/queries/claims.ts`. See "Claim scan strategy" below for the pagination + persistence layer that sits on top.
 - **Relayer.** `getUmbraRelayer` exposed by `getRelayer()` — `src/services/umbra/client.ts:168-170`. Used for fee-free claims so recipients don't need SOL on their stealth wallet.
+
+### Claim scan strategy
+
+`getClaimableUtxoScannerFunction` has to walk the Merkle tree and
+try-decrypt every ciphertext to find which UTXOs belong to the current
+signer. On a tree with hundreds of thousands of leaves this is tens of
+seconds of synchronous X25519 + AES-GCM crypto on the JS thread, even
+when zero UTXOs match. Three layers sit on top of the SDK to keep the
+app usable:
+
+- **Paginated scan with JS-thread yields** — `fetchClaimScan` in
+  `src/services/umbra/queries/claims.ts` calls the scanner in
+  fixed-size chunks (`CHUNK_SIZE = 5_000` leaves, `MAX_LEAVES = 2^20`)
+  and `await`s a `setTimeout(0)` between chunks. The total scan work
+  is unchanged, but per-chunk freeze drops from tens of seconds to
+  ~200ms, so taps / Reanimated worklets / React commits all interleave
+  with the crawl.
+- **Cursor + result persistence** — `src/features/stealth/lib/claimScanCache.ts`
+  stores `{ treeIndex, cursor, results }` per stealf wallet in
+  AsyncStorage. `fetchClaimScan` resumes from the saved cursor, so
+  subsequent app launches only decrypt the delta since the last scan.
+  The local burnt-blacklist (`isBurnt`) is reapplied on every merge
+  so UTXOs claimed between sessions drop out of the cached set.
+  Schema-versioned for forward compatibility.
+- **Opt-in fetching** — `useClaimScan` in
+  `src/features/stealth/hooks/useClaimScan.ts` accepts a
+  `{ fetch?: boolean }` option and defaults to `false`. Badges and
+  derived counts read from the cache only; screens that own the
+  pending-claim truth (`ClaimPendingScreen`, `ClaimsScreen`) pass
+  `{ fetch: true }` to force a fresh scan on mount. The cache is
+  warmed once at login by `DataBootstrap`; cache invalidation after
+  Move / Claim mutations triggers a delta refetch on next mount.
 
 ### ZK provers (`@umbra-privacy/rn-zk-prover`)
 

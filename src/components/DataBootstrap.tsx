@@ -9,6 +9,11 @@ import {
 import { subscribeToWalletUpdates } from '@/src/features/bank/api/subscriptions';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
+import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
+import { getStealthClient } from '@/src/services/umbra/client';
+import { prefetchEncryptedBalancesFor } from '@/src/features/stealth/hooks/useEncryptedBalances';
+import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
+import { fetchClaimScan } from '@/src/services/umbra/queries/claims';
 
 /**
  * Orchestrates per-feature subscriptions (sockets, prefetches) once the user
@@ -58,6 +63,43 @@ export function DataBootstrap() {
     };
     if (user.bankWallet) warmWallet(user.bankWallet);
     if (user.stealfWallet) warmWallet(user.stealfWallet);
+
+
+    const stealfWallet = user.stealfWallet;
+    if (stealfWallet) {
+      void (async () => {
+        try {
+          await walletKeyCache.warmup();
+          if (!walletKeyCache.hasKeys()) return;
+
+          const [publicBalance] = await Promise.all([
+            queryClient.fetchQuery({
+              queryKey: balanceQueries.byAddress(stealfWallet),
+              queryFn: () => fetchBalance(session.sessionToken, stealfWallet),
+              staleTime: Infinity,
+            }),
+            getStealthClient(),
+          ]);
+
+          await prefetchEncryptedBalancesFor(
+            queryClient,
+            stealfWallet,
+            publicBalance,
+          );
+
+          void queryClient.prefetchQuery({
+            queryKey: claimScanQueries.byStealfWallet(stealfWallet),
+            queryFn: () => fetchClaimScan(stealfWallet),
+            staleTime: Infinity,
+          });
+
+          if (__DEV__) console.log('[DataBootstrap] stealth warmup done');
+        } catch (err) {
+          if (__DEV__)
+            console.warn('[DataBootstrap] stealth warmup failed:', err);
+        }
+      })();
+    }
 
     const cleanups: (() => void)[] = [];
     if (user.bankWallet) {

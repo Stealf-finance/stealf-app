@@ -17,10 +17,8 @@ import { mono, sansation, serif } from '@/src/design-system/typography';
 import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
-import {
-  usePendingClaims,
-  pendingClaimsQueries,
-} from '@/src/features/stealth/hooks/usePendingClaims';
+import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
+import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -42,7 +40,10 @@ export function ClaimPendingScreen() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
-  const { data: incomingUtxos } = usePendingClaims();
+  // Force a fresh scan on screen mount — this is the user-facing source
+  // of truth for pending claims. The badge on the stealth tab reads the
+  // cached result instead of triggering its own scan.
+  const { data: incomingUtxos } = usePendingClaims({ fetch: true });
   const { claimReceived } = useUmbra();
 
   const items: Item[] = (incomingUtxos ?? []).map(utxoToItem);
@@ -65,7 +66,13 @@ export function ClaimPendingScreen() {
     // Animation plays for ANIM_HOLD_MS then we hand off to the stealth screen;
     // the pending pill takes over the status surface from there.
     setTimeout(() => {
-      router.replace('/(tabs)/stealth');
+      // Guard: if the user gesture-dismissed the modal during the animation,
+      // the modal is no longer in the stack — replacing from here would emit
+      // the dev-only "GO_BACK was not handled" warning. canGoBack() returns
+      // false in that case and we let the user stay where they navigated.
+      if (router.canGoBack()) {
+        router.replace('/(tabs)/stealth');
+      }
     }, ANIM_HOLD_MS);
 
     void (async () => {
@@ -81,7 +88,7 @@ export function ClaimPendingScreen() {
         const invalidate = () => {
           if (!stealfWallet) return;
           queryClient.invalidateQueries({
-            queryKey: pendingClaimsQueries.byStealfWallet(stealfWallet),
+            queryKey: claimScanQueries.byStealfWallet(stealfWallet),
           });
           queryClient.invalidateQueries({
             queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),

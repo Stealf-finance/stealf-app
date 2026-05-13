@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type QueryClient } from '@tanstack/react-query';
 import type { Address } from '@solana/kit';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
@@ -7,6 +7,7 @@ import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
 import { fetchEncryptedBalances } from '@/src/services/umbra/queries/balances';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { LAMPORTS_PER_SOL } from '@/src/services/solana/kit';
+import type { BalanceResponse } from '@/src/features/bank/types';
 
 export type EncryptedTokenBalance = {
   mint: string;
@@ -30,12 +31,12 @@ export type EncryptedBalances = {
 /** Raw on-chain data the cached query holds. USD/symbol/etc. are derived
  *  outside the cache so price refreshes flow through render without forcing
  *  a refetch (and don't leave stale fiat in the cached payload). */
-type RawEncryptedToken = {
+export type RawEncryptedToken = {
   mint: string;
   amountRaw: bigint;
   state: string | null;
 };
-type RawEncryptedBalances = { tokens: RawEncryptedToken[] };
+export type RawEncryptedBalances = { tokens: RawEncryptedToken[] };
 
 // Anything above 1B SOL/equivalent is garbage (corrupted account or wrong keys).
 const MAX_PLAUSIBLE_RAW = 1_000_000_000n * BigInt(LAMPORTS_PER_SOL);
@@ -65,6 +66,59 @@ export const encryptedBalancesQueries = {
   byStealfWallet: (wallet: string, mints: readonly string[]) =>
     ['stealth', 'encrypted-balances', wallet, ...mints] as const,
 };
+
+/** Build the sorted mint list the hook queries on. Exported so prefetchers
+ *  (e.g. DataBootstrap) can derive the same query key without re-implementing
+ *  the SOL-plus-public-tokens rule. */
+export function buildEncryptedMintList(
+  publicBalance: BalanceResponse | undefined,
+): string[] {
+  const set = new Set<string>([SOL_MINT]);
+  (publicBalance?.tokens ?? []).forEach((t) => {
+    if (t.tokenMint) set.add(t.tokenMint);
+  });
+  return Array.from(set).sort();
+}
+
+/** Pure on-chain fetch + sanitization. Extracted so the hook and the
+ *  prefetch path share one implementation of the cache payload shape. */
+export async function fetchEncryptedBalancesRaw(
+  mints: readonly string[],
+): Promise<RawEncryptedBalances> {
+  const raw = await fetchEncryptedBalances(mints as Address[]);
+  const tokens: RawEncryptedToken[] = mints.map((mint) => {
+    const entry = raw.get(mint as Address);
+    let amountRaw = 0n;
+    if (
+      entry?.state === 'shared' &&
+      typeof entry.balance === 'bigint' &&
+      entry.balance >= 0n &&
+      entry.balance <= MAX_PLAUSIBLE_RAW
+    ) {
+      amountRaw = entry.balance as bigint;
+    }
+    return { mint, amountRaw, state: entry?.state ?? null };
+  });
+  return { tokens };
+}
+
+/** Seed the encrypted-balance cache so the stealth screen renders instantly
+ *  on first mount. No-ops if mints can't be derived (e.g. public balance not
+ *  yet cached). Safe to call before the Umbra client is built — the SDK call
+ *  triggers a lazy build under the hood. */
+export async function prefetchEncryptedBalancesFor(
+  queryClient: QueryClient,
+  stealfWallet: string,
+  publicBalance: BalanceResponse | undefined,
+): Promise<void> {
+  const mints = buildEncryptedMintList(publicBalance);
+  if (mints.length === 0) return;
+  await queryClient.prefetchQuery({
+    queryKey: encryptedBalancesQueries.byStealfWallet(stealfWallet, mints),
+    queryFn: () => fetchEncryptedBalancesRaw(mints),
+    staleTime: 30_000,
+  });
+}
 
 /**
  * Multi-mint encrypted balance query. Always includes SOL plus every mint
@@ -140,23 +194,7 @@ export function useEncryptedBalances() {
 
   const baseQuery = useQuery<RawEncryptedBalances>({
     queryKey,
-    queryFn: async () => {
-      const raw = await fetchEncryptedBalances(mints as Address[]);
-      const tokens: RawEncryptedToken[] = mints.map((mint) => {
-        const entry = raw.get(mint as Address);
-        let amountRaw = 0n;
-        if (
-          entry?.state === 'shared' &&
-          typeof entry.balance === 'bigint' &&
-          entry.balance >= 0n &&
-          entry.balance <= MAX_PLAUSIBLE_RAW
-        ) {
-          amountRaw = entry.balance as bigint;
-        }
-        return { mint, amountRaw, state: entry?.state ?? null };
-      });
-      return { tokens };
-    },
+    queryFn: () => fetchEncryptedBalancesRaw(mints),
     enabled: !!wallet && mints.length > 0,
     staleTime: 30_000,
     refetchOnReconnect: true,

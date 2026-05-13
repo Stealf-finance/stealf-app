@@ -19,10 +19,8 @@ import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
-import {
-  pendingClaimsForCashQueries,
-  usePendingClaimsForCash,
-} from '@/src/features/stealth/hooks/usePendingClaimsForCash';
+import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
+import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -45,7 +43,10 @@ export function ClaimsScreen() {
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
   const { claimSelfToPublic } = useUmbra();
-  const { data: pendingUtxos } = usePendingClaimsForCash();
+  // Force a fresh scan on screen mount — this screen owns the truth of
+  // self-claimable UTXOs targeting bank. The bank tab's pending-pill
+  // count reads the cached result.
+  const { data: pendingUtxos } = usePendingClaimsForCash({ fetch: true });
 
   const items: Item[] = (pendingUtxos ?? []).map(utxoToItem);
   const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
@@ -57,6 +58,7 @@ export function ClaimsScreen() {
     setClaimingIndex(index);
 
     const bankWallet = user?.bankWallet ?? null;
+    const stealfWallet = user?.stealfWallet ?? null;
 
     const opId = pendingOps.enqueue({
       kind: 'claim-to-bank',
@@ -67,7 +69,11 @@ export function ClaimsScreen() {
     // Animation plays for ANIM_HOLD_MS then we hand off to the bank screen;
     // the pending pill takes over the status surface from there.
     setTimeout(() => {
-      router.replace('/(tabs)/bank');
+      // Guard: see ClaimPendingScreen for rationale (avoid GO_BACK warning
+      // if the user manually dismissed the modal during the animation).
+      if (router.canGoBack()) {
+        router.replace('/(tabs)/bank');
+      }
     }, ANIM_HOLD_MS);
 
     void (async () => {
@@ -82,9 +88,11 @@ export function ClaimsScreen() {
 
         const invalidate = () => {
           if (!bankWallet) return;
-          queryClient.invalidateQueries({
-            queryKey: pendingClaimsForCashQueries.byBankWallet(bankWallet),
-          });
+          if (stealfWallet) {
+            queryClient.invalidateQueries({
+              queryKey: claimScanQueries.byStealfWallet(stealfWallet),
+            });
+          }
           queryClient.invalidateQueries({
             queryKey: balanceQueries.byAddress(bankWallet),
           });

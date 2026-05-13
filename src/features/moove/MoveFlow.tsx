@@ -37,8 +37,7 @@ import {
   getPublicBalanceToReceiverClaimableUtxoCreatorFunction,
   getPublicBalanceToSelfClaimableUtxoCreatorFunction,
 } from '@/src/features/stealth/hooks/useUmbra';
-import { pendingClaimsForCashQueries } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
-import { pendingClaimsQueries } from '@/src/features/stealth/hooks/usePendingClaims';
+import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -253,17 +252,16 @@ export function MoveFlow() {
       keys.push(
         queryClient.invalidateQueries({ queryKey: balanceQueries.byAddress(user.bankWallet) }),
         queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(user.bankWallet) }),
-        queryClient.invalidateQueries({
-          queryKey: pendingClaimsForCashQueries.byBankWallet(user.bankWallet),
-        }),
       );
     }
     if (user?.stealfWallet) {
       keys.push(
         queryClient.invalidateQueries({ queryKey: balanceQueries.byAddress(user.stealfWallet) }),
         queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(user.stealfWallet) }),
+        // Single shared claim-scan query covers both inbound and for-cash
+        // derived views (see useClaimScan + Option B refactor).
         queryClient.invalidateQueries({
-          queryKey: pendingClaimsQueries.byStealfWallet(user.stealfWallet),
+          queryKey: claimScanQueries.byStealfWallet(user.stealfWallet),
         }),
       );
     }
@@ -323,8 +321,7 @@ export function MoveFlow() {
       assetSymbol,
     });
 
-    // Eager close — pill takes over the status surface from here. Balances
-    // stay honest until the op confirms (no optimistic debit).
+
     close();
 
     void (async () => {
@@ -399,17 +396,12 @@ export function MoveFlow() {
         await invalidateAll();
         pendingOps.complete(opId, 'done');
 
-        const bankAddr = user?.bankWallet;
         const stealfAddr = user?.stealfWallet;
-        const targetQueryKey =
-          direction === 'bank-to-shielded'
-            ? stealfAddr
-              ? pendingClaimsQueries.byStealfWallet(stealfAddr)
-              : null
-            : bankAddr
-              ? pendingClaimsForCashQueries.byBankWallet(bankAddr)
-              : null;
-        if (targetQueryKey) {
+        if (stealfAddr) {
+          // Both directions affect the same underlying scan: bank-to-shielded
+          // creates publicReceived UTXOs (inbound); shielded-to-bank creates
+          // selfBurnable UTXOs (for-cash). One invalidation covers both views.
+          const targetQueryKey = claimScanQueries.byStealfWallet(stealfAddr);
           [3000, 8000, 15000].forEach((d) =>
             setTimeout(() => {
               queryClient.invalidateQueries({ queryKey: targetQueryKey });
@@ -513,7 +505,6 @@ export function MoveFlow() {
           </Text>
           <Pressable
             onPress={() => {
-              close();
               router.replace('/(tabs)/stealth');
             }}
             accessibilityRole="button"
