@@ -9,6 +9,9 @@ import {
 import { subscribeToWalletUpdates } from '@/src/features/bank/api/subscriptions';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
+import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
+import { getStealthClient } from '@/src/services/umbra/client';
+import { prefetchEncryptedBalancesFor } from '@/src/features/stealth/hooks/useEncryptedBalances';
 
 /**
  * Orchestrates per-feature subscriptions (sockets, prefetches) once the user
@@ -58,6 +61,42 @@ export function DataBootstrap() {
     };
     if (user.bankWallet) warmWallet(user.bankWallet);
     if (user.stealfWallet) warmWallet(user.stealfWallet);
+
+    // Stealth warmup — runs in parallel with the bank prefetches above.
+    // Loads the ED25519 key into RAM, kicks off the Umbra client build,
+    // and once the stealth wallet's public balance lands, seeds the
+    // encrypted-balance query so the stealth screen renders instantly on
+    // first mount. Each phase is wrapped in try/catch so a missing key or
+    // network blip never blocks login.
+    const stealfWallet = user.stealfWallet;
+    if (stealfWallet) {
+      void (async () => {
+        try {
+          await walletKeyCache.warmup();
+          if (!walletKeyCache.hasKeys()) return;
+
+          const [publicBalance] = await Promise.all([
+            queryClient.fetchQuery({
+              queryKey: balanceQueries.byAddress(stealfWallet),
+              queryFn: () => fetchBalance(session.sessionToken, stealfWallet),
+              staleTime: Infinity,
+            }),
+            getStealthClient(),
+          ]);
+
+          await prefetchEncryptedBalancesFor(
+            queryClient,
+            stealfWallet,
+            publicBalance,
+          );
+
+          if (__DEV__) console.log('[DataBootstrap] stealth warmup done');
+        } catch (err) {
+          if (__DEV__)
+            console.warn('[DataBootstrap] stealth warmup failed:', err);
+        }
+      })();
+    }
 
     const cleanups: (() => void)[] = [];
     if (user.bankWallet) {
