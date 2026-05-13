@@ -32,7 +32,7 @@ speaks one language**.
 
 | Concept | Internal code name | User-facing label | Notes |
 |---|---|---|---|
-| Public Solana wallet, bridged to EUR IBAN + Stealf card | `bankWallet`, `user.bankWallet` | **Bank wallet** | No change. |
+| Public Solana wallet, bridged to virtual bank accont + Stealf card | `bankWallet`, `user.bankWallet` | **Bank wallet** | No change. |
 | 2nd Solana wallet, source for private operations, holds public ATA + encrypted balance | `stealfWallet`, `user.stealfWallet`, `STEALF_*` SecureStore keys, `src/features/stealth/`, `useSetupStealfWallet`, `registerStealfWallet` | **Stealth wallet** | 🔒 **Locked by Thomas.** Code keeps `stealfWallet` everywhere; UI says "Stealth wallet" everywhere. |
 
 ### Balances
