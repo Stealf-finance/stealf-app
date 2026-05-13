@@ -24,18 +24,23 @@ import { umbraClearSeed } from '@/src/services/umbra/seed';
 
 import { deposit } from '@/src/services/umbra/operations/deposit';
 import { withdraw } from '@/src/services/umbra/operations/withdraw';
-import { sendEncrypted } from '@/src/services/umbra/operations/sendEncrypted';
 import {
   claimReceived,
   claimSelfToPublic,
 } from '@/src/services/umbra/operations/claim';
+import {
+  getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
+  getEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
+  getPublicBalanceToReceiverClaimableUtxoCreatorFunction,
+  getPublicBalanceToSelfClaimableUtxoCreatorFunction,
+} from '@/src/services/umbra/operations/transfer';
 
 export {
   getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
   getEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
   getPublicBalanceToReceiverClaimableUtxoCreatorFunction,
   getPublicBalanceToSelfClaimableUtxoCreatorFunction,
-} from '@/src/services/umbra/operations/transfer';
+};
 
 export { StealthError };
 export type { StealthErrorCode } from '@/src/features/stealth/lib/errors';
@@ -148,7 +153,14 @@ export function useUmbra() {
       (destinationAddress: Address, mint: Address, amount: bigint) =>
         wrap(
           'getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction',
-          () => sendEncrypted(destinationAddress, mint, amount),
+          async () => {
+            const client = await sdkGetStealthClient();
+            const create =
+              getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction({
+                client,
+              });
+            return create({ destinationAddress, mint, amount });
+          },
         ),
       [wrap],
     ),
