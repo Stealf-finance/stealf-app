@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Linking, Platform, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthBtn } from '@/src/design-system/primitives/AuthBtn';
@@ -178,11 +178,17 @@ export function AuthScreen({ onEmail }: Props) {
           ]}
         >
           By continuing you agree to our{'\n'}
-          <Text style={{ color: T.inkDim, textDecorationLine: 'underline' }}>
+          <Text
+            onPress={() => void Linking.openURL('https://stealf.xyz/terms')}
+            style={{ color: T.inkDim, textDecorationLine: 'underline' }}
+          >
             Terms
           </Text>
           {' · '}
-          <Text style={{ color: T.inkDim, textDecorationLine: 'underline' }}>
+          <Text
+            onPress={() => void Linking.openURL('https://stealf.xyz/privacy')}
+            style={{ color: T.inkDim, textDecorationLine: 'underline' }}
+          >
             Privacy
           </Text>
         </Text>

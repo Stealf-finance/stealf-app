@@ -41,8 +41,16 @@ const SETTINGS: SettingsItem[] = [
     to: '/profile/private-key',
   },
   { iconKey: 'info', label: 'About us', href: 'https://www.stealf.xyz' },
-  { iconKey: 'folder', label: 'Terms of Services' },
-  { iconKey: 'shield', label: 'Privacy Policy' },
+  {
+    iconKey: 'folder',
+    label: 'Terms of Services',
+    href: 'https://stealf.xyz/terms',
+  },
+  {
+    iconKey: 'shield',
+    label: 'Privacy Policy',
+    href: 'https://stealf.xyz/privacy',
+  },
 ];
 
 function splitUsd(usd: number): { whole: string; cents: string } {
