@@ -10,7 +10,7 @@ We're building Stealf, a privacy-first neobank on Solana with a dual-wallet arch
 
 Bank Wallet — managed via Turnkey (TEE), your bridge to the real world. Connected to banking infrastructure (virtual bank account, card payments, transfers), KYC-compliant by design.
 
-Stealth Wallet — self-custodial, created locally, powered by the Umbra Privacy SDK. You hold the keys, control what you share, and invest privately.
+Stealth Wallet — self-custodial, created locally or imported, powered by the Umbra Privacy SDK. You hold the keys, control what you share, and invest privately.
 
 Killer feature: move funds between your two wallets in two taps, privately. There's no direct on-chain link between them.
 
