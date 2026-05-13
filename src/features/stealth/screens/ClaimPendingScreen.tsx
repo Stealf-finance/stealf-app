@@ -65,7 +65,13 @@ export function ClaimPendingScreen() {
     // Animation plays for ANIM_HOLD_MS then we hand off to the stealth screen;
     // the pending pill takes over the status surface from there.
     setTimeout(() => {
-      router.replace('/(tabs)/stealth');
+      // Guard: if the user gesture-dismissed the modal during the animation,
+      // the modal is no longer in the stack — replacing from here would emit
+      // the dev-only "GO_BACK was not handled" warning. canGoBack() returns
+      // false in that case and we let the user stay where they navigated.
+      if (router.canGoBack()) {
+        router.replace('/(tabs)/stealth');
+      }
     }, ANIM_HOLD_MS);
 
     void (async () => {

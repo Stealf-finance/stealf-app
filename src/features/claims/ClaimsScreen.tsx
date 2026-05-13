@@ -67,7 +67,11 @@ export function ClaimsScreen() {
     // Animation plays for ANIM_HOLD_MS then we hand off to the bank screen;
     // the pending pill takes over the status surface from there.
     setTimeout(() => {
-      router.replace('/(tabs)/bank');
+      // Guard: see ClaimPendingScreen for rationale (avoid GO_BACK warning
+      // if the user manually dismissed the modal during the animation).
+      if (router.canGoBack()) {
+        router.replace('/(tabs)/bank');
+      }
     }, ANIM_HOLD_MS);
 
     void (async () => {
