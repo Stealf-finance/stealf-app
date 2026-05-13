@@ -108,9 +108,9 @@ zkey assets:
 
 UI labels follow the contract pinned in [`docs/glossary.md`](docs/glossary.md):
 
-- **Shield** — Bank wallet public balance → Stealth wallet encrypted balance.
-- **Unshield** — Stealth wallet encrypted balance → Bank wallet public balance.
-- **Private send** — Stealth user A's encrypted balance → Stealth user B's encrypted balance.
+- **Shield** — Stealth wallet public balance → Stealth wallet encrypted balance.
+- **Unshield** — Stealth wallet encrypted balance → Stealth wallet public balance.
+- **Private send** — Stealth user A's encrypted balance → user B's encrypted balance (receiver-claimable) (Umbra or Stealf user only).
 - **Move** — direction-aware flows between Bank ↔ Stealth ↔ Encrypted balance.
 - **Claim** — receiver/sender claims pending UTXOs into their encrypted or public balance.
 
@@ -151,30 +151,6 @@ Fill in `.env` per the table in [`README.md`](README.md#environment-variables).
 npx expo run:ios                          # debug
 npx expo run:ios --configuration Release  # realistic perf check
 ```
-
-`expo start` works for UI-only iteration; ZK and Solana paths require the native build.
-
-### Testing
-
-`npm test` runs Vitest on **pure functions only**: Zod schemas, helpers, reducers. Anything that touches React Native (SecureStore, Turnkey native module, Umbra ZK provers) is exercised manually on a physical iOS device. There is no Jest / Detox harness in this repo.
-
-Manual test checklist for an Umbra-integration smoke run:
-
-1. OAuth signup (Google or Apple) → bank wallet auto-provisioned → stealth wallet created during onboarding.
-2. First Shield: Bank wallet public USDC balance → Stealth wallet encrypted balance. Verify the encrypted-balance pill updates and the Bank balance decreases by the shielded amount + fee.
-3. Check encrypted balance: open the Stealth tab and verify the encrypted balance matches the shielded amount.
-4. First Private send: send a small USDC amount to a known Stealf user (set up two test devices). Verify the recipient sees a pending UTXO in `claims`.
-5. Recipient claims the UTXO. Balance shows up in their encrypted balance.
-
-### User journey
-
-The intended product flow:
-
-1. **OAuth signup.** User taps Google or Apple → Turnkey provisions a sub-organization and a Solana wallet. Stealf creates the local stealth wallet at the same time.
-2. **Bank-wallet first use.** USDC is deposited into the bank wallet from any external Solana source, or from the Stealf card top-up once cash on-ramp is wired.
-3. **Shield.** User chooses to move some balance into the encrypted balance for privacy.
-4. **Private send / receive.** User-to-user encrypted USDC flows over Umbra UTXOs.
-5. **Unshield + cash-out.** User unshields back to the public bank wallet → off-ramp to fiat via the Stealf card.
 
 ### Mainnet / devnet
 
