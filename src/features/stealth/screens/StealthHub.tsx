@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dimensions,
   Pressable,
@@ -99,6 +99,18 @@ const GOLD_GRADIENT: [string, string, ...string[]] = [
   'rgba(212,175,99,0)',
 ];
 
+// Hoisted out of the component: pure, no closure deps. Avoids reallocating
+// the function on every render (which would invalidate the memo identity
+// of any child that takes it as a prop) and lets the JIT inline it.
+function formatBalance(usd: number) {
+  const safe = Math.max(0, usd);
+  return {
+    int: Math.floor(safe).toLocaleString('en-US'),
+    dec: `.${(safe % 1).toFixed(2).slice(2)}`,
+  };
+}
+const BALANCE_FONT_SIZE = { int: 76, dec: 32, dollar: 36 } as const;
+
 export function StealthHub() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
@@ -120,22 +132,18 @@ export function StealthHub() {
   const { data: encrypted } = useEncryptedBalances();
 
   const publicUSD = balanceData?.totalUSD ?? 0;
-
   const privateUSD = encrypted?.totalUSD ?? 0;
-  const privateTokens = (encrypted?.tokens ?? []).filter((t) => t.amount > 0);
 
-  const formatBalance = (usd: number) => {
-    const safe = Math.max(0, usd);
-    return {
-      int: Math.floor(safe).toLocaleString('en-US'),
-      dec: `.${(safe % 1).toFixed(2).slice(2)}`,
-    };
-  };
-
-  const publicBalance = formatBalance(publicUSD);
-  const privateBalance = formatBalance(privateUSD);
-
-  const balanceFontSize = { int: 76, dec: 32, dollar: 36 } as const;
+  // Memoize derived data so its reference identity stays stable across
+  // re-renders driven by socket updates / mode toggles. Keeps the array
+  // and balance objects from being recreated when their source data
+  // hasn't actually changed.
+  const privateTokens = useMemo(
+    () => (encrypted?.tokens ?? []).filter((t) => t.amount > 0),
+    [encrypted],
+  );
+  const publicBalance = useMemo(() => formatBalance(publicUSD), [publicUSD]);
+  const privateBalance = useMemo(() => formatBalance(privateUSD), [privateUSD]);
 
   const totalUSD = publicUSD + privateUSD;
   const publicValue = totalUSD > 0 ? publicUSD / totalUSD : 0;
@@ -498,7 +506,7 @@ export function StealthHub() {
                 accent={SILVER.accent}
                 ink={SILVER.ink}
                 inkDim={SILVER.inkDim}
-                fontSize={balanceFontSize}
+                fontSize={BALANCE_FONT_SIZE}
                 balanceHidden={balanceHidden}
                 onToggleHidden={toggleBalanceHidden}
               />
@@ -510,7 +518,7 @@ export function StealthHub() {
                 accent={GOLD.accent}
                 ink={GOLD.ink}
                 inkDim={GOLD.inkDim}
-                fontSize={balanceFontSize}
+                fontSize={BALANCE_FONT_SIZE}
                 balanceHidden={balanceHidden}
                 onToggleHidden={toggleBalanceHidden}
               />
