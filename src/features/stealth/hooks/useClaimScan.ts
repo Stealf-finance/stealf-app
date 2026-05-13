@@ -51,7 +51,7 @@ export function useClaimScan<TSelect = ClaimScanResult>(
 
   return useQuery({
     queryKey: claimScanQueries.byStealfWallet(wallet),
-    queryFn: fetchClaimScan,
+    queryFn: () => fetchClaimScan(wallet),
     enabled: !!wallet && (options.fetch ?? false),
     staleTime: Infinity,
     refetchOnWindowFocus: false,

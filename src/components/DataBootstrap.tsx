@@ -64,12 +64,7 @@ export function DataBootstrap() {
     if (user.bankWallet) warmWallet(user.bankWallet);
     if (user.stealfWallet) warmWallet(user.stealfWallet);
 
-    // Stealth warmup — runs in parallel with the bank prefetches above.
-    // Loads the ED25519 key into RAM, kicks off the Umbra client build,
-    // and once the stealth wallet's public balance lands, seeds the
-    // encrypted-balance query so the stealth screen renders instantly on
-    // first mount. Each phase is wrapped in try/catch so a missing key or
-    // network blip never blocks login.
+
     const stealfWallet = user.stealfWallet;
     if (stealfWallet) {
       void (async () => {
@@ -92,14 +87,9 @@ export function DataBootstrap() {
             publicBalance,
           );
 
-          // Boot-time claim scan: warms the cache so the stealth badge has
-          // a count to render without ever triggering its own scan. The
-          // scan itself crawls the full Merkle tree (~tens of seconds) but
-          // uses chunked yields so it runs in the background without
-          // freezing the JS thread — see `fetchClaimScan`.
           void queryClient.prefetchQuery({
             queryKey: claimScanQueries.byStealfWallet(stealfWallet),
-            queryFn: fetchClaimScan,
+            queryFn: () => fetchClaimScan(stealfWallet),
             staleTime: Infinity,
           });
 
