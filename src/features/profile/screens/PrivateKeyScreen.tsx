@@ -557,7 +557,7 @@ function MnemonicGrid({
   hidden?: boolean;
 }) {
   const words = hidden
-    ? Array.from({ length: 12 }, () => '••••••')
+    ? Array.from({ length: 12 }, () => '******')
     : value.trim().split(/\s+/);
   return (
     <View
