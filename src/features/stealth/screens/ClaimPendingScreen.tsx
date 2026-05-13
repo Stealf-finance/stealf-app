@@ -40,7 +40,10 @@ export function ClaimPendingScreen() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
-  const { data: incomingUtxos } = usePendingClaims();
+  // Force a fresh scan on screen mount — this is the user-facing source
+  // of truth for pending claims. The badge on the stealth tab reads the
+  // cached result instead of triggering its own scan.
+  const { data: incomingUtxos } = usePendingClaims({ fetch: true });
   const { claimReceived } = useUmbra();
 
   const items: Item[] = (incomingUtxos ?? []).map(utxoToItem);

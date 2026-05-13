@@ -24,22 +24,69 @@ export type ClaimScanResult = {
   publicSelfBurnable: any[];
 };
 
+// Paginated scan parameters. The Umbra SDK doc recommends pagination for
+// large trees (`getClaimableUtxoScannerFunction`):
+//   - TREE_INDEX 0 is the first Merkle tree; when full the next is 1, etc.
+//   - MAX_LEAVES is 2^20 (standard Merkle tree depth 20).
+//   - CHUNK_SIZE = leaves processed per scan call. The per-chunk crypto
+//     (X25519 ECDH + AES-GCM try-decrypt of each ciphertext) runs
+//     synchronously on the JS thread, so this controls how long the JS
+//     thread is blocked between yields. 5_000 ≈ 200ms per chunk in dev.
+//     A single unbounded `scan(0, 0)` call freezes the thread for tens of
+//     seconds — pagination keeps the app interactive throughout.
+const TREE_INDEX = 0;
+const MAX_LEAVES = 1_048_576;
+const CHUNK_SIZE = 5_000;
+
 /**
- * Single scan call against the indexer. Heavy: derives stealth keys and
- * decrypts UTXO commitments on the JS thread. Run once and let consumers
- * slice the result via React Query `select` — see `useClaimScan`.
+ * Full Merkle-tree scan for the current stealth signer. Heavy: derives
+ * stealth keys and tries to decrypt every UTXO commitment in the tree on
+ * the JS thread.
+ *
+ * Implemented as a loop of fixed-size chunked scans with a `setTimeout(0)`
+ * yield between each so taps, animations, and re-renders can interleave
+ * during the long crawl. Total work is unchanged vs. a single unbounded
+ * `scan(0, 0)` call, but per-chunk thread freeze is ~200ms instead of
+ * tens of seconds — the app stays interactive while the scan completes
+ * in the background.
+ *
+ * Run once and let consumers slice the result via React Query `select`
+ * (see `useClaimScan`).
  */
 export async function fetchClaimScan(): Promise<ClaimScanResult> {
   const client = await getStealthClient();
   await ensureBlacklistLoaded();
   const scan = getClaimableUtxoScannerFunction({ client });
-  const result = await scan(0n as any, 0n as any);
+
+  const acc = {
+    received: [] as any[],
+    publicReceived: [] as any[],
+    selfBurnable: [] as any[],
+    publicSelfBurnable: [] as any[],
+  };
+
+  let cursor = 0;
+  while (cursor < MAX_LEAVES) {
+    const end = Math.min(cursor + CHUNK_SIZE - 1, MAX_LEAVES - 1);
+    const chunk = await scan(TREE_INDEX as any, cursor as any, end as any);
+    if (chunk.received?.length) acc.received.push(...chunk.received);
+    if (chunk.publicReceived?.length) acc.publicReceived.push(...chunk.publicReceived);
+    if (chunk.selfBurnable?.length) acc.selfBurnable.push(...chunk.selfBurnable);
+    if (chunk.publicSelfBurnable?.length)
+      acc.publicSelfBurnable.push(...chunk.publicSelfBurnable);
+    cursor += CHUNK_SIZE;
+    // setTimeout(0) defers the next chunk to a fresh task, releasing the JS
+    // thread so pending taps / React commits / Reanimated worklet callbacks
+    // can run. Cheaper than rAF and not tied to the frame loop.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+
   const notBurnt = (u: any) => !isBurnt(u);
   const out: ClaimScanResult = {
-    received: (result.received ?? []).filter(notBurnt),
-    publicReceived: (result.publicReceived ?? []).filter(notBurnt),
-    selfBurnable: (result.selfBurnable ?? []).filter(notBurnt),
-    publicSelfBurnable: (result.publicSelfBurnable ?? []).filter(notBurnt),
+    received: acc.received.filter(notBurnt),
+    publicReceived: acc.publicReceived.filter(notBurnt),
+    selfBurnable: acc.selfBurnable.filter(notBurnt),
+    publicSelfBurnable: acc.publicSelfBurnable.filter(notBurnt),
   };
   if (__DEV__) {
     console.log(
