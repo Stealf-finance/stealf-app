@@ -19,10 +19,8 @@ import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
-import {
-  pendingClaimsForCashQueries,
-  usePendingClaimsForCash,
-} from '@/src/features/stealth/hooks/usePendingClaimsForCash';
+import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
+import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -57,6 +55,7 @@ export function ClaimsScreen() {
     setClaimingIndex(index);
 
     const bankWallet = user?.bankWallet ?? null;
+    const stealfWallet = user?.stealfWallet ?? null;
 
     const opId = pendingOps.enqueue({
       kind: 'claim-to-bank',
@@ -82,9 +81,11 @@ export function ClaimsScreen() {
 
         const invalidate = () => {
           if (!bankWallet) return;
-          queryClient.invalidateQueries({
-            queryKey: pendingClaimsForCashQueries.byBankWallet(bankWallet),
-          });
+          if (stealfWallet) {
+            queryClient.invalidateQueries({
+              queryKey: claimScanQueries.byStealfWallet(stealfWallet),
+            });
+          }
           queryClient.invalidateQueries({
             queryKey: balanceQueries.byAddress(bankWallet),
           });

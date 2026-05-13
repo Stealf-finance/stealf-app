@@ -8,12 +8,8 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { LoaderDots } from '@/src/design-system/primitives/LoaderDots';
-import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
-
-const SILVER = txPalette('silver');
 
 export function AnimatedSplash() {
   const { isLoading } = useAuth();
@@ -22,7 +18,6 @@ export function AnimatedSplash() {
 
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
-  const loaderOpacity = useSharedValue(1);
 
   const containerStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -30,21 +25,14 @@ export function AnimatedSplash() {
   const logoStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
-  const loaderStyle = useAnimatedStyle(() => ({
-    opacity: loaderOpacity.value,
-  }));
 
   useEffect(() => {
     if (isLoading || hasRunRef.current) return;
     hasRunRef.current = true;
 
-    // Loader fades out first so the logo takes the stage.
-    loaderOpacity.value = withTiming(0, { duration: 200 });
-
-    // Then the logo lunges forward + the whole splash fades out.
     scale.value = withDelay(
       120,
-      withTiming(1.6, {
+      withTiming(2.2, {
         duration: 720,
         easing: Easing.out(Easing.cubic),
       }),
@@ -62,7 +50,7 @@ export function AnimatedSplash() {
         },
       ),
     );
-  }, [isLoading, scale, opacity, loaderOpacity]);
+  }, [isLoading, scale, opacity]);
 
   if (done) return null;
 
@@ -83,24 +71,12 @@ export function AnimatedSplash() {
         containerStyle,
       ]}
     >
-      <Animated.View style={logoStyle}>
+      <Animated.View style={[logoStyle, { alignItems: 'center', justifyContent: 'center' }]}>
         <Image
           source={require('../../assets/images/splash-icon.png')}
-          style={{ width: 200, height: 200 }}
+          style={{ width: 360, height: 360 }}
           contentFit="contain"
         />
-      </Animated.View>
-
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            bottom: 140,
-          },
-          loaderStyle,
-        ]}
-      >
-        <LoaderDots color={SILVER.accent} size={9} bounce={9} />
       </Animated.View>
     </Animated.View>
   );
