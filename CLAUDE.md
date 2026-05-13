@@ -7,8 +7,8 @@ non-trivial change.
 
 Stealf is a privacy-first neobank on Solana. Two wallets per user:
 
-- **Bank wallet** — Turnkey-custodied Solana account, bridged to EUR
-  IBAN + Stealf card. Signing via Turnkey remote signing (custodial).
+- **Bank wallet** — Turnkey-custodied Solana account, bridged to virtual
+  bank account + Stealf card. Signing via Turnkey remote signing.
 - **Stealth wallet** — Local ED25519 wallet, private key in
   SecureStore (Keychain on iOS, Keystore on Android). Holds a public
   ATA *and* an Umbra-encrypted balance. Signing happens locally.
