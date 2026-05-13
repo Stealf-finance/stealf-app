@@ -321,8 +321,7 @@ export function MoveFlow() {
       assetSymbol,
     });
 
-    // Eager close — pill takes over the status surface from here. Balances
-    // stay honest until the op confirms (no optimistic debit).
+
     close();
 
     void (async () => {
@@ -506,7 +505,6 @@ export function MoveFlow() {
           </Text>
           <Pressable
             onPress={() => {
-              close();
               router.replace('/(tabs)/stealth');
             }}
             accessibilityRole="button"
