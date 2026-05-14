@@ -38,6 +38,7 @@ import {
   getPublicBalanceToSelfClaimableUtxoCreatorFunction,
 } from '@/src/features/stealth/hooks/useUmbra';
 import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
+import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -107,10 +108,7 @@ export function MoveFlow() {
   // Every direction supports multi-token now: public-side via on-chain ATAs
   // (Helius DAS), encrypted-side via the multi-mint Umbra querier.
   const supportsMultiToken = true;
-  // The picker's source depends on direction:
-  //   bank-to-shielded → bank ATA (paying side)
-  //   stealth-to-bank  → stealth ATA (paying side)
-  //   shielded-to-bank → encrypted balances (debiting the shielded side)
+
   const pickerWalletParam: 'bank' | 'stealth' | 'encrypted' =
     direction === 'bank-to-shielded'
       ? 'bank'
@@ -133,8 +131,11 @@ export function MoveFlow() {
   const { data: bankBalanceData } = useBalance(
     direction === 'bank-to-shielded' ? user?.bankWallet ?? null : null,
   );
+
   const { data: stealthBalanceData } = useBalance(
-    direction === 'stealth-to-bank' ? user?.stealfWallet ?? null : null,
+    direction === 'stealth-to-bank' || direction === 'shielded-to-bank'
+      ? user?.stealfWallet ?? null
+      : null,
   );
   const { data: shielded } = useShieldedSolBalance();
   const { data: encrypted } = useEncryptedBalances();
@@ -182,10 +183,6 @@ export function MoveFlow() {
       ? solPrice
       : 0;
 
-  // Fee logic stays anchored on SOL — that's where gas is paid regardless
-  // of which token is moved. Reserve only when source = SOL bucket *and*
-  // pays its own fees. Protocol fee (0.30%) still applies to anything
-  // touching the encrypted balance, regardless of mint.
   const sourcePaysFees =
     direction === 'bank-to-shielded' || direction === 'stealth-to-bank';
   const hasProtocolFee = direction !== 'stealth-to-bank';
@@ -216,10 +213,13 @@ export function MoveFlow() {
     };
   }, []);
 
-  const secondaryAmount =
+  const secondaryBase =
     inputMode === 'asset'
       ? `$${fiatAmount.toFixed(2)}`
       : `${solAmount.toFixed(4)} ${assetSymbol}`;
+  const secondaryAmount = hasProtocolFee
+    ? `~${secondaryBase} (-0.30%)`
+    : `~${secondaryBase}`;
 
   const maxBalanceLabel =
     inputMode === 'fiat'
@@ -306,6 +306,18 @@ export function MoveFlow() {
       return failPre(
         `Not enough ${assetSymbol}. You have ${formatBalance(sourceBalance)} ${assetSymbol} available.`,
       );
+    }
+
+    const stealthSigns =
+      direction === 'shielded-to-bank' || direction === 'stealth-to-bank';
+    if (stealthSigns) {
+      const stealthPublicSol =
+        stealthBalanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL')
+          ?.balance ?? 0;
+      const FEE_SOL_RESERVE = 0.01;
+      if (stealthPublicSol < FEE_SOL_RESERVE) {
+        return failPre(INSUFFICIENT_FEE_SOL_MESSAGE);
+      }
     }
 
     const mintAddr = selectionActive ? selected!.mint : SOL_MINT;
@@ -398,9 +410,6 @@ export function MoveFlow() {
 
         const stealfAddr = user?.stealfWallet;
         if (stealfAddr) {
-          // Both directions affect the same underlying scan: bank-to-shielded
-          // creates publicReceived UTXOs (inbound); shielded-to-bank creates
-          // selfBurnable UTXOs (for-cash). One invalidation covers both views.
           const targetQueryKey = claimScanQueries.byStealfWallet(stealfAddr);
           [3000, 8000, 15000].forEach((d) =>
             setTimeout(() => {
@@ -583,7 +592,7 @@ export function MoveFlow() {
 
       <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
         <SourceAssetCard
-          label="From"
+          label="Move"
           iconSource={{ uri: iconUri }}
           tokenLabel={assetSymbol}
           primaryAmount={primaryDisplay}

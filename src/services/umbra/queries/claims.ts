@@ -25,6 +25,28 @@ const TREE_INDEX = 0;
 const MAX_LEAVES = 1_048_576;
 const CHUNK_SIZE = 5_000;
 
+let cachedScanner: {
+  wallet: string;
+  scan: ReturnType<typeof getClaimableUtxoScannerFunction>;
+} | null = null;
+
+function getOrCreateScanner(
+  wallet: string,
+  client: Parameters<typeof getClaimableUtxoScannerFunction>[0]['client'],
+) {
+  if (cachedScanner && cachedScanner.wallet === wallet) {
+    return cachedScanner.scan;
+  }
+  const scan = getClaimableUtxoScannerFunction({ client });
+  cachedScanner = { wallet, scan };
+  return scan;
+}
+
+/** Resets the cached scanner. Call on logout / wallet switch. */
+export function clearClaimScanner(): void {
+  cachedScanner = null;
+}
+
 function emptyResult(): ClaimScanResult {
   return {
     received: [],
@@ -37,12 +59,25 @@ function emptyResult(): ClaimScanResult {
 export async function fetchClaimScan(wallet: string): Promise<ClaimScanResult> {
   const client = await getStealthClient();
   await ensureBlacklistLoaded();
-  const scan = getClaimableUtxoScannerFunction({ client });
+  const scan = getOrCreateScanner(wallet, client);
 
   const cache = wallet ? await loadClaimScanCache(wallet) : null;
   const baseTreeIndex = cache?.treeIndex ?? TREE_INDEX;
+
   const startCursor = cache?.cursor ?? 0;
   const seedResults = cache?.results ?? emptyResult();
+  if (__DEV__) {
+    console.log(
+      '[claims] fetchClaimScan start:' +
+        ` walletShort=${wallet.slice(0, 8)}` +
+        ` cacheHit=${!!cache}` +
+        ` startCursor=${startCursor}` +
+        ` seedReceived=${seedResults.received.length}` +
+        ` seedPublicReceived=${seedResults.publicReceived.length}` +
+        ` seedSelfBurnable=${seedResults.selfBurnable.length}` +
+        ` seedPublicSelfBurnable=${seedResults.publicSelfBurnable.length}`,
+    );
+  }
 
   const acc: ClaimScanResult = {
     received: [...seedResults.received],
@@ -53,19 +88,54 @@ export async function fetchClaimScan(wallet: string): Promise<ClaimScanResult> {
 
   let cursor = startCursor;
   let lastScannedEnd = startCursor;
-  while (cursor < MAX_LEAVES) {
-    const end = Math.min(cursor + CHUNK_SIZE - 1, MAX_LEAVES - 1);
-    const chunk = await scan(baseTreeIndex as any, cursor as any, end as any);
-    if (chunk.received?.length) acc.received.push(...chunk.received);
-    if (chunk.publicReceived?.length)
-      acc.publicReceived.push(...chunk.publicReceived);
-    if (chunk.selfBurnable?.length) acc.selfBurnable.push(...chunk.selfBurnable);
-    if (chunk.publicSelfBurnable?.length)
-      acc.publicSelfBurnable.push(...chunk.publicSelfBurnable);
-    lastScannedEnd = end + 1;
-    cursor += CHUNK_SIZE;
+  let chunkIndex = 0;
+  const scanT0 = Date.now();
+  try {
+    while (cursor < MAX_LEAVES) {
+      const end = Math.min(cursor + CHUNK_SIZE - 1, MAX_LEAVES - 1);
+      const chunkT0 = Date.now();
+      const chunk = await scan(
+        BigInt(baseTreeIndex) as any,
+        BigInt(cursor) as any,
+        BigInt(end) as any,
+      );
+      const chunkMs = Date.now() - chunkT0;
+      if (chunk.received?.length) acc.received.push(...chunk.received);
+      if (chunk.publicReceived?.length)
+        acc.publicReceived.push(...chunk.publicReceived);
+      if (chunk.selfBurnable?.length) acc.selfBurnable.push(...chunk.selfBurnable);
+      if (chunk.publicSelfBurnable?.length)
+        acc.publicSelfBurnable.push(...chunk.publicSelfBurnable);
 
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      const nextCursor = Number(chunk.nextScanStartIndex);
+      lastScannedEnd = nextCursor;
+      chunkIndex++;
+
+      if (__DEV__ && (chunkIndex % 20 === 0 || chunkMs > 800)) {
+        console.log(
+          `[claims] chunk #${chunkIndex} done cursor=${cursor}→${nextCursor}` +
+            ` chunkMs=${chunkMs} totalMs=${Date.now() - scanT0}` +
+            ` running totals received=${acc.received.length}` +
+            ` publicReceived=${acc.publicReceived.length}` +
+            ` selfBurnable=${acc.selfBurnable.length}` +
+            ` publicSelfBurnable=${acc.publicSelfBurnable.length}`,
+        );
+      }
+
+      if (nextCursor <= cursor) break;
+      cursor = nextCursor;
+
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    }
+  } catch (err: any) {
+    if (__DEV__) {
+      console.error(
+        `[claims] scan ABORTED at chunk #${chunkIndex} cursor=${cursor}` +
+          ` after ${Date.now() - scanT0}ms:`,
+        err?.message || err,
+      );
+    }
+    throw err;
   }
 
 
@@ -78,6 +148,9 @@ export async function fetchClaimScan(wallet: string): Promise<ClaimScanResult> {
   };
 
   if (wallet) {
+    // Persist whatever cursor the SDK last gave us. With `nextScanStartIndex`
+    // this naturally tracks the actual tree head, so subsequent scans only
+    // touch leaves that were appended since (typically zero or one chunk).
     await saveClaimScanCache(wallet, {
       treeIndex: baseTreeIndex,
       cursor: lastScannedEnd,
