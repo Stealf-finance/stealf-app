@@ -35,6 +35,7 @@ export type StealthErrorCode =
   | 'USER_NOT_REGISTERED'
   | 'RECEIVER_NOT_REGISTERED'
   | 'INSUFFICIENT_BALANCE'
+  | 'INSUFFICIENT_FEE_SOL'
   | 'ZK_PROOF_ERROR'
   | 'USER_CANCELLED'
   | 'TX_TIMEOUT'
@@ -71,6 +72,14 @@ export class StealthError extends Error {
   }
 }
 
+/**
+ * The user-facing message for `INSUFFICIENT_FEE_SOL`. Exported so the
+ * `MoveFlow` pre-flight can reuse it verbatim — same wording whether the
+ * failure surfaces from a simulation log or from the local balance check.
+ */
+export const INSUFFICIENT_FEE_SOL_MESSAGE =
+  "Your stealth wallet doesn't have enough SOL to pay network fees. Send a small amount of SOL (around 0.01) to your stealth wallet, then try again.";
+
 const MSG: Record<StealthErrorCode, string> = {
   REGISTRATION_REJECTED: 'Registration cancelled.',
   REGISTRATION_PROOF_FAILED: 'Failed to generate proof. Please try again.',
@@ -79,6 +88,7 @@ const MSG: Record<StealthErrorCode, string> = {
   RECEIVER_NOT_REGISTERED:
     'Recipient is not a Stealf user yet. Ask them to set up their stealth wallet first.',
   INSUFFICIENT_BALANCE: 'Insufficient balance to complete this transaction.',
+  INSUFFICIENT_FEE_SOL: INSUFFICIENT_FEE_SOL_MESSAGE,
   ZK_PROOF_ERROR: 'Failed to generate the privacy proof. Please try again.',
   USER_CANCELLED: 'Transaction cancelled.',
   TX_TIMEOUT:
@@ -96,6 +106,38 @@ const MSG: Record<StealthErrorCode, string> = {
 function rawMessageOf(err: unknown): string {
   const e = err as { cause?: { message?: string }; message?: string };
   return e?.cause?.message || e?.message || 'Operation failed';
+}
+
+function logsOf(err: unknown): string[] {
+  const e = err as { cause?: { context?: { logs?: string[] } } };
+  return e?.cause?.context?.logs ?? [];
+}
+
+/**
+ * Inspect Solana simulation logs to disambiguate the two `insufficient`
+ * cases: the signer not having enough lamports for transaction fees (fixed
+ * by topping up the wallet's public SOL), versus the source account not
+ * having enough of the asset being moved (fixed by sending less).
+ *
+ * The fee case is recognizable by a `Transfer: insufficient lamports X,
+ * need Y` line emitted by the System Program when the fee-payer transfer
+ * fails. Everything else `insufficient`-flavored gets routed to the
+ * generic balance error.
+ */
+function classifyInsufficient(
+  logs: string[],
+  rawMessage: string,
+): 'fee' | 'balance' | null {
+  if (logs.some((l) => /transfer:\s*insufficient lamports/i.test(l))) {
+    return 'fee';
+  }
+  if (
+    /insufficient/i.test(rawMessage) ||
+    logs.some((l) => /insufficient (funds|lamports)/i.test(l))
+  ) {
+    return 'balance';
+  }
+  return null;
 }
 
 function build(
@@ -117,6 +159,24 @@ function build(
 }
 
 /**
+ * Specialise a `transaction-send` failure: the SDK throws the same wrapper
+ * for "RPC dropped me" and "simulation rejected me", but the latter often
+ * carries actionable signal in the simulation logs (e.g. fee-payer broke,
+ * source balance too low). We extract those before falling back to the
+ * generic timeout message.
+ */
+function buildFromTxSend(
+  err: unknown,
+  op: StealthOp,
+  stage?: string,
+): StealthError {
+  const cls = classifyInsufficient(logsOf(err), rawMessageOf(err));
+  if (cls === 'fee') return build(err, op, 'INSUFFICIENT_FEE_SOL', stage);
+  if (cls === 'balance') return build(err, op, 'INSUFFICIENT_BALANCE', stage);
+  return build(err, op, 'TX_TIMEOUT', stage);
+}
+
+/**
  * Parse a raw SDK error into a `StealthError` with a stable code and a
  * user-facing message. Uses Umbra's typed guards first, then falls back to
  * message inspection for the long tail.
@@ -134,7 +194,7 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
       case 'account-fetch':
         return build(err, op, 'RPC_ERROR', err.stage);
       case 'transaction-send':
-        return build(err, op, 'TX_TIMEOUT', err.stage);
+        return buildFromTxSend(err, op, err.stage);
       default:
         return build(err, op, 'UNKNOWN', err.stage);
     }
@@ -149,14 +209,8 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
         return build(err, op, 'RPC_ERROR', err.stage);
       case 'transaction-sign':
         return build(err, op, 'USER_CANCELLED', err.stage);
-      case 'transaction-send': {
-        const e = err as { cause?: { context?: { logs?: string[] } } };
-        const logs = e?.cause?.context?.logs ?? [];
-        if (logs.some((l) => /insufficient/i.test(l))) {
-          return build(err, op, 'INSUFFICIENT_BALANCE', err.stage);
-        }
-        return build(err, op, 'TX_TIMEOUT', err.stage);
-      }
+      case 'transaction-send':
+        return buildFromTxSend(err, op, err.stage);
       default:
         return build(err, op, 'UNKNOWN', err.stage);
     }
@@ -171,7 +225,7 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
       case 'transaction-sign':
         return build(err, op, 'USER_CANCELLED', err.stage);
       case 'transaction-send':
-        return build(err, op, 'TX_TIMEOUT', err.stage);
+        return buildFromTxSend(err, op, err.stage);
       default:
         return build(err, op, 'UNKNOWN', err.stage);
     }
@@ -186,7 +240,7 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
       case 'account-fetch':
         return build(err, op, 'RPC_ERROR', err.stage);
       case 'transaction-send':
-        return build(err, op, 'TX_TIMEOUT', err.stage);
+        return buildFromTxSend(err, op, err.stage);
       default:
         return build(err, op, 'UNKNOWN', err.stage);
     }
@@ -201,7 +255,7 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
       case 'transaction-validate':
         return build(err, op, 'STALE_MERKLE_PROOF', err.stage);
       case 'transaction-send':
-        return build(err, op, 'TX_TIMEOUT', err.stage);
+        return buildFromTxSend(err, op, err.stage);
       default:
         return build(err, op, 'UNKNOWN', err.stage);
     }
@@ -218,8 +272,7 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
   }
 
   const rawMessage = rawMessageOf(err);
-  const e = err as { cause?: { context?: { logs?: string[] } } };
-  const simulationLogs = e?.cause?.context?.logs ?? [];
+  const simulationLogs = logsOf(err);
 
   if (/receiver is not registered/i.test(rawMessage)) {
     return build(err, op, 'RECEIVER_NOT_REGISTERED');
@@ -230,12 +283,9 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
   if (simulationLogs.some((l) => /zero_knowledge_verifying_key/i.test(l))) {
     return build(err, op, 'VERIFYING_KEY_NOT_INITIALIZED');
   }
-  if (
-    /insufficient/i.test(rawMessage) ||
-    simulationLogs.some((l) => /insufficient (funds|lamports)/i.test(l))
-  ) {
-    return build(err, op, 'INSUFFICIENT_BALANCE');
-  }
+  const cls = classifyInsufficient(simulationLogs, rawMessage);
+  if (cls === 'fee') return build(err, op, 'INSUFFICIENT_FEE_SOL');
+  if (cls === 'balance') return build(err, op, 'INSUFFICIENT_BALANCE');
   if (/rpc|network|fetch|timeout/i.test(rawMessage)) {
     return build(err, op, 'RPC_ERROR');
   }
