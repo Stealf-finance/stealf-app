@@ -60,12 +60,8 @@ import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 const FADE_OUT = 160;
 const FADE_IN = 220;
 
-// Solana base fee = 5,000 lamports per signature. Single-sig transfer = 5,000.
 const NETWORK_FEE_SOL = 0.000005;
-
-// Solana base58: alphabet excludes 0, O, I, l. Address length is 32–44.
 const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-// Lightweight .sol name accept-list — backend will resolve later.
 const SOL_NAME_RE = /^[a-zA-Z0-9._-]{1,32}\.sol$/;
 
 function isValidRecipient(input: string, selfAddress?: string): boolean {
@@ -91,11 +87,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const insets = useSafeAreaInsets();
   const S = txPalette(tone);
   const { user, isAuthenticated } = useAuth();
-  // `wallet` decides which account signs and what balance is shown. It's
-  // orthogonal to `tone` (visual styling) — the Stealth public tab uses
-  // tone=silver but pulls the stealf wallet, while the Stealth private tab
-  // uses tone=gold for the same wallet. Falls back to the legacy tone-based
-  // mapping when the prop isn't passed.
   const walletSource: WalletSource =
     wallet ?? (tone === 'gold' ? 'stealth' : 'bank');
   const isPrivate = mode === 'private';
@@ -115,9 +106,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const { setMode } = usePrivacyMode();
   const [privateSending, setPrivateSending] = useState(false);
 
-  // Private mode spends from the encrypted balance, which now supports any
-  // mint. We map every encrypted token (with non-zero balance) to an Asset
-  // entry so the existing AssetPill / Max / fiat plumbing keeps working.
+
   const privateAssets: Asset[] = useMemo(() => {
     const tokens = (encrypted?.tokens ?? []).filter((t) => t.amount > 0);
     if (tokens.length === 0) {
@@ -199,18 +188,14 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     else transitionTo(step - 1, 'back');
   };
 
-  // SOL → live price from the dedicated endpoint (fresher than wallet snapshot).
-  // Other tokens → per-unit price derived from the wallet balance/balanceUSD pair
-  // (or stable parity for USDC/EURC/USDT). 0 if we genuinely don't know.
+
   const rate = asset
     ? asset.symbol === 'SOL' && typeof solPrice === 'number' && solPrice > 0
       ? solPrice
       : (asset.priceUSD ?? 0)
     : 0;
   const balanceNum = asset ? Number(asset.balance) : 0;
-  // Private sends pay a 0.30% Umbra protocol fee on the encrypted balance,
-  // so Max has to leave that wedge unspent — otherwise the create-UTXO tx
-  // fails at submit time. SOL also reserves the network fee.
+
   const networkFeeReserve =
     !isPrivate && asset?.symbol === 'SOL' ? NETWORK_FEE_SOL : 0;
   const protocolFeeMultiplier = isPrivate ? 1 - PROTOCOL_FEE_RATE : 1;
@@ -293,7 +278,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         const destination = toAddress(recipient.name.trim());
         const mintAddr = asset.mint ?? SOL_MINT;
         const mint = toAddress(mintAddr);
-        await umbra.sendEncrypted(destination, mint, amountRaw);
+        const result = await umbra.sendEncrypted(destination, mint, amountRaw);
         await Promise.all([
           queryClient.invalidateQueries({
             queryKey: shieldedBalanceQueries.byStealfWallet(fromAddress),
@@ -305,7 +290,8 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             queryKey: historyQueries.byAddress(fromAddress),
           }),
         ]);
-        setTxSig(null);
+
+        setTxSig(result?.queueSignature ?? null);
         transitionTo(4, 'forward');
         return;
       }
@@ -334,18 +320,19 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     }
   };
 
-  // Success owns the whole screen (its own CenterGlow + header) so we early-return
-  // to avoid double-wrapping in the wizard's CenterGlow.
+
   if (step === 4 && asset && recipient) {
-    // Private sends originate from the stealth tab in private mode — land
-    // back there explicitly so the user sees the new (lower) shielded
-    // balance instead of relying on stack pop heuristics.
-    const finishPrivate = () => {
-      setMode('private');
+
+    const finishToOrigin = () => {
+      if (walletSource === 'bank') {
+        router.replace('/(tabs)/bank');
+        return;
+      }
+      setMode(isPrivate ? 'private' : 'public');
       router.replace('/(tabs)/stealth');
     };
-    const onDone = isPrivate ? finishPrivate : close;
-    const onSuccessClose = isPrivate ? finishPrivate : close;
+    const onDone = finishToOrigin;
+    const onSuccessClose = finishToOrigin;
     return (
       <SuccessScreen
         tone={tone}

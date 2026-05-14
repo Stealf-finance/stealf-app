@@ -1,21 +1,7 @@
 export const SOL_DECIMALS = 9;
 
-/**
- * SOL reserve subtracted from a wallet's balance when offering "Max" — covers
- * the worst-case priority + base fee for an Umbra-class transaction (proof
- * verification, Arcium MPC) so the tx doesn't fail at submit time. Only
- * applied when the source wallet is also the fee payer; for ops where fees
- * come from a different bucket (e.g. encrypted-balance withdrawals paid out
- * of the stealth public ATA), the full balance can be spent.
- */
 export const SOL_FEE_RESERVE = 0.01;
 
-/**
- * Umbra protocol fee taken on operations that touch the encrypted balance
- * (deposit / withdraw / encrypted-balance-out create-UTXO). 0.30% of the
- * notional amount. Applied on Max so the displayed value matches what can
- * actually be debited end-to-end.
- */
 export const PROTOCOL_FEE_RATE = 0.003;
 
 export function maxSpendableSol(
@@ -32,14 +18,6 @@ export function protocolFeeSol(amountSol: number): number {
   return amountSol * PROTOCOL_FEE_RATE;
 }
 
-/**
- * Apply a numpad keypress to the current amount string.
- *
- * - Caps fractional digits at `maxDecimals` (Solana's lamport precision is 9).
- * - Caps integer digits at 12 to keep the displayed amount readable and
- *   safely within Number-precision territory for fiat conversion.
- * - Treats '⌫' as backspace and '.' as a single-shot decimal insert.
- */
 export function applyAmountKey(
   current: string,
   key: string,

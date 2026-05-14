@@ -3,11 +3,8 @@ import { applyAmountKey } from '@/src/features/send/lib/amount';
 import type { InputMode } from '@/src/features/send/components/SourceAssetCard';
 
 type Params = {
-  /** Asset → USD rate. 0 disables the fiat toggle. */
   rate: number;
-  /** Spendable balance after fee/protocol-fee carve-outs. Drives percent shortcuts. */
   maxSol: number;
-  /** On-chain token decimals (SOL=9, USDC=6, BONK=5…). Caps fractional input. */
   decimals?: number;
 };
 

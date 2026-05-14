@@ -3,20 +3,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { Icons } from '@/src/design-system/icons';
-import {
-  sansation,
-  sansationBold,
-  serif,
-} from '@/src/design-system/typography';
+import { serif } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
-import { GlassListRow } from '@/src/features/receive/components/GlassListRow';
+import { GlassTile } from '@/src/features/receive/components/GlassTile';
 import {
+  BankDisc,
   StealfDisc,
   UsdcDisc,
-  UsdFlagDisc,
 } from '@/src/features/receive/components/Discs';
 
 export function ReceiveMenu() {
@@ -58,66 +53,35 @@ export function ReceiveMenu() {
         contentContainerStyle={{
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 32,
-          gap: 22,
+          gap: 14,
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View>
-          <Kicker style={{ marginBottom: 10, paddingLeft: 4 }}>
-            Pending claims
-          </Kicker>
-          <GlassListRow
+        <View style={{ flexDirection: 'row', gap: 14 }}>
+          <GlassTile
             leading={<IncomingDisc />}
-            label="Pending claims"
-            sub="Tap to review incoming transfers"
+            label="Incoming private transfers"
             onPress={() => router.push('/receive/claims')}
-            accessibilityLabel="Open pending claims"
+            accessibilityLabel="Open incoming private transfers"
+            trailing={<Icons.chevR size={14} color={T.inkFaint} />}
+          />
+          <GlassTile
+            leading={<UsdcDisc />}
+            label="USDC on Solana"
+            onPress={() => router.push('/receive/flow?tone=silver&wallet=bank')}
             trailing={<Icons.chevR size={14} color={T.inkFaint} />}
           />
         </View>
 
-        <View>
-          <Kicker style={{ marginBottom: 10, paddingLeft: 4 }}>
-            Receive by address
-          </Kicker>
-          <GlassListRow
-            leading={<UsdcDisc />}
-            label="USDC"
-            sub={
-              <Text
-                style={[
-                  sansation,
-                  {
-                    fontSize: 11,
-                    color: T.inkFaint,
-                    includeFontPadding: false,
-                  },
-                ]}
-              >
-                on{' '}
-                <Text style={[sansationBold, { color: T.ink }]}>Solana</Text>
-              </Text>
-            }
-            onPress={() => router.push('/receive/flow?tone=silver&wallet=bank')}
-          />
-        </View>
-
-        <View>
-          <Kicker style={{ marginBottom: 10, paddingLeft: 4 }}>Stealf</Kicker>
-          <GlassListRow
+        <View style={{ flexDirection: 'row', gap: 14 }}>
+          <GlassTile
             leading={<StealfDisc />}
             label="Stealf user"
             disabled
           />
-        </View>
-
-        <View>
-          <Kicker style={{ marginBottom: 10, paddingLeft: 4 }}>
-            Bank transfer
-          </Kicker>
-          <GlassListRow
-            leading={<UsdFlagDisc />}
-            label="USD bank transfer"
+          <GlassTile
+            leading={<BankDisc />}
+            label="Bank transfer"
             disabled
           />
         </View>
@@ -150,3 +114,4 @@ function IncomingDisc() {
     </View>
   );
 }
+

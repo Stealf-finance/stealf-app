@@ -166,7 +166,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             },
           ]}
         >
-          — Deposit to {destination} —
+          Deposit to {destination}
         </Text>
       </View>
 
