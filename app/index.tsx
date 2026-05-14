@@ -5,7 +5,9 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 export default function Index() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (getEnv().EXPO_PUBLIC_DEV_BYPASS_AUTH) {
+  // Defense-in-depth: bypass is dev-only even if the env var leaks
+  // into a release build.
+  if (__DEV__ && getEnv().EXPO_PUBLIC_DEV_BYPASS_AUTH) {
     return <Redirect href="/(tabs)/bank" />;
   }
 
