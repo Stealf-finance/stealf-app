@@ -550,7 +550,7 @@ export function StealthHub() {
               <View style={{ width: PAGE_GUTTER }} />
               <KickerBalancePage
                 width={PAGE_WIDTH}
-                kicker="Shielded Pool"
+                kicker="Encrypted balance"
                 balance={privateBalance}
                 accent={GOLD.accent}
                 ink={GOLD.ink}

@@ -164,7 +164,7 @@ export function ClaimPendingScreen() {
             },
           ]}
         >
-          {items.length} pending · into shielded pool
+          {items.length} pending · into encrypted balance
         </Text>
         <RefreshBtn onPress={() => refetch()} spinning={isFetching} />
       </View>
