@@ -298,9 +298,11 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       const sig = await sendMutation.mutateAsync({
         fromAddress,
         toAddress: recipient.name.trim(),
-        amountSol: typedAssetAmount,
+        amount: typedAssetAmount,
+        mint: asset.mint,
+        decimals: asset.decimals ?? SOL_DECIMALS,
         walletSource,
-        balanceSol: balanceNum,
+        balance: balanceNum,
       });
       if (__DEV__) console.log('[SendFlow] success, sig=', sig);
       setTxSig(sig);
