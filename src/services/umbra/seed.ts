@@ -9,9 +9,11 @@ const MASTER_SEED_KEY_PREFIX = 'umbra_master_seed_';
 // 2026-05-11 once telemetry confirms no migrations remain.
 const LEGACY_FALLBACK_REMOVE_AFTER = '2026-05-11';
 
+// Matches `secureStore.ts` BASE_OPTIONS. Existing seeds keep their previous
+// ACL until the next write (SecureStore upgrades on set, not on read).
 const KEYCHAIN_OPTIONS: SecureStore.SecureStoreOptions = {
   keychainService: 'com.stealf.wallet',
-  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+  keychainAccessible: SecureStore.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
 };
 
 let currentWalletInput: string | null = null;
