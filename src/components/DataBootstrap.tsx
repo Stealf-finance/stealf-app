@@ -141,7 +141,17 @@ export function DataBootstrap() {
       if (__DEV__) console.log('[DataBootstrap] cleanup');
       cleanups.forEach((fn) => fn());
     };
-  }, [isAuthenticated, user, session, queryClient]);
+    // Narrow deps: the bootstrap only needs to re-run when identity or
+    // session token changes. Listing the whole `user` / `session` objects
+    // tears down sockets + re-warms Umbra on every `setUser({...user,x:y})`,
+    // causing a ~10s freeze on profile partial updates.
+  }, [
+    isAuthenticated,
+    user?.bankWallet,
+    user?.stealfWallet,
+    session?.sessionToken,
+    queryClient,
+  ]);
 
   return null;
 }
