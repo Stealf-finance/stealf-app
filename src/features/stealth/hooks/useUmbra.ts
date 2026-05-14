@@ -20,6 +20,7 @@ import {
   ensureRegisteredFor,
 } from '@/src/features/stealth/lib/registration';
 import { clearBurntUtxos } from '@/src/features/stealth/lib/burntUtxos';
+import { clearClaimScanner } from '@/src/services/umbra/queries/claims';
 import { umbraClearSeed } from '@/src/services/umbra/seed';
 
 import { deposit } from '@/src/services/umbra/operations/deposit';
@@ -52,6 +53,7 @@ export function clearStealthState(): void {
   clearBankClient();
   clearRegistration();
   clearBurntUtxos();
+  clearClaimScanner();
 }
 
 export { umbraClearSeed };
