@@ -1,10 +1,11 @@
+import type { ImageSource } from 'expo-image';
 import { useEffect, useState } from 'react';
 
 export type SelectedAsset = {
   mint: string;
   symbol: string;
   decimals: number;
-  iconSource?: number;
+  iconSource?: ImageSource | number;
   iconUri?: string;
   balance: number;
   balanceUSD: number;

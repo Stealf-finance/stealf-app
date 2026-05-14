@@ -6,8 +6,8 @@ import {
 import type { Address } from '@solana/kit';
 import bs58 from 'bs58';
 import * as bip39 from 'bip39';
-import { hmac } from '@noble/hashes/hmac';
-import { sha512 } from '@noble/hashes/sha2';
+import { hmac } from '@noble/hashes/hmac.js';
+import { sha512 } from '@noble/hashes/sha2.js';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 
 const HARDENED_OFFSET = 0x80000000;
