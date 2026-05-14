@@ -3,7 +3,9 @@ import { BlurView } from 'expo-blur';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useQueryClient } from '@tanstack/react-query';
 import { InteractionManager, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AccountSetupCard } from '@/src/design-system/primitives/AccountSetupCard';
+import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { LoaderOverlay } from '@/src/design-system/primitives/LoaderOverlay';
 import { useToast } from '@/src/components/toast/ToastContext';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -29,6 +31,7 @@ type Props = {
  * operation in the app, so we register both in a single click.
  */
 export function StealthSetupOverlay({ onClose }: Props) {
+  const insets = useSafeAreaInsets();
   const { user, setUser } = useAuth();
   const stealfWallet = user?.stealfWallet ?? null;
   const bankWallet = user?.bankWallet ?? null;
@@ -208,6 +211,21 @@ export function StealthSetupOverlay({ onClose }: Props) {
           justifyContent: 'center',
         }}
       >
+        {/* Back button — lets the user exit the setup card back to the
+            stealth screen's public mode without registering. Hidden while
+            the heavy ZK registration is running so the user can't cancel
+            mid-proof. */}
+        {!registering ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: insets.top + 8,
+              left: 16,
+            }}
+          >
+            <BackBtn onPress={onClose} accessibilityLabel="Back to public" />
+          </View>
+        ) : null}
         <View style={{ width: '100%', maxWidth: 380 }}>
           <AccountSetupCard
             kind="stealth"
