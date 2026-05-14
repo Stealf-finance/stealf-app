@@ -13,6 +13,7 @@ import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
+import { RefreshBtn } from '@/src/design-system/primitives/RefreshBtn';
 import { Icons } from '@/src/design-system/icons';
 import { mono, sansation, serif } from '@/src/design-system/typography';
 import { Palette, txPalette } from '@/src/design-system/palettes';
@@ -46,7 +47,11 @@ export function ClaimsScreen() {
   // Force a fresh scan on screen mount — this screen owns the truth of
   // self-claimable UTXOs targeting bank. The bank tab's pending-pill
   // count reads the cached result.
-  const { data: pendingUtxos } = usePendingClaimsForCash({ fetch: true });
+  const {
+    data: pendingUtxos,
+    refetch,
+    isFetching,
+  } = usePendingClaimsForCash({ fetch: true });
 
   const items: Item[] = (pendingUtxos ?? []).map(utxoToItem);
   const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
@@ -151,7 +156,10 @@ export function ClaimsScreen() {
           paddingTop: 8,
           paddingBottom: 22,
           paddingHorizontal: 24,
+          flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
         }}
       >
         <Text
@@ -166,8 +174,9 @@ export function ClaimsScreen() {
             },
           ]}
         >
-          — {items.length} pending · to bank wallet —
+          {items.length} pending · to bank wallet
         </Text>
+        <RefreshBtn onPress={() => refetch()} spinning={isFetching} />
       </View>
 
       <ScrollView

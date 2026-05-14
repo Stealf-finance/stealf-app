@@ -219,6 +219,16 @@ export const Icons = {
   folder: make(
     <Path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />,
   ),
+  refresh: make(
+    <>
+      <Path d="M21 12a9 9 0 11-3.05-6.74M21 4v5h-5" />
+    </>,
+  ),
+  trash: make(
+    <>
+      <Path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6" />
+    </>,
+  ),
 } as const;
 
 export type IconName = keyof typeof Icons;
