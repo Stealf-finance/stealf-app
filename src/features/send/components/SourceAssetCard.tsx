@@ -4,14 +4,13 @@ import { Icons } from '@/src/design-system/icons';
 import {
   sansation,
   sansationLight,
-  serif,
 } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 
 export type InputMode = 'asset' | 'fiat';
 
 type Props = {
-  label: string;
+  label?: string;
   iconSource: ImageSource | number;
   tokenLabel: string;
   primaryAmount: string;
@@ -63,24 +62,26 @@ export function SourceAssetCard({
         }}
       >
         <View style={{ flex: 1 }}>
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 13,
-                color: T.inkFaint,
-                letterSpacing: 0.2,
-              },
-            ]}
-          >
-            {label}
-          </Text>
+          {label ? (
+            <Text
+              style={[
+                sansation,
+                {
+                  fontSize: 13,
+                  color: T.inkFaint,
+                  letterSpacing: 0.2,
+                },
+              ]}
+            >
+              {label}
+            </Text>
+          ) : null}
 
           <Text
             style={[
               sansationLight,
               {
-                marginTop: 12,
+                marginTop: label ? 12 : 0,
                 fontSize: amountFontSize,
                 lineHeight: amountFontSize,
                 letterSpacing: amountFontSize * -0.04,
@@ -103,11 +104,10 @@ export function SourceAssetCard({
           >
             <Text
               style={[
-                serif,
+                sansation,
                 {
-                  fontSize: 14,
-                  lineHeight: 22,
-                  fontStyle: 'italic',
+                  fontSize: 11,
+                  letterSpacing: 0.6,
                   color: T.inkFaint,
                   includeFontPadding: false,
                   textAlignVertical: 'center',

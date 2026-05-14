@@ -4,14 +4,10 @@ export type SelectedAsset = {
   mint: string;
   symbol: string;
   decimals: number;
-  /** Local bundle icon (require'd PNG) if available — wins over iconUri. */
   iconSource?: number;
-  /** Remote icon URL from on-chain metadata (Helius DAS). */
   iconUri?: string;
-  /** Public balance in token units (already humanized, not raw lamports). */
   balance: number;
   balanceUSD: number;
-  /** USD price per token unit. */
   price: number;
 };
 

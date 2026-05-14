@@ -18,7 +18,7 @@ import {
   type TurnkeyWalletAccount,
 } from './turnkeySigner';
 
-export const NETWORK = 'mainnet' as const;
+export const NETWORK = 'devnet' as const;
 export const RELAYER_API = 'https://relayer.api-devnet.umbraprivacy.com';
 export const INDEXER_API = 'https://utxo-indexer.api-devnet.umbraprivacy.com';
 
