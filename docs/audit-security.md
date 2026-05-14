@@ -31,7 +31,10 @@ privacy, or impersonation.
   `features/onboarding/lib/oidc.ts`.
 
 ### 1.2 SecureStore (`expo-secure-store`)
-- Stores: `stealfWallet` private key (ED25519 32-byte seed), `subOrgId`.
+- Stores: `stealfWallet` private key (ED25519 32-byte seed), recovery
+  mnemonic, session token, and the wallet address pair (bank + stealth).
+  `subOrgId` is **not** persisted in SecureStore — it lives in AuthContext
+  React state, sourced from the backend `userProfile` on hydration.
 - Backing: iOS Keychain (`kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly`
   for all keys, plus `requireAuthentication: true` on the high-sensitivity
   set), Android Keystore (encrypted at rest with hardware-backed key when
@@ -87,10 +90,11 @@ privacy, or impersonation.
   download `.zkey` only over HTTPS from trusted CDN.
 
 ### 1.7 Logout
-- Must clear: AuthContext state, SecureStore (`stealfWallet`,
-  `subOrgId`), walletKeyCache, React Query cache, socket connection,
-  Turnkey session, Sentry user scope, PostHog identification, Umbra
-  master seed.
+- Must clear: AuthContext state (incl. in-memory `subOrgId`), SecureStore
+  (`STEALF_PRIVATE_KEY`, `STEALF_MNEMONIC`, `STEALF_WALLET_ADDRESS`,
+  `USER_DATA`, `SESSION_TOKEN`), walletKeyCache, React Query cache, socket
+  connection, Turnkey session, Sentry user scope, PostHog identification,
+  Umbra master seed.
 - Surface: `useAuth().logout` (Slice 1). Test: relogin yields a clean
   state with no leftover query data.
 
@@ -101,7 +105,7 @@ privacy, or impersonation.
 | What                               | Storage                                  | TTL / Rotation               | Notes                                            |
 |------------------------------------|------------------------------------------|------------------------------|--------------------------------------------------|
 | `stealfWallet` private key (32B)   | SecureStore (Keychain / Keystore)        | Until logout / app uninstall | Single-device. No backup yet.                    |
-| `subOrgId`                         | SecureStore                              | Until logout                 | Cached for cold-start; authoritative = Turnkey.  |
+| `subOrgId`                         | AuthContext (React in-memory)            | Per session                  | Hydrated from backend `userProfile`. Not persisted client-side. |
 | Turnkey session token              | Turnkey SDK in-memory                    | Per Turnkey policy           | Refreshed by Turnkey lifecycle.                  |
 | API bearer (JWT)                   | Same as Turnkey session                  | Same                         | Re-signed when needed.                           |
 | OAuth identity (Google/Apple)      | Provider session at OS level             | Per provider policy          | Out of our control. Email-OTP path bypasses this.|

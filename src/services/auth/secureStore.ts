@@ -6,8 +6,6 @@ export const SECURE_STORE_KEYS = {
   STEALF_WALLET_ADDRESS: 'stealf_wallet_address',
   USER_DATA: 'user_data',
   SESSION_TOKEN: 'session_token',
-  SUB_ORG_ID: 'sub_org_id',
-  ONBOARDING_DRAFT: 'onboarding_draft',
 } as const;
 
 export type SecureStoreKey = typeof SECURE_STORE_KEYS[keyof typeof SECURE_STORE_KEYS];

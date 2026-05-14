@@ -8,6 +8,7 @@ vi.mock('../../env', () => ({
   getEnv: () => ({ EXPO_PUBLIC_SENTRY_DSN: undefined }),
 }));
 
+// eslint-disable-next-line import/first
 import { __TEST_ONLY__ } from '../sentry';
 
 const { scrubString, scrub } = __TEST_ONLY__;

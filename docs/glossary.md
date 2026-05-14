@@ -131,8 +131,10 @@ Email-OTP). This is the "public" wallet visible on-chain explorers.
 `expo-secure-store` (Keychain on iOS, Keystore on Android). Used for
 non-Turnkey signing paths (privacy ops, mempool obfuscation).
 
-**subOrgId** — Turnkey sub-organization identifier. Persisted client-side in
-SecureStore for cold-start hydration. Source of truth: Turnkey SDK.
+**subOrgId** — Turnkey sub-organization identifier. Sourced from the backend
+`userProfile` on session hydration and held in AuthContext React state for
+the lifetime of the session. **Not** persisted in SecureStore — earlier
+docs that claim otherwise are pre-refactor.
 
 **passkey** — Internal Turnkey credential, **not user-facing**. The UI auth
 surface is Google OAuth / Apple OAuth / Email-OTP. Earlier docs that frame

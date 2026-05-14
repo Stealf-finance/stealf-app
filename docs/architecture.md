@@ -108,7 +108,7 @@ PRs that bypass a layer (e.g., a screen calling `apiGet` directly).
 |--------------------------|-------------------------|-------------------------------------------------------------------|
 | `userId`, `email`, `bankWallet` | Turnkey SDK     | Owned by the auth provider. Never persisted manually.             |
 | `stealfWallet` (priv key)| `expo-secure-store`     | Local secret. Backed by Keychain.                                 |
-| `subOrgId`               | `expo-secure-store`     | Cached for cold-start hydration. Authoritative copy = Turnkey.    |
+| `subOrgId`               | Backend `userProfile`   | Hydrated into AuthContext (React state). Not persisted client-side. |
 | `username`, `points`, KYC| Backend → React Query   | App-domain fields. Never persisted manually.                      |
 | Balance, history, yield  | Backend → React Query   | Updated reactively via socket.                                    |
 | Shielded balance         | Computed client-side    | Decryption requires master seed (Keychain).                       |

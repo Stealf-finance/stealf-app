@@ -145,6 +145,7 @@ export function DataBootstrap() {
     // session token changes. Listing the whole `user` / `session` objects
     // tears down sockets + re-warms Umbra on every `setUser({...user,x:y})`,
     // causing a ~10s freeze on profile partial updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isAuthenticated,
     user?.bankWallet,
