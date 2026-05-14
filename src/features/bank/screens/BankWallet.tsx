@@ -1,8 +1,10 @@
+import { useCallback, useState } from 'react';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQueryClient } from '@tanstack/react-query';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
 import { SquareActionTile } from '@/src/design-system/primitives/SquareActionTile';
 import { TxRow } from '@/src/design-system/primitives/TxRow';
@@ -19,6 +21,8 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { getGreeting } from '@/src/lib/greeting';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
+import { balanceQueries } from '@/src/features/bank/api/balance';
+import { historyQueries } from '@/src/features/bank/api/history';
 import type { Transaction } from '@/src/features/bank/types';
 
 const S = txPalette('silver');
@@ -63,6 +67,26 @@ export function BankWallet() {
   const { hidden: balanceHidden, toggle: toggleBalanceHidden } =
     useBalanceVisibility();
 
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    const addr = user?.bankWallet;
+    if (!addr) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: balanceQueries.byAddress(addr),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: historyQueries.byAddress(addr),
+        }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient, user?.bankWallet]);
+
   return (
     <View style={{ flex: 1 }}>
       {/* Greeting row */}
@@ -91,6 +115,15 @@ export function BankWallet() {
           paddingBottom: insets.bottom + 100,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#ffffff"
+            colors={['#0a0a0a']}
+            progressBackgroundColor="#f5f5f7"
+          />
+        }
       >
         {/* Kicker + eye toggle. Mirrors the StealthHub header so the
             two tabs feel like the same wallet shell. */}

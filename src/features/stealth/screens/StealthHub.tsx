@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Dimensions,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -42,6 +43,7 @@ import {
   usePrivacyMode,
 } from '@/src/features/stealth/PrivacyModeContext';
 import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
+import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 import { useFeatureFlag } from '@/src/services/observability/featureFlags';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
@@ -130,6 +132,32 @@ export function StealthHub() {
 
   useHistory(stealfWallet);
   const { data: encrypted } = useEncryptedBalances();
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    if (!stealfWallet) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: balanceQueries.byAddress(stealfWallet),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: historyQueries.byAddress(stealfWallet),
+        }),
+        // Prefix invalidation — encrypted-balances key includes the mint
+        // list, so we strip it to catch every cached variant.
+        queryClient.invalidateQueries({
+          queryKey: ['stealth', 'encrypted-balances', stealfWallet],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: claimScanQueries.byStealfWallet(stealfWallet),
+        }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient, stealfWallet]);
 
   const publicUSD = balanceData?.totalUSD ?? 0;
   const privateUSD = encrypted?.totalUSD ?? 0;
@@ -480,6 +508,15 @@ export function StealthHub() {
           paddingBottom: insets.bottom + 100,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#ffffff"
+            colors={['#0a0a0a']}
+            progressBackgroundColor="#f5f5f7"
+          />
+        }
       >
         {/* Swipe-toggle zone: kicker + balance + dots + gauge + tiles all
             share one Pan gesture so a drag anywhere in the active area
