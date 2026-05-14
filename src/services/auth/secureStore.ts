@@ -13,11 +13,14 @@ export const SECURE_STORE_KEYS = {
 export type SecureStoreKey = typeof SECURE_STORE_KEYS[keyof typeof SECURE_STORE_KEYS];
 
 // Keys whose loss is irreversible (can't re-issue from the server). Biometric-gated.
-// TEMPORARILY EMPTIED while we untangle parallel Face ID prompts during boot.
-// Items written before this change keep their original ACL on disk — the
-// biometric prompt only goes away after the next write per key (or app
-// reinstall / sign-out + sign-in).
-export const HIGH_SENSITIVITY_KEYS: readonly SecureStoreKey[] = [];
+// Cold-start dual-prompt resolved by removing the eager `walletKeyCache.warmup()`
+// in DataBootstrap (matches audit-security §1.3 — warmup runs only after explicit
+// sign-in / sign-up; signing flows read lazily and prompt at action time).
+export const HIGH_SENSITIVITY_KEYS: readonly SecureStoreKey[] = [
+  SECURE_STORE_KEYS.STEALF_PRIVATE_KEY,
+  SECURE_STORE_KEYS.STEALF_MNEMONIC,
+  SECURE_STORE_KEYS.SESSION_TOKEN,
+];
 
 const BASE_OPTIONS: SecureStore.SecureStoreOptions = {
   keychainService: 'com.stealf.wallet',

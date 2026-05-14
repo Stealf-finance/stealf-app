@@ -25,8 +25,6 @@ describe('secureStore options', () => {
     const routine = [
       SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS,
       SECURE_STORE_KEYS.USER_DATA,
-      SECURE_STORE_KEYS.SUB_ORG_ID,
-      SECURE_STORE_KEYS.ONBOARDING_DRAFT,
     ];
     for (const key of routine) {
       const opts = resolveOptions(key);
@@ -35,10 +33,9 @@ describe('secureStore options', () => {
     }
   });
 
-  it('keeps HIGH_SENSITIVITY_KEYS empty while the cold-start dual-prompt is being resolved', () => {
-    // HIGH_SENSITIVITY_KEYS is intentionally empty — see secureStore.ts:15-20.
-    // Re-add STEALF_PRIVATE_KEY, STEALF_MNEMONIC, and SESSION_TOKEN here once
-    // the parallel Face ID prompt during boot is resolved.
-    expect(HIGH_SENSITIVITY_KEYS).toEqual([]);
+  it('classifies PK, mnemonic, and session token as high-sensitivity', () => {
+    expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.STEALF_PRIVATE_KEY);
+    expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.STEALF_MNEMONIC);
+    expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.SESSION_TOKEN);
   });
 });

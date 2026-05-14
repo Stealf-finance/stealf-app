@@ -69,7 +69,10 @@ export function DataBootstrap() {
     if (stealfWallet) {
       void (async () => {
         try {
-          await walletKeyCache.warmup();
+          // No eager walletKeyCache.warmup() at bootstrap — it would prompt
+          // Face ID on every cold start (STEALF_PRIVATE_KEY is biometric-gated).
+          // Warmup runs after explicit sign-in in useAuthFlow; signing flows
+          // read lazily through the cache and prompt at action time.
           if (!walletKeyCache.hasKeys()) return;
 
           const [publicBalance] = await Promise.all([
