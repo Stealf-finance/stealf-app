@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { RefreshBtn } from '@/src/design-system/primitives/RefreshBtn';
 import { Icons } from '@/src/design-system/icons';
 import { mono, sansation, serif } from '@/src/design-system/typography';
 import { Palette, txPalette } from '@/src/design-system/palettes';
@@ -43,7 +44,11 @@ export function ClaimPendingScreen() {
   // Force a fresh scan on screen mount — this is the user-facing source
   // of truth for pending claims. The badge on the stealth tab reads the
   // cached result instead of triggering its own scan.
-  const { data: incomingUtxos } = usePendingClaims({ fetch: true });
+  const {
+    data: incomingUtxos,
+    refetch,
+    isFetching,
+  } = usePendingClaims({ fetch: true });
   const { claimReceived } = useUmbra();
 
   const items: Item[] = (incomingUtxos ?? []).map(utxoToItem);
@@ -141,7 +146,10 @@ export function ClaimPendingScreen() {
           paddingTop: 8,
           paddingBottom: 22,
           paddingHorizontal: 24,
+          flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
         }}
       >
         <Text
@@ -158,6 +166,7 @@ export function ClaimPendingScreen() {
         >
           {items.length} pending · into shielded pool
         </Text>
+        <RefreshBtn onPress={() => refetch()} spinning={isFetching} />
       </View>
 
       <ScrollView

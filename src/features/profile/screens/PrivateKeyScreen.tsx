@@ -17,6 +17,8 @@ import {
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useDeleteStealthWallet } from '@/src/features/stealth/hooks/useDeleteStealthWallet';
+import { useToast } from '@/src/components/toast/ToastContext';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 
 const CLIPBOARD_CLEAR_DELAY_MS = 30_000;
@@ -45,6 +47,32 @@ export function PrivateKeyScreen() {
   const [bank, setBank] = useState<RevealState>({ phase: 'idle' });
   const [stealth, setStealth] = useState<RevealState>({ phase: 'idle' });
   const [confirmingFor, setConfirmingFor] = useState<WalletKind | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const deleteStealthWallet = useDeleteStealthWallet();
+  const { show: showToast } = useToast();
+
+  const askDeleteStealth = () => setConfirmingDelete(true);
+  const cancelDelete = () => setConfirmingDelete(false);
+  const onConfirmDelete = async () => {
+    setConfirmingDelete(false);
+    try {
+      await deleteStealthWallet.mutateAsync();
+      setStealth({ phase: 'idle' });
+      showToast({
+        kind: 'success',
+        title: 'Stealth wallet deleted',
+        message: 'Re-create or import one from the Stealth tab.',
+      });
+      router.back();
+    } catch (err: any) {
+      showToast({
+        kind: 'error',
+        title: "Couldn't delete",
+        message: err?.message || 'Try again in a moment.',
+      });
+    }
+  };
 
   const askBank = () => setConfirmingFor('bank');
   const askStealth = () => setConfirmingFor('stealth');
@@ -159,6 +187,7 @@ export function PrivateKeyScreen() {
           state={stealth}
           onAsk={askStealth}
           onRetry={revealStealth}
+          onDelete={stealthAddress ? askDeleteStealth : undefined}
         />
       </ScrollView>
 
@@ -166,6 +195,13 @@ export function PrivateKeyScreen() {
         visible={confirmingFor !== null}
         onConfirm={onConfirmExport}
         onCancel={cancelConfirm}
+      />
+
+      <ConfirmDeleteStealthSheet
+        visible={confirmingDelete}
+        deleting={deleteStealthWallet.isPending}
+        onConfirm={onConfirmDelete}
+        onCancel={cancelDelete}
       />
     </CenterGlow>
   );
@@ -214,6 +250,7 @@ function KeyCard({
   state,
   onAsk,
   onRetry,
+  onDelete,
 }: {
   title: string;
   accent: string;
@@ -221,6 +258,7 @@ function KeyCard({
   state: RevealState;
   onAsk: () => void;
   onRetry: () => void;
+  onDelete?: () => void;
 }) {
   const truncatedAddress =
     address && address.length > 16
@@ -274,21 +312,50 @@ function KeyCard({
           />
         </View>
 
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2.52,
-              textTransform: 'uppercase',
-              color: accent,
-              fontWeight: '700',
-              marginBottom: 4,
-            },
-          ]}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 4,
+          }}
         >
-          {title}
-        </Text>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 9,
+                letterSpacing: 2.52,
+                textTransform: 'uppercase',
+                color: accent,
+                fontWeight: '700',
+              },
+            ]}
+          >
+            {title}
+          </Text>
+          {onDelete ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Delete stealth wallet"
+              onPress={onDelete}
+              hitSlop={10}
+              style={({ pressed }) => ({
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(229,72,77,0.10)',
+                borderWidth: 1,
+                borderColor: 'rgba(229,72,77,0.28)',
+                opacity: pressed ? 0.6 : 1,
+              })}
+            >
+              <Icons.trash size={14} color={T.error} strokeWidth={1.8} />
+            </Pressable>
+          ) : null}
+        </View>
 
         <View
           style={{
@@ -839,6 +906,247 @@ function ConfirmExportSheet({
                 ]}
               >
                 Continue
+              </Text>
+            </Pressable>
+          </LinearGradient>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function ConfirmDeleteStealthSheet({
+  visible,
+  deleting,
+  onConfirm,
+  onCancel,
+}: {
+  visible: boolean;
+  deleting: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [acknowledged, setAcknowledged] = useState(false);
+
+  const handleClose = () => {
+    if (deleting) return;
+    setAcknowledged(false);
+    onCancel();
+  };
+
+  const handleConfirm = () => {
+    if (!acknowledged || deleting) return;
+    onConfirm();
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent
+      statusBarTranslucent
+      onRequestClose={handleClose}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.65)',
+          justifyContent: 'center',
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 24,
+          paddingBottom: insets.bottom + 24,
+        }}
+      >
+        <Pressable
+          onPress={handleClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+        />
+
+        <View
+          style={{
+            borderRadius: 24,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.10)',
+            overflow: 'hidden',
+            shadowColor: '#000',
+            shadowOpacity: 0.7,
+            shadowRadius: 30,
+            shadowOffset: { width: 0, height: 14 },
+          }}
+        >
+          <LinearGradient
+            colors={['rgba(22,22,24,0.98)', 'rgba(8,8,10,0.99)']}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 0.8, y: 1 }}
+            style={{
+              paddingTop: 32,
+              paddingHorizontal: 24,
+              paddingBottom: 24,
+              gap: 20,
+            }}
+          >
+            <Pressable
+              onPress={handleClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              hitSlop={12}
+              disabled={deleting}
+              style={{
+                position: 'absolute',
+                top: 14,
+                right: 14,
+                width: 36,
+                height: 36,
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2,
+              }}
+            >
+              <Icons.close size={22} color={T.ink} strokeWidth={1.6} />
+            </Pressable>
+
+            <View style={{ alignItems: 'center' }}>
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  backgroundColor: 'rgba(229,72,77,0.92)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: 'rgba(229,72,77,0.6)',
+                  shadowOpacity: 1,
+                  shadowRadius: 18,
+                  shadowOffset: { width: 0, height: 0 },
+                }}
+              >
+                <Icons.trash size={28} color="#fff" strokeWidth={1.8} />
+              </View>
+            </View>
+
+            <Text
+              style={[
+                serif,
+                {
+                  fontSize: 24,
+                  lineHeight: 30,
+                  color: T.ink,
+                  textAlign: 'center',
+                  fontStyle: 'italic',
+                  paddingHorizontal: 8,
+                },
+              ]}
+            >
+              Delete stealth wallet?
+            </Text>
+
+            <View style={{ gap: 14 }}>
+              <Bullet
+                iconKey="shieldOff"
+                text="This wipes the local key and recovery phrase from this device."
+              />
+              <Bullet
+                iconKey="hideEye"
+                text="Your encrypted balance stays on-chain but becomes unreachable without your recovery phrase."
+              />
+              <Bullet
+                iconKey="info"
+                text="Your bank wallet and account stay untouched."
+              />
+            </View>
+
+            <View
+              style={{
+                height: 1,
+                backgroundColor: 'rgba(255,255,255,0.06)',
+              }}
+            />
+
+            <Pressable
+              onPress={() => setAcknowledged((v) => !v)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: acknowledged }}
+              accessibilityLabel="I have saved my recovery phrase"
+              disabled={deleting}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                gap: 12,
+              }}
+            >
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  borderWidth: 1.5,
+                  borderColor: acknowledged ? T.ink : 'rgba(255,255,255,0.20)',
+                  backgroundColor: acknowledged ? T.ink : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: 1,
+                }}
+              >
+                {acknowledged ? (
+                  <Icons.check size={14} color="#0a0a0a" strokeWidth={2.6} />
+                ) : null}
+              </View>
+              <Text
+                style={[
+                  sansation,
+                  {
+                    flex: 1,
+                    fontSize: 13,
+                    lineHeight: 18,
+                    color: T.ink,
+                  },
+                ]}
+              >
+                I have saved my recovery phrase and understand my encrypted
+                balance will be unreachable without it.
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleConfirm}
+              disabled={!acknowledged || deleting}
+              accessibilityRole="button"
+              accessibilityLabel="Delete stealth wallet"
+              style={({ pressed }) => ({
+                width: '100%',
+                paddingVertical: 12,
+                borderRadius: 100,
+                backgroundColor: acknowledged
+                  ? 'rgba(229,72,77,0.92)'
+                  : 'rgba(229,72,77,0.30)',
+                borderWidth: 1,
+                borderColor: 'rgba(229,72,77,0.60)',
+                opacity: pressed ? 0.85 : 1,
+              })}
+            >
+              <Text
+                style={[
+                  sansation,
+                  {
+                    textAlign: 'center',
+                    fontSize: 11,
+                    letterSpacing: 2.4,
+                    textTransform: 'uppercase',
+                    color: '#fff',
+                    fontWeight: '700',
+                  },
+                ]}
+              >
+                {deleting ? 'Deleting…' : 'Delete stealth wallet'}
               </Text>
             </Pressable>
           </LinearGradient>
