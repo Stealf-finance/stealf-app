@@ -227,10 +227,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       ? amountNum + NETWORK_FEE_SOL > balanceNum
       : amountNum > balanceNum;
   const amountValid = amountNum > 0 && !exceedsBalance;
-  const amountError =
-    amountNum > 0 && exceedsBalance
-      ? `Insufficient balance · max ${asset?.balance ?? 0} ${asset?.symbol ?? ''}`
-      : null;
   const tokenAmountLabel =
     amountNum === 0 ? '0' : amountNum.toFixed(6).replace(/\.?0+$/, '');
   const maxBalanceLabel =
@@ -604,7 +600,11 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
               <PillBtn
                 variant="primary"
                 tone={tone}
-                label="Continue"
+                label={
+                  fromAddress && recipientQuery.trim() === fromAddress
+                    ? "Can't send to yourself"
+                    : 'Continue'
+                }
                 disabled={!isValidRecipient(recipientQuery, fromAddress)}
                 onPress={submitRecipient}
               />
@@ -661,32 +661,10 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                 paddingBottom: insets.bottom + 24,
               }}
             >
-              <View
-                style={{
-                  height: 22,
-                  marginBottom: 4,
-                  justifyContent: 'center',
-                }}
-              >
-                {amountError ? (
-                  <Text
-                    style={[
-                      sansation,
-                      {
-                        fontSize: 12,
-                        color: '#E5484D',
-                        textAlign: 'center',
-                      },
-                    ]}
-                  >
-                    {amountError}
-                  </Text>
-                ) : null}
-              </View>
               <PillBtn
                 variant="primary"
                 tone={tone}
-                label="Continue"
+                label={exceedsBalance && amountNum > 0 ? 'Insufficient balance' : 'Continue'}
                 disabled={!amountValid}
                 onPress={() => transitionTo(3, 'forward')}
               />
