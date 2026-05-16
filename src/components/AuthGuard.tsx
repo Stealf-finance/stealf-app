@@ -10,7 +10,9 @@ export function AuthGuard() {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-  const bypass = getEnv().EXPO_PUBLIC_DEV_BYPASS_AUTH;
+  // Defense-in-depth: even if EXPO_PUBLIC_DEV_BYPASS_AUTH leaks into a
+  // release build, the bypass is inert outside __DEV__.
+  const bypass = __DEV__ && getEnv().EXPO_PUBLIC_DEV_BYPASS_AUTH;
 
   useEffect(() => {
     if (bypass) return;

@@ -18,18 +18,30 @@ import {
 } from '@/src/services/solana/transactionsGuard';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
-import { buildSolTransferMessage } from '../lib/buildTransfer';
+import {
+  buildSolTransferMessage,
+  buildSplTransferMessage,
+  isNativeSolMint,
+} from '../lib/buildTransfer';
+import { toRawAmount } from '../lib/amount';
 
 export type WalletSource = 'bank' | 'stealth';
 
 export interface SendSimpleParams {
   fromAddress: string;
   toAddress: string;
-  amountSol: number;
+  /** Humanised amount typed by the user (e.g. 1.5 for 1.5 USDC). */
+  amount: number;
+  /** SPL mint, or null / SOL_MINT for native SOL. */
+  mint: string | null;
+  /** Token decimals (SOL=9, USDC=6, etc). */
+  decimals: number;
   /** Selects the signer: Turnkey for bank, local ED25519 for stealth. */
   walletSource: WalletSource;
-  /** Optional balance for pre-flight `guardTransaction` (recommended). */
-  balanceSol?: number;
+  /** Optional source-token balance (humanised) for pre-flight guard.
+   *  For SOL this gates the SOL-fee-aware guard; for SPL it short-circuits
+   *  obvious underflows but the on-chain check is the source of truth. */
+  balance?: number;
 }
 
 export class GuardError extends Error {
@@ -41,8 +53,15 @@ export class GuardError extends Error {
 }
 
 /**
- * Sends a SOL transfer signed by the Turnkey-managed bank wallet.
- * Returns the transaction signature on confirmation.
+ * Sends a transfer signed by the active source wallet. Branches on `mint`:
+ *   - native SOL → System program transfer (lamports)
+ *   - SPL token  → TransferChecked + auto-create destination ATA if missing
+ *
+ * Pre-refactor, this hook always built a System transfer regardless of `mint`,
+ * so picking USDC and typing "5" broadcast a 5 SOL transfer. Funds drain.
+ *
+ * Returns the transaction signature on broadcast acceptance (bank) or after
+ * status confirmation (stealth).
  */
 export function useSendSimple() {
   const { signAndSendTransaction, wallets } = useTurnkey();
@@ -53,24 +72,47 @@ export function useSendSimple() {
     mutationFn: async ({
       fromAddress,
       toAddress,
-      amountSol,
+      amount,
+      mint,
+      decimals,
       walletSource,
-      balanceSol,
+      balance,
     }: SendSimpleParams): Promise<string> => {
-      const guard: GuardResult = guardTransaction({
-        fromAddress,
-        toAddress,
-        amount: amountSol.toString(),
-        amountSOL: amountSol,
-        balanceSOL: balanceSol,
-      });
-      if (!guard.valid) throw new GuardError(guard.error ?? 'Invalid transaction');
+      const native = isNativeSolMint(mint);
 
-      const { message } = await buildSolTransferMessage({
-        fromAddress,
-        toAddress,
-        amountSol,
-      });
+      if (native) {
+        const guard: GuardResult = guardTransaction({
+          fromAddress,
+          toAddress,
+          amount: amount.toString(),
+          amountSOL: amount,
+          balanceSOL: balance,
+        });
+        if (!guard.valid) throw new GuardError(guard.error ?? 'Invalid transaction');
+      } else {
+        if (!Number.isFinite(amount) || amount <= 0) {
+          throw new GuardError('Amount must be greater than 0');
+        }
+        if (balance != null && amount > balance) {
+          throw new GuardError(
+            `Insufficient balance. Max sendable: ${balance.toFixed(Math.min(decimals, 6))}`,
+          );
+        }
+      }
+
+      const { message } = native
+        ? await buildSolTransferMessage({
+            fromAddress,
+            toAddress,
+            amountSol: amount,
+          })
+        : await buildSplTransferMessage({
+            fromAddress,
+            toAddress,
+            mint: mint as string,
+            rawAmount: toRawAmount(amount, decimals),
+            decimals,
+          });
       const compiled = compileTransaction(message);
 
       if (walletSource === 'bank') {

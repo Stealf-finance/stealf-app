@@ -54,6 +54,7 @@ import {
   PROTOCOL_FEE_RATE,
   protocolFeeSol,
   SOL_DECIMALS,
+  toRawAmount,
 } from '@/src/features/send/lib/amount';
 import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 
@@ -272,9 +273,9 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       if (isPrivate) {
         setPrivateSending(true);
         const txDecimals = asset.decimals ?? SOL_DECIMALS;
-        const amountRaw = BigInt(
-          Math.floor(typedAssetAmount * 10 ** txDecimals),
-        );
+        // Precision-safe — `Math.floor(human * 10**9)` overflows
+        // Number.MAX_SAFE_INTEGER once balances clear ~9.007 tokens.
+        const amountRaw = toRawAmount(typedAssetAmount, txDecimals);
         const destination = toAddress(recipient.name.trim());
         const mintAddr = asset.mint ?? SOL_MINT;
         const mint = toAddress(mintAddr);
@@ -298,9 +299,11 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       const sig = await sendMutation.mutateAsync({
         fromAddress,
         toAddress: recipient.name.trim(),
-        amountSol: typedAssetAmount,
+        amount: typedAssetAmount,
+        mint: asset.mint,
+        decimals: asset.decimals ?? SOL_DECIMALS,
         walletSource,
-        balanceSol: balanceNum,
+        balance: balanceNum,
       });
       if (__DEV__) console.log('[SendFlow] success, sig=', sig);
       setTxSig(sig);

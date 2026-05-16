@@ -1,5 +1,5 @@
-import { ImageSourcePropType, Pressable, Text, View } from 'react-native';
-import { Image } from 'expo-image';
+import { Pressable, Text, View } from 'react-native';
+import { Image, type ImageSource } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -13,8 +13,10 @@ export type Asset = {
   balance: string;
   fiat?: string;
   gradient: [string, string];
-  /** When set, rendered inside the 44px disc instead of the gradient. */
-  iconSource?: ImageSourcePropType;
+  /** When set, rendered inside the 44px disc instead of the gradient. Narrowed
+   * to expo-image's source shape since every producer ships a single
+   * `{ uri }` / bundled-number, never the RN array form. */
+  iconSource?: ImageSource | number;
   /** Per-unit USD price, used to convert the typed amount to fiat in real time. */
   priceUSD?: number;
   /** On-chain token decimals (SOL=9, USDC=6, BONK=5…). Required to convert

@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
 import { Tone } from '@/src/design-system/palettes';
 
 export type PrivacyMode = 'public' | 'private';
@@ -20,8 +20,9 @@ export function PrivacyModeProvider({
 }) {
   const [mode, setMode] = useState<PrivacyMode>(initial);
   const tone: Tone = mode === 'private' ? 'gold' : 'silver';
+  const value = useMemo(() => ({ mode, setMode, tone }), [mode, tone]);
   return (
-    <PrivacyModeCtx.Provider value={{ mode, setMode, tone }}>
+    <PrivacyModeCtx.Provider value={value}>
       {children}
     </PrivacyModeCtx.Provider>
   );

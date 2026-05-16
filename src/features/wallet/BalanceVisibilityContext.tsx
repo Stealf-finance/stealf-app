@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -57,8 +58,13 @@ export function BalanceVisibilityProvider({ children }: { children: ReactNode })
     });
   }, []);
 
+  const value = useMemo(
+    () => ({ hidden, setHidden, toggle }),
+    [hidden, setHidden, toggle],
+  );
+
   return (
-    <BalanceVisibilityCtx.Provider value={{ hidden, setHidden, toggle }}>
+    <BalanceVisibilityCtx.Provider value={value}>
       {children}
     </BalanceVisibilityCtx.Provider>
   );

@@ -1,4 +1,4 @@
-import type { ImageSourcePropType } from 'react-native';
+import type { ImageSource } from 'expo-image';
 import type { Asset } from '@/src/features/send/components/AssetPill';
 import type { TokenBalance } from '@/src/features/bank/types';
 import { SOL_ICON_URI } from '@/src/constants/solana';
@@ -12,7 +12,7 @@ const GRADIENTS: Record<string, [string, string]> = {
   EURC: ['#1a2c6b', '#0a1840'],
 };
 
-const ICONS: Record<string, ImageSourcePropType> = {
+const ICONS: Record<string, ImageSource | number> = {
   SOL: { uri: SOL_ICON_URI },
 };
 

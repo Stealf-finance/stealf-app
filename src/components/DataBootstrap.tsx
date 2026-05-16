@@ -69,7 +69,10 @@ export function DataBootstrap() {
     if (stealfWallet) {
       void (async () => {
         try {
-          await walletKeyCache.warmup();
+          // No eager walletKeyCache.warmup() at bootstrap — it would prompt
+          // Face ID on every cold start (STEALF_PRIVATE_KEY is biometric-gated).
+          // Warmup runs after explicit sign-in in useAuthFlow; signing flows
+          // read lazily through the cache and prompt at action time.
           if (!walletKeyCache.hasKeys()) return;
 
           const [publicBalance] = await Promise.all([
@@ -138,7 +141,18 @@ export function DataBootstrap() {
       if (__DEV__) console.log('[DataBootstrap] cleanup');
       cleanups.forEach((fn) => fn());
     };
-  }, [isAuthenticated, user, session, queryClient]);
+    // Narrow deps: the bootstrap only needs to re-run when identity or
+    // session token changes. Listing the whole `user` / `session` objects
+    // tears down sockets + re-warms Umbra on every `setUser({...user,x:y})`,
+    // causing a ~10s freeze on profile partial updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isAuthenticated,
+    user?.bankWallet,
+    user?.stealfWallet,
+    session?.sessionToken,
+    queryClient,
+  ]);
 
   return null;
 }
