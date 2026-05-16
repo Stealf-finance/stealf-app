@@ -36,6 +36,10 @@ const moduleOverrides = {
     __dirname,
     'node_modules/@posthog/core/dist/surveys/index.js',
   ),
+  '@solana/kit/program-client-core': path.resolve(
+    __dirname,
+    'node_modules/@solana/kit/dist/program-client-core.native.mjs',
+  ),
   '@peculiar/utils/bytes': path.resolve(
     __dirname,
     'node_modules/@peculiar/utils/build/cjs/bytes/index.js',

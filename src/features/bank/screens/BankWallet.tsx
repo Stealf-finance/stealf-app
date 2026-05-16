@@ -388,7 +388,7 @@ function CardPromo() {
           }}
         >
           <Image
-            source={require('@/assets/images/card-stealf.png')}
+            source={require('@/assets/images/bank-icon.png')}
             contentFit="contain"
             cachePolicy="memory-disk"
             style={{
@@ -410,7 +410,7 @@ function CardPromo() {
                 },
               ]}
             >
-              Get your card
+              Get your virtual bank account
             </Text>
             <Text
               style={[

@@ -39,7 +39,11 @@ export function SourceAssetCard({
 }: Props) {
   const digitCount = primaryAmount.replace('.', '').length;
   const amountFontSize =
-    digitCount >= 12 ? 32 : digitCount >= 10 ? 40 : digitCount >= 8 ? 52 : 64;
+    digitCount >= 11 ? 32 : digitCount >= 9 ? 40 : digitCount >= 7 ? 52 : 64;
+  // Pin line-height to the largest font size so the amount slot keeps a
+  // constant vertical footprint as digits shrink the glyph — otherwise the
+  // whole card jumps as the user types.
+  const AMOUNT_LINE_HEIGHT = 64;
 
   return (
     <View
@@ -83,7 +87,7 @@ export function SourceAssetCard({
               {
                 marginTop: label ? 12 : 0,
                 fontSize: amountFontSize,
-                lineHeight: amountFontSize,
+                lineHeight: AMOUNT_LINE_HEIGHT,
                 letterSpacing: amountFontSize * -0.04,
                 color: T.ink,
                 includeFontPadding: false,
