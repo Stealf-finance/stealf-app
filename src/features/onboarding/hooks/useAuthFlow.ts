@@ -59,10 +59,21 @@ export function useAuthFlow() {
         throw new Error('Bank wallet not provisioned');
       }
 
+      const resolvedEmail = email ?? tk.user?.userEmail ?? undefined;
+      Sentry.addBreadcrumb({
+        category: 'auth.oauth',
+        level: resolvedEmail ? 'info' : 'warning',
+        message: 'finalizePostAuth resolved email (with Turnkey fallback)',
+        data: {
+          fromOidc: !!email,
+          fromTurnkeyUser: !email && !!tk.user?.userEmail,
+          hasResolvedEmail: !!resolvedEmail,
+        },
+      });
       const profile = await finalizeOAuthAuth({
         sessionToken,
-        email,
-        pseudo: email ? pseudoFromEmail(email) : undefined,
+        email: resolvedEmail,
+        pseudo: resolvedEmail ? pseudoFromEmail(resolvedEmail) : undefined,
         cashWallet,
         authMethod,
       });
