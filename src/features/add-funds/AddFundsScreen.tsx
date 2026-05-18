@@ -27,16 +27,10 @@ import {
 import { T } from '@/src/design-system/tokens';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
-import { useToast } from '@/src/components/toast/ToastContext';
-import {
-  airdropFactory,
-  getRpc,
-  getRpcSubscriptions,
-  lamports,
-  toAddress,
-} from '@/src/services/solana/kit';
 import { getEnv } from '@/src/services/env';
 import { balanceQueries } from '@/src/features/bank/api/balance';
+import { claimFaucet } from '@/src/features/add-funds/api/faucet';
+import { ApiError } from '@/src/services/api/errors';
 
 type WalletSource = 'bank' | 'stealth';
 
@@ -60,7 +54,7 @@ const ACCENT_DIM: Record<Tone, string> = {
 export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const palette = txPalette(tone);
   const isGold = tone === 'gold';
   const accent = palette.accent;
@@ -126,48 +120,68 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   };
 
   const queryClient = useQueryClient();
-  const toast = useToast();
-  // Show the devnet airdrop button only when the RPC actually points at
-  // devnet — never in mainnet builds.
+  // Inline status pinned to the faucet button itself. Auto-clears after a
+  // few seconds. We don't rely on the global toast for this flow because the
+  // AddFunds screen is presented as an iOS modal (`presentation: 'modal'`),
+  // and the `ToastHost` mounted in `_layout.tsx` sits below that UIKit
+  // modal layer — toasts would render hidden behind the screen.
+  const [claimResult, setClaimResult] = useState<
+    { kind: 'success' | 'error'; label: string } | null
+  >(null);
+  useEffect(() => {
+    if (!claimResult) return;
+    const ms = claimResult.kind === 'success' ? 3000 : 4500;
+    const t = setTimeout(() => setClaimResult(null), ms);
+    return () => clearTimeout(t);
+  }, [claimResult]);
+  // Show the faucet button only on devnet builds. The backend faucet
+  // route exists only on dev/staging, so this also avoids 404s in prod.
   const isDevnet = useMemo(() => {
     const url = getEnv().EXPO_PUBLIC_SOLANA_RPC_URL ?? '';
     return /devnet/i.test(url);
   }, []);
 
   const airdrop = useMutation({
-    mutationFn: async (recipient: string) => {
-      const fn = airdropFactory({
-        rpc: getRpc(),
-        rpcSubscriptions: getRpcSubscriptions(),
-      });
-      return fn({
-        recipientAddress: toAddress(recipient),
-        lamports: lamports(2_000_000_000n),
-        commitment: 'confirmed',
-      });
+    mutationFn: async () => {
+      const token = session?.sessionToken;
+      if (!token) throw new Error('Not authenticated');
+      if (!fullAddress) throw new Error('Wallet unavailable');
+      return claimFaucet(token, fullAddress, isStealth ? 'stealf' : 'cash');
     },
-    onSuccess: () => {
-      toast.show({
-        kind: 'success',
-        title: 'Devnet airdrop received',
-        message: '+2 SOL credited to your wallet.',
-      });
+    onSuccess: (data) => {
+      const sol = (data.amountLamports / 1_000_000_000).toFixed(2);
+      setClaimResult({ kind: 'success', label: `Received +${sol} SOL` });
       queryClient.invalidateQueries({
         queryKey: balanceQueries.byAddress(fullAddress),
       });
     },
-    onError: (err: any) => {
-      // Devnet faucet enforces a rate-limit per IP & per recipient; surface
-      // the underlying message so the user knows whether to retry later.
-      const raw = err?.message || 'Airdrop failed';
-      const isRateLimited = /429|rate.?limit|airdrop.?limit/i.test(raw);
-      toast.show({
-        kind: 'error',
-        title: isRateLimited ? 'Faucet rate-limited' : 'Airdrop failed',
-        message: isRateLimited
-          ? 'Devnet faucet is throttled — wait a few minutes and try again.'
-          : raw,
-      });
+    onError: (err: unknown) => {
+      // Backend distinguishes cooldown (429) / out-of-funds (503) / chain
+      // failure (502) — render a tailored short label per case so the user
+      // knows whether to wait or whether something's broken.
+      if (err instanceof ApiError) {
+        if (err.status === 429) {
+          const nextAvailable =
+            (err.data as { nextAvailableAt?: string } | undefined)
+              ?.nextAvailableAt;
+          const when = nextAvailable
+            ? new Date(nextAvailable).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : null;
+          setClaimResult({
+            kind: 'error',
+            label: when ? `On cooldown · retry ${when}` : 'On cooldown',
+          });
+          return;
+        }
+        if (err.status === 503) {
+          setClaimResult({ kind: 'error', label: 'Faucet empty' });
+          return;
+        }
+      }
+      setClaimResult({ kind: 'error', label: 'Airdrop failed' });
     },
   });
 
@@ -405,7 +419,8 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
           <Pressable
             onPress={() => {
               if (airdrop.isPending) return;
-              airdrop.mutate(fullAddress);
+              setClaimResult(null);
+              airdrop.mutate();
             }}
             accessibilityRole="button"
             accessibilityLabel="Request a 2 SOL devnet airdrop"
@@ -413,9 +428,19 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             style={{
               paddingVertical: 14,
               borderRadius: 100,
-              backgroundColor: 'rgba(255,255,255,0.05)',
+              backgroundColor:
+                claimResult?.kind === 'success'
+                  ? 'rgba(58,170,90,0.12)'
+                  : claimResult?.kind === 'error'
+                    ? 'rgba(229,72,77,0.10)'
+                    : 'rgba(255,255,255,0.05)',
               borderWidth: 1,
-              borderColor: T.hairline,
+              borderColor:
+                claimResult?.kind === 'success'
+                  ? 'rgba(58,170,90,0.45)'
+                  : claimResult?.kind === 'error'
+                    ? 'rgba(229,72,77,0.45)'
+                    : T.hairline,
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
@@ -425,6 +450,10 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
           >
             {airdrop.isPending ? (
               <ActivityIndicator size="small" color={T.ink} />
+            ) : claimResult?.kind === 'success' ? (
+              <Icons.check size={14} color="#3AAA5A" strokeWidth={2.4} />
+            ) : claimResult?.kind === 'error' ? (
+              <Icons.info size={14} color="#E5484D" />
             ) : (
               <Icons.plus size={14} color={T.ink} />
             )}
@@ -436,11 +465,20 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
                   letterSpacing: 2.42,
                   textTransform: 'uppercase',
                   fontWeight: '700',
-                  color: T.ink,
+                  color:
+                    claimResult?.kind === 'success'
+                      ? '#3AAA5A'
+                      : claimResult?.kind === 'error'
+                        ? '#E5484D'
+                        : T.ink,
                 },
               ]}
             >
-              {airdrop.isPending ? 'Requesting…' : 'Get 2 SOL (devnet)'}
+              {airdrop.isPending
+                ? 'Requesting…'
+                : claimResult
+                  ? claimResult.label
+                  : 'Get 2 SOL (devnet)'}
             </Text>
           </Pressable>
         </View>
