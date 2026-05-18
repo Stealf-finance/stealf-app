@@ -10,13 +10,13 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { TurnkeyProvider } from '@turnkey/react-native-wallet-kit';
 import { PostHogProvider } from 'posthog-react-native';
 
 import { validateEnv, getEnv } from '@/src/services/env';
 import { initSentry, Sentry } from '@/src/services/observability/sentry';
-import { queryClient } from '@/src/services/queryClient';
+import { queryClient, PERSIST_OPTIONS } from '@/src/services/queryClient';
 import {
   TURNKEY_CONFIG,
   TURNKEY_CALLBACKS,
@@ -82,7 +82,10 @@ function RootLayout() {
   const tree = (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={PERSIST_OPTIONS}
+        >
           <TurnkeyProvider
             config={TURNKEY_CONFIG}
             callbacks={TURNKEY_CALLBACKS}
@@ -169,7 +172,7 @@ function RootLayout() {
               </SocketProvider>
             </AuthProvider>
           </TurnkeyProvider>
-        </QueryClientProvider>
+        </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

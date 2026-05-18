@@ -25,6 +25,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { BalanceSkeleton } from '@/src/design-system/primitives/BalanceSkeleton';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
 import { Icons } from '@/src/design-system/icons';
@@ -128,10 +129,11 @@ export function StealthHub() {
   const claimCount = pendingClaims?.length ?? 0;
 
   const stealfWallet = user?.stealfWallet ?? null;
-  const { data: balanceData } = useBalance(stealfWallet);
+  const { data: balanceData, isLoading: publicLoading } =
+    useBalance(stealfWallet);
 
   useHistory(stealfWallet);
-  const { data: encrypted } = useEncryptedBalances();
+  const { data: encrypted, isLoading: privateLoading } = useEncryptedBalances();
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -161,6 +163,10 @@ export function StealthHub() {
 
   const publicUSD = balanceData?.totalUSD ?? 0;
   const privateUSD = encrypted?.totalUSD ?? 0;
+  // Differentiate skeleton (cold start, no cache yet) from real $0. The
+  // gauge/labels below stay zero-aware; only the hero balance is gated.
+  const publicReady = balanceData !== undefined;
+  const privateReady = encrypted !== undefined;
 
   // Memoize derived data so its reference identity stays stable across
   // re-renders driven by socket updates / mode toggles. Keeps the array
@@ -546,6 +552,8 @@ export function StealthHub() {
                 fontSize={BALANCE_FONT_SIZE}
                 balanceHidden={balanceHidden}
                 onToggleHidden={toggleBalanceHidden}
+                showSkeleton={!publicReady && publicLoading}
+                skeletonTone="silver"
               />
               <View style={{ width: PAGE_GUTTER }} />
               <KickerBalancePage
@@ -558,6 +566,8 @@ export function StealthHub() {
                 fontSize={BALANCE_FONT_SIZE}
                 balanceHidden={balanceHidden}
                 onToggleHidden={toggleBalanceHidden}
+                showSkeleton={!privateReady && privateLoading}
+                skeletonTone="gold"
               />
             </Animated.View>
           </View>
@@ -907,6 +917,8 @@ function KickerBalancePage({
   fontSize,
   balanceHidden,
   onToggleHidden,
+  showSkeleton,
+  skeletonTone,
 }: {
   width: number;
   kicker: string;
@@ -917,6 +929,8 @@ function KickerBalancePage({
   fontSize: { int: number; dec: number; dollar: number };
   balanceHidden: boolean;
   onToggleHidden: () => void;
+  showSkeleton?: boolean;
+  skeletonTone?: 'silver' | 'gold';
 }) {
   return (
     <View style={{ width }}>
@@ -966,52 +980,56 @@ function KickerBalancePage({
       <View
         style={{ alignItems: 'center', marginTop: 30, marginBottom: 48 }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-          {balanceHidden ? null : (
+        {showSkeleton && !balanceHidden ? (
+          <BalanceSkeleton tone={skeletonTone ?? 'silver'} />
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+            {balanceHidden ? null : (
+              <Text
+                style={[
+                  serif,
+                  {
+                    fontSize: fontSize.dollar,
+                    color: accent,
+                    fontStyle: 'italic',
+                    lineHeight: fontSize.dollar,
+                    includeFontPadding: false,
+                  },
+                ]}
+              >
+                $
+              </Text>
+            )}
             <Text
               style={[
-                serif,
+                sansationLight,
                 {
-                  fontSize: fontSize.dollar,
-                  color: accent,
-                  fontStyle: 'italic',
-                  lineHeight: fontSize.dollar,
+                  fontSize: fontSize.int,
+                  letterSpacing: fontSize.int * -0.04,
+                  lineHeight: fontSize.int,
+                  color: ink,
                   includeFontPadding: false,
                 },
               ]}
             >
-              $
+              {balanceHidden ? '****' : balance.int}
             </Text>
-          )}
-          <Text
-            style={[
-              sansationLight,
-              {
-                fontSize: fontSize.int,
-                letterSpacing: fontSize.int * -0.04,
-                lineHeight: fontSize.int,
-                color: ink,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            {balanceHidden ? '****' : balance.int}
-          </Text>
-          <Text
-            style={[
-              sansationLight,
-              {
-                fontSize: fontSize.dec,
-                color: inkDim,
-                letterSpacing: fontSize.dec * -0.02,
-                lineHeight: fontSize.dec,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            {balanceHidden ? '' : balance.dec}
-          </Text>
-        </View>
+            <Text
+              style={[
+                sansationLight,
+                {
+                  fontSize: fontSize.dec,
+                  color: inkDim,
+                  letterSpacing: fontSize.dec * -0.02,
+                  lineHeight: fontSize.dec,
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              {balanceHidden ? '' : balance.dec}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
