@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Pressable, Share, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, Share, Text, View } from 'react-native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -26,6 +27,16 @@ import {
 import { T } from '@/src/design-system/tokens';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useToast } from '@/src/components/toast/ToastContext';
+import {
+  airdropFactory,
+  getRpc,
+  getRpcSubscriptions,
+  lamports,
+  toAddress,
+} from '@/src/services/solana/kit';
+import { getEnv } from '@/src/services/env';
+import { balanceQueries } from '@/src/features/bank/api/balance';
 
 type WalletSource = 'bank' | 'stealth';
 
@@ -113,6 +124,52 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   };
+
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  // Show the devnet airdrop button only when the RPC actually points at
+  // devnet — never in mainnet builds.
+  const isDevnet = useMemo(() => {
+    const url = getEnv().EXPO_PUBLIC_SOLANA_RPC_URL ?? '';
+    return /devnet/i.test(url);
+  }, []);
+
+  const airdrop = useMutation({
+    mutationFn: async (recipient: string) => {
+      const fn = airdropFactory({
+        rpc: getRpc(),
+        rpcSubscriptions: getRpcSubscriptions(),
+      });
+      return fn({
+        recipientAddress: toAddress(recipient),
+        lamports: lamports(2_000_000_000n),
+        commitment: 'confirmed',
+      });
+    },
+    onSuccess: () => {
+      toast.show({
+        kind: 'success',
+        title: 'Devnet airdrop received',
+        message: '+2 SOL credited to your wallet.',
+      });
+      queryClient.invalidateQueries({
+        queryKey: balanceQueries.byAddress(fullAddress),
+      });
+    },
+    onError: (err: any) => {
+      // Devnet faucet enforces a rate-limit per IP & per recipient; surface
+      // the underlying message so the user knows whether to retry later.
+      const raw = err?.message || 'Airdrop failed';
+      const isRateLimited = /429|rate.?limit|airdrop.?limit/i.test(raw);
+      toast.show({
+        kind: 'error',
+        title: isRateLimited ? 'Faucet rate-limited' : 'Airdrop failed',
+        message: isRateLimited
+          ? 'Devnet faucet is throttled — wait a few minutes and try again.'
+          : raw,
+      });
+    },
+  });
 
   const handleShare = async () => {
     if (!fullAddress) return;
@@ -342,6 +399,52 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
           </View>
         </Animated.View>
       </Pressable>
+
+      {isDevnet && fullAddress ? (
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+          <Pressable
+            onPress={() => {
+              if (airdrop.isPending) return;
+              airdrop.mutate(fullAddress);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Request a 2 SOL devnet airdrop"
+            disabled={airdrop.isPending}
+            style={{
+              paddingVertical: 14,
+              borderRadius: 100,
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              borderWidth: 1,
+              borderColor: T.hairline,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              opacity: airdrop.isPending ? 0.6 : 1,
+            }}
+          >
+            {airdrop.isPending ? (
+              <ActivityIndicator size="small" color={T.ink} />
+            ) : (
+              <Icons.plus size={14} color={T.ink} />
+            )}
+            <Text
+              style={[
+                sansation,
+                {
+                  fontSize: 11,
+                  letterSpacing: 2.42,
+                  textTransform: 'uppercase',
+                  fontWeight: '700',
+                  color: T.ink,
+                },
+              ]}
+            >
+              {airdrop.isPending ? 'Requesting…' : 'Get 2 SOL (devnet)'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={{ flex: 1 }} />
 
