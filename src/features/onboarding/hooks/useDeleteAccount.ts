@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTurnkey } from '@turnkey/react-native-wallet-kit';
+import { usePostHog } from 'posthog-react-native';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
 import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
@@ -18,9 +19,11 @@ export function useDeleteAccount() {
   const { deleteSubOrganization, logout: turnkeyLogout } = useTurnkey();
   const { reset } = useAuth();
   const queryClient = useQueryClient();
+  const posthog = usePostHog();
 
   return useMutation({
     mutationFn: async () => {
+      posthog?.capture('auth_account_deleted');
       try {
         await deleteSubOrganization({ deleteWithoutExport: true } as any);
       } catch (err) {
@@ -40,6 +43,7 @@ export function useDeleteAccount() {
       await purgeTurnkeyState();
       queryClient.clear();
       reset();
+      posthog?.reset();
     },
   });
 }

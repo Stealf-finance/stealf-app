@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { usePostHog } from 'posthog-react-native';
 import {
   Linking,
   Pressable,
@@ -57,6 +58,7 @@ import {
   toRawAmount,
 } from '@/src/features/send/lib/amount';
 import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
+import { amountBand, scrubString } from '@/src/services/observability/scrub';
 
 const FADE_OUT = 160;
 const FADE_IN = 220;
@@ -105,6 +107,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const queryClient = useQueryClient();
   const umbra = useUmbra();
   const { setMode } = usePrivacyMode();
+  const posthog = usePostHog();
   const [privateSending, setPrivateSending] = useState(false);
 
 
@@ -288,6 +291,12 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
           }),
         ]);
 
+        posthog?.capture('send_completed', {
+          mode: 'private',
+          asset_symbol: asset.symbol,
+          amount_band: amountBand(Number(fiatValue)),
+          wallet_source: walletSource,
+        });
         setTxSig(result?.queueSignature ?? null);
         transitionTo(4, 'forward');
         return;
@@ -302,6 +311,12 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         balance: balanceNum,
       });
       if (__DEV__) console.log('[SendFlow] success, sig=', sig);
+      posthog?.capture('send_completed', {
+        mode: 'public',
+        asset_symbol: asset.symbol,
+        amount_band: amountBand(Number(fiatValue)),
+        wallet_source: walletSource,
+      });
       setTxSig(sig);
       transitionTo(4, 'forward');
     } catch (err: any) {
@@ -311,6 +326,12 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         (err instanceof Error
           ? err.message
           : 'Could not send the transaction.');
+      posthog?.capture('send_failed', {
+        mode: isPrivate ? 'private' : 'public',
+        asset_symbol: asset.symbol,
+        error: scrubString(msg),
+        wallet_source: walletSource,
+      });
       setSendError(msg);
       // Force the swipe widget to reset visually so the user can retry.
       swipeAttempt.current += 1;
