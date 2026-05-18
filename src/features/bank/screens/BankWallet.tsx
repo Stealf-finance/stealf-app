@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
+import { BalanceSkeleton } from '@/src/design-system/primitives/BalanceSkeleton';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
 import { SquareActionTile } from '@/src/design-system/primitives/SquareActionTile';
 import { TxRow } from '@/src/design-system/primitives/TxRow';
@@ -56,12 +57,19 @@ export function BankWallet() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { data: balance } = useBalance(user?.bankWallet);
+  const { data: balance, isLoading: balanceLoading } = useBalance(
+    user?.bankWallet,
+  );
   const { data: history } = useHistory(user?.bankWallet);
 
   const username = user?.username ?? '';
   const greeting = getGreeting();
-  const { dollars, cents } = splitBalance(balance?.totalUSD ?? 0);
+  // Distinguish "not yet loaded" (skeleton) from "loaded with $0.00".
+  // splitBalance only runs when balance.totalUSD is defined for real.
+  const balanceReady = balance !== undefined;
+  const { dollars, cents } = balanceReady
+    ? splitBalance(balance.totalUSD)
+    : { dollars: '', cents: '' };
   const txRows =
     history?.transactions.slice(0, HISTORY_DISPLAY_LIMIT).map(formatTxRow) ?? [];
   const { hidden: balanceHidden, toggle: toggleBalanceHidden } =
@@ -180,52 +188,56 @@ export function BankWallet() {
             marginBottom: 48,
           }}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-            {balanceHidden ? null : (
+          {!balanceReady && balanceLoading && !balanceHidden ? (
+            <BalanceSkeleton tone="silver" />
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              {balanceHidden ? null : (
+                <Text
+                  style={[
+                    serif,
+                    {
+                      fontSize: 36,
+                      color: S.accent,
+                      fontStyle: 'italic',
+                      lineHeight: 36,
+                      includeFontPadding: false,
+                    },
+                  ]}
+                >
+                  $
+                </Text>
+              )}
               <Text
                 style={[
-                  serif,
+                  sansationLight,
                   {
-                    fontSize: 36,
-                    color: S.accent,
-                    fontStyle: 'italic',
-                    lineHeight: 36,
+                    fontSize: 76,
+                    letterSpacing: -3.04,
+                    lineHeight: 76,
+                    color: S.ink,
                     includeFontPadding: false,
                   },
                 ]}
               >
-                $
+                {balanceHidden ? '****' : dollars}
               </Text>
-            )}
-            <Text
-              style={[
-                sansationLight,
-                {
-                  fontSize: 76,
-                  letterSpacing: -3.04,
-                  lineHeight: 76,
-                  color: S.ink,
-                  includeFontPadding: false,
-                },
-              ]}
-            >
-              {balanceHidden ? '****' : dollars}
-            </Text>
-            <Text
-              style={[
-                sansationLight,
-                {
-                  fontSize: 32,
-                  color: S.inkDim,
-                  letterSpacing: -0.64,
-                  lineHeight: 32,
-                  includeFontPadding: false,
-                },
-              ]}
-            >
-              {balanceHidden ? '' : cents}
-            </Text>
-          </View>
+              <Text
+                style={[
+                  sansationLight,
+                  {
+                    fontSize: 32,
+                    color: S.inkDim,
+                    letterSpacing: -0.64,
+                    lineHeight: 32,
+                    includeFontPadding: false,
+                  },
+                ]}
+              >
+                {balanceHidden ? '' : cents}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View
