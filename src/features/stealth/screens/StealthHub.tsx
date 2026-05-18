@@ -513,8 +513,8 @@ export function StealthHub() {
             refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor="#ffffff"
-            colors={['#0a0a0a']}
-            progressBackgroundColor="#f5f5f7"
+            colors={['#ffffff']}
+            progressBackgroundColor="#1c1c1e"
           />
         }
       >
