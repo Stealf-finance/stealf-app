@@ -224,6 +224,15 @@ export function StealthHub() {
   const { hidden: balanceHidden, toggle: toggleBalanceHidden } =
     useBalanceVisibility();
   const { show: showToast } = useToast();
+  const showComingSoon = useCallback(
+    (feature: string) =>
+      showToast({
+        kind: 'info',
+        title: 'Coming soon',
+        message: `${feature} are not live yet — stay tuned.`,
+      }),
+    [showToast],
+  );
 
   const persistStealfWallet = async (
     walletAddress: string,
@@ -502,9 +511,14 @@ export function StealthHub() {
           <CircleIconBtn
             iconKey="card"
             tone="silver"
-            onPress={() => router.push('/card')}
+            onPress={() => showComingSoon('Cards')}
           />
-          <CircleIconBtn iconKey="bell" tone={tone} hasDot />
+          <CircleIconBtn
+            iconKey="bell"
+            tone={tone}
+            hasDot
+            onPress={() => showComingSoon('Notifications')}
+          />
         </View>
       </View>
 

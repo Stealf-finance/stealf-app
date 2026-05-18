@@ -18,6 +18,7 @@ import {
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useBalanceVisibility } from '@/src/features/wallet/BalanceVisibilityContext';
+import { useToast } from '@/src/components/toast/ToastContext';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { getGreeting } from '@/src/lib/greeting';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
@@ -57,6 +58,16 @@ export function BankWallet() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const toast = useToast();
+  const showComingSoon = useCallback(
+    (feature: string) =>
+      toast.show({
+        kind: 'info',
+        title: 'Coming soon',
+        message: `${feature} are not live yet — stay tuned.`,
+      }),
+    [toast],
+  );
   const { data: balance, isLoading: balanceLoading } = useBalance(
     user?.bankWallet,
   );
@@ -112,8 +123,15 @@ export function BankWallet() {
           {greeting}, <Text style={{ color: S.ink }}>{username}</Text>
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <CircleIconBtn iconKey="card" onPress={() => router.push('/card')} />
-          <CircleIconBtn iconKey="bell" hasDot />
+          <CircleIconBtn
+            iconKey="card"
+            onPress={() => showComingSoon('Cards')}
+          />
+          <CircleIconBtn
+            iconKey="bell"
+            hasDot
+            onPress={() => showComingSoon('Notifications')}
+          />
         </View>
       </View>
 
@@ -348,6 +366,7 @@ export function BankWallet() {
 }
 
 function CardPromo() {
+  const toast = useToast();
   return (
     <View
       style={{
@@ -411,6 +430,9 @@ function CardPromo() {
           />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
               style={[
                 sansationLight,
                 {
@@ -422,7 +444,7 @@ function CardPromo() {
                 },
               ]}
             >
-              Get your virtual bank account
+              Global bank account
             </Text>
             <Text
               style={[
@@ -434,14 +456,21 @@ function CardPromo() {
                 },
               ]}
             >
-              Spend anywhere. Stay private where it matters.
+              Your bridge to the real world.
             </Text>
           </View>
         </View>
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Get your card"
+          accessibilityLabel="Open your account"
+          onPress={() =>
+            toast.show({
+              kind: 'info',
+              title: 'Coming soon',
+              message: 'Virtual bank accounts are not live yet — stay tuned.',
+            })
+          }
           style={{
             paddingVertical: 14,
             borderRadius: 100,
@@ -466,7 +495,7 @@ function CardPromo() {
               },
             ]}
           >
-            Get your card
+            Open your account
           </Text>
           <Icons.arrRight size={12} color={S.ink} />
         </Pressable>
