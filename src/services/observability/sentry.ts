@@ -1,19 +1,8 @@
 import * as Sentry from '@sentry/react-native';
 import { getEnv } from '../env';
+import { scrubString } from './scrub';
 
 let initialized = false;
-
-// JWT (3 base64url segments), bs58 Solana pubkey/secret (43-44 chars), email.
-const JWT_RE = /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g;
-const BS58_RE = /\b[1-9A-HJ-NP-Za-km-z]{43,44}\b/g;
-const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
-
-function scrubString(value: string): string {
-  return value
-    .replace(JWT_RE, '[redacted:jwt]')
-    .replace(EMAIL_RE, '[redacted:email]')
-    .replace(BS58_RE, '[redacted:bs58]');
-}
 
 function scrub<T>(value: T): T {
   if (typeof value === 'string') return scrubString(value) as unknown as T;
@@ -40,6 +29,15 @@ export function initSentry(): boolean {
     enableAutoSessionTracking: enabled,
     debug: __DEV__ && enabled,
     tracesSampleRate: __DEV__ ? 1.0 : 0.2,
+    environment: __DEV__ ? 'dev' : 'production',
+    // Defense-in-depth: the scrubber below already strips JWT/bs58/email,
+    // but disabling default PII (IP / cookies / user agent) keeps Sentry
+    // from collecting fields the scrubber doesn't touch in the first place.
+    sendDefaultPii: false,
+    // Mobile Session Replay is intentionally disabled — wallet/balance/seed
+    // screens must not be captured. Same rule applied to PostHog. Do not
+    // add `mobileReplayIntegration()` here without an explicit policy change.
+    enableLogs: true,
     beforeSend(event) {
       if (event.message) event.message = scrubString(event.message);
       if (event.exception?.values) {

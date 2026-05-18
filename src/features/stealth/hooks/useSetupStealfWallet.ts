@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import bs58 from 'bs58';
 import * as bip39 from 'bip39';
+import { usePostHog } from 'posthog-react-native';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { deriveStealfKeypairFromMnemonic } from '@/src/services/solana/keyDerivation';
 
@@ -29,6 +30,7 @@ async function withMinDuration<T>(work: Promise<T>): Promise<T> {
 
 export function useSetupStealfWallet() {
   const [loading, setLoading] = useState(false);
+  const posthog = usePostHog();
 
   const createWallet = async (): Promise<SetupResult> => {
     setLoading(true);
@@ -36,7 +38,7 @@ export function useSetupStealfWallet() {
     // the synchronous BIP39 work blocks the JS thread.
     await sleep(0);
     try {
-      return await withMinDuration(
+      const result = await withMinDuration(
         (async () => {
           const mnemonic = bip39.generateMnemonic(128);
           const { privateKey, address } = await deriveStealfKeypairFromMnemonic(mnemonic);
@@ -45,6 +47,10 @@ export function useSetupStealfWallet() {
           return { success: true, walletAddress: address, mnemonic } as SetupResult;
         })(),
       );
+      if (result.success) {
+        posthog?.capture('stealth_wallet_created');
+      }
+      return result;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to create wallet';
       if (__DEV__) console.error('[useSetupStealfWallet] create failed:', msg);
@@ -58,7 +64,7 @@ export function useSetupStealfWallet() {
     setLoading(true);
     await sleep(0);
     try {
-      return await withMinDuration(
+      const result = await withMinDuration(
         (async () => {
           const { privateKey, address } = await deriveStealfKeypairFromMnemonic(mnemonic);
           const privateKeyB58 = bs58.encode(privateKey);
@@ -66,6 +72,10 @@ export function useSetupStealfWallet() {
           return { success: true, walletAddress: address } as SetupResult;
         })(),
       );
+      if (result.success) {
+        posthog?.capture('stealth_wallet_imported');
+      }
+      return result;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to import wallet';
       if (__DEV__) console.error('[useSetupStealfWallet] import failed:', msg);

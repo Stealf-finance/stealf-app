@@ -39,10 +39,15 @@ const withProjectPatch = (config) =>
   withXcodeProject(config, (cfg) => {
     const xcodeProject = cfg.modResults;
     const configurations = xcodeProject.pbxXCBuildConfigurationSection();
+    // The `xcode` npm lib does not auto-quote keys containing `[...]`
+    // conditional-build-setting suffixes, which makes the resulting pbxproj
+    // unparseable by other Expo config plugins (Entitlements baseMod fails
+    // with "Expected '/*', '=', or [A-Za-z0-9_.] but '[' found"). Pre-quote
+    // both the key and the value so the lib writes them verbatim.
     Object.keys(configurations).forEach((key) => {
       const buildSettings = configurations[key].buildSettings;
       if (buildSettings) {
-        buildSettings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'x86_64';
+        buildSettings['"EXCLUDED_ARCHS[sdk=iphonesimulator*]"'] = '"x86_64"';
       }
     });
     return cfg;

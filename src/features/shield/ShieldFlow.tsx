@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { usePostHog } from 'posthog-react-native';
 import { Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { maxSpendableSol, SOL_DECIMALS } from '@/src/features/send/lib/amount';
@@ -33,6 +34,7 @@ import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedB
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
+import { amountBand, scrubString } from '@/src/services/observability/scrub';
 
 type Direction = 'shield' | 'unshield';
 
@@ -63,6 +65,9 @@ export function ShieldFlow({ direction }: Props) {
   const { data: solPrice } = useSolPrice();
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
+  const posthog = usePostHog();
+  const posthogRef = useRef(posthog);
+  posthogRef.current = posthog;
 
   // - shield:   stealth public ATA → stealth encrypted balance
   // - unshield: stealth encrypted balance → stealth public ATA
@@ -242,11 +247,23 @@ export function ShieldFlow({ direction }: Props) {
             : Promise.resolve(),
         ]);
 
+        posthogRef.current?.capture('shield_completed', {
+          direction,
+          asset_symbol: assetSymbol,
+          amount_band: amountBand(
+            typeof solPrice === 'number' && solPrice > 0 ? num * solPrice : 0,
+          ),
+        });
         pendingOps.complete(opId, 'done');
       } catch (err: any) {
         clearTimeout(provingTimer);
         const msg = err?.userMessage || err?.message || 'Operation failed';
         if (__DEV__) console.warn('[ShieldFlow] failed:', msg);
+        posthogRef.current?.capture('shield_failed', {
+          direction,
+          asset_symbol: assetSymbol,
+          error: scrubString(msg),
+        });
         pendingOps.complete(opId, 'failed', msg);
       }
     })();

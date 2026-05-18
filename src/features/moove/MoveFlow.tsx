@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { usePostHog } from 'posthog-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { maxSpendableSol, SOL_DECIMALS } from '@/src/features/send/lib/amount';
@@ -43,6 +44,7 @@ import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import type { PendingOpKind } from '@/src/components/pending-ops/types';
+import { amountBand, scrubString } from '@/src/services/observability/scrub';
 
 function kindForDirection(d: MoveDirection): PendingOpKind {
   switch (d) {
@@ -120,6 +122,9 @@ export function MoveFlow() {
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
   const { data: solPrice } = useSolPrice();
+  const posthog = usePostHog();
+  const posthogRef = useRef(posthog);
+  posthogRef.current = posthog;
 
   const {
     wrap,
@@ -406,6 +411,13 @@ export function MoveFlow() {
 
         if (__DEV__) console.log('[MoveFlow] success →', direction);
         await invalidateAll();
+        posthogRef.current?.capture('move_completed', {
+          direction,
+          asset_symbol: assetSymbol,
+          amount_band: amountBand(
+            typeof solPrice === 'number' && solPrice > 0 ? num * solPrice : 0,
+          ),
+        });
         pendingOps.complete(opId, 'done');
 
         const stealfAddr = user?.stealfWallet;
@@ -421,6 +433,11 @@ export function MoveFlow() {
         clearTimeout(provingTimer);
         const msg = err?.userMessage || err?.message || 'Move failed';
         if (__DEV__) console.warn('[MoveFlow] failed:', direction, msg);
+        posthogRef.current?.capture('move_failed', {
+          direction,
+          asset_symbol: assetSymbol,
+          error: scrubString(msg),
+        });
         pendingOps.complete(opId, 'failed', msg);
       }
     })();

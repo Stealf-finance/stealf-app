@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTurnkey, ClientState } from '@turnkey/react-native-wallet-kit';
 import { OtpType } from '@turnkey/core';
 import * as Sentry from '@sentry/react-native';
+import { usePostHog } from 'posthog-react-native';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { useAuth, readPersistedStealfWallet } from '../context/AuthContext';
 import { finalizeOAuthAuth, type AuthMethod } from '../api/onboarding';
@@ -24,6 +25,9 @@ export function useAuthFlow() {
 
   const { setSession, setUser } = useAuth();
   const queryClient = useQueryClient();
+  const posthog = usePostHog();
+  const posthogRef = useRef(posthog);
+  posthogRef.current = posthog;
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +91,14 @@ export function useAuthFlow() {
 
       setSession({ sessionToken });
       setUser(enriched);
+
+      posthogRef.current?.identify(enriched.subOrgId, {
+        $set: { auth_method: authMethod },
+        $set_once: { first_login_date: new Date().toISOString() },
+      });
+      posthogRef.current?.capture('auth_signed_in', {
+        method: authMethod,
+      });
     },
     [queryClient, setSession, setUser],
   );
