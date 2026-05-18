@@ -190,7 +190,11 @@ export function MoveFlow() {
 
   const sourcePaysFees =
     direction === 'bank-to-shielded' || direction === 'stealth-to-bank';
-  const hasProtocolFee = direction !== 'stealth-to-bank';
+  // Every Move direction goes through the Umbra mixer (claimable UTXO
+  // creator), so the 0.30% protocol fee always applies — even on
+  // `stealth-to-bank`, which uses `getPublicBalanceToSelfClaimableUtxoCreatorFunction`
+  // under the hood, not a plain SystemProgram transfer.
+  const hasProtocolFee = true;
   const reserveFees = sourcePaysFees && !selectionActive;
   const maxSol = maxSpendableSol(sourceBalance, reserveFees, hasProtocolFee);
 
