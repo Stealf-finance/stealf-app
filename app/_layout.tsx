@@ -17,7 +17,10 @@ import { PostHogProvider } from 'posthog-react-native';
 import { validateEnv, getEnv } from '@/src/services/env';
 import { initSentry, Sentry } from '@/src/services/observability/sentry';
 import { queryClient } from '@/src/services/queryClient';
-import { TURNKEY_CONFIG, TURNKEY_CALLBACKS } from '@/src/services/turnkey/config';
+import {
+  TURNKEY_CONFIG,
+  TURNKEY_CALLBACKS,
+} from '@/src/services/turnkey/config';
 import { AuthProvider } from '@/src/features/onboarding/context/AuthContext';
 import { PrivacyModeProvider } from '@/src/features/stealth/PrivacyModeContext';
 import { BalanceVisibilityProvider } from '@/src/features/wallet/BalanceVisibilityContext';
@@ -68,7 +71,8 @@ function RootLayout() {
 
   useEffect(() => {
     if ((fontsLoaded || fontError) && imagesLoaded) {
-      if (__DEV__) console.log(`[boot-timing] splash-hide=${Date.now() - BOOT_START}ms`);
+      if (__DEV__)
+        console.log(`[boot-timing] splash-hide=${Date.now() - BOOT_START}ms`);
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError, imagesLoaded]);
@@ -79,42 +83,87 @@ function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <TurnkeyProvider config={TURNKEY_CONFIG} callbacks={TURNKEY_CALLBACKS}>
+          <TurnkeyProvider
+            config={TURNKEY_CONFIG}
+            callbacks={TURNKEY_CALLBACKS}
+          >
             <AuthProvider>
               <SocketProvider>
                 <PrivacyModeProvider initial="public">
                   <BalanceVisibilityProvider>
-                  <PendingOpsProvider>
-                  <ToastProvider>
-                  <DataBootstrap />
-                  <AuthGuard />
-                  <TelemetrySmokeTest />
-                  <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: T.bg },
-                  }}
-                >
-                  <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
-                  <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-                  <Stack.Screen name="moove" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="shield" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="unshield" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="card" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="lock" options={{ presentation: 'fullScreenModal' }} />
-                  <Stack.Screen name="send" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="receive" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="claim-pending" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="transactions" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="tx/[id]" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="profile/private-key" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="asset-picker" options={{ presentation: 'modal' }} />
-                  </Stack>
-                  <ToastHost />
-                  <AnimatedSplash />
-                  <StatusBar style="light" />
-                  </ToastProvider>
-                  </PendingOpsProvider>
+                    <PendingOpsProvider>
+                      <ToastProvider>
+                        <DataBootstrap />
+                        <AuthGuard />
+                        <TelemetrySmokeTest />
+                        <Stack
+                          screenOptions={{
+                            headerShown: false,
+                            contentStyle: { backgroundColor: T.bg },
+                          }}
+                        >
+                          <Stack.Screen
+                            name="(auth)"
+                            options={{ animation: 'fade' }}
+                          />
+                          <Stack.Screen
+                            name="(tabs)"
+                            options={{ animation: 'fade' }}
+                          />
+                          <Stack.Screen
+                            name="moove"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="shield"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="unshield"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="card"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="lock"
+                            options={{ presentation: 'fullScreenModal' }}
+                          />
+                          <Stack.Screen
+                            name="send"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="receive"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="claim-pending"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="transactions"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="tx/[id]"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="profile/private-key"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
+                            name="asset-picker"
+                            options={{ presentation: 'modal' }}
+                          />
+                        </Stack>
+                        <ToastHost />
+                        <AnimatedSplash />
+                        <StatusBar style="light" />
+                      </ToastProvider>
+                    </PendingOpsProvider>
                   </BalanceVisibilityProvider>
                 </PrivacyModeProvider>
               </SocketProvider>

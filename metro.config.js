@@ -1,8 +1,8 @@
-const { getDefaultConfig } = require('expo/metro-config');
 const { withNativeWind } = require('nativewind/metro');
 const path = require('path');
+const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 config.resolver.unstable_enablePackageExports = false;
 config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
@@ -15,12 +15,10 @@ config.resolver.extraNodeModules = {
   fs: path.resolve(__dirname, 'fs-shim.js'),
 };
 
-// Bundle Umbra ZK circuit keys (.zkey) as binary assets — required by
-// @umbra-privacy/rn-zk-prover when Slice 5 wires the Stealth provers.
+
 if (!config.resolver.assetExts.includes('zkey')) {
   config.resolver.assetExts.push('zkey');
 }
-
 
 const moduleOverrides = {
   '@bufbuild/protobuf/codegenv2': path.resolve(
@@ -64,9 +62,6 @@ const moduleOverrides = {
 
 const wrapped = withNativeWind(config, { input: './global.css' });
 
-// Apply overrides AFTER withNativeWind so its own wrapper doesn't replace
-// our resolveRequest. Metro calls resolveRequest first; we either return a
-// match from moduleOverrides or hand off to whatever was previously set.
 const previousResolveRequest = wrapped.resolver.resolveRequest;
 wrapped.resolver.resolveRequest = (context, moduleName, platform) => {
   if (moduleOverrides[moduleName]) {

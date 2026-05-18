@@ -53,3 +53,7 @@ app-example
 
 # Superpowers working notes (plans, specs) — kept locally, not in submission
 docs/superpowers/
+
+# Setup wizard error reports & summary files (Sentry/PostHog) — local only
+*-installation-error-*.log
+*-setup-report.md
