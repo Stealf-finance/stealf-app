@@ -68,9 +68,17 @@ const config: ExpoConfig = {
       },
     ],
     'expo-secure-store',
-    '@sentry/react-native',
+    [
+      '@sentry/react-native',
+      {
+        organization: 'stealf',
+        project: 'react-native',
+        url: 'https://sentry.io/',
+      },
+    ],
     'expo-localization',
     'expo-asset',
+    'expo-notifications',
     './plugins/withMoproExcludedArchs',
   ],
   experiments: {

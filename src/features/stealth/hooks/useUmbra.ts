@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { Address } from '@solana/kit';
 import { useTurnkey } from '@turnkey/react-native-wallet-kit';
+import * as Sentry from '@sentry/react-native';
 
 import {
   parseStealthError,
@@ -96,6 +97,26 @@ export function useUmbra() {
             );
           }
         }
+        // Surface stealth-flow failures to Sentry even in prod. Without
+        // this the user-facing "Confirmation timed out" / "Insufficient SOL"
+        // messages give us nothing to debug from in TestFlight. The raw
+        // SDK cause + sim logs (when present) are the most useful payload.
+        const simLogs: string[] | undefined =
+          Array.isArray(err?.cause?.context?.logs) && err.cause.context.logs.length
+            ? err.cause.context.logs.slice(0, 12)
+            : undefined;
+        Sentry.captureException(stealthErr, {
+          tags: {
+            'stealth.op': op,
+            'stealth.code': stealthErr.code,
+            'stealth.stage': stealthErr.stage ?? 'unknown',
+          },
+          extra: {
+            userMessage: stealthErr.userMessage,
+            rawCause: err?.cause?.message ?? err?.message ?? null,
+            simLogs,
+          },
+        });
         setError(stealthErr.userMessage);
         throw stealthErr;
       } finally {

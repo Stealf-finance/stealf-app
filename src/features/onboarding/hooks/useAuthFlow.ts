@@ -11,6 +11,7 @@ import { userProfileQueries } from '../api/userProfile';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
 import { subscribeOauthAuthSuccess } from '@/src/services/turnkey/oauthAuthEvents';
+import { maybeRequestNotifPermission } from '@/src/features/onboarding/lib/permissions';
 
 type FinalizeArgs = {
   authMethod: AuthMethod;
@@ -47,6 +48,14 @@ export function useAuthFlow() {
         : await tk.refreshWallets();
       const cashWallet = wallets[0]?.accounts?.[0]?.address;
       if (!cashWallet) {
+            if (__DEV__) {
+            console.log('[Auth] BANK WALLET MISSING DIAG:', {
+              subOrgId: tk.session?.organizationId,
+              walletsBefore: tk.wallets.length,
+              walletsAfterRefresh: wallets.length,
+        walletsDump: JSON.stringify(wallets, null, 2),
+      });
+    }
         throw new Error('Bank wallet not provisioned');
       }
 
@@ -92,6 +101,12 @@ export function useAuthFlow() {
       setSession({ sessionToken });
       setUser(enriched);
 
+      // First-time-on-device notification permission prompt. The helper
+      // gates on `status === 'undetermined'`, so it only surfaces the iOS
+      // system dialog at account creation (or first install of a returning
+      // user). Non-blocking — failures don't propagate.
+      void maybeRequestNotifPermission();
+
       posthogRef.current?.identify(enriched.subOrgId, {
         $set: { auth_method: authMethod },
         $set_once: { first_login_date: new Date().toISOString() },
@@ -136,6 +151,18 @@ export function useAuthFlow() {
                 : '(non-object)';
             console.error('[useAuthFlow] finalize failed:', err, 'bodyKeys:', bodyKeys);
           }
+          // Always capture: in prod __DEV__ logs are silent, and the email
+          // OTP / Apple OAuth divergence we're chasing happens server-side
+          // (400 "Email and pseudo required") — capturing here surfaces the
+          // breadcrumb chain (`auth.oauth` markers) needed to localise it.
+          Sentry.captureException(err, {
+            tags: { 'auth.method': method, 'auth.flow': 'finalize-post-auth' },
+            extra: {
+              hasEmail: !!email,
+              hasSessionToken: !!sessionToken,
+              errorStatus: (err as { status?: number })?.status,
+            },
+          });
           setError(softenMissingEmailError(method, email, err));
         })
         .finally(() => {
