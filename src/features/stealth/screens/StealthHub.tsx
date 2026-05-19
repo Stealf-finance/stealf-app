@@ -30,6 +30,11 @@ import { TonalBackground } from '@/src/design-system/primitives/TonalBackground'
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
 import { Icons } from '@/src/design-system/icons';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
+import { ProgressOverlay } from '@/src/design-system/primitives/ProgressOverlay';
+import {
+  decideSyncAction,
+  runSyncScan,
+} from '@/src/features/stealth/lib/syncStealfWallet';
 import { SquareActionTile } from '@/src/design-system/primitives/SquareActionTile';
 import {
   sansation,
@@ -221,6 +226,11 @@ export function StealthHub() {
   const [pendingMnemonic, setPendingMnemonic] = useState<string | null>(null);
   const [pendingAddress, setPendingAddress] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
+  // Sync overlay state — visible only during the post-setup claim scan.
+  // `null` means no sync in progress; otherwise the ratio drives the
+  // ProgressOverlay bar. We keep it in StealthHub (rather than a hook)
+  // because the overlay needs to render above the hub's own layout.
+  const [syncProgress, setSyncProgress] = useState<number | null>(null);
   const { hidden: balanceHidden, toggle: toggleBalanceHidden } =
     useBalanceVisibility();
   const { show: showToast } = useToast();
@@ -312,6 +322,34 @@ export function StealthHub() {
       ...(user.bankRegistered === undefined ? { bankRegistered: false } : {}),
     });
     setRegistering(false);
+
+    // Sync claim scan eagerly here (rather than at every session boot via
+    // DataBootstrap) so the badge / Claims screen is accurate without
+    // freezing the UI on cold-start. `decideSyncAction` short-circuits
+    // the common cases (fresh create, cache hit, not-yet-registered) so
+    // the overlay actually only shows when there's real work to do.
+    try {
+      const decision = await decideSyncAction(walletAddress, isFresh);
+      if (decision.action === 'scan') {
+        setSyncProgress(0);
+        try {
+          await runSyncScan(queryClient, walletAddress, {
+            onProgress: (ratio) => setSyncProgress(ratio),
+          });
+        } catch (err) {
+          // Retries inside `runSyncScan` exhausted. Continue silently to
+          // the hub — the user can pull-to-refresh on StealthHub or open
+          // Claims to retry on demand. Sentry already has the breadcrumbs.
+          if (__DEV__)
+            console.warn('[StealthHub] sync scan failed (continuing):', err);
+        } finally {
+          setSyncProgress(null);
+        }
+      }
+    } catch (err) {
+      if (__DEV__) console.warn('[StealthHub] sync decision threw:', err);
+    }
+
     setMode('public');
   };
 
@@ -853,6 +891,15 @@ export function StealthHub() {
       </Animated.View>
 
       {isPrivate ? <StealthSetupOverlay onClose={() => setMode('public')} /> : null}
+
+      {syncProgress !== null ? (
+        <ProgressOverlay
+          tone="gold"
+          label="Syncing your wallet"
+          sub="Setup can take up to a minute. Sit tight — we're scanning the privacy pool for any encrypted balance tied to your wallet."
+          progress={syncProgress}
+        />
+      ) : null}
     </View>
   );
 }

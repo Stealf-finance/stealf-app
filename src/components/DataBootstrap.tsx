@@ -12,8 +12,6 @@ import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { getStealthClient } from '@/src/services/umbra/client';
 import { prefetchEncryptedBalancesFor } from '@/src/features/stealth/hooks/useEncryptedBalances';
-import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
-import { fetchClaimScan } from '@/src/services/umbra/queries/claims';
 
 /**
  * Orchestrates per-feature subscriptions (sockets, prefetches) once the user
@@ -90,11 +88,15 @@ export function DataBootstrap() {
             publicBalance,
           );
 
-          void queryClient.prefetchQuery({
-            queryKey: claimScanQueries.byStealfWallet(stealfWallet),
-            queryFn: () => fetchClaimScan(stealfWallet),
-            staleTime: Infinity,
-          });
+          // Claim scan is intentionally NOT prefetched here. For a fresh
+          // wallet the SDK still has to walk the full Merkle tree from
+          // cursor 0 to confirm "no UTXOs", which is 10-14s of JS-thread
+          // crypto on cold start and freezes interactions in the first
+          // seconds after sign-in / wallet creation. The Claims screen
+          // and the ClaimPendingScreen both opt-in via `{ fetch: true }`
+          // — that's the natural moment for the cost (the user is
+          // explicitly looking at claim state). Returning users hit the
+          // AsyncStorage cache there and feel it instant.
 
           if (__DEV__) console.log('[DataBootstrap] stealth warmup done');
         } catch (err) {
