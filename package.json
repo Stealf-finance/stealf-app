@@ -8,7 +8,9 @@
     "ios": "expo run:ios",
     "lint": "expo lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prebuild:ios": "expo prebuild --platform ios && (grep '^SENTRY_AUTH_TOKEN=' .env.local | sed 's/^/export /' >> ios/.xcode.env.local) && echo '[prebuild:ios] SENTRY_AUTH_TOKEN appended to ios/.xcode.env.local'",
+    "prebuild:ios:clean": "rm -rf ios && npm run prebuild:ios"
   },
   "dependencies": {
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",
