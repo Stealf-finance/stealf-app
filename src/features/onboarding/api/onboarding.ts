@@ -131,3 +131,19 @@ export async function finalizeOAuthAuth(input: {
     UserProfileResponseSchema,
   );
 }
+
+export async function deleteAccountOnBackend(
+  sessionToken: string,
+): Promise<void> {
+  const { EXPO_PUBLIC_API_URL } = getEnv();
+  const response = await fetch(`${EXPO_PUBLIC_API_URL}/api/users/account`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${sessionToken}` },
+  });
+  if (!response.ok) {
+    throw new ApiError(
+      `deleteAccount failed: ${response.status}`,
+      response.status,
+    );
+  }
+}
