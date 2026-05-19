@@ -45,6 +45,7 @@ export type StealthErrorCode =
   | 'VERIFYING_KEY_NOT_INITIALIZED'
   | 'STALE_MERKLE_PROOF'
   | 'SIGNING_FAILED'
+  | 'PROTOCOL_INSTRUCTION_MISMATCH'
   | 'UNKNOWN';
 
 export class StealthError extends Error {
@@ -100,6 +101,8 @@ const MSG: Record<StealthErrorCode, string> = {
     'Stealth protocol is not fully deployed on this network. Please contact support.',
   STALE_MERKLE_PROOF: 'This claim is out of date. Please refresh and try again.',
   SIGNING_FAILED: 'Signing failed. Please try again.',
+  PROTOCOL_INSTRUCTION_MISMATCH:
+    "Umbra protocol version mismatch on this network — the on-chain program doesn't recognise this operation. Please contact support; this is not an issue with your balance.",
   UNKNOWN: 'Something went wrong. Please try again.',
 };
 
@@ -140,6 +143,31 @@ function classifyInsufficient(
   return null;
 }
 
+/**
+ * Detect an Anchor `InstructionFallbackNotFound` (error code 101 / 0x65)
+ * coming from the Umbra program. This fires when the SDK sends an
+ * instruction discriminator the on-chain program doesn't recognise — i.e.
+ * the deployed program is a different version than the one the SDK was
+ * compiled against. Symptoms appear as a `-32002` simulation rejection,
+ * which `buildFromTxSend` would otherwise mistakenly classify as
+ * `TX_TIMEOUT` ("please check your balance"), pushing the user toward
+ * irrelevant remediation.
+ *
+ * Match on three independent log shapes — Solana renders this error
+ * inconsistently across program versions and RPC providers:
+ *   - "AnchorError occurred. Error Code: InstructionFallbackNotFound"
+ *   - "Error Number: 101"
+ *   - "custom program error: 0x65"
+ */
+function isProtocolInstructionMismatch(logs: string[]): boolean {
+  return logs.some(
+    (l) =>
+      /InstructionFallbackNotFound/i.test(l) ||
+      /Error Number:\s*101\b/.test(l) ||
+      /custom program error:\s*0x65\b/i.test(l),
+  );
+}
+
 function build(
   err: unknown,
   op: StealthOp,
@@ -170,7 +198,15 @@ function buildFromTxSend(
   op: StealthOp,
   stage?: string,
 ): StealthError {
-  const cls = classifyInsufficient(logsOf(err), rawMessageOf(err));
+  const logs = logsOf(err);
+  // Check version-mismatch FIRST: a `-32002` rejection on an unknown
+  // instruction looks like a generic tx-send failure to the SDK, and the
+  // `TX_TIMEOUT` fallback would tell the user to check their balance —
+  // which is the wrong recovery path entirely.
+  if (isProtocolInstructionMismatch(logs)) {
+    return build(err, op, 'PROTOCOL_INSTRUCTION_MISMATCH', stage);
+  }
+  const cls = classifyInsufficient(logs, rawMessageOf(err));
   if (cls === 'fee') return build(err, op, 'INSUFFICIENT_FEE_SOL', stage);
   if (cls === 'balance') return build(err, op, 'INSUFFICIENT_BALANCE', stage);
   return build(err, op, 'TX_TIMEOUT', stage);
@@ -282,6 +318,9 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
   }
   if (simulationLogs.some((l) => /zero_knowledge_verifying_key/i.test(l))) {
     return build(err, op, 'VERIFYING_KEY_NOT_INITIALIZED');
+  }
+  if (isProtocolInstructionMismatch(simulationLogs)) {
+    return build(err, op, 'PROTOCOL_INSTRUCTION_MISMATCH');
   }
   const cls = classifyInsufficient(simulationLogs, rawMessage);
   if (cls === 'fee') return build(err, op, 'INSUFFICIENT_FEE_SOL');
