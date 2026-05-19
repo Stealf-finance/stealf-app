@@ -10,10 +10,6 @@ export const SECURE_STORE_KEYS = {
 
 export type SecureStoreKey = typeof SECURE_STORE_KEYS[keyof typeof SECURE_STORE_KEYS];
 
-// Keys whose loss is irreversible (can't re-issue from the server). Biometric-gated.
-// Cold-start dual-prompt resolved by removing the eager `walletKeyCache.warmup()`
-// in DataBootstrap (matches audit-security §1.3 — warmup runs only after explicit
-// sign-in / sign-up; signing flows read lazily and prompt at action time).
 export const HIGH_SENSITIVITY_KEYS: readonly SecureStoreKey[] = [
   SECURE_STORE_KEYS.STEALF_PRIVATE_KEY,
   SECURE_STORE_KEYS.STEALF_MNEMONIC,
@@ -25,16 +21,8 @@ const BASE_OPTIONS: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_PASSCODE_SET_THIS_DEVICE_ONLY,
 };
 
-const HIGH_OPTIONS: SecureStore.SecureStoreOptions = {
-  ...BASE_OPTIONS,
-  requireAuthentication: true,
-  authenticationPrompt: 'Authenticate to access your wallet',
-};
-
-export function resolveOptions(key: string): SecureStore.SecureStoreOptions {
-  return (HIGH_SENSITIVITY_KEYS as readonly string[]).includes(key)
-    ? HIGH_OPTIONS
-    : BASE_OPTIONS;
+export function resolveOptions(_key: string): SecureStore.SecureStoreOptions {
+  return BASE_OPTIONS;
 }
 
 export async function setSecure(key: string, value: string): Promise<void> {
