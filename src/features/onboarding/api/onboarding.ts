@@ -107,16 +107,9 @@ async function request<T extends object>(
 
 export type AuthMethod = 'google' | 'apple' | 'email';
 
-/**
- * Idempotent upsert: hits the backend with the Turnkey session JWT (used
- * to identify the sub-org) plus the wallet Turnkey just generated. Email
- * + pseudo are required at first sign-in but absent on returning Apple
- * users — Apple drops the email claim from the id_token after the first
- * authorization, and we don't need it because the backend looks the user
- * up by their Turnkey sub-org ID.
- */
 export async function finalizeOAuthAuth(input: {
   sessionToken: string;
+  subOrgId: string;
   email: string | undefined;
   pseudo: string | undefined;
   cashWallet: string;
@@ -127,6 +120,7 @@ export async function finalizeOAuthAuth(input: {
     {
       method: 'POST',
       body: {
+        subOrgId: input.subOrgId,
         email: input.email,
         pseudo: input.pseudo,
         bank_wallet: input.cashWallet,
@@ -136,4 +130,20 @@ export async function finalizeOAuthAuth(input: {
     },
     UserProfileResponseSchema,
   );
+}
+
+export async function deleteAccountOnBackend(
+  sessionToken: string,
+): Promise<void> {
+  const { EXPO_PUBLIC_API_URL } = getEnv();
+  const response = await fetch(`${EXPO_PUBLIC_API_URL}/api/users/account`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${sessionToken}` },
+  });
+  if (!response.ok) {
+    throw new ApiError(
+      `deleteAccount failed: ${response.status}`,
+      response.status,
+    );
+  }
 }

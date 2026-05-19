@@ -59,8 +59,18 @@ export function useAuthFlow() {
         throw new Error('Bank wallet not provisioned');
       }
 
+      const subOrgId = tk.session?.organizationId;
+      if (!subOrgId) {
+        // Should be unreachable — the SDK only emits `onAuthenticationSuccess`
+        // once the session is materialised — but the backend lookup hinges on
+        // this value, so fail loudly here rather than 400-ing with a
+        // misleading "email missing" from the server.
+        throw new Error('Turnkey sub-org id missing after auth');
+      }
+
       const profile = await finalizeOAuthAuth({
         sessionToken,
+        subOrgId,
         email,
         pseudo: email ? pseudoFromEmail(email) : undefined,
         cashWallet,

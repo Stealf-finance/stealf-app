@@ -56,7 +56,15 @@ function emptyResult(): ClaimScanResult {
   };
 }
 
-export async function fetchClaimScan(wallet: string): Promise<ClaimScanResult> {
+export type FetchClaimScanOptions = {
+  /** Called after each scanned chunk with a 0..1 ratio of progress. */
+  onProgress?: (ratio: number) => void;
+};
+
+export async function fetchClaimScan(
+  wallet: string,
+  options: FetchClaimScanOptions = {},
+): Promise<ClaimScanResult> {
   const client = await getStealthClient();
   await ensureBlacklistLoaded();
   const scan = getOrCreateScanner(wallet, client);
@@ -122,11 +130,20 @@ export async function fetchClaimScan(wallet: string): Promise<ClaimScanResult> {
         );
       }
 
+      if (options.onProgress) {
+        const ratio = Math.min(1, Math.max(0, nextCursor / MAX_LEAVES));
+        options.onProgress(ratio);
+      }
+
       if (nextCursor <= cursor) break;
       cursor = nextCursor;
 
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
     }
+    // Ensure we end at 100% on the success path — the loop above might
+    // break on `nextScanStartIndex <= cursor` (tree head reached) before
+    // `cursor / MAX_LEAVES` hits exactly 1, leaving the bar partial.
+    if (options.onProgress) options.onProgress(1);
   } catch (err: any) {
     if (__DEV__) {
       console.error(
