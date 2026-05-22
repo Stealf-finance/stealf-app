@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { decodeOidcEmail } from '../oidc';
+import { decodeOidcEmail, decodeOidcSub } from '../oidc';
 
 function makeJwt(payload: unknown): string {
   const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
@@ -62,5 +62,39 @@ describe('decodeOidcEmail', () => {
 
   it('returns undefined for an empty string', () => {
     expect(decodeOidcEmail('')).toBeUndefined();
+  });
+});
+
+describe('decodeOidcSub', () => {
+  it('extracts sub from a Google-shaped OIDC token', () => {
+    const token = makeJwt({
+      iss: 'https://accounts.google.com',
+      sub: '109876543210123456789',
+      email: 'jane@gmail.com',
+    });
+    expect(decodeOidcSub(token)).toBe('109876543210123456789');
+  });
+
+  it('extracts sub from an Apple-shaped OIDC token (no email claim)', () => {
+    const token = makeJwt({
+      iss: 'https://appleid.apple.com',
+      sub: '001234.abcdef.5678',
+    });
+    expect(decodeOidcSub(token)).toBe('001234.abcdef.5678');
+  });
+
+  it('returns undefined when the sub claim is missing', () => {
+    const token = makeJwt({ iss: 'https://appleid.apple.com', email: 'a@b.co' });
+    expect(decodeOidcSub(token)).toBeUndefined();
+  });
+
+  it('returns undefined when the sub claim is not a string', () => {
+    const token = makeJwt({ sub: 12345 });
+    expect(decodeOidcSub(token)).toBeUndefined();
+  });
+
+  it('returns undefined for a malformed token', () => {
+    expect(decodeOidcSub('not.a.real.jwt')).toBeUndefined();
+    expect(decodeOidcSub('')).toBeUndefined();
   });
 });

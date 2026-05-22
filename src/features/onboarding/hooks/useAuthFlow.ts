@@ -6,7 +6,11 @@ import * as Sentry from '@sentry/react-native';
 import { usePostHog } from 'posthog-react-native';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { useAuth, readPersistedStealfWallet } from '../context/AuthContext';
-import { finalizeOAuthAuth, type AuthMethod } from '../api/onboarding';
+import {
+  finalizeOAuthAuth,
+  type AuthMethod,
+  type OauthProvider,
+} from '../api/onboarding';
 import { userProfileQueries } from '../api/userProfile';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
@@ -17,6 +21,8 @@ type FinalizeArgs = {
   authMethod: AuthMethod;
   sessionToken: string;
   email: string | undefined;
+  oauthSub: string | undefined;
+  oauthProvider: OauthProvider | undefined;
 };
 
 export function useAuthFlow() {
@@ -33,14 +39,20 @@ export function useAuthFlow() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [pendingOauth, setPendingOauth] = useState<AuthMethod | null>(null);
+  const [pendingOauth, setPendingOauth] = useState<OauthProvider | null>(null);
 
   const finalizingRef = useRef(false);
 
   const isClientReady = turnkey.clientState === ClientState.Ready;
 
   const finalizePostAuth = useCallback(
-    async ({ authMethod, sessionToken, email }: FinalizeArgs) => {
+    async ({
+      authMethod,
+      sessionToken,
+      email,
+      oauthSub,
+      oauthProvider,
+    }: FinalizeArgs) => {
       const tk = turnkeyRef.current;
 
       const wallets = tk.wallets.length
@@ -75,6 +87,8 @@ export function useAuthFlow() {
         pseudo: email ? pseudoFromEmail(email) : undefined,
         cashWallet,
         authMethod,
+        oauthSub,
+        oauthProvider,
       });
 
       const persistedStealf = await readPersistedStealfWallet();
@@ -132,26 +146,34 @@ export function useAuthFlow() {
     if (!pendingOauth) return;
 
     const method = pendingOauth;
-    const unsubscribe = subscribeOauthAuthSuccess(({ email, sessionToken }) => {
-      if (finalizingRef.current) return;
-      finalizingRef.current = true;
-      setIsLoading(true);
+    const unsubscribe = subscribeOauthAuthSuccess(
+      ({ email, oauthSub, sessionToken }) => {
+        if (finalizingRef.current) return;
+        finalizingRef.current = true;
+        setIsLoading(true);
 
-      Sentry.addBreadcrumb({
-        category: 'auth.oauth',
-        level: 'info',
-        message: 'useAuthFlow subscriber received OAuth event',
-        data: { method, hasEmail: !!email },
-      });
-      if (__DEV__) {
-        console.log('[useAuthFlow] starting finalize', {
-          method,
-          hasEmail: !!email,
-          hasSessionToken: !!sessionToken,
+        Sentry.addBreadcrumb({
+          category: 'auth.oauth',
+          level: 'info',
+          message: 'useAuthFlow subscriber received OAuth event',
+          data: { method, hasEmail: !!email, hasSub: !!oauthSub },
         });
-      }
+        if (__DEV__) {
+          console.log('[useAuthFlow] starting finalize', {
+            method,
+            hasEmail: !!email,
+            hasSub: !!oauthSub,
+            hasSessionToken: !!sessionToken,
+          });
+        }
 
-      finalizePostAuth({ authMethod: method, sessionToken, email })
+        finalizePostAuth({
+          authMethod: method,
+          sessionToken,
+          email,
+          oauthSub,
+          oauthProvider: method,
+        })
         .catch((err) => {
           if (__DEV__) {
             const data = (err as { data?: unknown })?.data;
@@ -180,7 +202,8 @@ export function useAuthFlow() {
           setIsLoading(false);
           setPendingOauth(null);
         });
-    });
+      },
+    );
     return unsubscribe;
   }, [pendingOauth, finalizePostAuth]);
 
@@ -248,6 +271,8 @@ export function useAuthFlow() {
           authMethod: 'email',
           sessionToken,
           email,
+          oauthSub: undefined,
+          oauthProvider: undefined,
         });
       } catch (err) {
         setError(toMessage(err));

@@ -106,6 +106,7 @@ async function request<T extends object>(
 }
 
 export type AuthMethod = 'google' | 'apple' | 'email';
+export type OauthProvider = 'google' | 'apple';
 
 export async function finalizeOAuthAuth(input: {
   sessionToken: string;
@@ -114,6 +115,8 @@ export async function finalizeOAuthAuth(input: {
   pseudo: string | undefined;
   cashWallet: string;
   authMethod: AuthMethod;
+  oauthSub: string | undefined;
+  oauthProvider: OauthProvider | undefined;
 }): Promise<User> {
   return request(
     '/api/users/auth/login',
@@ -125,6 +128,8 @@ export async function finalizeOAuthAuth(input: {
         pseudo: input.pseudo,
         bank_wallet: input.cashWallet,
         authMethod: input.authMethod,
+        oauthSub: input.oauthSub,
+        oauthProvider: input.oauthProvider,
       },
       sessionToken: input.sessionToken,
     },
