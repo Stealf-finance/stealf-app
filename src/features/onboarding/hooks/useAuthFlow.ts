@@ -23,6 +23,7 @@ type FinalizeArgs = {
   email: string | undefined;
   oauthSub: string | undefined;
   oauthProvider: OauthProvider | undefined;
+  oidcToken: string | undefined;
 };
 
 export function useAuthFlow() {
@@ -52,6 +53,7 @@ export function useAuthFlow() {
       email,
       oauthSub,
       oauthProvider,
+      oidcToken,
     }: FinalizeArgs) => {
       const tk = turnkeyRef.current;
 
@@ -89,6 +91,7 @@ export function useAuthFlow() {
         authMethod,
         oauthSub,
         oauthProvider,
+        oidcToken,
       });
 
       const persistedStealf = await readPersistedStealfWallet();
@@ -147,7 +150,7 @@ export function useAuthFlow() {
 
     const method = pendingOauth;
     const unsubscribe = subscribeOauthAuthSuccess(
-      ({ email, oauthSub, sessionToken }) => {
+      ({ email, oauthSub, sessionToken, identifier }) => {
         if (finalizingRef.current) return;
         finalizingRef.current = true;
         setIsLoading(true);
@@ -173,6 +176,7 @@ export function useAuthFlow() {
           email,
           oauthSub,
           oauthProvider: method,
+          oidcToken: identifier,
         })
         .catch((err) => {
           if (__DEV__) {
@@ -273,6 +277,7 @@ export function useAuthFlow() {
           email,
           oauthSub: undefined,
           oauthProvider: undefined,
+          oidcToken: undefined,
         });
       } catch (err) {
         setError(toMessage(err));
