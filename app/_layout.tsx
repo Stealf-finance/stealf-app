@@ -32,6 +32,7 @@ import { PendingOpsProvider } from '@/src/components/pending-ops/PendingOpsConte
 import { ToastProvider } from '@/src/components/toast/ToastContext';
 import { ToastHost } from '@/src/components/toast/ToastHost';
 import { AnimatedSplash } from '@/src/components/AnimatedSplash';
+import { OfflineBanner } from '@/src/components/OfflineBanner';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,7 +44,6 @@ const env = getEnv();
 
 const PRELOAD_IMAGES = [
   require('../assets/images/splash-icon.png'),
-  require('../assets/images/card-stealf.png'),
 ];
 
 const BOOT_START = Date.now();
@@ -163,6 +163,7 @@ function RootLayout() {
                           />
                         </Stack>
                         <ToastHost />
+                        <OfflineBanner />
                         <AnimatedSplash />
                         <StatusBar style="light" />
                       </ToastProvider>
