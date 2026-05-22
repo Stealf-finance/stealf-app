@@ -5,7 +5,7 @@ import {
 } from '@turnkey/react-native-wallet-kit';
 import { Buffer } from 'buffer';
 import * as Sentry from '@sentry/react-native';
-import { decodeOidcEmail } from '@/src/features/onboarding/lib/oidc';
+import { decodeOidcEmail, decodeOidcSub } from '@/src/features/onboarding/lib/oidc';
 import { emitOauthAuthSuccess } from './oauthAuthEvents';
 
 export const BANK_WALLET_CONFIG = {
@@ -59,6 +59,7 @@ export const TURNKEY_CALLBACKS: TurnkeyCallbacks = {
   onAuthenticationSuccess: ({ session, action, method, identifier }) => {
     if (method === AuthMethod.Oauth && session?.token) {
       const email = decodeOidcEmail(identifier);
+      const oauthSub = decodeOidcSub(identifier);
       if (__DEV__) {
         const tokenParts = (identifier ?? '').split('.');
         console.log('[Turnkey] Auth success:', {
@@ -94,10 +95,11 @@ export const TURNKEY_CALLBACKS: TurnkeyCallbacks = {
         message: email
           ? 'OAuth callback fired with decoded email'
           : 'OIDC token had no email claim',
-        data: { action, hasEmail: !!email },
+        data: { action, hasEmail: !!email, hasSub: !!oauthSub },
       });
       emitOauthAuthSuccess({
         email,
+        oauthSub,
         sessionToken: session.token,
         identifier,
       });

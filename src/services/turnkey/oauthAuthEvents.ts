@@ -3,6 +3,7 @@
 // post-auth state commits.
 type OauthAuthSuccess = {
   email: string | undefined;
+  oauthSub: string | undefined;
   sessionToken: string;
   identifier: string;
 };
