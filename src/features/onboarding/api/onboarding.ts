@@ -117,6 +117,7 @@ export async function finalizeOAuthAuth(input: {
   authMethod: AuthMethod;
   oauthSub: string | undefined;
   oauthProvider: OauthProvider | undefined;
+  oidcToken: string | undefined;
 }): Promise<User> {
   return request(
     '/api/users/auth/login',
@@ -130,6 +131,7 @@ export async function finalizeOAuthAuth(input: {
         authMethod: input.authMethod,
         oauthSub: input.oauthSub,
         oauthProvider: input.oauthProvider,
+        oidcToken: input.oidcToken,
       },
       sessionToken: input.sessionToken,
     },
