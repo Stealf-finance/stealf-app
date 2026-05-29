@@ -5,10 +5,7 @@ import {
 } from '@solana/transactions';
 import nacl from 'tweetnacl';
 import bs58 from 'bs58';
-import type {
-  IUmbraSigner,
-  SignableTransaction,
-} from '@umbra-privacy/sdk/interfaces';
+import type { IUmbraSigner, SignableTransaction } from '@umbra-privacy/sdk';
 import type { SignedTransaction } from '@umbra-privacy/sdk/types';
 
 // Bridges Umbra's `IUmbraSigner` to Turnkey's remote signing for the bank

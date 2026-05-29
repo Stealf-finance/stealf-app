@@ -1,9 +1,5 @@
-import type {
-  IZkProverForReceiverClaimableUtxo,
-  IZkProverForSelfClaimableUtxo,
-  ZkProverForReceiverClaimableUtxoFromPublicBalance,
-  ZkProverForSelfClaimableUtxoFromPublicBalance,
-} from '@umbra-privacy/sdk/interfaces';
+import type { IZkProverForATAIntoStealthPoolNote } from '@umbra-privacy/sdk/deposit';
+import type { IZkProverForETAIntoStealthPoolNote } from '@umbra-privacy/sdk/shared';
 import Zk from '@umbra-privacy/rn-zk-prover';
 import { createZkProver } from './prover';
 import { getZKey } from '../services/zkAssetService';
@@ -31,7 +27,7 @@ function memoizeZkeyPath(type: ZKeyType): () => Promise<string> {
 
 export function createCreateUtxoWithReceiverUnlockerZkProver(
   zkLib: ZkType = Zk,
-): IZkProverForReceiverClaimableUtxo {
+): IZkProverForETAIntoStealthPoolNote {
   const getPath = memoizeZkeyPath('createDepositWithConfidentialAmount');
   return {
     prove: async (inputs: unknown) => {
@@ -43,7 +39,7 @@ export function createCreateUtxoWithReceiverUnlockerZkProver(
 
 export function createCreateUtxoWithEphemeralUnlockerZkProver(
   zkLib: ZkType = Zk,
-): IZkProverForSelfClaimableUtxo {
+): IZkProverForETAIntoStealthPoolNote {
   const getPath = memoizeZkeyPath('createDepositWithConfidentialAmount');
   return {
     prove: async (inputs: unknown) => {
@@ -55,7 +51,7 @@ export function createCreateUtxoWithEphemeralUnlockerZkProver(
 
 export function createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver(
   zkLib: ZkType = Zk,
-): ZkProverForReceiverClaimableUtxoFromPublicBalance {
+): IZkProverForATAIntoStealthPoolNote {
   const getPath = memoizeZkeyPath('createDepositWithPublicAmount');
   return {
     prove: async (inputs: unknown) => {
@@ -67,7 +63,7 @@ export function createCreateUtxoFromPublicBalanceWithReceiverUnlockerZkProver(
 
 export function createCreateUtxoFromPublicBalanceWithEphemeralUnlockerZkProver(
   zkLib: ZkType = Zk,
-): ZkProverForSelfClaimableUtxoFromPublicBalance {
+): IZkProverForATAIntoStealthPoolNote {
   const getPath = memoizeZkeyPath('createDepositWithPublicAmount');
   return {
     prove: async (inputs: unknown) => {

@@ -1,9 +1,9 @@
 import {
-  getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction as sdkGetEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
-  getEncryptedBalanceToSelfClaimableUtxoCreatorFunction as sdkGetEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
-  getPublicBalanceToReceiverClaimableUtxoCreatorFunction as sdkGetPublicBalanceToReceiverClaimableUtxoCreatorFunction,
-  getPublicBalanceToSelfClaimableUtxoCreatorFunction as sdkGetPublicBalanceToSelfClaimableUtxoCreatorFunction,
-} from '@umbra-privacy/sdk';
+  getETAIntoReceiverBurnableStealthPoolNoteCreatorFunction as sdkGetEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
+  getETAIntoSelfBurnableStealthPoolNoteCreatorFunction as sdkGetEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
+  getATAIntoReceiverBurnableStealthPoolNoteCreatorFunction as sdkGetPublicBalanceToReceiverClaimableUtxoCreatorFunction,
+  getATAIntoSelfBurnableStealthPoolNoteCreatorFunction as sdkGetPublicBalanceToSelfClaimableUtxoCreatorFunction,
+} from '@umbra-privacy/sdk/deposit';
 import type { Address } from '@solana/kit';
 import {
   createCreateUtxoWithReceiverUnlockerZkProver,

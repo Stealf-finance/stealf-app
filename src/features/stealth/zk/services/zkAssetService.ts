@@ -1,6 +1,7 @@
 import { Asset } from 'expo-asset';
 import { Directory, File, Paths } from 'expo-file-system';
 import {
+  NATIVE_CIRCUIT_VERSION,
   ZK_ASSETS_BASE_URL,
   ZK_ASSETS_DIRECTORY,
   ZK_MANIFEST_FILENAME,
@@ -18,14 +19,7 @@ import type {
 const MANIFEST_TTL_MS = 5 * 60 * 1000;
 const manifestCache = createTtlCache<ZkAssetManifest>(MANIFEST_TTL_MS);
 
-/**
- * Bundled ZK assets — shipped inside the app and used as a fallback when
- * we can't reach the CDN. We bundle only the hot-path public deposit zkey
- * (~4 MB) so that creating UTXOs from the public balance works offline /
- * on first launch. `userRegistration` (~47 MB) is fetched on demand the
- * first time a wallet registers, which is always preceded by an
- * authenticated network call anyway.
- */
+
 const BUNDLED_ZKEYS: Partial<Record<ZKeyType, number>> = {
   createDepositWithPublicAmount: require('@/assets/zk/createdepositwithpublicamount.zkey'),
 };
@@ -76,6 +70,7 @@ async function saveAssetToManifest(
   const existing = await readLocalManifest();
   const manifest: LocalZkManifest = {
     manifestVersion: manifestVersion ?? existing?.manifestVersion ?? 'bundled',
+    nativeCircuitVersion: NATIVE_CIRCUIT_VERSION,
     downloadedAt: Date.now(),
     assets: existing?.assets ?? {},
   };
@@ -135,6 +130,21 @@ async function validateManifestVersion(): Promise<void> {
       typeof local.manifestVersion !== 'string'
     ) {
       if (__DEV__) console.log('[ZK] Local manifest legacy format — clearing.');
+      await clearZkAssetsCache();
+      return;
+    }
+
+    // Cache from a previous rn-zk-prover version → CDN might have rotated
+    // zkeys against the new circuit under the same manifest version. Wipe
+    // and re-fetch.
+    if (local.nativeCircuitVersion !== NATIVE_CIRCUIT_VERSION) {
+      if (__DEV__) {
+        console.log(
+          `[ZK] Native circuit version mismatch (local: ${
+            local.nativeCircuitVersion ?? 'unset'
+          }, current: ${NATIVE_CIRCUIT_VERSION}) — clearing.`,
+        );
+      }
       await clearZkAssetsCache();
       return;
     }

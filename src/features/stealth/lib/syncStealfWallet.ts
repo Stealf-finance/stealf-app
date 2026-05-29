@@ -4,7 +4,7 @@ import {
   fetchClaimScan,
   type ClaimScanResult,
 } from '@/src/services/umbra/queries/claims';
-import { loadClaimScanCache } from '@/src/features/stealth/lib/claimScanCache';
+import { hasAsyncStorageBackendData } from '@/src/services/umbra/storage/asyncStorageBackend';
 import {
   fetchUmbraRegistration,
   umbraRegistrationQueries,
@@ -39,8 +39,12 @@ export async function decideSyncAction(
 ): Promise<SyncDecision> {
   if (isFresh) return { action: 'skip', reason: 'fresh-create' };
 
-  const cached = await loadClaimScanCache(walletAddress);
-  if (cached) return { action: 'skip', reason: 'cache-exists' };
+  // The Umbra SDK's sharded store persists scan progress per wallet under
+  // its AsyncStorage namespace. If any blob exists, the user has scanned at
+  // least once on this device — the Claims screen will resume incrementally,
+  // no eager scan needed.
+  const storeWarm = await hasAsyncStorageBackendData(walletAddress);
+  if (storeWarm) return { action: 'skip', reason: 'cache-exists' };
 
   try {
     const registered = await fetchUmbraRegistration(walletAddress);

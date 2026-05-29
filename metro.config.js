@@ -13,6 +13,7 @@ config.resolver.extraNodeModules = {
   buffer: require.resolve('buffer'),
   crypto: path.resolve(__dirname, 'crypto-shim.js'),
   fs: path.resolve(__dirname, 'fs-shim.js'),
+  snarkjs: path.resolve(__dirname, 'snarkjs-shim.js'),
 };
 
 
@@ -57,6 +58,34 @@ const moduleOverrides = {
   '@peculiar/utils/pem': path.resolve(
     __dirname,
     'node_modules/@peculiar/utils/build/cjs/pem/index.js',
+  ),
+  '@umbra-privacy/sdk/query': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/operations/query/index.js',
+  ),
+  '@umbra-privacy/sdk/registration': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/operations/registration/index.js',
+  ),
+  '@umbra-privacy/sdk/deposit': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/operations/deposit/index.js',
+  ),
+  '@umbra-privacy/sdk/withdrawal': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/operations/withdrawal/index.js',
+  ),
+  '@umbra-privacy/sdk/burn': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/operations/burn/index.js',
+  ),
+  '@umbra-privacy/sdk/errors': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/core/errors/index.js',
+  ),
+  '@umbra-privacy/sdk/store-adapters': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/persistence/adapters/index.js',
   ),
 };
 

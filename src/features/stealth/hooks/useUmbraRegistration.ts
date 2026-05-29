@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getUserAccountQuerierFunction } from '@umbra-privacy/sdk';
+import { getUserAccountQuerierFunction } from '@umbra-privacy/sdk/query';
 import { toAddress } from '@/src/services/solana/kit';
 import { getStealthClient } from '@/src/services/umbra/client';
 

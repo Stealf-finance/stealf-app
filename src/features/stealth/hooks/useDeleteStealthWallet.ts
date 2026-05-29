@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { umbraClearSeed } from '@/src/services/umbra/seed';
 import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
-import { clearClaimScanCache } from '@/src/features/stealth/lib/claimScanCache';
+import { clearAsyncStorageBackend } from '@/src/services/umbra/storage/asyncStorageBackend';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
 /**
@@ -28,7 +28,7 @@ export function useDeleteStealthWallet() {
       await umbraClearSeed();
       await walletKeyCache.clearAll();
       if (prevStealfWallet) {
-        await clearClaimScanCache(prevStealfWallet).catch(() => undefined);
+        await clearAsyncStorageBackend(prevStealfWallet).catch(() => undefined);
       }
 
       if (user) {

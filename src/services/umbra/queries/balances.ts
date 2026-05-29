@@ -1,4 +1,4 @@
-import { getEncryptedBalanceQuerierFunction } from '@umbra-privacy/sdk';
+import { getEncryptedBalanceQuerierFunction } from '@umbra-privacy/sdk/query';
 import type { Address } from '@solana/kit';
 import { getStealthClient } from '../client';
 

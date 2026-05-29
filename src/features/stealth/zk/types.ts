@@ -27,6 +27,13 @@ export interface ZkAssetManifest {
 
 export interface LocalZkManifest {
   manifestVersion: string;
+  /**
+   * Tracks the rn-zk-prover bundled-circuit version that downloaded these
+   * zkeys. When we bump the prover, on-disk zkeys may have been served by
+   * the CDN against a since-rotated circuit (same `manifestVersion` string)
+   * — so on prover-version change we wipe the cache and re-fetch.
+   */
+  nativeCircuitVersion?: string;
   downloadedAt: number;
   assets: Record<string, { version: string; localPath: string }>;
 }

@@ -5,7 +5,7 @@ import {
   isEncryptedWithdrawalError,
   isFetchUtxosError,
   isRegistrationError,
-} from '@umbra-privacy/sdk';
+} from '@umbra-privacy/sdk/errors';
 
 export {
   isClaimUtxoError,

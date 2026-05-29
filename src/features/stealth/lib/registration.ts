@@ -1,4 +1,4 @@
-import { getUserRegistrationFunction } from '@umbra-privacy/sdk';
+import { getUserRegistrationFunction } from '@umbra-privacy/sdk/registration';
 import { getStealthClient, type UmbraClient } from '@/src/services/umbra/client';
 import { createUserRegistrationProver } from '../zk/provers/register';
 

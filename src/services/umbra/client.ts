@@ -3,6 +3,10 @@ import {
   getUmbraClient,
   getUmbraRelayer,
 } from '@umbra-privacy/sdk';
+import {
+  createShardedUtxoDataStore,
+  createShardedNullifierStore,
+} from '@umbra-privacy/sdk/store-adapters';
 import bs58 from 'bs58';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { getEnv } from '@/src/services/env';
@@ -17,6 +21,7 @@ import {
   type TurnkeySignTransactionFn,
   type TurnkeyWalletAccount,
 } from './turnkeySigner';
+import { createAsyncStorageBackend } from './storage/asyncStorageBackend';
 
 export const NETWORK = 'devnet' as const;
 export const RELAYER_API = 'https://relayer.api-devnet.umbraprivacy.com';
@@ -65,7 +70,7 @@ async function buildStealthClient(): Promise<UmbraClient> {
     signer = await createSignerFromPrivateKeyBytes(fullKeyBytes);
   }
 
-  cachedClient = await getUmbraClient(
+  const client = await getUmbraClient(
     {
       signer,
       network: NETWORK,
@@ -81,8 +86,28 @@ async function buildStealthClient(): Promise<UmbraClient> {
     },
   );
 
+  // Chicken-and-egg: the sharded stores derive their encryption key from the
+  // client's master seed, so the client must exist first; but the client
+  // exposes the stores at scan time via `client.utxoDataStore`. The client
+  // object is plain (not frozen), so we attach the stores post-construction.
+  await attachShardedStores(client, signer.address.toString());
+
+  cachedClient = client;
   cachedSignerKey = privateKeyB58;
   return cachedClient;
+}
+
+async function attachShardedStores(
+  client: UmbraClient,
+  namespace: string,
+): Promise<void> {
+  const backend = createAsyncStorageBackend(namespace);
+  const [utxoDataStore, nullifierStore] = await Promise.all([
+    createShardedUtxoDataStore(client as never, backend),
+    createShardedNullifierStore(client as never, backend),
+  ]);
+  (client as unknown as { utxoDataStore: unknown }).utxoDataStore = utxoDataStore;
+  (client as unknown as { nullifierStore: unknown }).nullifierStore = nullifierStore;
 }
 
 // Cached per private key; parallel callers share the in-flight build.
@@ -143,6 +168,8 @@ export async function getBankClient(
       },
     },
   );
+
+  await attachShardedStores(client, addr);
 
   bankClientCache.set(addr, client);
   return client;

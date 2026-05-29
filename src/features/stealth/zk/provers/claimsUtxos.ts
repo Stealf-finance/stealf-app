@@ -3,7 +3,7 @@ import type {
   ClaimReceiverClaimableUtxoIntoEncryptedBalanceCircuitInputs,
   IZkProverForClaimReceiverClaimableUtxoIntoEncryptedBalance,
   IZkProverForClaimSelfClaimableUtxoIntoPublicBalance,
-} from '@umbra-privacy/sdk/interfaces';
+} from '@umbra-privacy/sdk/shared';
 import Zk from '@umbra-privacy/rn-zk-prover';
 import { createZkProver } from './prover';
 import { getZKey } from '../services/zkAssetService';

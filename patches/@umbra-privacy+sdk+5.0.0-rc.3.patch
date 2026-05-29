@@ -1,0 +1,13 @@
+diff --git a/node_modules/@umbra-privacy/sdk/dist/chunk-MZ3TIUAU.cjs b/node_modules/@umbra-privacy/sdk/dist/chunk-MZ3TIUAU.cjs
+index ac9db7a..100facc 100644
+--- a/node_modules/@umbra-privacy/sdk/dist/chunk-MZ3TIUAU.cjs
++++ b/node_modules/@umbra-privacy/sdk/dist/chunk-MZ3TIUAU.cjs
+@@ -134,7 +134,7 @@ async function getUmbraClient(args, deps) {
+         getBatchMerkleProofFetcher,
+         getUtxoDataFetcher,
+         getTreeSummaryFetcher
+-      } = await import('./infrastructure/indexer/index.cjs');
++      } = require('./infrastructure/indexer/index.cjs');
+       fetchMerkleProof = getMerkleProofFetcher({ apiEndpoint: indexerApiEndpoint });
+       fetchBatchMerkleProof = getBatchMerkleProofFetcher({ apiEndpoint: indexerApiEndpoint });
+       fetchUtxoData = getUtxoDataFetcher({ apiEndpoint: indexerApiEndpoint });

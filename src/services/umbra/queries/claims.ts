@@ -1,13 +1,9 @@
-import { getClaimableUtxoScannerFunction } from '@umbra-privacy/sdk';
+import { getBurnableStealthPoolNoteScannerFunction } from '@umbra-privacy/sdk/burn';
 import { getStealthClient, getCachedSignerKey } from '../client';
 import {
   isBurnt,
   loadBurntUtxosForCurrentWallet,
 } from '@/src/features/stealth/lib/burntUtxos';
-import {
-  loadClaimScanCache,
-  saveClaimScanCache,
-} from '@/src/features/stealth/lib/claimScanCache';
 
 async function ensureBlacklistLoaded(): Promise<void> {
   const key = getCachedSignerKey();
@@ -21,23 +17,19 @@ export type ClaimScanResult = {
   publicSelfBurnable: any[];
 };
 
-const TREE_INDEX = 0;
-const MAX_LEAVES = 1_048_576;
-const CHUNK_SIZE = 5_000;
-
 let cachedScanner: {
   wallet: string;
-  scan: ReturnType<typeof getClaimableUtxoScannerFunction>;
+  scan: ReturnType<typeof getBurnableStealthPoolNoteScannerFunction>;
 } | null = null;
 
 function getOrCreateScanner(
   wallet: string,
-  client: Parameters<typeof getClaimableUtxoScannerFunction>[0]['client'],
+  client: Parameters<typeof getBurnableStealthPoolNoteScannerFunction>[0]['client'],
 ) {
   if (cachedScanner && cachedScanner.wallet === wallet) {
     return cachedScanner.scan;
   }
-  const scan = getClaimableUtxoScannerFunction({ client });
+  const scan = getBurnableStealthPoolNoteScannerFunction({ client });
   cachedScanner = { wallet, scan };
   return scan;
 }
@@ -57,10 +49,20 @@ function emptyResult(): ClaimScanResult {
 }
 
 export type FetchClaimScanOptions = {
-  /** Called after each scanned chunk with a 0..1 ratio of progress. */
+  /** Reported at 0 (start) and 1 (end). v5 scans atomically — no mid-scan progress. */
   onProgress?: (ratio: number) => void;
 };
 
+/**
+ * Run the burn scanner (incremental — only re-scans tree ranges not yet in
+ * the client's UtxoDataStore) and return every known burnable note for the
+ * active wallet, bucketed into the 4 categories the UI consumes.
+ *
+ * The scan function itself only emits notes *newly discovered* in this run.
+ * The store-backed `query()` is what gives us the full picture across cold
+ * starts — that's why we query after scanning rather than using the scan
+ * result directly.
+ */
 export async function fetchClaimScan(
   wallet: string,
   options: FetchClaimScanOptions = {},
@@ -69,122 +71,68 @@ export async function fetchClaimScan(
   await ensureBlacklistLoaded();
   const scan = getOrCreateScanner(wallet, client);
 
-  const cache = wallet ? await loadClaimScanCache(wallet) : null;
-  const baseTreeIndex = cache?.treeIndex ?? TREE_INDEX;
+  if (options.onProgress) options.onProgress(0);
 
-  const startCursor = cache?.cursor ?? 0;
-  const seedResults = cache?.results ?? emptyResult();
-  if (__DEV__) {
-    console.log(
-      '[claims] fetchClaimScan start:' +
-        ` walletShort=${wallet.slice(0, 8)}` +
-        ` cacheHit=${!!cache}` +
-        ` startCursor=${startCursor}` +
-        ` seedReceived=${seedResults.received.length}` +
-        ` seedPublicReceived=${seedResults.publicReceived.length}` +
-        ` seedSelfBurnable=${seedResults.selfBurnable.length}` +
-        ` seedPublicSelfBurnable=${seedResults.publicSelfBurnable.length}`,
-    );
-  }
-
-  const acc: ClaimScanResult = {
-    received: [...seedResults.received],
-    publicReceived: [...seedResults.publicReceived],
-    selfBurnable: [...seedResults.selfBurnable],
-    publicSelfBurnable: [...seedResults.publicSelfBurnable],
-  };
-
-  let cursor = startCursor;
-  let lastScannedEnd = startCursor;
-  let chunkIndex = 0;
   const scanT0 = Date.now();
   try {
-    while (cursor < MAX_LEAVES) {
-      const end = Math.min(cursor + CHUNK_SIZE - 1, MAX_LEAVES - 1);
-      const chunkT0 = Date.now();
-      const chunk = await scan(
-        BigInt(baseTreeIndex) as any,
-        BigInt(cursor) as any,
-        BigInt(end) as any,
-      );
-      const chunkMs = Date.now() - chunkT0;
-      if (chunk.received?.length) acc.received.push(...chunk.received);
-      if (chunk.publicReceived?.length)
-        acc.publicReceived.push(...chunk.publicReceived);
-      if (chunk.selfBurnable?.length) acc.selfBurnable.push(...chunk.selfBurnable);
-      if (chunk.publicSelfBurnable?.length)
-        acc.publicSelfBurnable.push(...chunk.publicSelfBurnable);
-
-      const nextCursor = Number(chunk.nextScanStartIndex);
-      lastScannedEnd = nextCursor;
-      chunkIndex++;
-
-      if (__DEV__ && (chunkIndex % 20 === 0 || chunkMs > 800)) {
-        console.log(
-          `[claims] chunk #${chunkIndex} done cursor=${cursor}→${nextCursor}` +
-            ` chunkMs=${chunkMs} totalMs=${Date.now() - scanT0}` +
-            ` running totals received=${acc.received.length}` +
-            ` publicReceived=${acc.publicReceived.length}` +
-            ` selfBurnable=${acc.selfBurnable.length}` +
-            ` publicSelfBurnable=${acc.publicSelfBurnable.length}`,
-        );
-      }
-
-      if (options.onProgress) {
-        const ratio = Math.min(1, Math.max(0, nextCursor / MAX_LEAVES));
-        options.onProgress(ratio);
-      }
-
-      if (nextCursor <= cursor) break;
-      cursor = nextCursor;
-
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
-    }
-    // Ensure we end at 100% on the success path — the loop above might
-    // break on `nextScanStartIndex <= cursor` (tree head reached) before
-    // `cursor / MAX_LEAVES` hits exactly 1, leaving the bar partial.
-    if (options.onProgress) options.onProgress(1);
+    await scan();
   } catch (err: any) {
     if (__DEV__) {
       console.error(
-        `[claims] scan ABORTED at chunk #${chunkIndex} cursor=${cursor}` +
-          ` after ${Date.now() - scanT0}ms:`,
+        `[claims] scan ABORTED after ${Date.now() - scanT0}ms:`,
         err?.message || err,
       );
     }
     throw err;
   }
+  if (options.onProgress) options.onProgress(1);
 
+  const store = (client as unknown as { utxoDataStore?: { query: (f: object) => Promise<any[]> } })
+    .utxoDataStore;
+  if (!store) {
+    if (__DEV__) console.warn('[claims] no utxoDataStore wired — returning empty');
+    return emptyResult();
+  }
 
-  const notBurnt = (u: any) => !isBurnt(u);
-  const out: ClaimScanResult = {
-    received: acc.received.filter(notBurnt),
-    publicReceived: acc.publicReceived.filter(notBurnt),
-    selfBurnable: acc.selfBurnable.filter(notBurnt),
-    publicSelfBurnable: acc.publicSelfBurnable.filter(notBurnt),
-  };
+  // `claimType` discriminates the 6 v5 buckets. We surface the four we use
+  // today; the two NetworkBalance variants are dropped until we wire that flow.
+  const allEntries = await store.query({
+    network: client.network,
+    signerAddress: client.signer.address,
+  });
 
-  if (wallet) {
-    // Persist whatever cursor the SDK last gave us. With `nextScanStartIndex`
-    // this naturally tracks the actual tree head, so subsequent scans only
-    // touch leaves that were appended since (typically zero or one chunk).
-    await saveClaimScanCache(wallet, {
-      treeIndex: baseTreeIndex,
-      cursor: lastScannedEnd,
-      results: out,
-    });
+  const out = emptyResult();
+  for (const entry of allEntries) {
+    if (isBurnt(entry.data)) continue;
+    switch (entry.claimType) {
+      case 'etaToStealthPoolReceiverBurnable':
+        out.received.push(entry.data);
+        break;
+      case 'ataToStealthPoolReceiverBurnable':
+        out.publicReceived.push(entry.data);
+        break;
+      case 'etaToStealthPoolSelfBurnable':
+        out.selfBurnable.push(entry.data);
+        break;
+      case 'ataToStealthPoolSelfBurnable':
+        out.publicSelfBurnable.push(entry.data);
+        break;
+      default:
+        break;
+    }
   }
 
   if (__DEV__) {
     console.log(
-      '[claims] scan:' +
-        ` start=${startCursor}` +
-        ` end=${lastScannedEnd}` +
+      '[claims] scan+query done:' +
+        ` totalMs=${Date.now() - scanT0}` +
+        ` walletShort=${wallet.slice(0, 8)}` +
         ` received=${out.received.length}` +
         ` publicReceived=${out.publicReceived.length}` +
         ` selfBurnable=${out.selfBurnable.length}` +
         ` publicSelfBurnable=${out.publicSelfBurnable.length}`,
     );
   }
+
   return out;
 }
