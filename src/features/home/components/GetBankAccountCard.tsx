@@ -43,9 +43,9 @@ export function GetBankAccountCard() {
         >
           <Image
             source={require('@/assets/images/bank-icon.png')}
-            contentFit="cover"
+            contentFit="contain"
             cachePolicy="memory-disk"
-            style={{ width: 46, height: 46, borderRadius: 23 }}
+            style={{ width: 46, height: 46 }}
           />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[sansation, { fontSize: 16, color: T.ink, fontWeight: '600' }]}>
