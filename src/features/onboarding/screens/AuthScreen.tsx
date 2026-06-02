@@ -69,21 +69,41 @@ export function AuthScreen({ onEmail }: Props) {
           contentFit="contain"
           cachePolicy="memory-disk"
         />
-        <Text
-          style={[
-            sansationItalic,
-            {
-              fontSize: 80,
-              lineHeight: 80,
-              color: T.ink,
-              letterSpacing: -3.2,
-              marginBottom: 12,
-              includeFontPadding: false,
-            },
-          ]}
-        >
-          stealf
-        </Text>
+        {/* Wrapper sizes to the wordmark and stays centered by the parent's
+            alignItems; (beta) is absolutely pinned to its bottom-right so the
+            title itself never shifts off-center. */}
+        <View style={{ marginBottom: 12 }}>
+          <Text
+            style={[
+              sansationItalic,
+              {
+                fontSize: 80,
+                lineHeight: 80,
+                color: T.ink,
+                letterSpacing: -3.2,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            stealf
+          </Text>
+          <Text
+            style={[
+              sansationBold,
+              {
+                position: 'absolute',
+                right: -48,
+                bottom: 8,
+                fontSize: 12,
+                letterSpacing: 1,
+                color: SILVER.accent,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            (beta)
+          </Text>
+        </View>
         <Text
           style={[
             sansationBold,
