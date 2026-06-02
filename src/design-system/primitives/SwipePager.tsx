@@ -21,9 +21,14 @@ type Props = {
   /** Horizontal inset; page width = screen width - 2*inset. */
   inset?: number;
   /**
+   * Optional external progress shared value to drive screen-level effects
+   * (e.g. a background halo) from the same swipe. When omitted, an internal
+   * one is created.
+   */
+  progress?: SharedValue<number>;
+  /**
    * Renders the swipe zone. The whole returned tree is inside the Pan gesture,
-   * so multiple `SwipeSlider`s driven by the same `progress` slide in lockstep
-   * (e.g. the balance cards and the action tiles).
+   * so multiple `SwipeSlider`s driven by the same `progress` slide in lockstep.
    */
   children: (progress: SharedValue<number>, pageWidth: number) => ReactNode;
 };
@@ -33,9 +38,17 @@ type Props = {
  * `progress` (0..count-1) and the snapping logic, but renders no pages itself —
  * the consumer composes `SwipeSlider`s with the exposed `progress`/`pageWidth`.
  */
-export function SwipePager({ count, index, onIndexChange, inset = 24, children }: Props) {
+export function SwipePager({
+  count,
+  index,
+  onIndexChange,
+  inset = 24,
+  progress: externalProgress,
+  children,
+}: Props) {
   const pageWidth = SCREEN_W - inset * 2;
-  const progress = useSharedValue(index);
+  const internalProgress = useSharedValue(index);
+  const progress = externalProgress ?? internalProgress;
   const startX = useSharedValue(index);
 
   // Settle progress whenever the controlled index changes (dot tap, swipe commit).
@@ -47,7 +60,6 @@ export function SwipePager({ count, index, onIndexChange, inset = 24, children }
   const onPanEnd = (translationX: number, velocityX: number) => {
     const target = resolveSwipeTarget({ index, translationX, velocityX, count, pageWidth });
     if (target === index) {
-      // No page change → snap back here (the index effect won't fire).
       progress.value = withTiming(index, SNAP);
     } else {
       onIndexChange(target);
