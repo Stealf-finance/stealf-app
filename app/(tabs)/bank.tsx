@@ -1,10 +1,10 @@
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
-import { BankWallet } from '@/src/features/bank/screens/BankWallet';
+import { HomeHub } from '@/src/features/home/screens/HomeHub';
 
 export default function BankTab() {
   return (
     <TonalBackground tone="silver">
-      <BankWallet />
+      <HomeHub />
     </TonalBackground>
   );
 }
