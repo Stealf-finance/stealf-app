@@ -11,7 +11,7 @@ describe('homeCardActions', () => {
   it('Stealf card exposes receive/move', () => {
     expect(homeCardActions('stealf').map((a) => a.key)).toEqual(['receive', 'move']);
   });
-  it('Encrypted card exposes shield/unshield', () => {
-    expect(homeCardActions('encrypted').map((a) => a.key)).toEqual(['shield', 'unshield']);
+  it('Encrypted card exposes move', () => {
+    expect(homeCardActions('encrypted').map((a) => a.key)).toEqual(['move']);
   });
 });

@@ -31,20 +31,6 @@ const DETAILS: HomeAction = {
   route: '/transactions?wallet=bank',
 };
 
-// Encrypted (private mode) actions — sourced from StealthHub.tsx private-mode
-// tile panel (SquareActionTile props and router.push calls).
-const SHIELD: HomeAction = {
-  key: 'shield',
-  label: 'Shield',
-  iconKey: 'shieldCheck',
-  route: '/shield',
-};
-const UNSHIELD: HomeAction = {
-  key: 'unshield',
-  label: 'Unshield',
-  iconKey: 'shieldOff',
-  route: '/unshield',
-};
 export function homeCardActions(card: HomeCardId): HomeAction[] {
   switch (card) {
     case 'bank':
@@ -52,7 +38,7 @@ export function homeCardActions(card: HomeCardId): HomeAction[] {
     case 'stealf':
       return [RECEIVE, MOVE];
     case 'encrypted':
-      return [SHIELD, UNSHIELD];
+      return [MOVE];
     case 'total':
     default:
       return [];
