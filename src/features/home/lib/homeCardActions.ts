@@ -24,12 +24,6 @@ const MOVE: HomeAction = {
   iconKey: 'move',
   route: '/moove?direction=bank-to-shielded',
 };
-const SEND: HomeAction = {
-  key: 'send',
-  label: 'Send',
-  iconKey: 'arrUp',
-  route: '/send',
-};
 const DETAILS: HomeAction = {
   key: 'details',
   label: 'Details',
@@ -51,27 +45,14 @@ const UNSHIELD: HomeAction = {
   iconKey: 'shieldOff',
   route: '/unshield',
 };
-const SEND_ENCRYPTED: HomeAction = {
-  key: 'send',
-  label: 'Send',
-  iconKey: 'arrUp',
-  route: '/send/flow?tone=gold&wallet=stealth&mode=private',
-};
-const CLAIM: HomeAction = {
-  key: 'claim',
-  label: 'Claim',
-  iconKey: 'gift',
-  route: '/claim-pending',
-};
-
 export function homeCardActions(card: HomeCardId): HomeAction[] {
   switch (card) {
     case 'bank':
       return [MOVE, DETAILS];
     case 'stealf':
-      return [RECEIVE, MOVE, SEND];
+      return [RECEIVE, MOVE];
     case 'encrypted':
-      return [SHIELD, UNSHIELD, SEND_ENCRYPTED, CLAIM];
+      return [SHIELD, UNSHIELD];
     case 'total':
     default:
       return [];

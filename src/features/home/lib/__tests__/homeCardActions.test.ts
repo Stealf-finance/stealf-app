@@ -8,12 +8,10 @@ describe('homeCardActions', () => {
   it('Bank card exposes move + details', () => {
     expect(homeCardActions('bank').map((a) => a.key)).toEqual(['move', 'details']);
   });
-  it('Stealf card exposes receive/move/send', () => {
-    expect(homeCardActions('stealf').map((a) => a.key)).toEqual(['receive', 'move', 'send']);
+  it('Stealf card exposes receive/move', () => {
+    expect(homeCardActions('stealf').map((a) => a.key)).toEqual(['receive', 'move']);
   });
-  it('Encrypted card exposes shield/unshield/send/claim', () => {
-    expect(homeCardActions('encrypted').map((a) => a.key)).toEqual([
-      'shield', 'unshield', 'send', 'claim',
-    ]);
+  it('Encrypted card exposes shield/unshield', () => {
+    expect(homeCardActions('encrypted').map((a) => a.key)).toEqual(['shield', 'unshield']);
   });
 });
