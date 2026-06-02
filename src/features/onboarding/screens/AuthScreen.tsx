@@ -24,23 +24,23 @@ export function AuthScreen({ onEmail }: Props) {
   const insets = useSafeAreaInsets();
   const { show: showToast } = useToast();
   const {
-    signInWithApple,
     signInWithGoogle,
     isAuthenticating,
     pendingProvider,
     error,
   } = useAuthFlow();
 
-  // OAuth errors raised inside the post-auth effect can't reach the
-  // try/catch around signInWith*, so we surface them via a toast as soon as
-  // the hook's `error` state changes.
   useEffect(() => {
     if (!error) return;
     showToast({ kind: 'error', title: 'Error', message: error });
   }, [error, showToast]);
 
   const onApple = () => {
-    void signInWithApple();
+    showToast({
+      kind: 'info',
+      title: 'Coming soon',
+      message: 'Sign in with Apple is coming soon. Use Google or Email for now.',
+    });
   };
 
   const onGoogle = () => {
@@ -154,24 +154,23 @@ export function AuthScreen({ onEmail }: Props) {
           <View style={{ flex: 1, height: 1, backgroundColor: T.hairline }} />
         </View>
 
-        {Platform.OS === 'ios' && (
-          <AuthBtn
-            variant="primary"
-            icon={<AppleGlyph size={18} color={T.bg} />}
-            label="Continue with Apple"
-            disabled={disabled}
-            loading={pendingProvider === 'apple'}
-            onPress={onApple}
-          />
-        )}
         <AuthBtn
-          variant={Platform.OS === 'ios' ? 'glass' : 'primary'}
+          variant="primary"
           icon={<GoogleGlyph size={18} />}
           label="Continue with Google"
           disabled={disabled}
           loading={pendingProvider === 'google'}
           onPress={onGoogle}
         />
+        {Platform.OS === 'ios' && (
+          <AuthBtn
+            variant="glass"
+            icon={<AppleGlyph size={18} color={T.ink} />}
+            label="Apple · Coming soon"
+            onPress={onApple}
+            style={{ opacity: 0.5 }}
+          />
+        )}
         <AuthBtn
           variant="glass"
           icon={<MailGlyph size={18} color={T.ink} />}

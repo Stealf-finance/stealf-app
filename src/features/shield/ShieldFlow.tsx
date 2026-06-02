@@ -2,7 +2,11 @@ import { useEffect, useRef } from 'react';
 import { usePostHog } from 'posthog-react-native';
 import { Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { maxSpendableSol, SOL_DECIMALS } from '@/src/features/send/lib/amount';
+import {
+  maxSpendableSol,
+  SOL_DECIMALS,
+  PRIVATE_OP_SOL_FEE_RESERVE,
+} from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
@@ -108,7 +112,13 @@ export function ShieldFlow({ direction }: Props) {
       : 0;
 
   const reserveFees = isShield && !selectionActive;
-  const maxSol = maxSpendableSol(sourceBalance, reserveFees, true);
+
+  const maxSol = maxSpendableSol(
+    sourceBalance,
+    reserveFees,
+    true,
+    PRIVATE_OP_SOL_FEE_RESERVE,
+  );
 
   const {
     setAmount,
@@ -173,10 +183,9 @@ export function ShieldFlow({ direction }: Props) {
       );
     }
 
-    const FEE_SOL_RESERVE = 0.01;
     const stealthPublicSol =
       stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
-    if (isShield && stealthPublicSol < FEE_SOL_RESERVE) {
+    if (isShield && stealthPublicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
       return failPre(INSUFFICIENT_FEE_SOL_MESSAGE);
     }
 

@@ -2,7 +2,11 @@ import { useEffect, useRef } from 'react';
 import { usePostHog } from 'posthog-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { maxSpendableSol, SOL_DECIMALS } from '@/src/features/send/lib/amount';
+import {
+  maxSpendableSol,
+  SOL_DECIMALS,
+  PRIVATE_OP_SOL_FEE_RESERVE,
+} from '@/src/features/send/lib/amount';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
@@ -184,7 +188,14 @@ export function MoveFlow() {
 
   const hasProtocolFee = true;
   const reserveFees = sourcePaysFees && !selectionActive;
-  const maxSol = maxSpendableSol(sourceBalance, reserveFees, hasProtocolFee);
+  // Encrypted moves queue an Arcium computation, so "Max" must keep back the
+  // larger Arcium-aware SOL reserve on top of the 0.30% protocol fee.
+  const maxSol = maxSpendableSol(
+    sourceBalance,
+    reserveFees,
+    hasProtocolFee,
+    PRIVATE_OP_SOL_FEE_RESERVE,
+  );
 
   const {
     setAmount,
@@ -300,8 +311,7 @@ export function MoveFlow() {
       const stealthPublicSol =
         stealthBalanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL')
           ?.balance ?? 0;
-      const FEE_SOL_RESERVE = 0.01;
-      if (stealthPublicSol < FEE_SOL_RESERVE) {
+      if (stealthPublicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
         return failPre(INSUFFICIENT_FEE_SOL_MESSAGE);
       }
     }

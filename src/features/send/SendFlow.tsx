@@ -59,7 +59,9 @@ import {
   protocolFeeSol,
   SOL_DECIMALS,
   toRawAmount,
+  PRIVATE_OP_SOL_FEE_RESERVE,
 } from '@/src/features/send/lib/amount';
+import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
 import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
 
@@ -273,10 +275,14 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     if (__DEV__) console.log('[SendFlow] sending', typedAssetAmount, asset.symbol, '→', recipient.name, isPrivate ? '(private)' : '');
     try {
       if (isPrivate) {
+        const publicSol =
+          balance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+        if (publicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
+          setSendError(INSUFFICIENT_FEE_SOL_MESSAGE);
+          return;
+        }
         setPrivateSending(true);
         const txDecimals = asset.decimals ?? SOL_DECIMALS;
-        // Precision-safe — `Math.floor(human * 10**9)` overflows
-        // Number.MAX_SAFE_INTEGER once balances clear ~9.007 tokens.
         const amountRaw = toRawAmount(typedAssetAmount, txDecimals);
         const destination = toAddress(recipient.name.trim());
         const mintAddr = asset.mint ?? SOL_MINT;

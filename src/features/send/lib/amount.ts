@@ -2,6 +2,8 @@ export const SOL_DECIMALS = 9;
 
 export const SOL_FEE_RESERVE = 0.01;
 
+export const PRIVATE_OP_SOL_FEE_RESERVE = 0.02;
+
 export const PROTOCOL_FEE_RATE = 0.003;
 
 export function toRawAmount(human: number, decimals: number): bigint {
@@ -22,9 +24,10 @@ export function maxSpendableSol(
   balance: number,
   sourcePaysFees: boolean,
   hasProtocolFee = false,
+  reserve: number = SOL_FEE_RESERVE,
 ): number {
   let max = hasProtocolFee ? balance * (1 - PROTOCOL_FEE_RATE) : balance;
-  if (sourcePaysFees) max -= SOL_FEE_RESERVE;
+  if (sourcePaysFees) max -= reserve;
   return Math.max(0, max);
 }
 
