@@ -219,6 +219,30 @@ export async function isZKeyAvailable(
   return zkeyFile(type, variant, manifest.manifestVersion).exists;
 }
 
+
+async function downloadFileWithRetry(
+  url: string,
+  file: File,
+  attempts = 3,
+): Promise<void> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      if (file.exists) file.delete();
+      await File.downloadFileAsync(url, file);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < attempts) {
+        await new Promise<void>((resolve) =>
+          setTimeout(resolve, attempt * 800),
+        );
+      }
+    }
+  }
+  throw lastErr;
+}
+
 export async function downloadZKey(
   type: ZKeyType,
   variant?: ClaimVariant,
@@ -243,7 +267,7 @@ export async function downloadZKey(
     : `${ZK_ASSETS_BASE_URL}/${entry.url}`;
 
   if (!file.exists) {
-    await File.downloadFileAsync(downloadUrl, file);
+    await downloadFileWithRetry(downloadUrl, file);
   }
 
   await saveAssetToManifest(type, variant, entry.version, file.uri, version);

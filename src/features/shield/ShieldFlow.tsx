@@ -37,6 +37,7 @@ import {
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
+import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
 
 type Direction = 'shield' | 'unshield';
@@ -172,6 +173,13 @@ export function ShieldFlow({ direction }: Props) {
       );
     }
 
+    const FEE_SOL_RESERVE = 0.01;
+    const stealthPublicSol =
+      stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+    if (isShield && stealthPublicSol < FEE_SOL_RESERVE) {
+      return failPre(INSUFFICIENT_FEE_SOL_MESSAGE);
+    }
+
     const mintAddr = selectionActive ? selected!.mint : SOL_MINT;
     const amountBigInt = BigInt(Math.floor(num * 10 ** decimals));
     const mint = toAddress(mintAddr);
@@ -186,12 +194,8 @@ export function ShieldFlow({ direction }: Props) {
 
     close();
 
-    // Detached async — survives this component's unmount because the closure
-    // holds stable references to pendingOps + queryClient (root-level singletons).
     void (async () => {
-      // Heuristic phase progression: most of the wall-clock time on these
-      // ops is spent in ZK proof gen. Surface "Generating proof…" after a
-      // short submitting window so the pill feels alive.
+
       const provingTimer = setTimeout(() => {
         pendingOps.setPhase(opId, 'proving');
       }, 700);
