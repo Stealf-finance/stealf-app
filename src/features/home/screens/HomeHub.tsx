@@ -5,8 +5,9 @@ import { useSharedValue } from 'react-native-reanimated';
 import { T } from '@/src/design-system/tokens';
 import { useHomeBalances } from '../hooks/useHomeBalances';
 import { HomeHeader } from '../components/HomeHeader';
-import { BalanceCarousel } from '../components/BalanceCarousel';
+import { BalanceCarousel, HOME_CARDS } from '../components/BalanceCarousel';
 import { HomeActivity } from '../components/HomeActivity';
+import { AssetsList } from '../components/AssetsList';
 import { TonalHalo } from '../components/TonalHalo';
 
 export function HomeHub() {
@@ -14,9 +15,9 @@ export function HomeHub() {
   const balances = useHomeBalances();
   const [hidden, setHidden] = useState(false);
   const [index, setIndex] = useState(0);
-  // Shared between the carousel (which drives it) and the background halo
-  // (which reads it) so swiping to Encrypted recolours the whole background.
+  // Shared between the carousel (drives it) and the background halo (reads it).
   const progress = useSharedValue(0);
+  const card = HOME_CARDS[index].id;
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
@@ -35,7 +36,13 @@ export function HomeHub() {
           onIndexChange={setIndex}
           progress={progress}
         />
-        <HomeActivity />
+        {/* Bottom section follows the active card: Bank/Total → recent
+            activity; Wallet/Encrypted → the holdings list. */}
+        {card === 'stealf' || card === 'encrypted' ? (
+          <AssetsList card={card} />
+        ) : (
+          <HomeActivity />
+        )}
       </ScrollView>
     </View>
   );
