@@ -6,8 +6,10 @@ export type HomeAction = {
   key: string;
   label: string;
   iconKey: keyof typeof Icons;
-  /** Expo-router path to navigate to on press. */
-  route: string;
+  /** Expo-router path to navigate to on press. Omitted for coming-soon tiles. */
+  route?: string;
+  /** When true, the tile shows a "coming soon" toast instead of navigating. */
+  comingSoon?: boolean;
 };
 
 // Bank / Stealf actions — sourced from BankWallet.tsx (SquareActionTile props
@@ -39,6 +41,27 @@ const MOVE_ENCRYPTED_TO_BANK: HomeAction = {
   iconKey: 'move',
   route: '/moove?direction=shielded-to-bank',
 };
+// Shield: move the stealth wallet's public balance into the encrypted balance.
+const SHIELD: HomeAction = {
+  key: 'shield',
+  label: 'Shield',
+  iconKey: 'shieldCheck',
+  route: '/shield',
+};
+// Unshield: move the encrypted balance back out to the public stealth wallet.
+const UNSHIELD: HomeAction = {
+  key: 'unshield',
+  label: 'Unshield',
+  iconKey: 'shieldOff',
+  route: '/unshield',
+};
+// Swap: not built yet — surfaces a "coming soon" toast.
+const SWAP: HomeAction = {
+  key: 'swap',
+  label: 'Swap',
+  iconKey: 'swap',
+  comingSoon: true,
+};
 const DETAILS: HomeAction = {
   key: 'details',
   label: 'Details',
@@ -51,9 +74,9 @@ export function homeCardActions(card: HomeCardId): HomeAction[] {
     case 'bank':
       return [MOVE, DETAILS];
     case 'stealf':
-      return [RECEIVE_STEALTH, MOVE_STEALTH_TO_BANK];
+      return [RECEIVE_STEALTH, MOVE_STEALTH_TO_BANK, SHIELD];
     case 'encrypted':
-      return [MOVE_ENCRYPTED_TO_BANK];
+      return [MOVE_ENCRYPTED_TO_BANK, SWAP, UNSHIELD];
     case 'total':
     default:
       return [];

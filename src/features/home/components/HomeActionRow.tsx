@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { SquareActionTile } from '@/src/design-system/primitives/SquareActionTile';
+import { useToast } from '@/src/components/toast/ToastContext';
 import { homeCardActions, type HomeCardId } from '../lib/homeCardActions';
 
 /**
@@ -10,6 +11,7 @@ import { homeCardActions, type HomeCardId } from '../lib/homeCardActions';
  */
 export function HomeActionRow({ card }: { card: HomeCardId }) {
   const router = useRouter();
+  const { show } = useToast();
   const actions = homeCardActions(card);
   const gold = card === 'encrypted';
   return (
@@ -21,7 +23,15 @@ export function HomeActionRow({ card }: { card: HomeCardId }) {
           label={a.label}
           accent={gold && a.key === 'send'}
           accentTone={gold ? 'gold' : 'silver'}
-          onPress={() => router.push(a.route as never)}
+          onPress={() =>
+            a.comingSoon || !a.route
+              ? show({
+                  kind: 'info',
+                  title: 'Coming soon',
+                  message: `${a.label} is coming soon.`,
+                })
+              : router.push(a.route as never)
+          }
         />
       ))}
     </View>
