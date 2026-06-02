@@ -10,7 +10,6 @@ import { HomeHeader } from '../components/HomeHeader';
 import { BalanceCarousel, HOME_CARDS } from '../components/BalanceCarousel';
 import { HomeActivity } from '../components/HomeActivity';
 import { AssetsList } from '../components/AssetsList';
-import { GetBankAccountCard } from '../components/GetBankAccountCard';
 import { TonalHalo } from '../components/TonalHalo';
 import type { HomeCardId } from '../lib/homeCardActions';
 
@@ -25,9 +24,8 @@ function bottomFor(id: HomeCardId) {
       return <AssetsList card="stealf" />;
     case 'encrypted':
       return <AssetsList card="encrypted" />;
-    case 'total':
     default:
-      return <GetBankAccountCard />;
+      return null;
   }
 }
 

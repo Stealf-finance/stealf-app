@@ -31,10 +31,10 @@ const GOLD: [string, string, ...string[]] = [
  */
 export function TonalHalo({ progress }: { progress: SharedValue<number> }) {
   const silverStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [2.2, 3], [1, 0], 'clamp'),
+    opacity: interpolate(progress.value, [1.2, 2], [1, 0], 'clamp'),
   }));
   const goldStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [2.2, 3], [0, 1], 'clamp'),
+    opacity: interpolate(progress.value, [1.2, 2], [0, 1], 'clamp'),
   }));
   return (
     <>
