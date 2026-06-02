@@ -12,6 +12,10 @@ import { resolveSwipeTarget } from './swipePagerLogic';
 const SCREEN_W = Dimensions.get('window').width;
 const SNAP = { duration: 320 } as const;
 
+/** Default horizontal inset; page width = screen width - 2*inset. Exported so
+ *  sibling sliders (driven by the same progress) can match the page width. */
+export const SWIPE_PAGE_INSET = 24;
+
 type Props = {
   /** Number of pages. */
   count: number;
@@ -42,7 +46,7 @@ export function SwipePager({
   count,
   index,
   onIndexChange,
-  inset = 24,
+  inset = SWIPE_PAGE_INSET,
   progress: externalProgress,
   children,
 }: Props) {

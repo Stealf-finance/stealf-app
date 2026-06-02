@@ -34,14 +34,14 @@ export function AssetsList({ card }: { card: 'stealf' | 'encrypted' }) {
   const pal = isEncrypted ? GOLD : SILVER;
 
   const rows: Row[] = isEncrypted
-    ? (encrypted.data?.tokens ?? []).map((t) => ({
+    ? (encrypted.data?.tokens ?? []).slice(0, 6).map((t) => ({
         key: t.mint,
         iconSource: t.iconUri ? { uri: t.iconUri } : undefined,
         symbol: t.symbol,
         caption: t.amount > 0 ? `${trim(t.amount)} · encrypted` : 'encrypted',
         priceLabel: `$${t.amountUSD.toFixed(2)}`,
       }))
-    : (publicBal.data?.tokens ?? []).map((t) => ({
+    : (publicBal.data?.tokens ?? []).slice(0, 6).map((t) => ({
         key: t.tokenMint ?? t.tokenSymbol,
         iconSource: t.tokenIcon
           ? { uri: t.tokenIcon }
@@ -54,7 +54,7 @@ export function AssetsList({ card }: { card: 'stealf' | 'encrypted' }) {
       }));
 
   return (
-    <View style={{ paddingHorizontal: 24, marginTop: 22 }}>
+    <View style={{ marginTop: 22 }}>
       <Text
         style={[
           sansationLight,

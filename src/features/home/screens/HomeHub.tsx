@@ -1,14 +1,35 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Dimensions, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import { T } from '@/src/design-system/tokens';
+import { SwipeSlider } from '@/src/design-system/primitives/SwipeSlider';
+import { SWIPE_PAGE_INSET } from '@/src/design-system/primitives/SwipePager';
 import { useHomeBalances } from '../hooks/useHomeBalances';
 import { HomeHeader } from '../components/HomeHeader';
 import { BalanceCarousel, HOME_CARDS } from '../components/BalanceCarousel';
 import { HomeActivity } from '../components/HomeActivity';
 import { AssetsList } from '../components/AssetsList';
+import { GetBankAccountCard } from '../components/GetBankAccountCard';
 import { TonalHalo } from '../components/TonalHalo';
+import type { HomeCardId } from '../lib/homeCardActions';
+
+// Matches the carousel's page width so the bottom slider moves in lockstep.
+const PAGE_WIDTH = Dimensions.get('window').width - SWIPE_PAGE_INSET * 2;
+
+function bottomFor(id: HomeCardId) {
+  switch (id) {
+    case 'bank':
+      return <HomeActivity />;
+    case 'stealf':
+      return <AssetsList card="stealf" />;
+    case 'encrypted':
+      return <AssetsList card="encrypted" />;
+    case 'total':
+    default:
+      return <GetBankAccountCard />;
+  }
+}
 
 export function HomeHub() {
   const insets = useSafeAreaInsets();
@@ -17,7 +38,6 @@ export function HomeHub() {
   const [index, setIndex] = useState(0);
   // Shared between the carousel (drives it) and the background halo (reads it).
   const progress = useSharedValue(0);
-  const card = HOME_CARDS[index].id;
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
@@ -36,13 +56,16 @@ export function HomeHub() {
           onIndexChange={setIndex}
           progress={progress}
         />
-        {/* Bottom section follows the active card: Bank/Total → recent
-            activity; Wallet/Encrypted → the holdings list. */}
-        {card === 'stealf' || card === 'encrypted' ? (
-          <AssetsList card={card} />
-        ) : (
-          <HomeActivity />
-        )}
+        {/* Bottom section slides in lockstep with the carousel: Total → the
+            "Get your bank account" card, Bank → recent activity, Wallet /
+            Encrypted → their assets list. */}
+        <View style={{ alignItems: 'center', marginTop: 8 }}>
+          <SwipeSlider
+            progress={progress}
+            pageWidth={PAGE_WIDTH}
+            pages={HOME_CARDS.map((c) => bottomFor(c.id))}
+          />
+        </View>
       </ScrollView>
     </View>
   );

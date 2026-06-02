@@ -32,7 +32,7 @@ export function HomeActivity() {
     history?.transactions.slice(0, ACTIVITY_DISPLAY_LIMIT).map(formatTxRow) ?? [];
 
   return (
-    <View style={{ paddingHorizontal: 20, marginTop: 22 }}>
+    <View style={{ marginTop: 22 }}>
       <Text
         style={[
           sansation,
