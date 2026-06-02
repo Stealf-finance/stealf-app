@@ -19,8 +19,8 @@ const GOLD = txPalette('gold');
 
 export const HOME_CARDS: { id: HomeCardId; kicker: string }[] = [
   { id: 'total', kicker: 'Total balance' },
-  { id: 'bank', kicker: 'Bank wallet' },
-  { id: 'stealf', kicker: 'Stealf wallet' },
+  { id: 'bank', kicker: 'Virtual Bank account' },
+  { id: 'stealf', kicker: 'Wallet' },
   { id: 'encrypted', kicker: 'Encrypted balance' },
 ];
 
