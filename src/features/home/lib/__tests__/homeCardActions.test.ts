@@ -18,7 +18,9 @@ describe('homeCardActions', () => {
       '/moove?direction=stealth-to-bank',
     );
   });
-  it('Encrypted card exposes move', () => {
-    expect(homeCardActions('encrypted').map((a) => a.key)).toEqual(['move']);
+  it('Encrypted card moves the encrypted balance to bank', () => {
+    const actions = homeCardActions('encrypted');
+    expect(actions.map((a) => a.key)).toEqual(['move']);
+    expect(actions[0].route).toBe('/moove?direction=shielded-to-bank');
   });
 });

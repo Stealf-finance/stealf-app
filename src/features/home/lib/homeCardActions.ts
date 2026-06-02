@@ -32,6 +32,13 @@ const MOVE_STEALTH_TO_BANK: HomeAction = {
   iconKey: 'move',
   route: '/moove?direction=stealth-to-bank',
 };
+// Encrypted balance tile: move the encrypted (shielded) balance out to the bank.
+const MOVE_ENCRYPTED_TO_BANK: HomeAction = {
+  key: 'move',
+  label: 'Move',
+  iconKey: 'move',
+  route: '/moove?direction=shielded-to-bank',
+};
 const DETAILS: HomeAction = {
   key: 'details',
   label: 'Details',
@@ -46,7 +53,7 @@ export function homeCardActions(card: HomeCardId): HomeAction[] {
     case 'stealf':
       return [RECEIVE_STEALTH, MOVE_STEALTH_TO_BANK];
     case 'encrypted':
-      return [MOVE];
+      return [MOVE_ENCRYPTED_TO_BANK];
     case 'total':
     default:
       return [];
