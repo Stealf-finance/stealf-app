@@ -36,9 +36,6 @@ export function EmailEntryScreen({ onBack, onSent }: Props) {
 
   const valid = isValidEmail(email);
 
-  // Send failures are transient (network / Turnkey 5xx / rate limit) —
-  // not something the user fixes by retyping the email. Toast pattern
-  // per docs/conventions.md "Error display".
   const onSubmit = async () => {
     if (!valid || isLoading) return;
     try {

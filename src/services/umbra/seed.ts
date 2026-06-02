@@ -4,9 +4,7 @@ import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 
 const MASTER_SEED_KEY_PREFIX = 'umbra_master_seed_';
 
-// Plaintext-input fallback is read for ~1 week post-deploy so existing
-// users don't lose their stealth seed when they update. Remove after
-// 2026-05-11 once telemetry confirms no migrations remain.
+
 const LEGACY_FALLBACK_REMOVE_AFTER = '2026-05-11';
 
 // Matches `secureStore.ts` BASE_OPTIONS. Existing seeds keep their previous
@@ -18,12 +16,6 @@ const KEYCHAIN_OPTIONS: SecureStore.SecureStoreOptions = {
 
 let currentWalletInput: string | null = null;
 
-/**
- * Bind the storage to a wallet identity. Callers historically pass a bs58
- * private key (stealth) OR a public wallet address (bank). Either way we
- * hash before using it as the Keychain service identifier so the raw
- * value never leaks via Keychain enumeration.
- */
 export function setActiveWallet(walletInput: string | null | undefined) {
   currentWalletInput = walletInput || null;
 }
@@ -103,10 +95,7 @@ export const masterSeedStorage = {
   },
 };
 
-/**
- * Clear the master seed for the currently active wallet only. Other wallets'
- * seeds are preserved so they remain decryptable after a wallet switch.
- */
+
 export async function umbraClearSeed(): Promise<void> {
   if (!currentWalletInput) return;
   const newKey = buildHashedServiceKey(currentWalletInput);
@@ -115,12 +104,7 @@ export async function umbraClearSeed(): Promise<void> {
   await SecureStore.deleteItemAsync(legacyKey, KEYCHAIN_OPTIONS).catch(() => undefined);
 }
 
-/**
- * Build a master seed storage scoped to a specific wallet identity (e.g. the
- * bank wallet) without touching the global `currentWalletInput`. Used by the
- * bank-wallet UmbraClient so its seed reads/writes never collide with the
- * stealth wallet storage.
- */
+
 export function createMasterSeedStorage(walletInput: string) {
   return {
     async load() {

@@ -106,8 +106,7 @@ export function createTurnkeyUmbraSigner(
       hashFunction: 'HASH_FUNCTION_NOT_APPLICABLE',
     });
 
-    // Turnkey returns { r, s, v }. For Ed25519, r and s are each 32 bytes.
-    // If Turnkey ever packs the full 64-byte sig in `r`, handle that too.
+
     const rBytes = hexToBytes(tkResult.r);
     const sBytes = hexToBytes(tkResult.s);
     const signature =

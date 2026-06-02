@@ -1,8 +1,6 @@
 import { z } from 'zod';
 import { apiPost } from '@/src/services/api/client';
 
-// `apiPost` auto-unwraps the backend's `{ data: ... }` envelope, so we parse
-// the inner shape directly.
 const RegisterPrivacyWalletResponseSchema = z.object({
   stealf_wallet: z.string(),
 });

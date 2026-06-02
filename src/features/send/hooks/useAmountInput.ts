@@ -8,14 +8,6 @@ type Params = {
   decimals?: number;
 };
 
-/**
- * Centralizes the dual-mode (asset / USD) amount-entry behavior shared
- * between Shield, Unshield, and Move flows.
- *
- * The Numpad writes a single string; what it represents depends on
- * `inputMode`. `solAmount` is always in token units — historically named
- * for the SOL-only past; today it carries whichever asset is selected.
- */
 export function useAmountInput({ rate, maxSol, decimals = 9 }: Params) {
   const [amount, setAmount] = useState('0');
   const [inputMode, setInputMode] = useState<InputMode>('asset');

@@ -18,32 +18,17 @@ type Props = {
   onSend: () => void;
   tone?: Tone;
   label?: string;
-  /** Blocks the gesture and dims the track. Use when the amount is 0/invalid. */
   disabled?: boolean;
-  /**
-   * Replaces the post-swipe check with an in-thumb loader and keeps the
-   * thumb pinned at the end while the parent finishes async work. Flip
-   * back to false (or unmount the swipe via key) once the op completes.
-   */
   loading?: boolean;
 };
 
 const THUMB = 48;
 const TRACK_PAD = 5;
-// Below this fraction the gesture cancels back to start. Lowered from 0.85
-// because users were struggling to "complete" the swipe — most of the way
-// is enough commitment to fire.
 const RELEASE_THRESHOLD = 0.78;
 
-// Spring tuned to feel like Apple Pay's slide-to-pay: light damping for
-// responsive bounce-back, stiffness around 200 for natural pace. The
-// snap-to-end uses a stiffer spring so the thumb arrives confidently.
 const SPRING_BACK = { damping: 18, stiffness: 200, mass: 0.7 } as const;
 const SPRING_SNAP = { damping: 22, stiffness: 380, mass: 0.6 } as const;
 
-// Success flash: arrow → check on the thumb after the snap, hold briefly
-// before handing off to the caller. Total dwell is ~360ms (220 cross-fade
-// + 140 hold) — long enough to feel rewarding, short enough not to delay.
 const SUCCESS_FADE_MS = 220;
 const SUCCESS_HOLD_MS = 140;
 
@@ -55,11 +40,9 @@ export function SwipeToSend({
   loading = false,
 }: Props) {
   const palette = txPalette(tone);
-  // Shared values (not refs) so worklets read consistent UI-thread values.
   const trackW = useSharedValue(0);
   const x = useSharedValue(0);
   const successProgress = useSharedValue(0);
-  // 0 → check, 1 → loader. Flips on the JS thread when `loading` toggles.
   const loadingProgress = useSharedValue(0);
 
   useEffect(() => {
@@ -77,9 +60,6 @@ export function SwipeToSend({
     onSend();
   };
 
-  // Pan over the FULL track surface (not just the thumb): users can grab
-  // anywhere along the strip and the thumb follows. failOffsetY hands the
-  // gesture back to the modal-sheet pull-down if the user moves vertically.
   const gesture = Gesture.Pan()
     .enabled(!disabled)
     .activeOffsetX([-4, 4])
@@ -88,8 +68,7 @@ export function SwipeToSend({
       'worklet';
       const max = trackW.value - THUMB - TRACK_PAD * 2;
       if (max <= 0) return;
-      // Relative drag: x grows with the gesture's translationX, clamped
-      // to the track. Thumb starts at 0 each gesture (release resets it).
+
       const next = Math.min(Math.max(e.translationX, 0), max);
       x.value = next;
     })
@@ -128,9 +107,7 @@ export function SwipeToSend({
     })
     .onFinalize(() => {
       'worklet';
-      // Belt-and-suspenders: if the gesture is interrupted by a system
-      // gesture (e.g. modal dismiss), reset rather than leave the thumb
-      // floating mid-track.
+
       const max = trackW.value - THUMB - TRACK_PAD * 2;
       if (
         max > 0 &&
@@ -149,15 +126,13 @@ export function SwipeToSend({
     ],
   }));
 
-  // Progress fill: a tinted layer that grows from the left with the thumb,
-  // so the gesture has visible weight (Apple Pay / Revolut style). The
-  // width follows the thumb edge with a small lead so the fill peeks out.
+
   const fillStyle = useAnimatedStyle(() => {
     const max = Math.max(trackW.value - THUMB - TRACK_PAD * 2, 1);
     const progress = x.value / max;
     return {
       width: x.value + THUMB + TRACK_PAD * 2,
-      opacity: 0.18 + progress * 0.42, // 0.18 → 0.6
+      opacity: 0.18 + progress * 0.42,
     };
   });
 
@@ -171,8 +146,6 @@ export function SwipeToSend({
   }));
 
   const checkStyle = useAnimatedStyle(() => ({
-    // Check is the post-swipe state when nothing is loading. While loading,
-    // the dots take over (loaderStyle below).
     opacity: successProgress.value * (1 - loadingProgress.value),
     transform: [{ scale: 0.7 + successProgress.value * 0.3 }],
   }));

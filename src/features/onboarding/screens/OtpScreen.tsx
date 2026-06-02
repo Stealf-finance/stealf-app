@@ -33,9 +33,7 @@ export function OtpScreen({ email, otpId: initialOtpId, onBack }: Props) {
   const [otpId, setOtpId] = useState(initialOtpId);
 
   const [code, setCode] = useState('');
-  // Field-level error only. Verify failures stay inline next to the
-  // 6-digit input ("Invalid code") because the recovery action is to
-  // retype. Resend / network failures route through Toast.
+
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S);
 

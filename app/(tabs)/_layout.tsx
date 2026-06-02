@@ -16,10 +16,6 @@ export default function TabsLayout() {
   const { user } = useAuth();
   const isStealthSetup = !user?.stealfWallet;
 
-  // When a root-level modal (claim-pending, send, send-money, …) is pushed
-  // from inside (tabs), useSegments() no longer points at a tab id. Keep
-  // showing the last-known tab as active so the bar doesn't snap to 'bank'
-  // during the modal transition.
   const tabSegment = segments.find((s) => TAB_IDS.includes(s as TabId)) as
     | TabId
     | undefined;

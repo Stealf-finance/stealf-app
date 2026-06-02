@@ -35,10 +35,7 @@ export function createClaimEphemeralZkProver(
 export function createClaimReceiverZkProver(
   zkLib: ZkType = Zk,
 ): IZkProverForClaimReceiverClaimableUtxoIntoEncryptedBalance {
-  // Per-variant memoization. nLeaves can be 1-16 in the SDK type but
-  // only 1-4 are produced as on-CDN circuits. Variants beyond 4 fall
-  // through to getZKey, which throws — preserving the existing failure
-  // mode without caching the rejection beyond the in-flight call.
+
   const cache: Partial<Record<ClaimVariant, Promise<string>>> = {};
   const getPath = (variant: ClaimVariant): Promise<string> => {
     const existing = cache[variant];

@@ -1,11 +1,3 @@
-/**
- * Minimal Node.js `crypto` shim for React Native.
- *
- * Only provides `randomBytes` and `createHash('sha256')`.
- * Relies on `react-native-get-random-values` having polyfilled
- * `globalThis.crypto.getRandomValues` before this module is loaded.
- */
-
 const { sha256 } = require('@noble/hashes/sha2');
 
 module.exports = {

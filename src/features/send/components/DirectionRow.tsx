@@ -10,11 +10,6 @@ type Props = {
   tone?: Tone;
 };
 
-/**
- * Compact "From … → To …" card that anchors the user on the source and
- * destination of a value transfer. Used at the top of Move and Shield flows
- * (where the asset is moving between two named places, not just being sent).
- */
 export function DirectionRow({ fromLabel, toLabel, tone = 'silver' }: Props) {
   const palette = txPalette(tone);
 

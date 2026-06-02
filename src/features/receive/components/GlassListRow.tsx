@@ -10,12 +10,9 @@ type Props = {
   label: string;
   sub?: ReactNode;
   onPress?: () => void;
-  /** Vertical padding override — defaults to 14, the address row uses 16. */
   paddingVertical?: number;
   accessibilityLabel?: string;
-  /** When true, dims the row, disables press, and shows a "Soon" pill instead of the chevron. */
   disabled?: boolean;
-  /** Replaces the chevron/Soon pill with a custom node (e.g., a Claim CTA). */
   trailing?: ReactNode;
 };
 

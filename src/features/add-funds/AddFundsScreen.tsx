@@ -258,9 +258,6 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
         >
           <Image
             source={{
-              // Canonical CDN logo from solana-labs/token-list, same source
-              // the backend's WELL_KNOWN map points at — keeps every Solana
-              // icon in the app visually consistent with the Assets list.
               uri: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
             }}
             contentFit="contain"

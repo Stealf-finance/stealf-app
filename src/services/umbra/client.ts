@@ -1,5 +1,6 @@
 import {
   createSignerFromPrivateKeyBytes,
+  getPollingComputationMonitor,
   getUmbraClient,
   getUmbraRelayer,
 } from '@umbra-privacy/sdk';
@@ -7,6 +8,7 @@ import {
   createShardedUtxoDataStore,
   createShardedNullifierStore,
 } from '@umbra-privacy/sdk/store-adapters';
+import { masterSeedSchemeV4 } from '@umbra-privacy/sdk/master-seed-schemes';
 import bs58 from 'bs58';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { getEnv } from '@/src/services/env';
@@ -21,11 +23,16 @@ import {
   type TurnkeySignTransactionFn,
   type TurnkeyWalletAccount,
 } from './turnkeySigner';
-import { createAsyncStorageBackend } from './storage/asyncStorageBackend';
+import {
+  createMmkvStorageBackend,
+  migrateUmbraStoreIfNeeded,
+} from './storage/mmkvStorageBackend';
 
 export const NETWORK = 'devnet' as const;
 export const RELAYER_API = 'https://relayer.api-devnet.umbraprivacy.com';
 export const INDEXER_API = 'https://utxo-indexer.api-devnet.umbraprivacy.com';
+
+const LEGACY_MASTER_SEED_SCHEMES = [masterSeedSchemeV4] as const;
 
 export type UmbraClient = Awaited<ReturnType<typeof getUmbraClient>>;
 
@@ -51,7 +58,6 @@ async function buildStealthClient(): Promise<UmbraClient> {
   }
   if (cachedClient) return cachedClient;
 
-  const env = getEnv();
   const keyBytes = bs58.decode(privateKeyB58);
 
   let signer;
@@ -70,44 +76,63 @@ async function buildStealthClient(): Promise<UmbraClient> {
     signer = await createSignerFromPrivateKeyBytes(fullKeyBytes);
   }
 
-  const client = await getUmbraClient(
-    {
-      signer,
-      network: NETWORK,
-      rpcUrl: env.EXPO_PUBLIC_SOLANA_RPC_URL,
-      rpcSubscriptionsUrl: env.EXPO_PUBLIC_SOLANA_WSS_URL,
-      indexerApiEndpoint: INDEXER_API,
-    },
-    {
-      masterSeedStorage: {
-        load: masterSeedStorage.load as never,
-        store: masterSeedStorage.store as never,
-      },
-    },
+  const client = await assembleClient(
+    signer,
+    { load: masterSeedStorage.load, store: masterSeedStorage.store },
+    signer.address.toString(),
   );
-
-  // Chicken-and-egg: the sharded stores derive their encryption key from the
-  // client's master seed, so the client must exist first; but the client
-  // exposes the stores at scan time via `client.utxoDataStore`. The client
-  // object is plain (not frozen), so we attach the stores post-construction.
-  await attachShardedStores(client, signer.address.toString());
 
   cachedClient = client;
   cachedSignerKey = privateKeyB58;
   return cachedClient;
 }
 
-async function attachShardedStores(
-  client: UmbraClient,
+interface SeedStorageLike {
+  load: unknown;
+  store: unknown;
+}
+
+
+async function assembleClient(
+  signer: unknown,
+  seedStorage: SeedStorageLike,
   namespace: string,
-): Promise<void> {
-  const backend = createAsyncStorageBackend(namespace);
+): Promise<UmbraClient> {
+  const env = getEnv();
+  const args = {
+    signer,
+    network: NETWORK,
+    rpcUrl: env.EXPO_PUBLIC_SOLANA_RPC_URL,
+    rpcSubscriptionsUrl: env.EXPO_PUBLIC_SOLANA_WSS_URL,
+    indexerApiEndpoint: INDEXER_API,
+    legacyMasterSeedSchemes: LEGACY_MASTER_SEED_SCHEMES,
+  };
+  const computationMonitor = getPollingComputationMonitor({
+    rpcUrl: env.EXPO_PUBLIC_SOLANA_RPC_URL,
+  } as never);
+  const baseDeps = {
+    masterSeedStorage: { load: seedStorage.load, store: seedStorage.store },
+    computationMonitor,
+  };
+
+  const bareClient = await getUmbraClient(args as never, baseDeps as never);
+
+  // One-time wipe of stale scan progress (legacy scheme + native crypto were
+  // not in effect when earlier ranges were marked scanned). Runs before the
+  // sharded stores load their persisted shards.
+  await migrateUmbraStoreIfNeeded(namespace);
+
+  const backend = createMmkvStorageBackend(namespace);
   const [utxoDataStore, nullifierStore] = await Promise.all([
-    createShardedUtxoDataStore(client as never, backend),
-    createShardedNullifierStore(client as never, backend),
+    createShardedUtxoDataStore(bareClient as never, backend),
+    createShardedNullifierStore(bareClient as never, backend),
   ]);
-  (client as unknown as { utxoDataStore: unknown }).utxoDataStore = utxoDataStore;
-  (client as unknown as { nullifierStore: unknown }).nullifierStore = nullifierStore;
+
+  return getUmbraClient(args as never, {
+    ...baseDeps,
+    utxoDataStore,
+    nullifierStore,
+  } as never);
 }
 
 // Cached per private key; parallel callers share the in-flight build.
@@ -144,7 +169,6 @@ export async function getBankClient(
   const cached = bankClientCache.get(addr);
   if (cached) return cached;
 
-  const env = getEnv();
   const signer = createTurnkeyUmbraSigner({
     walletAccount: args.walletAccount,
     signTransaction: args.signTransaction,
@@ -153,23 +177,11 @@ export async function getBankClient(
 
   const seedStorage = createMasterSeedStorage(addr);
 
-  const client = await getUmbraClient(
-    {
-      signer,
-      network: NETWORK,
-      rpcUrl: env.EXPO_PUBLIC_SOLANA_RPC_URL,
-      rpcSubscriptionsUrl: env.EXPO_PUBLIC_SOLANA_WSS_URL,
-      indexerApiEndpoint: INDEXER_API,
-    },
-    {
-      masterSeedStorage: {
-        load: seedStorage.load as never,
-        store: seedStorage.store as never,
-      },
-    },
+  const client = await assembleClient(
+    signer,
+    { load: seedStorage.load, store: seedStorage.store },
+    addr,
   );
-
-  await attachShardedStores(client, addr);
 
   bankClientCache.set(addr, client);
   return client;

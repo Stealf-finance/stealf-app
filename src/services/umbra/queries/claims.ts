@@ -1,6 +1,11 @@
 import { getBurnableStealthPoolNoteScannerFunction } from '@umbra-privacy/sdk/burn';
 import { getStealthClient, getCachedSignerKey } from '../client';
 import {
+  nativeAesDecryptor,
+  nativeX25519GetSharedSecretAsync,
+  nativeX25519GetPublicKey,
+} from '../crypto/nativeCrypto';
+import {
   isBurnt,
   loadBurntUtxosForCurrentWallet,
 } from '@/src/features/stealth/lib/burntUtxos';
@@ -29,7 +34,15 @@ function getOrCreateScanner(
   if (cachedScanner && cachedScanner.wallet === wallet) {
     return cachedScanner.scan;
   }
-  const scan = getBurnableStealthPoolNoteScannerFunction({ client });
+
+  const scan = getBurnableStealthPoolNoteScannerFunction(
+    { client },
+    {
+      aesDecryptor: nativeAesDecryptor,
+      x25519GetSharedSecret: nativeX25519GetSharedSecretAsync as never,
+      x25519GetPublicKey: nativeX25519GetPublicKey as never,
+    },
+  );
   cachedScanner = { wallet, scan };
   return scan;
 }
@@ -49,20 +62,9 @@ function emptyResult(): ClaimScanResult {
 }
 
 export type FetchClaimScanOptions = {
-  /** Reported at 0 (start) and 1 (end). v5 scans atomically — no mid-scan progress. */
   onProgress?: (ratio: number) => void;
 };
 
-/**
- * Run the burn scanner (incremental — only re-scans tree ranges not yet in
- * the client's UtxoDataStore) and return every known burnable note for the
- * active wallet, bucketed into the 4 categories the UI consumes.
- *
- * The scan function itself only emits notes *newly discovered* in this run.
- * The store-backed `query()` is what gives us the full picture across cold
- * starts — that's why we query after scanning rather than using the scan
- * result directly.
- */
 export async function fetchClaimScan(
   wallet: string,
   options: FetchClaimScanOptions = {},
@@ -94,8 +96,6 @@ export async function fetchClaimScan(
     return emptyResult();
   }
 
-  // `claimType` discriminates the 6 v5 buckets. We surface the four we use
-  // today; the two NetworkBalance variants are dropped until we wire that flow.
   const allEntries = await store.query({
     network: client.network,
     signerAddress: client.signer.address,
@@ -104,6 +104,8 @@ export async function fetchClaimScan(
   const out = emptyResult();
   for (const entry of allEntries) {
     if (isBurnt(entry.data)) continue;
+    (entry.data as { masterSeedSchemeId?: string }).masterSeedSchemeId =
+      entry.masterSeedSchemeId;
     switch (entry.claimType) {
       case 'etaToStealthPoolReceiverBurnable':
         out.received.push(entry.data);

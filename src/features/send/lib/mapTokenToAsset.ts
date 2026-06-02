@@ -45,6 +45,8 @@ const STABLE_PRICES: Record<string, number> = {
   USDC: 1,
   USDT: 1,
   EURC: 1,
+  dUSDC: 1,
+  dUSDT: 1,
 };
 
 export function mapTokenToAsset(token: TokenBalance): Asset {

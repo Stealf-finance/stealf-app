@@ -24,12 +24,6 @@ type Props = {
   onClose?: () => void;
 };
 
-/**
- * Full-screen overlay shown over private-balance flows when either of the
- * user's wallets (stealth or bank) hasn't been registered with the Umbra
- * protocol yet. Registering both is the prerequisite for every private
- * operation in the app, so we register both in a single click.
- */
 export function StealthSetupOverlay({ onClose }: Props) {
   const insets = useSafeAreaInsets();
   const { user, setUser } = useAuth();
@@ -89,10 +83,6 @@ export function StealthSetupOverlay({ onClose }: Props) {
   const queryClient = useQueryClient();
   const { show: showToast } = useToast();
 
-  // Set on unmount so any in-flight register() that resolves later doesn't
-  // try to setState on a dead component. The Umbra ZK proof itself can't
-  // be cancelled (SDK limitation) — we just stop awaiting it on the React
-  // side, freeing the UI immediately when the user navigates away.
   const cancelledRef = useRef(false);
   useEffect(() => () => {
     cancelledRef.current = true;
@@ -131,17 +121,10 @@ export function StealthSetupOverlay({ onClose }: Props) {
     setRegistering(true);
     cancelledRef.current = false;
     try {
-      // Yield to the FadeIn loader frame before kicking off the heavy ZK
-      // proof + RPC sequence — without this, the loader paint is starved
-      // by the synchronous prologue of register() and the user sees the
-      // tap with no visible feedback for ~300ms.
       await new Promise<void>((resolve) =>
         InteractionManager.runAfterInteractions(() => resolve()),
       );
 
-      // Register sequentially so each transaction sees a clean blockhash and
-      // we don't race two activities on the same RPC. `ensureRegistered` is
-      // idempotent so already-registered wallets are no-ops.
       if (needStealthRegistration) {
         await register();
       }

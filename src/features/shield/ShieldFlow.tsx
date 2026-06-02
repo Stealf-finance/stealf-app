@@ -69,29 +69,21 @@ export function ShieldFlow({ direction }: Props) {
   const posthogRef = useRef(posthog);
   posthogRef.current = posthog;
 
-  // - shield:   stealth public ATA → stealth encrypted balance
-  // - unshield: stealth encrypted balance → stealth public ATA
   const { data: stealthBalance } = useBalance(
     isShield ? user?.stealfWallet ?? null : null,
   );
   const { data: shielded } = useShieldedSolBalance();
   const { data: encrypted } = useEncryptedBalances();
 
-  // Asset selection works in both directions. The picker source differs:
-  // shield reads tokens from the public ATA, unshield from the encrypted
-  // balance (Umbra multi-mint querier).
   const selected = useSelectedAsset();
   const isSolSelected =
     !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
   const selectionActive = !isSolSelected && !!selected;
 
-  // Encrypted SOL surfaces as plain "SOL" (the picker emits 'SOL' for it),
-  // so the unshield fallback matches.
   const assetSymbol = selected?.symbol ?? 'SOL';
   const decimals = selectionActive ? selected!.decimals : SOL_DECIMALS;
   const iconUri = selectionActive ? selected!.iconUri : SOL_ICON_URI;
 
-  // Resolve the spendable source balance per direction + selection.
   let sourceBalance = 0;
   if (isShield) {
     const tokens = stealthBalance?.tokens ?? [];
@@ -99,29 +91,18 @@ export function ShieldFlow({ direction }: Props) {
       ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
       : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
   } else {
-    // Unshield: read from the encrypted balance for the chosen mint, falling
-    // back to encrypted SOL when no selection is made.
+
     sourceBalance = selectionActive
       ? encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ?? 0
       : shielded?.sol ?? 0;
   }
 
-  // Price: SOL has a live oracle feed, SPL tokens use the per-token rate
-  // baked into the selection (Helius DAS-derived for shield, encrypted-side
-  // ratio for unshield). Falls back to 0 → fiat toggle disabled.
   const rate = selectionActive
     ? selected!.price
     : typeof solPrice === 'number' && solPrice > 0
       ? solPrice
       : 0;
 
-  // Shield+SOL: source = stealth public ATA, fee payer = same bucket → reserve SOL.
-  // Shield+SPL: fees still paid in SOL, but the SOL bucket is separate from
-  // the SPL bucket → the SPL balance is fully spendable.
-  // Unshield: source = encrypted balance, fee payer = stealth public ATA →
-  // different buckets, no SOL reserve.
-  // Both directions touch the encrypted balance, so the 0.30% protocol fee
-  // applies — Max has to leave that wedge unspent or the on-chain tx reverts.
   const reserveFees = isShield && !selectionActive;
   const maxSol = maxSpendableSol(sourceBalance, reserveFees, true);
 
@@ -136,15 +117,11 @@ export function ShieldFlow({ direction }: Props) {
     onToggleMode,
   } = useAmountInput({ rate, maxSol, decimals });
 
-  // Reset typed amount when user picks a different token: rate changes, so
-  // any previously typed fiat value would silently misrepresent the new
-  // token amount.
+
   useEffect(() => {
     setAmount('0');
   }, [selected?.mint, setAmount]);
 
-  // Wipe selection on unmount so the next time the modal opens it starts
-  // fresh (default = SOL).
   useEffect(() => {
     return () => {
       setSelectedAsset(null);

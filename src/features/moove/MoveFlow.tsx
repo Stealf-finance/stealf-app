@@ -102,13 +102,9 @@ export function MoveFlow() {
   const direction = (params.direction as MoveDirection) ?? 'bank-to-shielded';
   const config = CONFIG[direction];
 
-  // Tone follows the source side: silver when moving out of a public wallet,
-  // gold when moving out of the shielded pool.
   const tone: Tone = direction === 'shielded-to-bank' ? 'gold' : 'silver';
   const palette = txPalette(tone);
 
-  // Every direction supports multi-token now: public-side via on-chain ATAs
-  // (Helius DAS), encrypted-side via the multi-mint Umbra querier.
   const supportsMultiToken = true;
 
   const pickerWalletParam: 'bank' | 'stealth' | 'encrypted' =
@@ -145,19 +141,15 @@ export function MoveFlow() {
   const { data: shielded } = useShieldedSolBalance();
   const { data: encrypted } = useEncryptedBalances();
 
-  // Asset selection — every direction now supports multi-token.
   const selected = useSelectedAsset();
   const isSolSelected =
     !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
   const selectionActive = !isSolSelected && !!selected;
 
-  // Source-side asset symbol: every direction renders the underlying token
-  // symbol the picker emits (encrypted SOL is 'SOL', not 'WSOL').
   const assetSymbol = selected?.symbol ?? 'SOL';
   const decimals = selectionActive ? selected!.decimals : SOL_DECIMALS;
   const iconUri = selectionActive ? selected!.iconUri : SOL_ICON_URI;
 
-  // Resolve the spendable source balance per direction + selection.
   let sourceBalance = 0;
   if (direction === 'bank-to-shielded') {
     const tokens = bankBalanceData?.tokens ?? [];
@@ -170,8 +162,6 @@ export function MoveFlow() {
       ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
       : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
   } else {
-    // shielded-to-bank: source is the encrypted balance for the chosen mint,
-    // falling back to the encrypted SOL balance when no selection is made.
     if (selectionActive) {
       sourceBalance =
         encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ?? 0;
@@ -180,8 +170,6 @@ export function MoveFlow() {
     }
   }
 
-  // Price feed: SOL has a live oracle; SPL tokens use the per-token rate
-  // Helius DAS embedded in the picker payload.
   const rate = selectionActive
     ? selected!.price
     : typeof solPrice === 'number' && solPrice > 0
@@ -190,10 +178,7 @@ export function MoveFlow() {
 
   const sourcePaysFees =
     direction === 'bank-to-shielded' || direction === 'stealth-to-bank';
-  // Every Move direction goes through the Umbra mixer (claimable UTXO
-  // creator), so the 0.30% protocol fee always applies — even on
-  // `stealth-to-bank`, which uses `getPublicBalanceToSelfClaimableUtxoCreatorFunction`
-  // under the hood, not a plain SystemProgram transfer.
+
   const hasProtocolFee = true;
   const reserveFees = sourcePaysFees && !selectionActive;
   const maxSol = maxSpendableSol(sourceBalance, reserveFees, hasProtocolFee);
@@ -209,13 +194,10 @@ export function MoveFlow() {
     onToggleMode,
   } = useAmountInput({ rate, maxSol, decimals });
 
-  // Reset typed amount when user switches asset — fiat-mode display would
-  // silently misrepresent the new token's amount otherwise.
   useEffect(() => {
     setAmount('0');
   }, [selected?.mint, setAmount]);
 
-  // Wipe selection on unmount so re-entering the modal starts at SOL.
   useEffect(() => {
     return () => {
       setSelectedAsset(null);
@@ -237,9 +219,6 @@ export function MoveFlow() {
 
   const close = () => router.back();
 
-  // Block bank → shielded the moment the user lands here without a stealth
-  // wallet. No amount entry, no swipe, no chance to type into a flow that's
-  // guaranteed to fail.
   const stealthMissingForBankToShielded =
     direction === 'bank-to-shielded' && !!user && !user.stealfWallet;
 
@@ -251,8 +230,6 @@ export function MoveFlow() {
       queryClient.invalidateQueries({
         queryKey: shieldedBalanceQueries.byStealfWallet(user?.stealfWallet ?? ''),
       }),
-      // Multi-mint encrypted query — prefix invalidation catches every
-      // mint-list variant cached.
       queryClient.invalidateQueries({
         queryKey: ['stealth', 'encrypted-balances', user?.stealfWallet ?? ''],
       }),
@@ -267,8 +244,6 @@ export function MoveFlow() {
       keys.push(
         queryClient.invalidateQueries({ queryKey: balanceQueries.byAddress(user.stealfWallet) }),
         queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(user.stealfWallet) }),
-        // Single shared claim-scan query covers both inbound and for-cash
-        // derived views (see useClaimScan + Option B refactor).
         queryClient.invalidateQueries({
           queryKey: claimScanQueries.byStealfWallet(user.stealfWallet),
         }),
@@ -281,9 +256,6 @@ export function MoveFlow() {
     const num = solAmount;
     if (!num || num <= 0) return;
 
-    // Pre-flight: surface auth/wallet/balance gaps as failed pills + close
-    // the modal. The user gets the explanation on the destination screen
-    // instead of an intrusive Alert that traps them in the modal.
     const failPre = (msg: string) => {
       const id = pendingOps.enqueue({
         kind: kindForDirection(direction),
@@ -352,9 +324,6 @@ export function MoveFlow() {
 
       try {
         if (direction === 'bank-to-shielded') {
-          // Stealth (the destination) needs its EncryptedUserAccount PDA
-          // before the receiver-claimable encryption can target it. This is
-          // idempotent on subsequent moves.
           try {
             await ensureRegistered();
           } catch (regErr: any) {

@@ -14,6 +14,7 @@ import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
 import { RefreshBtn } from '@/src/design-system/primitives/RefreshBtn';
+import { LoaderDots } from '@/src/design-system/primitives/LoaderDots';
 import { Icons } from '@/src/design-system/icons';
 import { mono, sansation, serif } from '@/src/design-system/typography';
 import { Palette, txPalette } from '@/src/design-system/palettes';
@@ -22,6 +23,7 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
 import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
+import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -64,6 +66,28 @@ export function ClaimsScreen() {
 
     const bankWallet = user?.bankWallet ?? null;
     const stealfWallet = user?.stealfWallet ?? null;
+    const claimKey = stealfWallet
+      ? claimScanQueries.byStealfWallet(stealfWallet)
+      : null;
+
+    const snapshot = claimKey
+      ? queryClient.getQueryData<ClaimScanResult>(claimKey)
+      : undefined;
+
+    const removeFromCache = () => {
+      if (!claimKey) return;
+      queryClient.setQueryData<ClaimScanResult>(claimKey, (prev) =>
+        prev
+          ? {
+              ...prev,
+              selfBurnable: prev.selfBurnable.filter((u) => u !== item.utxo),
+              publicSelfBurnable: prev.publicSelfBurnable.filter(
+                (u) => u !== item.utxo,
+              ),
+            }
+          : prev,
+      );
+    };
 
     const opId = pendingOps.enqueue({
       kind: 'claim-to-bank',
@@ -71,11 +95,8 @@ export function ClaimsScreen() {
       amountSol: 0,
     });
 
-    // Animation plays for ANIM_HOLD_MS then we hand off to the bank screen;
-    // the pending pill takes over the status surface from there.
     setTimeout(() => {
-      // Guard: see ClaimPendingScreen for rationale (avoid GO_BACK warning
-      // if the user manually dismissed the modal during the animation).
+      removeFromCache();
       if (router.canGoBack()) {
         router.replace('/(tabs)/bank');
       }
@@ -106,14 +127,16 @@ export function ClaimsScreen() {
           });
         };
         invalidate();
-        // Indexer + RPC take a few seconds to reflect the burn and the
-        // public-ATA credit; stagger refetches so the bank screen updates as
-        // soon as either side catches up.
         [3000, 8000, 15000].forEach((d) => setTimeout(invalidate, d));
 
         pendingOps.complete(opId, 'done');
       } catch (err: any) {
         clearTimeout(provingTimer);
+        // Roll the optimistic removal back so the note reappears — the on-chain
+        // UTXO is still unspent.
+        if (claimKey && snapshot) {
+          queryClient.setQueryData(claimKey, snapshot);
+        }
         const msg = err?.userMessage || err?.message || 'Claim failed';
         if (__DEV__) console.warn('[ClaimsScreen] claim failed:', msg);
         pendingOps.complete(opId, 'failed', msg);
@@ -174,7 +197,9 @@ export function ClaimsScreen() {
             },
           ]}
         >
-          {items.length} pending · to bank wallet
+          {isFetching && items.length === 0
+            ? 'Scanning encrypted notes…'
+            : `${items.length} pending · to bank wallet`}
         </Text>
         <RefreshBtn onPress={() => refetch()} spinning={isFetching} />
       </View>
@@ -188,7 +213,9 @@ export function ClaimsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {items.length === 0 ? (
+        {isFetching && items.length === 0 ? (
+          <ScanningState palette={palette} />
+        ) : items.length === 0 ? (
           <EmptyState palette={palette} />
         ) : (
           items.map((tx, i) => (
@@ -290,6 +317,27 @@ function ClaimItem({
           />
         </View>
       </LinearGradient>
+    </View>
+  );
+}
+
+function ScanningState({ palette }: { palette: Palette }) {
+  return (
+    <View style={{ paddingTop: 72, alignItems: 'center', gap: 20 }}>
+      <LoaderDots color={palette.accent} size={9} bounce={9} />
+      <Text
+        style={[
+          serif,
+          {
+            fontSize: 14,
+            fontStyle: 'italic',
+            color: palette.inkFaint,
+            textAlign: 'center',
+          },
+        ]}
+      >
+        Scanning encrypted notes…
+      </Text>
     </View>
   );
 }

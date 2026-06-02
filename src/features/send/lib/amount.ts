@@ -4,14 +4,6 @@ export const SOL_FEE_RESERVE = 0.01;
 
 export const PROTOCOL_FEE_RATE = 0.003;
 
-/**
- * Precision-safe conversion from a humanised amount to raw on-chain units.
- *
- * `BigInt(Math.floor(human * 10 ** decimals))` loses precision for 9-decimal
- * tokens once the integer part of `human * 1e9` exceeds Number.MAX_SAFE_INTEGER
- * (i.e. human balances ≥ ~9.007). Parse the human string instead:
- * integer + paddedFractional → BigInt.
- */
 export function toRawAmount(human: number, decimals: number): bigint {
   if (!Number.isFinite(human) || human < 0) {
     throw new Error(`Invalid amount: ${human}`);
@@ -19,7 +11,6 @@ export function toRawAmount(human: number, decimals: number): bigint {
   if (!Number.isInteger(decimals) || decimals < 0 || decimals > 30) {
     throw new Error(`Invalid decimals: ${decimals}`);
   }
-  // Avoid scientific notation from toString for very small numbers.
   const str = human.toFixed(decimals);
   const [intPart, fracPartRaw = ''] = str.split('.');
   const fracPart = (fracPartRaw + '0'.repeat(decimals)).slice(0, decimals);

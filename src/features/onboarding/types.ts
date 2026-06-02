@@ -22,9 +22,6 @@ export const SessionSchema = z.object({
 });
 export type Session = z.infer<typeof SessionSchema>;
 
-// Backend stores email hashed + encrypted only — it never returns the
-// plaintext. The display email comes from Turnkey's user record on the
-// client (`useTurnkey().user?.userEmail`).
 const BackendUserSchema = z.object({
   username: z.string().nullish(),
   pseudo: z.string().nullish(),

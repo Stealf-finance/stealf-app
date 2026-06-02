@@ -12,10 +12,6 @@ export interface SetupResult {
   error?: string;
 }
 
-// Local key derivation can finish in <500ms which makes the loader flash by.
-// Hold the loader visible just long enough that the create/import action
-// reads as intentional. Phased copy in StealfWalletSetup carries perceived
-// progress past this floor — 600ms is enough for the FadeIn to land cleanly.
 const MIN_LOADER_MS = 600;
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -34,8 +30,7 @@ export function useSetupStealfWallet() {
 
   const createWallet = async (): Promise<SetupResult> => {
     setLoading(true);
-    // Yield so React commits the loading state and the overlay paints before
-    // the synchronous BIP39 work blocks the JS thread.
+
     await sleep(0);
     try {
       const result = await withMinDuration(

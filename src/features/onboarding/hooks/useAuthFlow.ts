@@ -75,10 +75,6 @@ export function useAuthFlow() {
 
       const subOrgId = tk.session?.organizationId;
       if (!subOrgId) {
-        // Should be unreachable — the SDK only emits `onAuthenticationSuccess`
-        // once the session is materialised — but the backend lookup hinges on
-        // this value, so fail loudly here rather than 400-ing with a
-        // misleading "email missing" from the server.
         throw new Error('Turnkey sub-org id missing after auth');
       }
 
@@ -127,11 +123,6 @@ export function useAuthFlow() {
 
       setSession({ sessionToken });
       setUser(enriched);
-
-      // First-time-on-device notification permission prompt. The helper
-      // gates on `status === 'undetermined'`, so it only surfaces the iOS
-      // system dialog at account creation (or first install of a returning
-      // user). Non-blocking — failures don't propagate.
       void maybeRequestNotifPermission();
 
       posthogRef.current?.identify(enriched.subOrgId, {
@@ -187,10 +178,6 @@ export function useAuthFlow() {
                 : '(non-object)';
             console.error('[useAuthFlow] finalize failed:', err, 'bodyKeys:', bodyKeys);
           }
-          // Always capture: in prod __DEV__ logs are silent, and the email
-          // OTP / Apple OAuth divergence we're chasing happens server-side
-          // (400 "Email and pseudo required") — capturing here surfaces the
-          // breadcrumb chain (`auth.oauth` markers) needed to localise it.
           Sentry.captureException(err, {
             tags: { 'auth.method': method, 'auth.flow': 'finalize-post-auth' },
             extra: {

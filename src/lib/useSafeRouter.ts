@@ -3,17 +3,6 @@ import { useRouter, usePathname } from 'expo-router';
 
 const THROTTLE_MS = 800;
 
-/**
- * Wraps `useRouter` so the same destination can't be pushed twice in a row —
- * either because the user double-taps a tile, or because two presses fire
- * before the first one navigates. Two guards combined:
- *
- *   1. Drop pushes targeting the current pathname (already there).
- *   2. Drop pushes to the same href within THROTTLE_MS of the last one
- *      (covers the gap before pathname updates).
- *
- * `back` and `replace` are passed through unchanged.
- */
 export function useSafeRouter() {
   const router = useRouter();
   const pathname = usePathname();

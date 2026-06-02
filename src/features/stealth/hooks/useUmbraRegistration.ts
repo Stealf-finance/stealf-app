@@ -7,7 +7,6 @@ export const umbraRegistrationQueries = {
   byAddress: (addr: string) => ['umbra', 'registration', addr] as const,
 };
 
-
 export async function fetchUmbraRegistration(
   walletAddress: string,
 ): Promise<boolean> {

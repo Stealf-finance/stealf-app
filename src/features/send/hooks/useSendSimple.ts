@@ -30,17 +30,10 @@ export type WalletSource = 'bank' | 'stealth';
 export interface SendSimpleParams {
   fromAddress: string;
   toAddress: string;
-  /** Humanised amount typed by the user (e.g. 1.5 for 1.5 USDC). */
   amount: number;
-  /** SPL mint, or null / SOL_MINT for native SOL. */
   mint: string | null;
-  /** Token decimals (SOL=9, USDC=6, etc). */
   decimals: number;
-  /** Selects the signer: Turnkey for bank, local ED25519 for stealth. */
   walletSource: WalletSource;
-  /** Optional source-token balance (humanised) for pre-flight guard.
-   *  For SOL this gates the SOL-fee-aware guard; for SPL it short-circuits
-   *  obvious underflows but the on-chain check is the source of truth. */
   balance?: number;
 }
 
@@ -52,17 +45,6 @@ export class GuardError extends Error {
   }
 }
 
-/**
- * Sends a transfer signed by the active source wallet. Branches on `mint`:
- *   - native SOL → System program transfer (lamports)
- *   - SPL token  → TransferChecked + auto-create destination ATA if missing
- *
- * Pre-refactor, this hook always built a System transfer regardless of `mint`,
- * so picking USDC and typing "5" broadcast a 5 SOL transfer. Funds drain.
- *
- * Returns the transaction signature on broadcast acceptance (bank) or after
- * status confirmation (stealth).
- */
 export function useSendSimple() {
   const { signAndSendTransaction, wallets } = useTurnkey();
   const queryClient = useQueryClient();
@@ -133,10 +115,6 @@ export function useSendSimple() {
         });
       }
 
-      // Local ED25519 path for the stealth wallet. Pulled from walletKeyCache
-      // (RAM 15 min TTL with Keychain fallback). Signed locally and broadcast
-      // via RPC; we poll status because socket.io subs and Solana WSS are
-      // separate channels we don't want to depend on for tx confirmation.
       const privateKeyB58 = await walletKeyCache.getPrivateKey();
       if (!privateKeyB58) {
         throw new Error('Stealth wallet key unavailable. Please re-import or unlock.');

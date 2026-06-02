@@ -13,6 +13,7 @@ import Animated, {
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { RefreshBtn } from '@/src/design-system/primitives/RefreshBtn';
+import { LoaderDots } from '@/src/design-system/primitives/LoaderDots';
 import { Icons } from '@/src/design-system/icons';
 import { mono, sansation, serif } from '@/src/design-system/typography';
 import { Palette, txPalette } from '@/src/design-system/palettes';
@@ -20,6 +21,7 @@ import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
 import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
+import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -41,9 +43,7 @@ export function ClaimPendingScreen() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
-  // Force a fresh scan on screen mount — this is the user-facing source
-  // of truth for pending claims. The badge on the stealth tab reads the
-  // cached result instead of triggering its own scan.
+
   const {
     data: incomingUtxos,
     refetch,
@@ -61,6 +61,28 @@ export function ClaimPendingScreen() {
     setClaimingIndex(index);
 
     const stealfWallet = user?.stealfWallet ?? null;
+    const claimKey = stealfWallet
+      ? claimScanQueries.byStealfWallet(stealfWallet)
+      : null;
+
+    const snapshot = claimKey
+      ? queryClient.getQueryData<ClaimScanResult>(claimKey)
+      : undefined;
+
+    const removeFromCache = () => {
+      if (!claimKey) return;
+      queryClient.setQueryData<ClaimScanResult>(claimKey, (prev) =>
+        prev
+          ? {
+              ...prev,
+              received: prev.received.filter((u) => u !== item.utxo),
+              publicReceived: prev.publicReceived.filter(
+                (u) => u !== item.utxo,
+              ),
+            }
+          : prev,
+      );
+    };
 
     const opId = pendingOps.enqueue({
       kind: 'claim-to-shielded',
@@ -70,7 +92,7 @@ export function ClaimPendingScreen() {
 
 
     setTimeout(() => {
-
+      removeFromCache();
       if (router.canGoBack()) {
         router.replace('/(tabs)/stealth');
       }
@@ -104,6 +126,9 @@ export function ClaimPendingScreen() {
         pendingOps.complete(opId, 'done');
       } catch (err: any) {
         clearTimeout(provingTimer);
+        if (claimKey && snapshot) {
+          queryClient.setQueryData(claimKey, snapshot);
+        }
         const msg = err?.userMessage || err?.message || 'Claim failed';
         if (__DEV__) console.warn('[ClaimPending] claim failed:', msg);
         pendingOps.complete(opId, 'failed', msg);
@@ -164,7 +189,9 @@ export function ClaimPendingScreen() {
             },
           ]}
         >
-          {items.length} pending · into encrypted balance
+          {isFetching && items.length === 0
+            ? 'Scanning encrypted notes…'
+            : `${items.length} pending · into encrypted balance`}
         </Text>
         <RefreshBtn onPress={() => refetch()} spinning={isFetching} />
       </View>
@@ -178,7 +205,9 @@ export function ClaimPendingScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {items.length === 0 ? (
+        {isFetching && items.length === 0 ? (
+          <ScanningState palette={palette} />
+        ) : items.length === 0 ? (
           <EmptyState palette={palette} />
         ) : (
           items.map((tx, i) => (
@@ -280,6 +309,27 @@ function ClaimItem({
           />
         </View>
       </LinearGradient>
+    </View>
+  );
+}
+
+function ScanningState({ palette }: { palette: Palette }) {
+  return (
+    <View style={{ paddingTop: 72, alignItems: 'center', gap: 20 }}>
+      <LoaderDots color={palette.accent} size={9} bounce={9} />
+      <Text
+        style={[
+          serif,
+          {
+            fontSize: 14,
+            fontStyle: 'italic',
+            color: palette.inkFaint,
+            textAlign: 'center',
+          },
+        ]}
+      >
+        Scanning encrypted notes…
+      </Text>
     </View>
   );
 }

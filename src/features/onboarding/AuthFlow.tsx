@@ -14,14 +14,6 @@ type Mode = 'auth' | 'email' | 'otp';
 const FADE_OUT = 220;
 const FADE_IN = 260;
 
-/**
- * Auth flow shell. Owns mode + scratch state (email, otpId) for the
- * three-screen flow and animates between them with a sequential fade
- * (out → swap → in) so screens never overlap mid-transition. A single
- * route at app/(auth)/welcome.tsx renders this — keeping email + otp
- * out of the Expo Router stack avoids the parallel crossfade that
- * makes those transitions feel like ghosting.
- */
 export function AuthFlow() {
   const [mode, setMode] = useState<Mode>('auth');
   const [email, setEmail] = useState('');

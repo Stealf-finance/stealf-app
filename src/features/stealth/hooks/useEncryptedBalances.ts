@@ -13,13 +13,10 @@ export type EncryptedTokenBalance = {
   mint: string;
   symbol: string;
   decimals: number;
-  /** Humanized balance (e.g. 12.34 for 12.34 USDC). */
   amount: number;
-  /** Raw on-chain amount in token base units. */
   amountRaw: bigint;
   amountUSD: number;
   iconUri?: string;
-  /** SDK-reported encrypted account state — 'shared' means active. */
   state: string | null;
 };
 
@@ -28,9 +25,6 @@ export type EncryptedBalances = {
   totalUSD: number;
 };
 
-/** Raw on-chain data the cached query holds. USD/symbol/etc. are derived
- *  outside the cache so price refreshes flow through render without forcing
- *  a refetch (and don't leave stale fiat in the cached payload). */
 export type RawEncryptedToken = {
   mint: string;
   amountRaw: bigint;
@@ -38,7 +32,6 @@ export type RawEncryptedToken = {
 };
 export type RawEncryptedBalances = { tokens: RawEncryptedToken[] };
 
-// Anything above 1B SOL/equivalent is garbage (corrupted account or wrong keys).
 const MAX_PLAUSIBLE_RAW = 1_000_000_000n * BigInt(LAMPORTS_PER_SOL);
 
 const TOKEN_DECIMALS: Record<string, number> = {
@@ -50,26 +43,19 @@ const TOKEN_DECIMALS: Record<string, number> = {
   BONK: 5,
 };
 
-// Stablecoins floor — backend may report 0 balance + 0 balanceUSD when the
-// public ATA is empty (typical right after shielding the full position),
-// which would otherwise collapse the derived per-unit price to 0 and zero
-// out fiat for the encrypted side. Mirrors mapTokenToAsset.STABLE_PRICES.
 const STABLE_PRICES: Record<string, number> = {
   USDC: 1,
   USDT: 1,
   EURC: 1,
+  dUSDC: 1,
+  dUSDT: 1,
 };
 
-// `mints` MUST be pre-sorted by the caller — the hook below guarantees this
-// via its memoized signature so we can drop the per-call `.slice().sort()`.
 export const encryptedBalancesQueries = {
   byStealfWallet: (wallet: string, mints: readonly string[]) =>
     ['stealth', 'encrypted-balances', wallet, ...mints] as const,
 };
 
-/** Build the sorted mint list the hook queries on. Exported so prefetchers
- *  (e.g. DataBootstrap) can derive the same query key without re-implementing
- *  the SOL-plus-public-tokens rule. */
 export function buildEncryptedMintList(
   publicBalance: BalanceResponse | undefined,
 ): string[] {
@@ -80,8 +66,6 @@ export function buildEncryptedMintList(
   return Array.from(set).sort();
 }
 
-/** Pure on-chain fetch + sanitization. Extracted so the hook and the
- *  prefetch path share one implementation of the cache payload shape. */
 export async function fetchEncryptedBalancesRaw(
   mints: readonly string[],
 ): Promise<RawEncryptedBalances> {
@@ -102,10 +86,6 @@ export async function fetchEncryptedBalancesRaw(
   return { tokens };
 }
 
-/** Seed the encrypted-balance cache so the stealth screen renders instantly
- *  on first mount. No-ops if mints can't be derived (e.g. public balance not
- *  yet cached). Safe to call before the Umbra client is built — the SDK call
- *  triggers a lazy build under the hood. */
 export async function prefetchEncryptedBalancesFor(
   queryClient: QueryClient,
   stealfWallet: string,
@@ -120,23 +100,12 @@ export async function prefetchEncryptedBalancesFor(
   });
 }
 
-/**
- * Multi-mint encrypted balance query. Always includes SOL plus every mint
- * the user holds on their public stealth ATA — i.e. tokens they're aware of.
- * Tokens shielded but no longer held publicly will be missed; expand the
- * mint list if/when that becomes a real case.
- */
 export function useEncryptedBalances() {
   const { user } = useAuth();
   const wallet = user?.stealfWallet ?? '';
   const { data: publicBalance } = useBalance(user?.stealfWallet ?? null);
   const { data: solPrice } = useSolPrice();
 
-  // Two-step memo so the `mints` array reference stays stable when the
-  // mint *set* hasn't actually changed, even if publicBalance refetches
-  // for unrelated reasons (balance amount updates, refetchOnFocus, etc.).
-  // Without this, every refetch would yield a new mints reference → new
-  // query key → cache miss on the encrypted-balances query.
   const mintsSignature = useMemo(() => {
     const set = new Set<string>([SOL_MINT]);
     (publicBalance?.tokens ?? []).forEach((t) => {
@@ -150,11 +119,6 @@ export function useEncryptedBalances() {
     [wallet, mints],
   );
 
-  // Per-mint metadata derived from the public balance — labels encrypted
-  // entries with the same icon/symbol the user sees publicly, instead of
-  // bare addresses. Recomputes when solPrice or public balance changes,
-  // and the derivation in the wrapper memo below picks the new values up
-  // immediately without invalidating the cached on-chain query.
   const metaByMint = useMemo(() => {
     const map = new Map<
       string,
@@ -228,9 +192,6 @@ export function useEncryptedBalances() {
     return { tokens, totalUSD };
   }, [baseQuery.data, metaByMint]);
 
-  // Reshape the query result so the cached payload's data type doesn't leak
-  // out — callers expect EncryptedBalances on `.data`, not the raw on-chain
-  // shape we hold in the cache.
   return { ...baseQuery, data: derived } as Omit<typeof baseQuery, 'data'> & {
     data: EncryptedBalances | undefined;
   };

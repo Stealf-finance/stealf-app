@@ -87,6 +87,14 @@ const moduleOverrides = {
     __dirname,
     'node_modules/@umbra-privacy/sdk/dist/persistence/adapters/index.js',
   ),
+  '@umbra-privacy/sdk/master-seed-schemes': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/master-seed-schemes/index.js',
+  ),
+  '@umbra-privacy/sdk/crypto/aes': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/primitives/crypto/aes/index.js',
+  ),
 };
 
 const wrapped = withNativeWind(config, { input: './global.css' });

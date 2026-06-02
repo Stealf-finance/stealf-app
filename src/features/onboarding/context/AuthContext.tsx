@@ -29,7 +29,6 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// Reads the persisted stealth-wallet address so it survives sign-out → sign-in.
 export async function readPersistedStealfWallet(): Promise<string | null> {
   try {
     return await getSecure(SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS);
@@ -71,9 +70,6 @@ async function persistSessionToken(token: string | null): Promise<void> {
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUserState] = useState<User | null>(null);
   const [session, setSessionState] = useState<Session | null>(null);
-  // Block routing decisions in <AuthGuard> until we've finished restoring
-  // persisted state from SecureStore (otherwise we briefly redirect to /welcome
-  // on cold start before rehydration completes).
   const [isLoading, setLoading] = useState(true);
 
   // Cold-start rehydration: pull user + session token from Keychain so the

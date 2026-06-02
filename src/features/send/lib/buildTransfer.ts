@@ -21,9 +21,6 @@ import { SOL_MINT } from '@/src/constants/solana';
 
 const SYSTEM_PROGRAM = toAddress('11111111111111111111111111111111');
 
-/** Native SOL is always sent via System program, never SPL transferChecked.
- * The SPL WSOL mint exists but our bank balance is held as native lamports,
- * not wrapped SOL. Treat both `null` mint and the canonical WSOL mint as SOL. */
 export function isNativeSolMint(mint: string | null | undefined): boolean {
   return !mint || mint === SOL_MINT;
 }
@@ -75,15 +72,6 @@ export async function buildSolTransferMessage(params: {
   return { message, latestBlockhash };
 }
 
-/**
- * Build an SPL transfer (TransferChecked). Derives source + destination ATAs,
- * auto-creates the destination ATA if missing (sender pays rent), and signs
- * the authority through `createNoopSigner` so the marker account-meta is set
- * for the external signer (Turnkey bank or local ED25519 stealth) to fill
- * the signature slot during the sign step.
- *
- * Reject native-SOL mints here — callers should branch via `isNativeSolMint`.
- */
 export async function buildSplTransferMessage(params: {
   fromAddress: string;
   toAddress: string;
@@ -117,9 +105,6 @@ export async function buildSplTransferMessage(params: {
     mint: mintAddr,
   });
 
-  // Mark the sender as fee-payer + authority signer. `createNoopSigner` does
-  // not produce a signature; it just satisfies the type and the account-meta
-  // marker so the external signer (Turnkey or local) can sign at send time.
   const payerSigner = createNoopSigner(fromAddr);
 
   const destAtaInfo = await rpc

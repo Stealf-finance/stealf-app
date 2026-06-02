@@ -1,3 +1,45 @@
+diff --git a/node_modules/@umbra-privacy/sdk/dist/chunk-3KX35ITU.cjs b/node_modules/@umbra-privacy/sdk/dist/chunk-3KX35ITU.cjs
+index 48badaa..461ca3c 100644
+--- a/node_modules/@umbra-privacy/sdk/dist/chunk-3KX35ITU.cjs
++++ b/node_modules/@umbra-privacy/sdk/dist/chunk-3KX35ITU.cjs
+@@ -214,9 +214,35 @@ function getUtxoDataFetcher(args, deps = chunkIG53W3KW_cjs.getDefaultIndexerDeps
+           minute: item.h1_minute,
+           second: item.h1_second
+         };
++        // PATCH: the v5 indexer returns h1_version / h1_commitment_index as
++        // base64-encoded little-endian byte arrays (e.g. "AQAA...==" -> 1),
++        // but the rc.3 parser calls BigInt() directly on the string. Decode
++        // base64 LE -> bigint here; pass decimal/hex strings through unchanged.
++        const __leBase64ToBig = (v, f) => {
++          if (typeof v === "bigint") return v;
++          if (typeof v === "number") return BigInt(v);
++          if (typeof v === "string") {
++            if (/^-?\d+$/.test(v) || /^0x[0-9a-fA-F]+$/.test(v)) return BigInt(v);
++            try {
++              const buf = Buffer.from(v, "base64");
++              let r = 0n;
++              for (let i = buf.length - 1; i >= 0; i--) {
++                r = (r << 8n) + BigInt(buf[i]);
++              }
++              return r;
++            } catch (e) {
++              throw new Error(
++                `[umbra-patch] cannot coerce ${f} to bigint: raw=${JSON.stringify(v)}`
++              );
++            }
++          }
++          throw new Error(
++            `[umbra-patch] cannot coerce ${f} to bigint: type=${typeof v}`
++          );
++        };
+         const h1Components = {
+-          version: BigInt(item.h1_version),
+-          commitmentIndex: BigInt(item.h1_commitment_index),
++          version: __leBase64ToBig(item.h1_version, "h1_version"),
++          commitmentIndex: __leBase64ToBig(item.h1_commitment_index, "h1_commitment_index"),
+           senderAddressLow: senderAddress.low,
+           senderAddressHigh: senderAddress.high,
+           relayerFixedSolFees: item.h1_relayer_fixed_sol_fees,
 diff --git a/node_modules/@umbra-privacy/sdk/dist/chunk-MZ3TIUAU.cjs b/node_modules/@umbra-privacy/sdk/dist/chunk-MZ3TIUAU.cjs
 index ac9db7a..100facc 100644
 --- a/node_modules/@umbra-privacy/sdk/dist/chunk-MZ3TIUAU.cjs
@@ -11,3 +53,16 @@ index ac9db7a..100facc 100644
        fetchMerkleProof = getMerkleProofFetcher({ apiEndpoint: indexerApiEndpoint });
        fetchBatchMerkleProof = getBatchMerkleProofFetcher({ apiEndpoint: indexerApiEndpoint });
        fetchUtxoData = getUtxoDataFetcher({ apiEndpoint: indexerApiEndpoint });
+diff --git a/node_modules/@umbra-privacy/sdk/dist/operations/burn/index.js b/node_modules/@umbra-privacy/sdk/dist/operations/burn/index.js
+index 54b3b14..471fc40 100644
+--- a/node_modules/@umbra-privacy/sdk/dist/operations/burn/index.js
++++ b/node_modules/@umbra-privacy/sdk/dist/operations/burn/index.js
+@@ -65,7 +65,7 @@ async function tryDecryptStealthPoolNote(stealthPoolNote, schemes, aesDecryptor,
+     ];
+     for (const clientX25519PrivateKey of candidatePrivateKeys) {
+       try {
+-        const sharedSecret = x25519GetSharedSecret(
++        const sharedSecret = await x25519GetSharedSecret(
+           clientX25519PrivateKey,
+           stealthPoolNote.depositorX25519PublicKey
+         );

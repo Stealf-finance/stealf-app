@@ -12,7 +12,6 @@ const PRESETS = [
 
 type Props = {
   onPressPercent: (pct: number) => void;
-  /** When true, dims and blocks all chips (e.g. zero balance). */
   disabled?: boolean;
 };
 

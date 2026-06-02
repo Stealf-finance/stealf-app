@@ -11,7 +11,6 @@ export interface ShieldedSolBalance {
   state: string | null;
 }
 
-// Anything above 1B SOL is garbage (corrupted account or wrong keys).
 const MAX_PLAUSIBLE_LAMPORTS = 1_000_000_000n * BigInt(LAMPORTS_PER_SOL);
 
 export const shieldedBalanceQueries = {

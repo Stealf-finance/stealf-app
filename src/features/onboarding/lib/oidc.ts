@@ -1,6 +1,5 @@
 import { Buffer } from 'buffer';
 
-
 function decodeOidcPayload(token: string): Record<string, unknown> | undefined {
   if (!token) return undefined;
   const parts = token.split('.');

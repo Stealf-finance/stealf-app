@@ -134,11 +134,6 @@ export function AuthScreen({ onEmail }: Props) {
           <View style={{ flex: 1, height: 1, backgroundColor: T.hairline }} />
         </View>
 
-        {/* Provider hierarchy is platform-conditional. iOS surfaces
-            Apple as primary per HIG; Android surfaces Google. We
-            hide Apple on Android entirely — Apple Sign-In on
-            non-Apple platforms is awkward UX and breaks visual
-            hierarchy when shown next to Google. */}
         {Platform.OS === 'ios' && (
           <AuthBtn
             variant="primary"

@@ -116,17 +116,6 @@ function logsOf(err: unknown): string[] {
   return e?.cause?.context?.logs ?? [];
 }
 
-/**
- * Inspect Solana simulation logs to disambiguate the two `insufficient`
- * cases: the signer not having enough lamports for transaction fees (fixed
- * by topping up the wallet's public SOL), versus the source account not
- * having enough of the asset being moved (fixed by sending less).
- *
- * The fee case is recognizable by a `Transfer: insufficient lamports X,
- * need Y` line emitted by the System Program when the fee-payer transfer
- * fails. Everything else `insufficient`-flavored gets routed to the
- * generic balance error.
- */
 function classifyInsufficient(
   logs: string[],
   rawMessage: string,
@@ -143,22 +132,6 @@ function classifyInsufficient(
   return null;
 }
 
-/**
- * Detect an Anchor `InstructionFallbackNotFound` (error code 101 / 0x65)
- * coming from the Umbra program. This fires when the SDK sends an
- * instruction discriminator the on-chain program doesn't recognise — i.e.
- * the deployed program is a different version than the one the SDK was
- * compiled against. Symptoms appear as a `-32002` simulation rejection,
- * which `buildFromTxSend` would otherwise mistakenly classify as
- * `TX_TIMEOUT` ("please check your balance"), pushing the user toward
- * irrelevant remediation.
- *
- * Match on three independent log shapes — Solana renders this error
- * inconsistently across program versions and RPC providers:
- *   - "AnchorError occurred. Error Code: InstructionFallbackNotFound"
- *   - "Error Number: 101"
- *   - "custom program error: 0x65"
- */
 function isProtocolInstructionMismatch(logs: string[]): boolean {
   return logs.some(
     (l) =>
@@ -186,23 +159,12 @@ function build(
   });
 }
 
-/**
- * Specialise a `transaction-send` failure: the SDK throws the same wrapper
- * for "RPC dropped me" and "simulation rejected me", but the latter often
- * carries actionable signal in the simulation logs (e.g. fee-payer broke,
- * source balance too low). We extract those before falling back to the
- * generic timeout message.
- */
 function buildFromTxSend(
   err: unknown,
   op: StealthOp,
   stage?: string,
 ): StealthError {
   const logs = logsOf(err);
-  // Check version-mismatch FIRST: a `-32002` rejection on an unknown
-  // instruction looks like a generic tx-send failure to the SDK, and the
-  // `TX_TIMEOUT` fallback would tell the user to check their balance —
-  // which is the wrong recovery path entirely.
   if (isProtocolInstructionMismatch(logs)) {
     return build(err, op, 'PROTOCOL_INSTRUCTION_MISMATCH', stage);
   }
@@ -212,11 +174,6 @@ function buildFromTxSend(
   return build(err, op, 'TX_TIMEOUT', stage);
 }
 
-/**
- * Parse a raw SDK error into a `StealthError` with a stable code and a
- * user-facing message. Uses Umbra's typed guards first, then falls back to
- * message inspection for the long tail.
- */
 export function parseStealthError(err: unknown, op: StealthOp): StealthError {
   if (err instanceof StealthError) return err;
 

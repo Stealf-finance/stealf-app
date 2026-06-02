@@ -5,22 +5,14 @@ import { serif } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
 export type Asset = {
-  /** SPL mint or null for native SOL — the only globally-unique id (symbols
-   * collide on mainnet for unresolved tokens that all surface as 'UNKNOWN'). */
   mint: string | null;
   symbol: string;
   name: string;
   balance: string;
   fiat?: string;
   gradient: [string, string];
-  /** When set, rendered inside the 44px disc instead of the gradient. Narrowed
-   * to expo-image's source shape since every producer ships a single
-   * `{ uri }` / bundled-number, never the RN array form. */
   iconSource?: ImageSource | number;
-  /** Per-unit USD price, used to convert the typed amount to fiat in real time. */
   priceUSD?: number;
-  /** On-chain token decimals (SOL=9, USDC=6, BONK=5…). Required to convert
-   * the typed humanized amount back to raw units when building the tx. */
   decimals?: number;
 };
 

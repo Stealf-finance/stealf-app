@@ -20,18 +20,6 @@ interface CreateUtxoArgs {
   amount: bigint;
 }
 
-/**
- * Thin wrappers over Umbra SDK's UTXO creator factories. Each wrapper:
- *   1. Injects the matching zkProver (the SDK doesn't bundle them).
- *   2. Registers the creator's client on first use.
- *   3. Casts `amount` to U64 (the SDK's branded bigint).
- *
- * The wrapper does NOT register the destination wallet. Receiver-claimable
- * UTXOs read the destination's userCommitment PDA on-chain, so the caller
- * must `ensureRegistered` / `ensureRegisteredFor` the destination before
- * invoking the creator if it isn't already known to be registered.
- */
-
 export function getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction({
   client,
 }: {
