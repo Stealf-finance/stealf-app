@@ -63,7 +63,7 @@ export function HomeHub() {
         {/* Bottom section slides in lockstep with the carousel: Total → the
             "Get your bank account" card, Bank → recent activity, Wallet /
             Encrypted → their assets list. */}
-        <View style={{ alignItems: 'center', marginTop: 8 }}>
+        <View style={{ alignItems: 'center', marginTop: 24 }}>
           <SwipeSlider
             progress={progress}
             pageWidth={PAGE_WIDTH}
