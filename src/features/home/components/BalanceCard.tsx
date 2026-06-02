@@ -17,7 +17,10 @@ type Props = {
 
 function splitUsd(usd: number): { int: string; dec: string } {
   const [int, dec = '00'] = Math.abs(usd).toFixed(2).split('.');
-  return { int: `${usd < 0 ? '-' : ''}${Number(int).toLocaleString()}`, dec };
+  // Force en-US grouping so it's always "," for thousands + "." before cents,
+  // regardless of the device locale.
+  const grouped = Number(int).toLocaleString('en-US');
+  return { int: `${usd < 0 ? '-' : ''}${grouped}`, dec: `.${dec}` };
 }
 
 export function BalanceCard({
