@@ -8,8 +8,15 @@ describe('homeCardActions', () => {
   it('Bank card exposes move + details', () => {
     expect(homeCardActions('bank').map((a) => a.key)).toEqual(['move', 'details']);
   });
-  it('Stealf card exposes receive/move', () => {
-    expect(homeCardActions('stealf').map((a) => a.key)).toEqual(['receive', 'move']);
+  it('Stealf card receives into the stealth wallet and moves to bank', () => {
+    const actions = homeCardActions('stealf');
+    expect(actions.map((a) => a.key)).toEqual(['receive', 'move']);
+    expect(actions.find((a) => a.key === 'receive')?.route).toBe(
+      '/receive/flow?tone=silver&wallet=stealth',
+    );
+    expect(actions.find((a) => a.key === 'move')?.route).toBe(
+      '/moove?direction=stealth-to-bank',
+    );
   });
   it('Encrypted card exposes move', () => {
     expect(homeCardActions('encrypted').map((a) => a.key)).toEqual(['move']);

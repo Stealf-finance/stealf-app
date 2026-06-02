@@ -12,17 +12,25 @@ export type HomeAction = {
 
 // Bank / Stealf actions — sourced from BankWallet.tsx (SquareActionTile props
 // and router.push calls).
-const RECEIVE: HomeAction = {
-  key: 'receive',
-  label: 'Receive',
-  iconKey: 'arrDown',
-  route: '/receive',
-};
 const MOVE: HomeAction = {
   key: 'move',
   label: 'Move',
   iconKey: 'move',
   route: '/moove?direction=bank-to-shielded',
+};
+// Stealf ("Wallet") tiles: receive straight into the stealth wallet, and move
+// the stealth wallet's public balance out to the bank.
+const RECEIVE_STEALTH: HomeAction = {
+  key: 'receive',
+  label: 'Receive',
+  iconKey: 'arrDown',
+  route: '/receive/flow?tone=silver&wallet=stealth',
+};
+const MOVE_STEALTH_TO_BANK: HomeAction = {
+  key: 'move',
+  label: 'Move',
+  iconKey: 'move',
+  route: '/moove?direction=stealth-to-bank',
 };
 const DETAILS: HomeAction = {
   key: 'details',
@@ -36,7 +44,7 @@ export function homeCardActions(card: HomeCardId): HomeAction[] {
     case 'bank':
       return [MOVE, DETAILS];
     case 'stealf':
-      return [RECEIVE, MOVE];
+      return [RECEIVE_STEALTH, MOVE_STEALTH_TO_BANK];
     case 'encrypted':
       return [MOVE];
     case 'total':
