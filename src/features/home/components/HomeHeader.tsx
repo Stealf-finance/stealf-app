@@ -1,41 +1,26 @@
-import { Pressable, Text, View } from 'react-native';
-import { Icons } from '@/src/design-system/icons';
-import { sansation } from '@/src/design-system/typography';
-import { T } from '@/src/design-system/tokens';
+import { View } from 'react-native';
+import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
+import { useToast } from '@/src/components/toast/ToastContext';
 
-type Props = { name?: string | null; hidden: boolean; onToggleHidden: () => void };
+/** Top bar: card + notifications shortcuts (both parked as "coming soon"). */
+export function HomeHeader() {
+  const { show } = useToast();
+  const soon = (label: string) =>
+    show({ kind: 'info', title: 'Coming soon', message: `${label} are coming soon.` });
 
-export function HomeHeader({ name, hidden, onToggleHidden }: Props) {
   return (
     <View
       style={{
         flexDirection: 'row',
+        justifyContent: 'flex-end',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 8,
+        gap: 10,
+        paddingHorizontal: 24,
+        paddingBottom: 8,
       }}
     >
-      <Text style={[sansation, { fontSize: 14, color: T.inkDim }]}>
-        Hi{name ? ', ' : ''}
-        {name ? <Text style={{ color: T.ink, fontWeight: '600' }}>{name}</Text> : null}
-      </Text>
-      <Pressable
-        onPress={onToggleHidden}
-        accessibilityRole="button"
-        accessibilityLabel="Toggle balance visibility"
-        hitSlop={10}
-        style={({ pressed }) => ({
-          padding: 4,
-          opacity: pressed ? 0.6 : 1,
-        })}
-      >
-        {hidden ? (
-          <Icons.eyeOff size={20} color={T.inkDim} />
-        ) : (
-          <Icons.eye size={20} color={T.inkDim} />
-        )}
-      </Pressable>
+      <CircleIconBtn iconKey="card" tone="silver" onPress={() => soon('Cards')} />
+      <CircleIconBtn iconKey="bell" tone="silver" hasDot onPress={() => soon('Notifications')} />
     </View>
   );
 }

@@ -1,31 +1,49 @@
 import { View } from 'react-native';
-import Animated, { useAnimatedStyle, interpolate, type SharedValue } from 'react-native-reanimated';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { txPalette } from '@/src/design-system/palettes';
 import { SwipePager } from '@/src/design-system/primitives/SwipePager';
+import { SwipeSlider } from '@/src/design-system/primitives/SwipeSlider';
 import { CarouselDots } from '@/src/design-system/primitives/CarouselDots';
 import { BalanceCard } from './BalanceCard';
+import { HomeActionRow } from './HomeActionRow';
 import type { HomeBalances } from '../lib/aggregateHomeBalances';
 import type { HomeCardId } from '../lib/homeCardActions';
+
+const SILVER = txPalette('silver');
+const GOLD = txPalette('gold');
 
 export const HOME_CARDS: { id: HomeCardId; kicker: string }[] = [
   { id: 'total', kicker: 'Total balance' },
   { id: 'bank', kicker: 'Bank wallet' },
-  { id: 'stealf', kicker: 'Stealf wallet · public' },
+  { id: 'stealf', kicker: 'Stealf wallet' },
   { id: 'encrypted', kicker: 'Encrypted balance' },
 ];
 
+const usdFor = (id: HomeCardId, b: HomeBalances) =>
+  id === 'total'
+    ? b.totalUSD
+    : id === 'bank'
+      ? b.bankUSD
+      : id === 'stealf'
+        ? b.stealfUSD
+        : b.encryptedUSD;
+
+const paletteFor = (id: HomeCardId) => (id === 'encrypted' ? GOLD : SILVER);
+
 type Props = {
   balances: HomeBalances;
-  hidden?: boolean;
+  hidden: boolean;
+  onToggleHidden: () => void;
   index: number;
   onIndexChange: (i: number) => void;
 };
 
-const usdFor = (id: HomeCardId, b: HomeBalances) =>
-  id === 'total' ? b.totalUSD : id === 'bank' ? b.bankUSD : id === 'stealf' ? b.stealfUSD : b.encryptedUSD;
-
-// Gold wash that fades in as the pager approaches the Encrypted page (index 3).
-// zIndex:-1 keeps it behind the cards (it renders after them via the render-prop).
+// Gold wash fading in as the pager approaches the Encrypted page (index 3).
 function GoldHalo({ progress }: { progress: SharedValue<number> }) {
   const style = useAnimatedStyle(() => ({
     opacity: interpolate(progress.value, [2.2, 3], [0, 1], 'clamp'),
@@ -34,7 +52,7 @@ function GoldHalo({ progress }: { progress: SharedValue<number> }) {
     <Animated.View
       pointerEvents="none"
       style={[
-        { position: 'absolute', top: -40, left: 0, right: 0, height: 220, zIndex: -1 },
+        { position: 'absolute', top: -30, left: -24, right: -24, height: 260, zIndex: -1 },
         style,
       ]}
     >
@@ -43,19 +61,53 @@ function GoldHalo({ progress }: { progress: SharedValue<number> }) {
   );
 }
 
-export function BalanceCarousel({ balances, hidden, index, onIndexChange }: Props) {
-  const pages = HOME_CARDS.map((c) => (
-    <BalanceCard key={c.id} kicker={c.kicker} amountUSD={usdFor(c.id, balances)} hidden={hidden} />
-  ));
+export function BalanceCarousel({
+  balances,
+  hidden,
+  onToggleHidden,
+  index,
+  onIndexChange,
+}: Props) {
   return (
-    <SwipePager pages={pages} index={index} onIndexChange={onIndexChange}>
-      {(progress) => (
-        <>
+    <SwipePager count={HOME_CARDS.length} index={index} onIndexChange={onIndexChange}>
+      {(progress, pageWidth) => (
+        <View style={{ alignItems: 'center' }}>
           <GoldHalo progress={progress} />
-          <View style={{ marginTop: 14 }}>
+
+          {/* Balance cards slider */}
+          <SwipeSlider
+            progress={progress}
+            pageWidth={pageWidth}
+            pages={HOME_CARDS.map((c) => {
+              const p = paletteFor(c.id);
+              return (
+                <BalanceCard
+                  key={c.id}
+                  kicker={c.kicker}
+                  amountUSD={usdFor(c.id, balances)}
+                  hidden={hidden}
+                  onToggleHidden={onToggleHidden}
+                  accent={p.accent}
+                  ink={p.ink}
+                  inkDim={p.inkDim}
+                />
+              );
+            })}
+          />
+
+          <View style={{ marginVertical: 20 }}>
             <CarouselDots count={HOME_CARDS.length} progress={progress} onSelect={onIndexChange} />
           </View>
-        </>
+
+          {/* Action tiles slider — same `progress`, slides in lockstep */}
+          <SwipeSlider
+            progress={progress}
+            pageWidth={pageWidth}
+            pages={HOME_CARDS.map((c) => (
+              <HomeActionRow key={c.id} card={c.id} />
+            ))}
+          />
+        </View>
       )}
     </SwipePager>
   );
