@@ -10,6 +10,7 @@ import { HomeHeader } from '../components/HomeHeader';
 import { BalanceCarousel, HOME_CARDS } from '../components/BalanceCarousel';
 import { HomeActivity } from '../components/HomeActivity';
 import { AssetsList } from '../components/AssetsList';
+import { GetBankAccountCard } from '../components/GetBankAccountCard';
 import { TonalHalo } from '../components/TonalHalo';
 import type { HomeCardId } from '../lib/homeCardActions';
 
@@ -19,7 +20,12 @@ const PAGE_WIDTH = Dimensions.get('window').width - SWIPE_PAGE_INSET * 2;
 function bottomFor(id: HomeCardId) {
   switch (id) {
     case 'bank':
-      return <HomeActivity />;
+      return (
+        <>
+          <GetBankAccountCard />
+          <HomeActivity />
+        </>
+      );
     case 'stealf':
       return <AssetsList card="stealf" />;
     case 'encrypted':
