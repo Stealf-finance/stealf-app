@@ -16,6 +16,10 @@ const SNAP = { duration: 320 } as const;
  *  sibling sliders (driven by the same progress) can match the page width. */
 export const SWIPE_PAGE_INSET = 24;
 
+/** Empty gap shown between pages while swiping. Exported so SwipeSlider lays
+ *  out + translates by `pageWidth + gutter`, matching this pager's pan math. */
+export const SWIPE_PAGE_GUTTER = 40;
+
 type Props = {
   /** Number of pages. */
   count: number;
@@ -77,7 +81,9 @@ export function SwipePager({
       startX.value = progress.value;
     })
     .onUpdate((e) => {
-      progress.value = startX.value - e.translationX / pageWidth;
+      // Divide by the full slide distance (page + gutter) so a drag tracks the
+      // page under the finger 1:1 across the gap.
+      progress.value = startX.value - e.translationX / (pageWidth + SWIPE_PAGE_GUTTER);
     })
     .onEnd((e) => {
       runOnJS(onPanEnd)(e.translationX, e.velocityX);
