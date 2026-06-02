@@ -21,12 +21,15 @@ that touches signing, secrets, or balances as production-grade.
 
 In this order:
 
-1. `docs/glossary.md` — **the most important file in the repo.** Pins
+> Note: the deep docs now live under `.claude/docs/` (local, gitignored —
+> not in the repo). Paths below point there.
+
+1. `.claude/docs/glossary.md` — **the most important file in the repo.** Pins
    the split between internal code names and user-facing labels.
-2. `docs/architecture.md` — top-level layout, layered model.
-3. `docs/conventions.md` — strict 3-layer pattern + naming.
-4. `docs/decisions.md` — ADRs, including ones rejected.
-5. `docs/audit-security.md` — known security posture, deferred items.
+2. `.claude/docs/architecture.md` — top-level layout, layered model.
+3. `.claude/docs/conventions.md` — strict 3-layer pattern + naming.
+4. `.claude/docs/decisions.md` — ADRs, including ones rejected.
+5. `.claude/docs/audit-security.md` — known security posture, deferred items.
 
 ## Hard rules — never deviate without explicit user sign-off
 
@@ -44,7 +47,7 @@ forces a backend migration. UI-only changes are cheap; everything
 else is a breaking change.
 
 If you think you've found an inconsistency to fix, check
-`docs/glossary.md` first — most "drift" is internal vs UI by design.
+`.claude/docs/glossary.md` first — most "drift" is internal vs UI by design.
 
 ### 2. The 3-layer pattern is strict
 
@@ -126,24 +129,49 @@ Two known release-time bottlenecks survive: the
 
 ### Backend is local-dev only
 
-Staff Engineer runs the backend locally on port 5000 (no Railway dev
-environment). Front-stealf (the legacy prod app) hits the prod API.
-This repo's `.env` should point at `http://localhost:5000` (or
-`http://<dev-machine-LAN-ip>:5000` for physical iOS device testing)
-during development.
+Staff Engineer runs the backend locally (no Railway dev environment).
+Front-stealf (the legacy prod app) hits the prod API. The live port is
+whatever `EXPO_PUBLIC_API_URL` in `.env` points at — currently
+`http://192.168.1.29:3000` (a LAN IP, so a physical iOS device must be
+on the same Wi-Fi; a simulator can use `localhost`). On-chain stealth
+ops go through the public devnet RPC + relayer, not this backend.
 
 ## Mopro / ZK FFI
 
 ZK provers come from `@umbra-privacy/rn-zk-prover` (Mopro-bundled
 native xcframework distributed via npm). Don't touch the package source
-unless you've read `docs/spike-mopro.md`. The provers consume zkey
+unless you've read `.claude/docs/spike-mopro.md`. The provers consume zkey
 assets — one (`createdepositwithpublicamount.zkey`, ~4.0 MB) is shipped
 in-bundle at `assets/zk/`; others are lazy-fetched at first use via
 `src/features/stealth/zk/services/zkAssetService.ts`. Changes to the
 zkey loading strategy ripple into `metro.config.js` and the splash gate.
 
-## When in doubt, defer to docs/
+## Umbra SDK v5 (stealth core)
 
-This file is the entry-point. The deeper rules live in `docs/`. Keep
-this file lean — when a topic grows past a paragraph here, move it to
-`docs/` and link.
+The stealth flow runs on `@umbra-privacy/sdk` `5.0.0-rc.3`
+(`rn-zk-prover` 5.0.0). Key integration facts, all in
+`src/services/umbra/`:
+
+- **Client** (`client.ts`): two-phase `getUmbraClient` build (bare client
+  → sharded stores → final client), `getPollingComputationMonitor` in
+  deps, and `legacyMasterSeedSchemes: [v4]` so notes created under older
+  SDK versions still decrypt. `masterSeedSchemeId` is threaded scan →
+  claim.
+- **Storage** (`storage/mmkvStorageBackend.ts`): the sharded UTXO /
+  nullifier stores persist to **MMKV** (`react-native-mmkv`, Nitro), not
+  AsyncStorage. A version-gated one-time wipe forces a clean re-scan on
+  migration.
+- **Scan crypto** (`crypto/nativeCrypto.ts`): the burnable-note scanner
+  uses native crypto — AES-256-GCM via `react-native-quick-crypto`, and
+  X25519 via `@umbra-privacy/rn-quick-x25519` `scalarMultAsync` (runs on a
+  background thread, zero-copy ArrayBuffer). Without this a full
+  merkle-tree scan blocks the JS thread for ~20s. The SDK scanner is
+  patched (`patches/@umbra-privacy+sdk+5.0.0-rc.3.patch`) to `await` the
+  async X25519; the same patch carries a base64-LE bigint parse fix.
+- Devnet test tokens dUSDC / dUSDT live in `src/constants/solana.ts`.
+
+## When in doubt, defer to .claude/docs/
+
+This file is the entry-point. The deeper rules live in `.claude/docs/`
+(local, gitignored). Keep this file lean — when a topic grows past a
+paragraph here, move it to `.claude/docs/` and link.

@@ -31,7 +31,10 @@ import {
   useShieldedSolBalance,
   shieldedBalanceQueries,
 } from '@/src/features/stealth/hooks/useShieldedSolBalance';
-import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
+import {
+  useEncryptedBalances,
+  encryptedBalancesQueries,
+} from '@/src/features/stealth/hooks/useEncryptedBalances';
 import {
   useUmbra,
   getEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
@@ -231,7 +234,9 @@ export function MoveFlow() {
         queryKey: shieldedBalanceQueries.byStealfWallet(user?.stealfWallet ?? ''),
       }),
       queryClient.invalidateQueries({
-        queryKey: ['stealth', 'encrypted-balances', user?.stealfWallet ?? ''],
+        queryKey: encryptedBalancesQueries.byStealfWalletPrefix(
+          user?.stealfWallet ?? '',
+        ),
       }),
     ];
     if (user?.bankWallet) {

@@ -3,6 +3,9 @@ import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { umbraClearSeed } from '@/src/services/umbra/seed';
 import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
 import { clearAsyncStorageBackend } from '@/src/services/umbra/storage/asyncStorageBackend';
+import { clearMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
+import { balanceQueries } from '@/src/features/bank/api/balance';
+import { historyQueries } from '@/src/features/bank/api/history';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
 export function useDeleteStealthWallet() {
@@ -17,6 +20,9 @@ export function useDeleteStealthWallet() {
       await umbraClearSeed();
       await walletKeyCache.clearAll();
       if (prevStealfWallet) {
+        // Wipe the wallet's Umbra store — MMKV (current backend) plus the
+        // legacy AsyncStorage namespace, so no decrypted UTXO data lingers.
+        clearMmkvStorageBackend(prevStealfWallet);
         await clearAsyncStorageBackend(prevStealfWallet).catch(() => undefined);
       }
 
@@ -31,10 +37,10 @@ export function useDeleteStealthWallet() {
       queryClient.removeQueries({ queryKey: ['stealth'] });
       if (prevStealfWallet) {
         queryClient.removeQueries({
-          queryKey: ['wallet-balance', prevStealfWallet],
+          queryKey: balanceQueries.byAddress(prevStealfWallet),
         });
         queryClient.removeQueries({
-          queryKey: ['wallet-history', prevStealfWallet],
+          queryKey: historyQueries.byAddress(prevStealfWallet),
         });
       }
     },

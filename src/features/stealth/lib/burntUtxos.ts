@@ -43,8 +43,10 @@ export async function loadBurntUtxosForCurrentWallet(
   const safe = privateKeyB58.replace(/[^A-Za-z0-9._-]/g, '_');
   const key = `${BURNT_UTXOS_KEY_PREFIX}${safe}`;
   try {
-    const SecureStore = await import('expo-secure-store');
-    const stored = await SecureStore.getItemAsync(key);
+    // Lazy import keeps `expo-secure-store` (and RN) out of the module graph
+    // at load time, while still routing through the centralized service.
+    const { getSecure } = await import('@/src/services/auth/secureStore');
+    const stored = await getSecure(key);
     if (stored) {
       const ids: string[] = JSON.parse(stored);
       for (const id of ids) burntUtxoIds.add(id);
@@ -60,11 +62,8 @@ export async function persistBurntUtxos(): Promise<void> {
   const safe = loadedForKey.replace(/[^A-Za-z0-9._-]/g, '_');
   const key = `${BURNT_UTXOS_KEY_PREFIX}${safe}`;
   try {
-    const SecureStore = await import('expo-secure-store');
-    await SecureStore.setItemAsync(
-      key,
-      JSON.stringify(Array.from(burntUtxoIds)),
-    );
+    const { setSecure } = await import('@/src/services/auth/secureStore');
+    await setSecure(key, JSON.stringify(Array.from(burntUtxoIds)));
   } catch {
     // Best-effort.
   }

@@ -30,7 +30,10 @@ import {
   shieldedBalanceQueries,
   useShieldedSolBalance,
 } from '@/src/features/stealth/hooks/useShieldedSolBalance';
-import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
+import {
+  useEncryptedBalances,
+  encryptedBalancesQueries,
+} from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
@@ -210,7 +213,9 @@ export function ShieldFlow({ direction }: Props) {
           // Multi-mint encrypted query — key includes the mint list so we
           // invalidate by prefix to catch every active variant.
           queryClient.invalidateQueries({
-            queryKey: ['stealth', 'encrypted-balances', stealfWallet ?? ''],
+            queryKey: encryptedBalancesQueries.byStealfWalletPrefix(
+              stealfWallet ?? '',
+            ),
           }),
           stealfWallet
             ? queryClient.invalidateQueries({

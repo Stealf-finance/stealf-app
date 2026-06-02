@@ -46,7 +46,10 @@ import { useSendSimple } from './hooks/useSendSimple';
 import { mapTokensToAssets } from './lib/mapTokenToAsset';
 import { useQueryClient } from '@tanstack/react-query';
 import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
-import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
+import {
+  useEncryptedBalances,
+  encryptedBalancesQueries,
+} from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { toAddress } from '@/src/services/solana/kit';
@@ -284,7 +287,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             queryKey: shieldedBalanceQueries.byStealfWallet(fromAddress),
           }),
           queryClient.invalidateQueries({
-            queryKey: ['stealth', 'encrypted-balances', fromAddress],
+            queryKey: encryptedBalancesQueries.byStealfWalletPrefix(fromAddress),
           }),
           queryClient.invalidateQueries({
             queryKey: historyQueries.byAddress(fromAddress),

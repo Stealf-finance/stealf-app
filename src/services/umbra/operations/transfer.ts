@@ -20,6 +20,15 @@ interface CreateUtxoArgs {
   amount: bigint;
 }
 
+/**
+ * The SDK creator functions brand `amount` with their own integer type; our
+ * `bigint` is wire-compatible. Localize that unavoidable cast to one place
+ * instead of repeating `amount as any` at every call site.
+ */
+function toCreatorArgs({ destinationAddress, mint, amount }: CreateUtxoArgs) {
+  return { destinationAddress, mint, amount: amount as never };
+}
+
 export function getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction({
   client,
 }: {
@@ -31,7 +40,7 @@ export function getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction({
   );
   return async ({ destinationAddress, mint, amount }: CreateUtxoArgs) => {
     await ensureRegisteredFor(client);
-    return sdkFn({ destinationAddress, mint, amount: amount as any });
+    return sdkFn(toCreatorArgs({ destinationAddress, mint, amount }));
   };
 }
 
@@ -46,7 +55,7 @@ export function getEncryptedBalanceToSelfClaimableUtxoCreatorFunction({
   );
   return async ({ destinationAddress, mint, amount }: CreateUtxoArgs) => {
     await ensureRegisteredFor(client);
-    return sdkFn({ destinationAddress, mint, amount: amount as any });
+    return sdkFn(toCreatorArgs({ destinationAddress, mint, amount }));
   };
 }
 
@@ -61,7 +70,7 @@ export function getPublicBalanceToReceiverClaimableUtxoCreatorFunction({
   );
   return async ({ destinationAddress, mint, amount }: CreateUtxoArgs) => {
     await ensureRegisteredFor(client);
-    return sdkFn({ destinationAddress, mint, amount: amount as any });
+    return sdkFn(toCreatorArgs({ destinationAddress, mint, amount }));
   };
 }
 
@@ -76,6 +85,6 @@ export function getPublicBalanceToSelfClaimableUtxoCreatorFunction({
   );
   return async ({ destinationAddress, mint, amount }: CreateUtxoArgs) => {
     await ensureRegisteredFor(client);
-    return sdkFn({ destinationAddress, mint, amount: amount as any });
+    return sdkFn(toCreatorArgs({ destinationAddress, mint, amount }));
   };
 }

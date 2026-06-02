@@ -24,6 +24,7 @@ import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { encryptedBalancesQueries } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 
 const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
@@ -117,7 +118,8 @@ export function ClaimPendingScreen() {
             queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),
           });
           queryClient.invalidateQueries({
-            queryKey: ['stealth', 'encrypted-balances', stealfWallet],
+            queryKey:
+              encryptedBalancesQueries.byStealfWalletPrefix(stealfWallet),
           });
         };
         invalidate();

@@ -54,6 +54,12 @@ const STABLE_PRICES: Record<string, number> = {
 export const encryptedBalancesQueries = {
   byStealfWallet: (wallet: string, mints: readonly string[]) =>
     ['stealth', 'encrypted-balances', wallet, ...mints] as const,
+  /**
+   * Mint-agnostic prefix — use for `invalidateQueries` to hit every
+   * per-mint variant of a wallet's encrypted balances at once.
+   */
+  byStealfWalletPrefix: (wallet: string) =>
+    ['stealth', 'encrypted-balances', wallet] as const,
 };
 
 export function buildEncryptedMintList(

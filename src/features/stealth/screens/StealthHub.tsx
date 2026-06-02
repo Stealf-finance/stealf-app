@@ -54,22 +54,20 @@ import { useFeatureFlag } from '@/src/services/observability/featureFlags';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
-import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
+import {
+  useEncryptedBalances,
+  encryptedBalancesQueries,
+} from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { umbraRegistrationQueries } from '@/src/features/stealth/hooks/useUmbraRegistration';
 import {
   StealfWalletSetup,
   type SetupChoice,
 } from '@/src/features/stealth/screens/StealfWalletSetup';
 import { useSetupStealfWallet } from '@/src/features/stealth/hooks/useSetupStealfWallet';
-import { registerStealfWallet } from '@/src/features/stealth/api/registerStealfWallet';
-import {
-  balanceQueries,
-  fetchBalance,
-} from '@/src/features/bank/api/balance';
-import {
-  historyQueries,
-  fetchHistory,
-} from '@/src/features/bank/api/history';
+import { useRegisterStealfWallet } from '@/src/features/stealth/hooks/useRegisterStealfWallet';
+import { usePrefetchWalletData } from '@/src/features/bank/hooks/usePrefetchWalletData';
+import { balanceQueries } from '@/src/features/bank/api/balance';
+import { historyQueries } from '@/src/features/bank/api/history';
 import type {
   BalanceResponse,
   HistoryResponse,
@@ -125,6 +123,8 @@ export function StealthHub() {
   const { mode, setMode, tone } = usePrivacyMode();
   const isPrivate = mode === 'private';
   const queryClient = useQueryClient();
+  const { mutateAsync: registerWallet } = useRegisterStealfWallet();
+  const prefetchWalletData = usePrefetchWalletData();
   const { user, session, setUser } = useAuth();
   const sessionToken = session?.sessionToken ?? null;
 
@@ -155,7 +155,7 @@ export function StealthHub() {
         // Prefix invalidation — encrypted-balances key includes the mint
         // list, so we strip it to catch every cached variant.
         queryClient.invalidateQueries({
-          queryKey: ['stealth', 'encrypted-balances', stealfWallet],
+          queryKey: encryptedBalancesQueries.byStealfWalletPrefix(stealfWallet),
         }),
         queryClient.invalidateQueries({
           queryKey: claimScanQueries.byStealfWallet(stealfWallet),
@@ -258,7 +258,7 @@ export function StealthHub() {
     }
     setRegistering(true);
     try {
-      await registerStealfWallet(sessionToken, walletAddress);
+      await registerWallet({ sessionToken, walletAddress });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to register wallet';
       if (__DEV__) console.warn('[StealthHub] register failed:', msg);
@@ -302,16 +302,7 @@ export function StealthHub() {
         );
       }
     } else {
-      void queryClient.prefetchQuery({
-        queryKey: balanceQueries.byAddress(walletAddress),
-        queryFn: () => fetchBalance(sessionToken, walletAddress),
-        staleTime: Infinity,
-      });
-      void queryClient.prefetchQuery({
-        queryKey: historyQueries.byAddress(walletAddress),
-        queryFn: () => fetchHistory(sessionToken, walletAddress, 10),
-        staleTime: Infinity,
-      });
+      prefetchWalletData(sessionToken, walletAddress);
     }
 
     setUser({
