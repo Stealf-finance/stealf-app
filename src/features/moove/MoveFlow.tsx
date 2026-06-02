@@ -78,21 +78,21 @@ type DirectionConfig = {
 
 const CONFIG: Record<MoveDirection, DirectionConfig> = {
   'bank-to-shielded': {
-    title: 'Move to private',
-    fromLabel: 'Bank wallet',
+    title: 'Bank to Encrypted Balance',
+    fromLabel: 'Bank',
     toLabel: 'Encrypted balance',
     cta: 'Slide to move',
   },
   'shielded-to-bank': {
-    title: 'Move to bank',
+    title: 'Encrypted Balance to Bank',
     fromLabel: 'Encrypted balance',
-    toLabel: 'Bank wallet',
+    toLabel: 'Bank',
     cta: 'Slide to move',
   },
   'stealth-to-bank': {
-    title: 'Move to bank',
-    fromLabel: 'Stealth wallet',
-    toLabel: 'Bank wallet',
+    title: 'Wallet to Bank',
+    fromLabel: 'Wallet',
+    toLabel: 'Bank',
     cta: 'Slide to move',
   },
 };
