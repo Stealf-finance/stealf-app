@@ -29,6 +29,11 @@ import { Tone, txPalette } from '@/src/design-system/palettes';
 import { TxHeader } from '@/src/features/send/components/TxHeader';
 import { TxTitleBlock } from '@/src/features/send/components/TxTitleBlock';
 import { Asset } from '@/src/features/send/components/AssetPill';
+import {
+  useSelectedAsset,
+  setSelectedAsset,
+  type SelectedAsset,
+} from '@/src/features/send/lib/selectedAssetStore';
 import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
 import { PercentageChips } from '@/src/features/send/components/PercentageChips';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
@@ -85,6 +90,23 @@ function truncateAddress(input: string, head = 6, tail = 4): string {
   return `${s.slice(0, head)}…${s.slice(-tail)}`;
 }
 
+function selectedToAsset(sel: SelectedAsset): Asset {
+  const isSol = sel.mint === SOL_MINT || sel.symbol === 'SOL';
+  return {
+    mint: isSol ? null : sel.mint,
+    symbol: sel.symbol,
+    name: sel.symbol,
+    balance: String(sel.balance),
+    fiat: `$${sel.balanceUSD.toFixed(2)}`,
+    gradient: isSol ? ['#9945FF', '#14F195'] : ['#c9c9cc', '#5a5a5e'],
+    iconSource:
+      sel.iconSource ??
+      (sel.iconUri ? { uri: sel.iconUri } : { uri: SOL_ICON_URI }),
+    priceUSD: sel.price > 0 ? sel.price : undefined,
+    decimals: sel.decimals,
+  };
+}
+
 type WalletSource = 'bank' | 'stealth';
 type SendMode = 'public' | 'private';
 
@@ -99,6 +121,11 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     wallet ?? (tone === 'gold' ? 'stealth' : 'bank');
   const isPrivate = mode === 'private';
   const title = isPrivate ? 'Private transfer' : 'Simple transfer';
+  // Which wallet's tokens the asset picker should show.
+  const pickerWalletParam: 'stealth' | 'encrypted' = isPrivate
+    ? 'encrypted'
+    : 'stealth';
+  const selected = useSelectedAsset();
   const fromAddress =
     (walletSource === 'stealth' ? user?.stealfWallet : user?.bankWallet) ?? '';
   const fromLabel = isPrivate
@@ -172,10 +199,20 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const [sendError, setSendError] = useState<string | null>(null);
   const [txSig, setTxSig] = useState<string | null>(null);
 
-  // Default the asset to the first holding now that the select-asset step is gone.
+  // Start from a clean asset-picker selection (stale picks from other flows
+  // shouldn't leak in); clear again on unmount.
   useEffect(() => {
-    if (!asset && assets.length > 0) setAsset(assets[0]);
-  }, [asset, assets]);
+    setSelectedAsset(null);
+    return () => setSelectedAsset(null);
+  }, []);
+  // Apply the asset chosen in the picker.
+  useEffect(() => {
+    if (selected) setAsset(selectedToAsset(selected));
+  }, [selected]);
+  // Default to the first holding when nothing has been picked yet.
+  useEffect(() => {
+    if (!selected && !asset && assets.length > 0) setAsset(assets[0]);
+  }, [selected, asset, assets]);
   // Force-remount the swipe widget after a failed send so the thumb returns to start.
   const swipeAttempt = useRef(0);
 
@@ -560,6 +597,9 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
               <SourceAssetCard
                 label={isPrivate ? 'Sending privately' : 'Sending'}
+                fromLabel={fromLabel}
+                toLabel={truncateAddress(recipient.name)}
+                tone={tone}
                 iconSource={asset.iconSource ?? { uri: SOL_ICON_URI }}
                 tokenLabel={asset.symbol}
                 primaryAmount={primaryDisplay}
@@ -569,6 +609,9 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                     : `${tokenAmountLabel} ${asset.symbol}`
                 }
                 inputMode={inputMode}
+                onPressTokenPill={() =>
+                  router.push(`/asset-picker?wallet=${pickerWalletParam}`)
+                }
                 onToggleMode={onToggleMode}
                 toggleDisabled={rate <= 0}
                 maxLabel={maxBalanceLabel}
