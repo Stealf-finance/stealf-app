@@ -66,7 +66,7 @@ const DETAILS: HomeAction = {
   key: 'details',
   label: 'Details',
   iconKey: 'bank',
-  route: '/transactions?wallet=bank',
+  route: '/account-details',
 };
 
 export function homeCardActions(card: HomeCardId): HomeAction[] {
