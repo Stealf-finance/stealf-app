@@ -5,14 +5,14 @@ import { GlassTile } from '@/src/features/receive/components/GlassTile';
 import {
   UmbraDisc,
   SolanaTokenDisc,
-  BankDisc,
+  GlobeDisc,
 } from '@/src/features/receive/components/Discs';
 import { PAY_METHODS } from '@/src/features/stealth/lib/payMethods';
 
 const DISCS = {
   umbra: UmbraDisc,
   solana: SolanaTokenDisc,
-  bank: BankDisc,
+  globe: GlobeDisc,
 } as const;
 
 /** The "New payment" row: Private / Simple / Bank. Each routes to an existing

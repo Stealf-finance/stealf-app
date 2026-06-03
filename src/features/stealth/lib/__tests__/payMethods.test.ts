@@ -22,7 +22,7 @@ describe('PAY_METHODS', () => {
   it('marks Bank as coming-soon (disabled, no route)', () => {
     const m = PAY_METHODS.find((m) => m.key === 'bank');
     expect(m?.label).toBe('Bank');
-    expect(m?.discKey).toBe('bank');
+    expect(m?.discKey).toBe('globe');
     expect(m?.disabled).toBe(true);
     expect(m?.route).toBeUndefined();
   });

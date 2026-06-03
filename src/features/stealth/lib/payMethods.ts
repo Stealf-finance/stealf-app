@@ -3,7 +3,7 @@
 export type PayMethod = {
   key: 'private' | 'simple' | 'bank';
   label: string;
-  discKey: 'umbra' | 'solana' | 'bank';
+  discKey: 'umbra' | 'solana' | 'globe';
   route?: string;
   disabled?: boolean;
 };
@@ -21,5 +21,5 @@ export const PAY_METHODS: PayMethod[] = [
     discKey: 'solana',
     route: '/send/flow?tone=silver&wallet=bank',
   },
-  { key: 'bank', label: 'Bank', discKey: 'bank', disabled: true },
+  { key: 'bank', label: 'Bank', discKey: 'globe', disabled: true },
 ];

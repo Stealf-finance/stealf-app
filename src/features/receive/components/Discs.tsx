@@ -51,6 +51,23 @@ export function SolanaTokenDisc() {
   );
 }
 
+/** Bank-transfer icon — a square app-icon illustration (globe + currencies),
+ *  rendered as a rounded square to match the other app-icon leadings. */
+export function GlobeDisc() {
+  return (
+    <Image
+      source={require('@/assets/images/globe.png')}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      style={{
+        width: STEALF_SIZE,
+        height: STEALF_SIZE,
+        borderRadius: 9,
+      }}
+    />
+  );
+}
+
 const STRIPE_HEIGHT = 4;
 const STRIPE_COUNT = Math.ceil(FLAG_SIZE / STRIPE_HEIGHT);
 
