@@ -27,7 +27,8 @@ export function LoaderRefreshButton({
   const angle = useSharedValue(0);
   const pressScale = useSharedValue(1);
 
-  // Continuous spin while a fetch is in flight; stop where it is when done.
+  // Continuous spin while a fetch is in flight; when it stops, settle onto the
+  // next full-turn boundary so it always completes a whole rotation.
   useEffect(() => {
     if (spinning) {
       angle.value = withRepeat(
@@ -40,6 +41,11 @@ export function LoaderRefreshButton({
       );
     } else {
       cancelAnimation(angle);
+      const fullTurn = Math.ceil(angle.value / 360) * 360;
+      angle.value = withTiming(fullTurn, {
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+      });
     }
   }, [spinning, angle]);
 
@@ -47,10 +53,12 @@ export function LoaderRefreshButton({
     pressScale.value = withTiming(0.85, { duration: 90 }, () => {
       pressScale.value = withTiming(1, { duration: 180 });
     });
-    // Guaranteed one-turn spin on tap (visible even when the refetch is instant).
-    angle.value = withTiming(angle.value + 360, {
-      duration: 700,
-      easing: Easing.out(Easing.cubic),
+    // One full turn on tap, landing exactly on a 360° boundary (so it always
+    // reads as a complete rotation, even if the refetch resolves instantly).
+    const target = (Math.round(angle.value / 360) + 1) * 360;
+    angle.value = withTiming(target, {
+      duration: 650,
+      easing: Easing.inOut(Easing.cubic),
     });
     onPress();
   };
