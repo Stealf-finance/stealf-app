@@ -280,7 +280,7 @@ function ClaimItem({
           }}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <IconChip accent={palette.accent} />
+          <IconChip />
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
@@ -367,27 +367,18 @@ function EmptyState({ palette }: { palette: Palette }) {
   );
 }
 
-function IconChip({ accent }: { accent: string }) {
+function IconChip() {
+  // Received-transaction arrow, matching the history rows (borderless, size 26).
   return (
     <View
       style={{
         width: 36,
         height: 36,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.14)',
         alignItems: 'center',
         justifyContent: 'center',
-        overflow: 'hidden',
       }}
     >
-      <LinearGradient
-        colors={['rgba(255,255,255,0.10)', 'rgba(255,255,255,0.02)']}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      <Icons.arrDown size={16} color={accent} strokeWidth={1.8} />
+      <Icons.arrDownLeft size={26} color="#ffffff" />
     </View>
   );
 }
