@@ -347,9 +347,10 @@ function ClaimItem({
             <Text
               numberOfLines={1}
               style={[
-                serif,
+                label === CLAIM_FALLBACK_LABEL ? sansation : serif,
                 {
-                  fontStyle: 'italic',
+                  fontStyle:
+                    label === CLAIM_FALLBACK_LABEL ? 'normal' : 'italic',
                   fontSize: 14,
                   color: T.ink,
                   fontWeight: '500',
