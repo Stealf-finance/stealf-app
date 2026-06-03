@@ -27,7 +27,6 @@ import {
 } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { TxHeader } from '@/src/features/send/components/TxHeader';
-import { TxTitleBlock } from '@/src/features/send/components/TxTitleBlock';
 import { Asset } from '@/src/features/send/components/AssetPill';
 import {
   useSelectedAsset,
@@ -644,16 +643,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
 
         {step === 3 && asset && recipient && (
           <>
-            <TxTitleBlock
-              kicker="Step 3 of 3"
-              title={isPrivate ? 'Confirm private send' : 'Confirm'}
-              subtitle={
-                isPrivate
-                  ? 'Create an unlinkable transfer claimable by the receiver.'
-                  : 'Review and swipe to send'
-              }
-            />
-
             <ScrollView
               contentContainerStyle={{ paddingHorizontal: 24 }}
               showsVerticalScrollIndicator={false}
