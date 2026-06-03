@@ -4,14 +4,14 @@ import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { GlassTile } from '@/src/features/receive/components/GlassTile';
 import {
   UmbraDisc,
-  UsdcDisc,
+  SolanaTokenDisc,
   BankDisc,
 } from '@/src/features/receive/components/Discs';
 import { PAY_METHODS } from '@/src/features/stealth/lib/payMethods';
 
 const DISCS = {
   umbra: UmbraDisc,
-  usdc: UsdcDisc,
+  solana: SolanaTokenDisc,
   bank: BankDisc,
 } as const;
 

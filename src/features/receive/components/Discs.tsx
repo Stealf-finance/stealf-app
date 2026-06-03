@@ -38,6 +38,19 @@ export function UmbraDisc() {
   );
 }
 
+/** Simple-transfer icon — two overlapping token coins (wide, transparent),
+ *  so it's rendered with `contain` and extra width to avoid clipping. */
+export function SolanaTokenDisc() {
+  return (
+    <Image
+      source={require('@/assets/images/solana-token.png')}
+      contentFit="contain"
+      cachePolicy="memory-disk"
+      style={{ width: 44, height: STEALF_SIZE }}
+    />
+  );
+}
+
 const STRIPE_HEIGHT = 4;
 const STRIPE_COUNT = Math.ceil(FLAG_SIZE / STRIPE_HEIGHT);
 

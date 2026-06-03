@@ -15,7 +15,7 @@ describe('PAY_METHODS', () => {
   it('routes Simple to the public bank send flow', () => {
     const m = PAY_METHODS.find((m) => m.key === 'simple');
     expect(m?.label).toBe('Simple');
-    expect(m?.discKey).toBe('usdc');
+    expect(m?.discKey).toBe('solana');
     expect(m?.route).toBe('/send/flow?tone=silver&wallet=bank');
     expect(m?.disabled).toBeFalsy();
   });
