@@ -133,8 +133,9 @@ function SoonPill() {
   return (
     <View
       style={{
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        flexShrink: 0,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
         borderRadius: 100,
         borderWidth: 1,
         borderColor: T.hairline,
@@ -146,7 +147,7 @@ function SoonPill() {
           sansation,
           {
             fontSize: 9,
-            letterSpacing: 1.6,
+            letterSpacing: 1,
             textTransform: 'uppercase',
             color: T.inkFaint,
             fontWeight: '700',

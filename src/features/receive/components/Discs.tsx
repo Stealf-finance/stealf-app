@@ -51,19 +51,15 @@ export function SolanaTokenDisc() {
   );
 }
 
-/** Bank-transfer icon — a square app-icon illustration (globe + currencies),
- *  rendered as a rounded square to match the other app-icon leadings. */
+/** Bank-transfer icon — a wide three-coin illustration (transparent), so it's
+ *  rendered with `contain` and kept narrow to sit beside the "Soon" pill. */
 export function GlobeDisc() {
   return (
     <Image
       source={require('@/assets/images/globe.png')}
-      contentFit="cover"
+      contentFit="contain"
       cachePolicy="memory-disk"
-      style={{
-        width: STEALF_SIZE,
-        height: STEALF_SIZE,
-        borderRadius: 9,
-      }}
+      style={{ width: 36, height: STEALF_SIZE }}
     />
   );
 }
