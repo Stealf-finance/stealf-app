@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -205,21 +205,12 @@ export function ClaimsScreen() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Transparent modal: blur + dim the screen behind instead of a solid bg. */}
-      <BlurView
-        intensity={40}
-        tint="dark"
-        experimentalBlurMethod="dimezisBlurView"
-        style={StyleSheet.absoluteFill}
-      />
-      <View
-        pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          { backgroundColor: 'rgba(10,10,10,0.55)' },
-        ]}
-      />
+    <BlurView
+      intensity={40}
+      tint="dark"
+      experimentalBlurMethod="dimezisBlurView"
+      style={{ flex: 1, backgroundColor: 'rgba(8,8,10,0.5)' }}
+    >
       <View
         style={{
           paddingTop: insets.top,
@@ -312,7 +303,7 @@ export function ClaimsScreen() {
           })
         )}
       </ScrollView>
-    </View>
+    </BlurView>
   );
 }
 
