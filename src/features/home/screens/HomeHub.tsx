@@ -9,6 +9,7 @@ import { useHomeBalances } from '../hooks/useHomeBalances';
 import { HomeHeader } from '../components/HomeHeader';
 import { BalanceCarousel, HOME_CARDS } from '../components/BalanceCarousel';
 import { HomeActivity } from '../components/HomeActivity';
+import { StealthActivity } from '../components/StealthActivity';
 import { AssetsList } from '../components/AssetsList';
 import { GetBankAccountCard } from '../components/GetBankAccountCard';
 import { TonalHalo } from '../components/TonalHalo';
@@ -27,7 +28,12 @@ function bottomFor(id: HomeCardId) {
         </>
       );
     case 'stealf':
-      return <AssetsList card="stealf" />;
+      return (
+        <>
+          <AssetsList card="stealf" />
+          <StealthActivity />
+        </>
+      );
     case 'encrypted':
       return <AssetsList card="encrypted" />;
     default:
