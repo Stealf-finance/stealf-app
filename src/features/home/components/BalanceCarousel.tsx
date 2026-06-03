@@ -80,7 +80,7 @@ export function BalanceCarousel({
 
           {/* Claim pill — glued under the balance, bank card only (empty
               placeholder on the others so the slider stays in lockstep). */}
-          <View style={{ marginTop: -24 }}>
+          <View style={{ marginTop: -34 }}>
             <SwipeSlider
               progress={p}
               pageWidth={pageWidth}
