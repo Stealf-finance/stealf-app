@@ -1,12 +1,15 @@
 // src/features/stealth/screens/PayHub.tsx
+import { useCallback } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { serif, sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { EncryptedSenderCard } from '@/src/features/stealth/components/EncryptedSenderCard';
 import { PayMethodTiles } from '@/src/features/stealth/components/PayMethodTiles';
 import { PayRecents } from '@/src/features/stealth/components/PayRecents';
+import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 
 function SectionLabel({ children }: { children: string }) {
   return (
@@ -34,6 +37,15 @@ function SectionLabel({ children }: { children: string }) {
  *  The tab bar is rendered by app/(tabs)/_layout.tsx — not here. */
 export function PayHub() {
   const insets = useSafeAreaInsets();
+  const { setMode } = usePrivacyMode();
+  // The Pay hub has no private/public mode; a prior private-send flow may have
+  // left the shared PrivacyModeContext in 'private'. Reset on focus so the
+  // centralized tab bar tone (driven by that context) stays silver to match.
+  useFocusEffect(
+    useCallback(() => {
+      setMode('public');
+    }, [setMode]),
+  );
   return (
     <CenterGlow tone="silver" flat>
       <View
