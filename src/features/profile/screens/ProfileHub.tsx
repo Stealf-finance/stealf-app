@@ -135,7 +135,7 @@ export function ProfileHub() {
   const [emailCopied, setEmailCopied] = useState(false);
   const emailPop = useSharedValue(1);
   const emailIconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: emailPop.value }],
+    transform: [{ scale: emailPop.value }, { translateY: -1 }],
   }));
   const copyEmail = async () => {
     if (!email) return;
@@ -237,7 +237,14 @@ export function ProfileHub() {
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <Text style={{ fontSize: 12, color: S.inkDim, letterSpacing: 0.2 }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: S.inkDim,
+                  letterSpacing: 0.2,
+                  includeFontPadding: false,
+                }}
+              >
                 {email}
               </Text>
               <Animated.View style={emailIconStyle}>
