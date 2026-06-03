@@ -319,7 +319,10 @@ export function ClaimsScreen() {
         {isFetching && items.length === 0 ? (
           <ScanningState palette={palette} />
         ) : items.length === 0 ? (
-          <EmptyState palette={palette} />
+          <EmptyState
+            palette={palette}
+            destination={isEncrypted ? 'your encrypted balance' : 'your bank'}
+          />
         ) : (
           items.map((tx, i) => {
             if (__DEV__ && i === 0) {
@@ -451,7 +454,13 @@ function ScanningState({ palette }: { palette: Palette }) {
   );
 }
 
-function EmptyState({ palette }: { palette: Palette }) {
+function EmptyState({
+  palette,
+  destination,
+}: {
+  palette: Palette;
+  destination: string;
+}) {
   return (
     <View style={{ paddingTop: 60, alignItems: 'center' }}>
       <Text
@@ -465,7 +474,7 @@ function EmptyState({ palette }: { palette: Palette }) {
           },
         ]}
       >
-        No transfers on the way to your bank.
+        No transfers on the way to {destination}.
       </Text>
     </View>
   );
