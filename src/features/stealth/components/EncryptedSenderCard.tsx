@@ -24,7 +24,7 @@ export function EncryptedSenderCard() {
         borderRadius: 22,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: T.goldDim,
+        borderColor: 'rgba(255,255,255,0.10)',
         shadowColor: '#000',
         shadowOpacity: 0.4,
         shadowRadius: 14,
@@ -32,9 +32,9 @@ export function EncryptedSenderCard() {
       }}
     >
       <LinearGradient
-        colors={[T.goldFaint, 'rgba(201,168,106,0.03)']}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
+        colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -43,6 +43,18 @@ export function EncryptedSenderCard() {
           paddingHorizontal: 16,
         }}
       >
+        {/* top inset highlight — matches GlassTile */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 1,
+            backgroundColor: 'rgba(255,255,255,0.12)',
+          }}
+        />
         <Image
           source={require('@/assets/images/Lock.png')}
           contentFit="contain"
@@ -72,13 +84,13 @@ export function EncryptedSenderCard() {
               paddingHorizontal: 7,
               borderRadius: 11,
               borderWidth: 1,
-              borderColor: T.goldDim,
-              backgroundColor: T.goldFaint,
+              borderColor: 'rgba(255,255,255,0.10)',
+              backgroundColor: 'rgba(255,255,255,0.08)',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Text style={[sansation, { fontSize: 12, fontWeight: '600', color: T.gold }]}>
+            <Text style={[sansation, { fontSize: 12, fontWeight: '600', color: T.ink }]}>
               {count > 99 ? '99+' : count}
             </Text>
           </View>
