@@ -24,12 +24,10 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
           key={i}
           style={{
             flexDirection: 'row',
-            marginBottom: i < ROWS.length - 1 ? 8 : 0,
+            marginBottom: i < ROWS.length - 1 ? 30 : 0,
           }}
         >
           {row.map((k) => (
-            // flex:1 on a static wrapper View → each key reliably takes an equal
-            // third of the row width; the glyph is centred within it.
             <View key={k} style={{ flex: 1 }}>
               <Pressable
                 onPress={() => onKey(k)}
@@ -43,7 +41,11 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                 })}
               >
                 {k === '⌫' ? (
-                  <Icons.backspace size={26} color={palette.ink} />
+                  <Icons.backspace
+                    size={30}
+                    color={palette.ink}
+                    strokeWidth={2}
+                  />
                 ) : (
                   <Text
                     style={[
