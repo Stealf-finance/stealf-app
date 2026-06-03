@@ -198,9 +198,7 @@ export function ClaimsScreen() {
             },
           ]}
         >
-          {isFetching && items.length === 0
-            ? 'Scanning encrypted notes…'
-            : `${items.length} pending · to bank wallet`}
+          Incoming Assets
         </Text>
         <RefreshBtn onPress={() => refetch()} spinning={isFetching} />
       </View>
