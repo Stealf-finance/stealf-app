@@ -644,7 +644,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         {step === 3 && asset && recipient && (
           <>
             <ScrollView
-              contentContainerStyle={{ paddingHorizontal: 24 }}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 48 }}
               showsVerticalScrollIndicator={false}
             >
               <View
