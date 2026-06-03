@@ -4,20 +4,15 @@ import { BlurView } from 'expo-blur';
 import { Icons } from '@/src/design-system/icons';
 import { sansation, sansationLight } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
-import { useToast } from '@/src/components/toast/ToastContext';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
 
-/** Promo card (glassmorphism): CTA to open a virtual bank account. */
+/** Promo card (glassmorphism): CTA to open a virtual bank account. Opens the
+ *  (coming-soon, sample-data) Account details page. */
 export function GetBankAccountCard() {
-  const { show } = useToast();
+  const router = useSafeRouter();
   return (
     <Pressable
-      onPress={() =>
-        show({
-          kind: 'info',
-          title: 'Coming soon',
-          message: 'Virtual bank accounts are coming soon.',
-        })
-      }
+      onPress={() => router.push('/account-details')}
       style={({ pressed }) => ({ marginTop: 22, opacity: pressed ? 0.85 : 1 })}
     >
       {/* Outer view clips the blur to the rounded corners + carries the border. */}
