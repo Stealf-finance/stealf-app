@@ -1,5 +1,6 @@
 // src/features/stealth/components/EncryptedSenderCard.tsx
 import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { Icons } from '@/src/design-system/icons';
@@ -54,7 +55,12 @@ export function EncryptedSenderCard() {
             justifyContent: 'center',
           }}
         >
-          <Icons.shield size={22} color={T.gold} />
+          <Image
+            source={require('@/assets/images/Lock.png')}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            style={{ width: 24, height: 24 }}
+          />
         </View>
 
         <View style={{ flex: 1, minWidth: 0 }}>
