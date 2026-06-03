@@ -6,6 +6,7 @@ import { SwipeSlider } from '@/src/design-system/primitives/SwipeSlider';
 import { CarouselDots } from '@/src/design-system/primitives/CarouselDots';
 import { BalanceCard } from './BalanceCard';
 import { HomeActionRow } from './HomeActionRow';
+import { BankClaimButton } from './BankClaimButton';
 import type { HomeBalances } from '../lib/aggregateHomeBalances';
 import type { HomeCardId } from '../lib/homeCardActions';
 
@@ -76,6 +77,20 @@ export function BalanceCarousel({
               );
             })}
           />
+
+          {/* Claim pill — glued under the balance, bank card only (empty
+              placeholder on the others so the slider stays in lockstep). */}
+          <View style={{ marginTop: -24 }}>
+            <SwipeSlider
+              progress={p}
+              pageWidth={pageWidth}
+              pages={HOME_CARDS.map((c) => (
+                <View key={c.id} style={{ alignItems: 'center' }}>
+                  {c.id === 'bank' ? <BankClaimButton /> : null}
+                </View>
+              ))}
+            />
+          </View>
 
           <View style={{ marginVertical: 20 }}>
             <CarouselDots count={HOME_CARDS.length} progress={p} onSelect={onIndexChange} />
