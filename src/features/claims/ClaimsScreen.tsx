@@ -28,6 +28,8 @@ import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 
 const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
+// Kept for the Claim button's glow — everything else on this screen is neutral.
+const GOLD_GLOW = 'rgba(230,192,121,0.45)';
 const ANIM_HOLD_MS = 480;
 
 type Item = { ago: string; utxo: unknown };
@@ -39,7 +41,7 @@ function utxoToItem(utxo: any): Item {
 export function ClaimsScreen() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
-  const palette = txPalette('gold');
+  const palette = txPalette('silver');
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -193,7 +195,7 @@ export function ClaimsScreen() {
               fontSize: 9,
               letterSpacing: 2.52,
               textTransform: 'uppercase',
-              color: 'rgba(230,192,121,0.85)',
+              color: T.inkDim,
               fontWeight: '700',
             },
           ]}
@@ -203,7 +205,7 @@ export function ClaimsScreen() {
         <LoaderRefreshButton
           onPress={() => refetch()}
           spinning={isFetching}
-          size={48}
+          size={36}
         />
       </View>
 
@@ -256,12 +258,12 @@ function ClaimItem({
         borderRadius: 18,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(212,165,83,0.18)',
+        borderColor: 'rgba(255,255,255,0.10)',
         opacity: disabled ? 0.45 : 1,
       }}
     >
       <LinearGradient
-        colors={['rgba(212,165,83,0.10)', 'rgba(163,123,46,0.03)']}
+        colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
         style={{ paddingVertical: 14, paddingHorizontal: 16 }}
@@ -274,7 +276,7 @@ function ClaimItem({
             left: 0,
             right: 0,
             height: 1,
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: 'rgba(255,255,255,0.12)',
           }}
         />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
@@ -313,7 +315,7 @@ function ClaimItem({
 
         <View style={{ marginTop: 12 }}>
           <ClaimButton
-            accentGlow={palette.accentGlow}
+            accentGlow={GOLD_GLOW}
             claiming={claiming}
             disabled={disabled}
             onPress={onClaim}
