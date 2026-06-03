@@ -17,13 +17,8 @@ type Props = {
 
 export function PercentageChips({ onPressPercent, disabled = false }: Props) {
   return (
-    <View style={{ paddingHorizontal: 24, marginBottom: 12 }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-        }}
-      >
+    <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
         {PRESETS.map(({ label, pct }) => (
           <Pressable
             key={label}
@@ -32,6 +27,7 @@ export function PercentageChips({ onPressPercent, disabled = false }: Props) {
             accessibilityLabel={`Set amount to ${label} of balance`}
             disabled={disabled}
             style={({ pressed }) => ({
+              flex: 1,
               opacity: disabled ? 0.4 : pressed ? 0.85 : 1,
             })}
           >
@@ -51,8 +47,7 @@ export function PercentageChips({ onPressPercent, disabled = false }: Props) {
                 start={{ x: 0.2, y: 0 }}
                 end={{ x: 0.8, y: 1 }}
                 style={{
-                  paddingVertical: 11,
-                  paddingHorizontal: 22,
+                  paddingVertical: 17,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
