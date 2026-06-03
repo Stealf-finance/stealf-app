@@ -20,8 +20,8 @@ const CONFIG: Record<
   WalletKind,
   { title: string; tone: Tone }
 > = {
-  bank: { title: 'Bank transactions history', tone: 'silver' },
-  stealth: { title: 'Stealth transactions history', tone: 'gold' },
+  bank: { title: 'Transactions', tone: 'silver' },
+  stealth: { title: 'Transactions', tone: 'gold' },
 };
 
 function formatTxRow(tx: Transaction): {
@@ -73,7 +73,8 @@ export function TransactionsScreen() {
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontStyle: 'italic',
               color: T.ink,
               includeFontPadding: false,
               marginRight: 36,
