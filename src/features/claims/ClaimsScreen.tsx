@@ -26,6 +26,15 @@ import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
+import { reconstructAddressFromU128Parts } from '@umbra-privacy/sdk/solana';
+import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import {
+  SOL_MINT,
+  USDC_MINT,
+  DUSDC_MINT,
+  DUSDT_MINT,
+} from '@/src/constants/solana';
+import { describeClaimLine, type ClaimToken } from './lib/describeClaimLine';
 
 const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
 // Kept for the Claim button's glow — everything else on this screen is neutral.
@@ -36,6 +45,50 @@ type Item = { ago: string; utxo: unknown };
 
 function utxoToItem(utxo: any): Item {
   return { ago: 'Encrypted', utxo };
+}
+
+function tokenForMint(mint: string | null, solUsd: number | null): ClaimToken | null {
+  switch (mint) {
+    case DUSDC_MINT:
+      return { symbol: 'dUSDC', decimals: 6, usdPerUnit: 1 };
+    case DUSDT_MINT:
+      return { symbol: 'dUSDT', decimals: 6, usdPerUnit: 1 };
+    case USDC_MINT:
+      return { symbol: 'USDC', decimals: 6, usdPerUnit: 1 };
+    case SOL_MINT:
+      return { symbol: 'SOL', decimals: 9, usdPerUnit: solUsd };
+    default:
+      return null;
+  }
+}
+
+function addrFromParts(low: unknown, high: unknown): string | null {
+  if (low == null || high == null) return null;
+  try {
+    return reconstructAddressFromU128Parts({
+      low: low as never,
+      high: high as never,
+    }) as unknown as string;
+  } catch {
+    return null;
+  }
+}
+
+/** Reads sender / mint / amount off an Umbra note (the burn-ready note encodes
+ *  the addresses as U128 low/high halves) and builds the display line. Degrades
+ *  gracefully to "Encrypted to bank" when fields aren't present. */
+function claimLineForNote(note: any, solUsd: number | null): string {
+  const mint =
+    addrFromParts(note?.mintAddressLow, note?.mintAddressHigh) ??
+    (typeof note?.mint === 'string' ? note.mint : null);
+  const sender =
+    addrFromParts(note?.senderAddressLow, note?.senderAddressHigh) ??
+    (typeof note?.sender === 'string' ? note.sender : null);
+  return describeClaimLine({
+    sender,
+    token: tokenForMint(mint, solUsd),
+    amountRaw: note?.amount ?? null,
+  });
 }
 
 export function ClaimsScreen() {
@@ -55,6 +108,8 @@ export function ClaimsScreen() {
     refetch,
     isFetching,
   } = usePendingClaimsForCash({ fetch: true });
+  const { data: solPrice } = useSolPrice();
+  const solUsd = solPrice ?? null;
 
   const items: Item[] = (pendingUtxos ?? []).map(utxoToItem);
   const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
@@ -223,15 +278,20 @@ export function ClaimsScreen() {
         ) : items.length === 0 ? (
           <EmptyState palette={palette} />
         ) : (
-          items.map((tx, i) => (
-            <ClaimItem
-              key={`claim-${i}`}
-              tx={tx}
-              claiming={claimingIndex === i}
-              disabled={claimingIndex !== null && claimingIndex !== i}
-              onClaim={() => onClaim(tx, i)}
-            />
-          ))
+          items.map((tx, i) => {
+            if (__DEV__ && i === 0) {
+              console.log('[claims] sample note keys', Object.keys(tx.utxo ?? {}));
+            }
+            return (
+              <ClaimItem
+                key={`claim-${i}`}
+                label={claimLineForNote(tx.utxo, solUsd)}
+                claiming={claimingIndex === i}
+                disabled={claimingIndex !== null && claimingIndex !== i}
+                onClaim={() => onClaim(tx, i)}
+              />
+            );
+          })
         )}
       </ScrollView>
     </CenterGlow>
@@ -239,12 +299,12 @@ export function ClaimsScreen() {
 }
 
 function ClaimItem({
-  tx,
+  label,
   claiming,
   disabled,
   onClaim,
 }: {
-  tx: Item;
+  label: string;
   claiming: boolean;
   disabled: boolean;
   onClaim: () => void;
@@ -281,6 +341,7 @@ function ClaimItem({
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
+              numberOfLines={1}
               style={[
                 serif,
                 {
@@ -292,7 +353,7 @@ function ClaimItem({
                 },
               ]}
             >
-              Encrypted to bank
+              {label}
             </Text>
             <Text
               style={[
@@ -305,7 +366,7 @@ function ClaimItem({
                 },
               ]}
             >
-              {tx.ago}
+              Private transfer
             </Text>
           </View>
         </View>
@@ -414,6 +475,7 @@ function ClaimButton({
       onPress={onPress}
       disabled={claiming || disabled}
       style={{
+        alignSelf: 'flex-start',
         borderRadius: 100,
         overflow: 'hidden',
         borderWidth: 1,
@@ -430,6 +492,8 @@ function ClaimButton({
         end={{ x: 0.8, y: 1 }}
         style={{
           paddingVertical: 10,
+          paddingHorizontal: 24,
+          minWidth: 116,
           alignItems: 'center',
           justifyContent: 'center',
           minHeight: 36,
@@ -459,7 +523,7 @@ function ClaimButton({
               },
             ]}
           >
-            Claim to bank
+            Claim
           </Text>
         </Animated.View>
 
