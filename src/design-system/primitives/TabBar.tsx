@@ -17,9 +17,9 @@ type Props = {
 
 // `id` stays internal (route segment + tone logic); only label/icon are UI.
 const TABS: { id: TabId; label: string; iconKey: keyof typeof Icons }[] = [
-  { id: 'bank', label: 'HOME', iconKey: 'home' },
-  { id: 'stealth', label: 'PAYMENT', iconKey: 'bolt' },
-  { id: 'profile', label: 'PROFILE', iconKey: 'user' },
+  { id: 'bank', label: 'HOME', iconKey: 'tabHome' },
+  { id: 'stealth', label: 'PAYMENT', iconKey: 'tabPayment' },
+  { id: 'profile', label: 'PROFILE', iconKey: 'tabProfile' },
 ];
 
 export function TabBar({ active, onTab, tone = 'silver' }: Props) {
@@ -119,6 +119,7 @@ export function TabBar({ active, onTab, tone = 'silver' }: Props) {
               >
                 <Icon
                   size={22}
+                  strokeWidth={2}
                   color={isActive ? palette.accent : T.inkMute}
                 />
               </View>
