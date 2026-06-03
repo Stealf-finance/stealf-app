@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
+import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
@@ -276,14 +276,15 @@ export function ShieldFlow({ direction }: Props) {
           gap: 14,
         }}
       >
-        <View style={{ width: 36 }} />
+        <BackBtn onPress={close} />
         <Text
           style={[
             serif,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontStyle: 'italic',
               color: T.ink,
               includeFontPadding: false,
             },
@@ -291,7 +292,7 @@ export function ShieldFlow({ direction }: Props) {
         >
           {title}
         </Text>
-        <CloseBtn onPress={close} />
+        <View style={{ width: 36 }} />
       </View>
 
       <Text
