@@ -41,15 +41,7 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                 })}
               >
                 {k === '⌫' ? (
-                  // The backspace glyph is right-biased in its viewBox; nudge it
-                  // left so it optically centres under the digit column.
-                  <View style={{ transform: [{ translateX: -3 }] }}>
-                    <Icons.backspace
-                      size={30}
-                      color={palette.ink}
-                      strokeWidth={2}
-                    />
-                  </View>
+                  <Icons.chevL size={28} color={palette.ink} strokeWidth={2} />
                 ) : (
                   <Text
                     style={[
