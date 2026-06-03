@@ -135,7 +135,7 @@ export function ProfileHub() {
   const [emailCopied, setEmailCopied] = useState(false);
   const emailPop = useSharedValue(1);
   const emailIconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: emailPop.value }, { translateY: -1 }],
+    transform: [{ scale: emailPop.value }],
   }));
   const copyEmail = async () => {
     if (!email) return;
@@ -230,30 +230,38 @@ export function ProfileHub() {
               accessibilityRole="button"
               accessibilityLabel="Copy email"
               hitSlop={8}
-              style={({ pressed }) => ({
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                opacity: pressed ? 0.7 : 1,
-              })}
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             >
-              <Text
+              {/* row layout on a static View — flexDirection in a Pressable
+                  style-fn doesn't apply reliably, which dropped the icon below */}
+              <View
                 style={{
-                  fontSize: 12,
-                  color: S.inkDim,
-                  letterSpacing: 0.2,
-                  includeFontPadding: false,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
                 }}
               >
-                {email}
-              </Text>
-              <Animated.View style={emailIconStyle}>
-                {emailCopied ? (
-                  <Icons.check size={13} color={T.green} strokeWidth={2.4} />
-                ) : (
-                  <Icons.copy size={13} color={S.inkFaint} />
-                )}
-              </Animated.View>
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={{
+                    flexShrink: 1,
+                    fontSize: 12,
+                    color: S.inkDim,
+                    letterSpacing: 0.2,
+                    includeFontPadding: false,
+                  }}
+                >
+                  {email}
+                </Text>
+                <Animated.View style={emailIconStyle}>
+                  {emailCopied ? (
+                    <Icons.check size={13} color={T.green} strokeWidth={2.4} />
+                  ) : (
+                    <Icons.copy size={13} color={S.inkFaint} />
+                  )}
+                </Animated.View>
+              </View>
             </Pressable>
           ) : null}
         </View>
