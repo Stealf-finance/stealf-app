@@ -1,5 +1,13 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -123,6 +131,22 @@ export function ProfileHub() {
   const username = user?.username ?? '';
   // Backend never holds plaintext email; pull it from Turnkey's user record.
   const email = turnkey.user?.userEmail ?? '';
+
+  const [emailCopied, setEmailCopied] = useState(false);
+  const emailPop = useSharedValue(1);
+  const emailIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: emailPop.value }],
+  }));
+  const copyEmail = async () => {
+    if (!email) return;
+    await Clipboard.setStringAsync(email);
+    setEmailCopied(true);
+    emailPop.value = withSequence(
+      withTiming(0.6, { duration: 90 }),
+      withSpring(1, { damping: 7, stiffness: 320 }),
+    );
+    setTimeout(() => setEmailCopied(false), 1200);
+  };
   const avatarLetter = (username[0] ?? '·').toUpperCase();
   const points = user?.points ?? 0;
 
@@ -201,11 +225,29 @@ export function ProfileHub() {
             {username ? `@${username}` : '—'}
           </Text>
           {email ? (
-            <Text
-              style={{ fontSize: 12, color: S.inkDim, letterSpacing: 0.2 }}
+            <Pressable
+              onPress={copyEmail}
+              accessibilityRole="button"
+              accessibilityLabel="Copy email"
+              hitSlop={8}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                opacity: pressed ? 0.7 : 1,
+              })}
             >
-              {email}
-            </Text>
+              <Text style={{ fontSize: 12, color: S.inkDim, letterSpacing: 0.2 }}>
+                {email}
+              </Text>
+              <Animated.View style={emailIconStyle}>
+                {emailCopied ? (
+                  <Icons.check size={13} color={T.green} strokeWidth={2.4} />
+                ) : (
+                  <Icons.copy size={13} color={S.inkFaint} />
+                )}
+              </Animated.View>
+            </Pressable>
           ) : null}
         </View>
 
