@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
-import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
 import { RefreshBtn } from '@/src/design-system/primitives/RefreshBtn';
 import { LoaderDots } from '@/src/design-system/primitives/LoaderDots';
 import { Icons } from '@/src/design-system/icons';
@@ -172,7 +171,8 @@ export function ClaimsScreen() {
         >
           Vault
         </Text>
-        <CloseBtn onPress={() => router.replace('/(tabs)/bank')} />
+        {/* Spacer to keep the title centered now that the close button is gone. */}
+        <View style={{ width: 36 }} />
       </View>
 
       <View
