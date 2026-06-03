@@ -11,15 +11,15 @@ export type PayMethod = {
 export const PAY_METHODS: PayMethod[] = [
   {
     key: 'private',
-    label: 'Private',
+    label: 'Private transfer',
     discKey: 'umbra',
     route: '/send/flow?tone=gold&wallet=stealth&mode=private',
   },
   {
     key: 'simple',
-    label: 'Simple',
+    label: 'Simple transfer',
     discKey: 'solana',
     route: '/send/flow?tone=silver&wallet=bank',
   },
-  { key: 'bank', label: 'Bank', discKey: 'globe', disabled: true },
+  { key: 'bank', label: 'Bank transfer', discKey: 'globe', disabled: true },
 ];
