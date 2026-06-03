@@ -1,7 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
-import { sansation } from '@/src/design-system/typography';
+import { sansation, sansationLight } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
-import { Icons } from '@/src/design-system/icons';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { TxRow } from '@/src/design-system/primitives/TxRow';
@@ -43,18 +42,13 @@ export function StealthActivity() {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          marginBottom: 8,
+          marginBottom: 4,
         }}
       >
         <Text
           style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2,
-              textTransform: 'uppercase',
-              color: T.inkFaint,
-            },
+            sansationLight,
+            { fontSize: 22, letterSpacing: -0.44, color: T.ink },
           ]}
         >
           Recent activity
@@ -64,12 +58,7 @@ export function StealthActivity() {
           accessibilityRole="button"
           accessibilityLabel="See all stealth transactions"
           hitSlop={8}
-          style={({ pressed }) => ({
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-            opacity: pressed ? 0.6 : 1,
-          })}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}
         >
           <Text
             style={[
@@ -79,19 +68,20 @@ export function StealthActivity() {
           >
             See all
           </Text>
-          <Icons.chevR size={12} color={T.inkDim} />
         </Pressable>
       </View>
-      {txRows.map((row, i) => (
-        <TxRow
-          key={`${row.title}-${row.meta}-${i}`}
-          type={row.type}
-          title={row.title}
-          meta={row.meta}
-          amount={row.amount}
-          last={i === txRows.length - 1}
-        />
-      ))}
+      <View style={{ paddingTop: 6 }}>
+        {txRows.map((row, i) => (
+          <TxRow
+            key={`${row.title}-${row.meta}-${i}`}
+            type={row.type}
+            title={row.title}
+            meta={row.meta}
+            amount={row.amount}
+            last={i === txRows.length - 1}
+          />
+        ))}
+      </View>
     </View>
   );
 }

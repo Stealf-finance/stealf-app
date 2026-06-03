@@ -9,6 +9,8 @@ type Props = {
   ink: string;
   inkFaint: string;
   hairline: string;
+  /** Last row in the list — drops the bottom divider. */
+  last?: boolean;
 };
 
 /** A single asset/holding row: icon · symbol + caption · price. Tone-agnostic
@@ -21,12 +23,13 @@ export function AssetRow({
   ink,
   inkFaint,
   hairline,
+  last = false,
 }: Props) {
   return (
     <View
       style={{
         paddingVertical: 14,
-        borderBottomWidth: 1,
+        borderBottomWidth: last ? 0 : 1,
         borderBottomColor: hairline,
         flexDirection: 'row',
         alignItems: 'center',

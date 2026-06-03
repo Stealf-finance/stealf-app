@@ -20,13 +20,8 @@ type Row = {
   priceLabel: string;
 };
 
-/**
- * Holdings list for the Wallet (public stealth balance) and Encrypted balance
- * cards — shown in place of the recent-activity feed for those cards.
- */
 export function AssetsList({ card }: { card: 'stealf' | 'encrypted' }) {
   const { user } = useAuth();
-  // React Query dedups these against useHomeBalances' calls — no extra fetches.
   const publicBal = useBalance(card === 'stealf' ? user?.stealfWallet ?? null : null);
   const encrypted = useEncryptedBalances();
 
@@ -69,7 +64,7 @@ export function AssetsList({ card }: { card: 'stealf' | 'encrypted' }) {
             No assets yet.
           </Text>
         ) : (
-          rows.map((r) => (
+          rows.map((r, i) => (
             <AssetRow
               key={r.key}
               iconSource={r.iconSource}
@@ -79,6 +74,7 @@ export function AssetsList({ card }: { card: 'stealf' | 'encrypted' }) {
               ink={pal.ink}
               inkFaint={pal.inkFaint}
               hairline={pal.hairline}
+              last={i === rows.length - 1}
             />
           ))
         )}
