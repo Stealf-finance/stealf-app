@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
-import { RefreshBtn } from '@/src/design-system/primitives/RefreshBtn';
+import { LoaderRefreshButton } from '@/src/design-system/primitives/LoaderRefreshButton';
 import { LoaderDots } from '@/src/design-system/primitives/LoaderDots';
 import { Icons } from '@/src/design-system/icons';
 import { mono, sansation, serif } from '@/src/design-system/typography';
@@ -200,7 +200,7 @@ export function ClaimsScreen() {
         >
           Incoming Assets
         </Text>
-        <RefreshBtn onPress={() => refetch()} spinning={isFetching} />
+        <LoaderRefreshButton onPress={() => refetch()} spinning={isFetching} />
       </View>
 
       <ScrollView
