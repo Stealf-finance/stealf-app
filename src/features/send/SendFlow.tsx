@@ -597,7 +597,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
               <SourceAssetCard
                 label={isPrivate ? 'Sending privately' : 'Sending'}
-                fromLabel={fromLabel}
                 toLabel={truncateAddress(recipient.name)}
                 tone={tone}
                 iconSource={asset.iconSource ?? { uri: SOL_ICON_URI }}

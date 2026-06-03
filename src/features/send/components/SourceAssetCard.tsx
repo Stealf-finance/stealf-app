@@ -119,6 +119,43 @@ export function SourceAssetCard({
             {toLabel}
           </Text>
         </View>
+      ) : toLabel ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingBottom: 14,
+            marginBottom: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: T.hairline,
+          }}
+        >
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 9,
+                letterSpacing: 2.52,
+                textTransform: 'uppercase',
+                fontWeight: '700',
+                color: T.inkFaint,
+              },
+            ]}
+          >
+            To
+          </Text>
+          <Text
+            style={[
+              sansation,
+              { flex: 1, fontSize: 13, color: T.ink, fontWeight: '500' },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+          >
+            {toLabel}
+          </Text>
+        </View>
       ) : null}
 
       <View

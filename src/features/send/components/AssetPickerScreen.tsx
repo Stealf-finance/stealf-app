@@ -117,7 +117,8 @@ export function AssetPickerScreen() {
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontStyle: 'italic',
               color: T.ink,
               includeFontPadding: false,
               marginRight: 36,
