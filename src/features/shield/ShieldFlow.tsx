@@ -265,7 +265,7 @@ export function ShieldFlow({ direction }: Props) {
   };
 
   return (
-    <CenterGlow tone={tone}>
+    <CenterGlow tone={tone} flat>
       <View
         style={{
           paddingTop: insets.top,
