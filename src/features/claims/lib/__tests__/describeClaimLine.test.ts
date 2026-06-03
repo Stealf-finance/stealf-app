@@ -48,10 +48,10 @@ describe('describeClaimLine', () => {
     ).toBe('Bc9k…f81a');
   });
 
-  it('falls back to "Encrypted to bank" when nothing resolves', () => {
+  it('falls back to "Private transfer" when nothing resolves', () => {
     expect(
       describeClaimLine({ sender: null, token: null, amountRaw: null }),
-    ).toBe('Encrypted to bank');
+    ).toBe('Private transfer');
   });
 
   it('still shows the symbol when amount is missing', () => {

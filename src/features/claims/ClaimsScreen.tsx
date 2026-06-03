@@ -34,7 +34,11 @@ import {
   DUSDC_MINT,
   DUSDT_MINT,
 } from '@/src/constants/solana';
-import { describeClaimLine, type ClaimToken } from './lib/describeClaimLine';
+import {
+  describeClaimLine,
+  CLAIM_FALLBACK_LABEL,
+  type ClaimToken,
+} from './lib/describeClaimLine';
 
 const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
 // Kept for the Claim button's glow — everything else on this screen is neutral.
@@ -355,19 +359,21 @@ function ClaimItem({
             >
               {label}
             </Text>
-            <Text
-              style={[
-                mono,
-                {
-                  fontSize: 10,
-                  color: T.inkFaint,
-                  marginTop: 3,
-                  letterSpacing: 0.4,
-                },
-              ]}
-            >
-              Private transfer
-            </Text>
+            {label !== CLAIM_FALLBACK_LABEL ? (
+              <Text
+                style={[
+                  mono,
+                  {
+                    fontSize: 10,
+                    color: T.inkFaint,
+                    marginTop: 3,
+                    letterSpacing: 0.4,
+                  },
+                ]}
+              >
+                Private transfer
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -475,7 +481,7 @@ function ClaimButton({
       onPress={onPress}
       disabled={claiming || disabled}
       style={{
-        alignSelf: 'flex-start',
+        alignSelf: 'flex-end',
         borderRadius: 100,
         overflow: 'hidden',
         borderWidth: 1,

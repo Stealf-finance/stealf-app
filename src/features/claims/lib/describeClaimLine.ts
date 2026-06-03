@@ -9,6 +9,9 @@ export type ClaimToken = {
   usdPerUnit: number | null;
 };
 
+/** Shown when neither the sender nor the amount/token could be resolved. */
+export const CLAIM_FALLBACK_LABEL = 'Private transfer';
+
 export function shortAddress(a: string | null | undefined): string | null {
   if (!a) return null;
   return a.length <= 10 ? a : `${a.slice(0, 4)}…${a.slice(-4)}`;
@@ -60,5 +63,5 @@ export function describeClaimLine(args: {
   }
 
   const parts = [sender, valuePart].filter(Boolean) as string[];
-  return parts.length > 0 ? parts.join(' · ') : 'Encrypted to bank';
+  return parts.length > 0 ? parts.join(' · ') : CLAIM_FALLBACK_LABEL;
 }
