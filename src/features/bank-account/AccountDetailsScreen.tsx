@@ -4,51 +4,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
-import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { Icons } from '@/src/design-system/icons';
-import { serif, sansation } from '@/src/design-system/typography';
+import { serif, sansation, mono } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { useToast } from '@/src/components/toast/ToastContext';
-
-// Virtual bank accounts aren't live yet — these are sample details so the page
-// can be designed/reviewed ahead of the real IBAN integration.
-const ACCOUNT = {
-  currency: 'Euro',
-  flag: '🇪🇺',
-  beneficiary: 'John Doe',
-  iban: 'LT82 3250 0177 4587 2046',
-  bic: 'REVOLT21',
-  bankName: 'Stealf Bank UAB',
-  bankAddress: 'Konstitucijos ave. 21B, 08130, Vilnius, Lithuania',
-  correspondentBic: 'BARCGB22',
-};
-
-const ROWS: { label: string; value: string }[] = [
-  { label: 'Beneficiary', value: ACCOUNT.beneficiary },
-  { label: 'IBAN', value: ACCOUNT.iban },
-  { label: 'BIC / SWIFT', value: ACCOUNT.bic },
-  {
-    label: 'Bank name & address',
-    value: `${ACCOUNT.bankName}, ${ACCOUNT.bankAddress}`,
-  },
-  { label: 'Correspondent bank BIC', value: ACCOUNT.correspondentBic },
-];
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
 export function AccountDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useSafeRouter();
   const { show } = useToast();
+  const { user } = useAuth();
+  const address = user?.bankWallet ?? '';
 
-  const copy = async (label: string, value: string) => {
-    await Clipboard.setStringAsync(value);
-    show({ kind: 'success', title: 'Copied', message: `${label} copied.` });
-  };
-
-  const shareDetails = () => {
+  const copy = async () => {
+    if (!address) return;
+    await Clipboard.setStringAsync(address);
     show({
-      kind: 'info',
-      title: 'Coming soon',
-      message: 'Virtual bank accounts are coming soon.',
+      kind: 'success',
+      title: 'Copied',
+      message: 'Bank wallet address copied.',
     });
   };
 
@@ -86,150 +61,53 @@ export function AccountDetailsScreen() {
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 22,
+          paddingTop: 8,
           paddingBottom: insets.bottom + 24,
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Coming-soon badge — sample data until virtual accounts go live. */}
-        <View
-          style={{
-            alignSelf: 'center',
-            marginBottom: 18,
-            paddingVertical: 6,
-            paddingHorizontal: 14,
-            borderRadius: 100,
-            borderWidth: 1,
-            borderColor: T.hairlineStrong,
-            backgroundColor: 'rgba(255,255,255,0.04)',
-          }}
-        >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 2,
-                textTransform: 'uppercase',
-                fontWeight: '700',
-                color: T.inkDim,
-              },
-            ]}
-          >
-            Coming soon · sample details
-          </Text>
-        </View>
-
-        {/* Currency */}
-        <View style={{ alignItems: 'center', marginBottom: 6 }}>
-          <Text style={{ fontSize: 26 }}>{ACCOUNT.flag}</Text>
-          <Text
-            style={[
-              sansation,
-              { fontSize: 18, color: T.ink, fontWeight: '600', marginTop: 6 },
-            ]}
-          >
-            {ACCOUNT.currency}
-          </Text>
-        </View>
-
-        {/* Section kicker */}
-        <View style={{ alignItems: 'center', marginTop: 4, marginBottom: 22 }}>
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 9,
-                letterSpacing: 2.4,
-                textTransform: 'uppercase',
-                fontWeight: '700',
-                color: T.inkFaint,
-              },
-            ]}
-          >
-            International transfers only
-          </Text>
-        </View>
-
-        {/* Detail rows — tap to copy */}
-        <View
-          style={{
+        <Pressable
+          onPress={copy}
+          accessibilityRole="button"
+          accessibilityLabel="Copy bank wallet address"
+          style={({ pressed }) => ({
             borderRadius: 18,
             borderWidth: 1,
             borderColor: T.hairline,
             backgroundColor: 'rgba(255,255,255,0.03)',
-            overflow: 'hidden',
-          }}
+            padding: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            opacity: pressed ? 0.7 : 1,
+          })}
         >
-          {ROWS.map((r, i) => (
-            <Pressable
-              key={r.label}
-              onPress={() => copy(r.label, r.value)}
-              accessibilityRole="button"
-              accessibilityLabel={`Copy ${r.label}`}
-              style={({ pressed }) => ({
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderTopWidth: i === 0 ? 0 : 1,
-                borderTopColor: T.trace,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 12,
-                opacity: pressed ? 0.6 : 1,
-              })}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              style={[
+                sansation,
+                {
+                  fontSize: 10,
+                  letterSpacing: 1.6,
+                  textTransform: 'uppercase',
+                  color: T.inkFaint,
+                  fontWeight: '700',
+                },
+              ]}
             >
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 10,
-                      letterSpacing: 1.6,
-                      textTransform: 'uppercase',
-                      color: T.inkFaint,
-                      fontWeight: '700',
-                    },
-                  ]}
-                >
-                  {r.label}
-                </Text>
-                <Text
-                  style={[
-                    sansation,
-                    { fontSize: 15, color: T.ink, marginTop: 4 },
-                  ]}
-                >
-                  {r.value}
-                </Text>
-              </View>
-              <Icons.copy size={16} color={T.inkFaint} />
-            </Pressable>
-          ))}
-        </View>
-
-        <View style={{ marginTop: 22 }}>
-          <PillBtn
-            label="Share details"
-            variant="primary"
-            tone="silver"
-            onPress={shareDetails}
-          />
-        </View>
-
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 11,
-              color: T.inkFaint,
-              marginTop: 18,
-              lineHeight: 16,
-              textAlign: 'center',
-            },
-          ]}
-        >
-          Sample details shown while virtual accounts are in development. Once
-          live, deposits will be protected up to the applicable limit.
-        </Text>
+              Bank wallet address
+            </Text>
+            <Text
+              style={[
+                mono,
+                { fontSize: 14, color: T.ink, marginTop: 6, lineHeight: 20 },
+              ]}
+            >
+              {address || '—'}
+            </Text>
+          </View>
+          <Icons.copy size={16} color={T.inkFaint} />
+        </Pressable>
       </ScrollView>
     </CenterGlow>
   );
