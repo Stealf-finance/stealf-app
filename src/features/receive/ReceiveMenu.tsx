@@ -61,7 +61,7 @@ export function ReceiveMenu() {
           <GlassTile
             leading={<IncomingDisc />}
             label="Incoming private transfers"
-            onPress={() => router.push('/receive/claims')}
+            onPress={() => router.push('/claims')}
             accessibilityLabel="Open incoming private transfers"
             trailing={<Icons.chevR size={14} color={T.inkFaint} />}
           />

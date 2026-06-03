@@ -154,6 +154,13 @@ function RootLayout() {
                             options={{ presentation: 'modal' }}
                           />
                           <Stack.Screen
+                            name="claims"
+                            options={{
+                              presentation: 'transparentModal',
+                              animation: 'fade',
+                            }}
+                          />
+                          <Stack.Screen
                             name="tx/[id]"
                             options={{ presentation: 'modal' }}
                           />

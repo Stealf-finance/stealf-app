@@ -11,7 +11,7 @@ export function BankClaimButton() {
 
   return (
     <Pressable
-      onPress={() => router.push('/receive/claims')}
+      onPress={() => router.push('/claims')}
       accessibilityRole="button"
       accessibilityLabel="Claim pending transfers"
       style={({ pressed }) => ({
@@ -25,8 +25,6 @@ export function BankClaimButton() {
         style={{
           borderRadius: 100,
           overflow: 'hidden',
-          borderWidth: 1,
-          borderColor: T.hairlineStrong,
         }}
       >
         <BlurView

@@ -16,7 +16,7 @@ export function EncryptedSenderCard() {
 
   return (
     <Pressable
-      onPress={() => router.push('/receive/claims')}
+      onPress={() => router.push('/claims')}
       accessibilityRole="button"
       accessibilityLabel="Vault, private transfers ready to claim"
       style={{

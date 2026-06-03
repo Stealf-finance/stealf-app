@@ -1,5 +1,5 @@
 import { ClaimsScreen } from '@/src/features/claims/ClaimsScreen';
 
-export default function ReceiveClaimsRoute() {
+export default function ClaimsRoute() {
   return <ClaimsScreen />;
 }
