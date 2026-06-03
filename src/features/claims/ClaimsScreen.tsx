@@ -9,6 +9,7 @@ import Animated, {
   interpolate,
 } from 'react-native-reanimated';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
@@ -21,10 +22,13 @@ import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
+import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
 import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
+import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { encryptedBalancesQueries } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import { reconstructAddressFromU128Parts } from '@umbra-privacy/sdk/solana';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
@@ -98,20 +102,29 @@ function claimLineForNote(note: any, solUsd: number | null): string {
 export function ClaimsScreen() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
-  const palette = txPalette('silver');
+
+  // `target` picks the claim destination:
+  //   bank      → claim self-burnable UTXOs out to the public bank wallet
+  //   encrypted → claim incoming transfers into the encrypted balance
+  const params = useLocalSearchParams<{ target?: string }>();
+  const isEncrypted = params.target === 'encrypted';
+  const palette = txPalette(isEncrypted ? 'gold' : 'silver');
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
-  const { claimSelfToPublic } = useUmbra();
-  // Force a fresh scan on screen mount — this screen owns the truth of
-  // self-claimable UTXOs targeting bank. The bank tab's pending-pill
-  // count reads the cached result.
+  const { claimSelfToPublic, claimReceived } = useUmbra();
+  // Force a fresh scan on screen mount for the active target — this screen
+  // owns the truth of claimable UTXOs. The home pending-dots read the cache.
+  // Both hooks share the same underlying scan query, so the idle one just
+  // selects a different slice of the cached result.
+  const cash = usePendingClaimsForCash({ fetch: !isEncrypted });
+  const inbound = usePendingClaims({ fetch: isEncrypted });
   const {
     data: pendingUtxos,
     refetch,
     isFetching,
-  } = usePendingClaimsForCash({ fetch: true });
+  } = isEncrypted ? inbound : cash;
   const { data: solPrice } = useSolPrice();
   const solUsd = solPrice ?? null;
 
@@ -136,21 +149,29 @@ export function ClaimsScreen() {
 
     const removeFromCache = () => {
       if (!claimKey) return;
-      queryClient.setQueryData<ClaimScanResult>(claimKey, (prev) =>
-        prev
+      queryClient.setQueryData<ClaimScanResult>(claimKey, (prev) => {
+        if (!prev) return prev;
+        // Drop the just-claimed UTXO from whichever slice this target reads.
+        return isEncrypted
           ? {
+              ...prev,
+              received: prev.received.filter((u) => u !== item.utxo),
+              publicReceived: prev.publicReceived.filter(
+                (u) => u !== item.utxo,
+              ),
+            }
+          : {
               ...prev,
               selfBurnable: prev.selfBurnable.filter((u) => u !== item.utxo),
               publicSelfBurnable: prev.publicSelfBurnable.filter(
                 (u) => u !== item.utxo,
               ),
-            }
-          : prev,
-      );
+            };
+      });
     };
 
     const opId = pendingOps.enqueue({
-      kind: 'claim-to-bank',
+      kind: isEncrypted ? 'claim-to-shielded' : 'claim-to-bank',
       tone: 'gold',
       amountSol: 0,
     });
@@ -158,7 +179,7 @@ export function ClaimsScreen() {
     setTimeout(() => {
       removeFromCache();
       if (router.canGoBack()) {
-        router.replace('/(tabs)/bank');
+        router.replace(isEncrypted ? '/(tabs)/stealth' : '/(tabs)/bank');
       }
     }, ANIM_HOLD_MS);
 
@@ -168,23 +189,36 @@ export function ClaimsScreen() {
       }, 700);
 
       try {
-        await claimSelfToPublic([item.utxo]);
+        await (isEncrypted
+          ? claimReceived([item.utxo])
+          : claimSelfToPublic([item.utxo]));
         clearTimeout(provingTimer);
         pendingOps.setPhase(opId, 'confirming');
 
         const invalidate = () => {
-          if (!bankWallet) return;
           if (stealfWallet) {
             queryClient.invalidateQueries({
               queryKey: claimScanQueries.byStealfWallet(stealfWallet),
             });
           }
-          queryClient.invalidateQueries({
-            queryKey: balanceQueries.byAddress(bankWallet),
-          });
-          queryClient.invalidateQueries({
-            queryKey: historyQueries.byAddress(bankWallet),
-          });
+          if (isEncrypted) {
+            if (!stealfWallet) return;
+            queryClient.invalidateQueries({
+              queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),
+            });
+            queryClient.invalidateQueries({
+              queryKey:
+                encryptedBalancesQueries.byStealfWalletPrefix(stealfWallet),
+            });
+          } else {
+            if (!bankWallet) return;
+            queryClient.invalidateQueries({
+              queryKey: balanceQueries.byAddress(bankWallet),
+            });
+            queryClient.invalidateQueries({
+              queryKey: historyQueries.byAddress(bankWallet),
+            });
+          }
         };
         invalidate();
         [3000, 8000, 15000].forEach((d) => setTimeout(invalidate, d));

@@ -87,8 +87,10 @@ export function BalanceCarousel({
               pageWidth={pageWidth}
               pages={HOME_CARDS.map((c) => (
                 <View key={c.id} style={{ alignItems: 'center' }}>
-                  {c.id === 'bank' || c.id === 'encrypted' ? (
-                    <BankClaimButton />
+                  {c.id === 'bank' ? (
+                    <BankClaimButton target="bank" />
+                  ) : c.id === 'encrypted' ? (
+                    <BankClaimButton target="encrypted" />
                   ) : null}
                 </View>
               ))}

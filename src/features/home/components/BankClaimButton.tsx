@@ -4,18 +4,33 @@ import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
+import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
 
-/** Transparent (blurred glass) "Claim" pill shown right under the bank balance —
+/** Transparent (blurred glass) "Claim" pill shown right under the balance —
  *  same glassmorphism treatment as GetBankAccountCard. Opens the claims screen.
- *  Shows a gold dot when there are private transfers waiting to be claimed. */
-export function BankClaimButton() {
+ *  Shows a gold dot when there are private transfers waiting to be claimed.
+ *
+ *  `target` selects the claim destination (and therefore which pending notes
+ *  the dot reflects): `bank` → claim out to the public bank wallet, `encrypted`
+ *  → claim into the encrypted balance. */
+export function BankClaimButton({
+  target = 'bank',
+}: {
+  target?: 'bank' | 'encrypted';
+}) {
   const router = useSafeRouter();
-  const { data: pending } = usePendingClaimsForCash();
+  const isEncrypted = target === 'encrypted';
+  // Read-only cache slices (no forced scan here — the claims screen owns that).
+  const cash = usePendingClaimsForCash();
+  const inbound = usePendingClaims();
+  const pending = isEncrypted ? inbound.data : cash.data;
   const hasPending = (pending?.length ?? 0) > 0;
 
   return (
     <Pressable
-      onPress={() => router.push('/claims')}
+      onPress={() =>
+        router.push(isEncrypted ? '/claims?target=encrypted' : '/claims')
+      }
       accessibilityRole="button"
       accessibilityLabel="Claim pending transfers"
       style={({ pressed }) => ({
