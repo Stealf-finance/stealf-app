@@ -163,13 +163,14 @@ export function ClaimsScreen() {
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontStyle: 'italic',
               color: T.ink,
               includeFontPadding: false,
             },
           ]}
         >
-          Claim pending
+          Vault
         </Text>
         <CloseBtn onPress={() => router.replace('/(tabs)/bank')} />
       </View>
