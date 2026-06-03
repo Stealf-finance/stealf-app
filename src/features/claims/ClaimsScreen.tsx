@@ -214,7 +214,7 @@ export function ClaimsScreen() {
       <View
         style={{
           paddingTop: insets.top,
-          paddingBottom: 18,
+          paddingBottom: 12,
           paddingHorizontal: 20,
           flexDirection: 'row',
           alignItems: 'center',
