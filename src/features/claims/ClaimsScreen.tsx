@@ -200,7 +200,11 @@ export function ClaimsScreen() {
         >
           Incoming Assets
         </Text>
-        <LoaderRefreshButton onPress={() => refetch()} spinning={isFetching} />
+        <LoaderRefreshButton
+          onPress={() => refetch()}
+          spinning={isFetching}
+          size={48}
+        />
       </View>
 
       <ScrollView
