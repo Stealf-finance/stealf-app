@@ -18,7 +18,7 @@ const ROWS: string[][] = [
 export function Numpad({ onKey, tone = 'silver' }: Props) {
   const palette = txPalette(tone);
   return (
-    <View style={{ width: '100%', paddingHorizontal: 20 }}>
+    <View style={{ width: '100%', paddingHorizontal: 5 }}>
       {ROWS.map((row, i) => (
         <View
           key={i}
@@ -41,11 +41,15 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                 })}
               >
                 {k === '⌫' ? (
-                  <Icons.backspace
-                    size={30}
-                    color={palette.ink}
-                    strokeWidth={2}
-                  />
+                  // The backspace glyph is right-biased in its viewBox; nudge it
+                  // left so it optically centres under the digit column.
+                  <View style={{ transform: [{ translateX: -3 }] }}>
+                    <Icons.backspace
+                      size={30}
+                      color={palette.ink}
+                      strokeWidth={2}
+                    />
+                  </View>
                 ) : (
                   <Text
                     style={[
