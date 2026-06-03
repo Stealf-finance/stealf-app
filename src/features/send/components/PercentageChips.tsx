@@ -18,7 +18,7 @@ type Props = {
 export function PercentageChips({ onPressPercent, disabled = false }: Props) {
   return (
     <View
-      style={{ flexDirection: 'row', paddingHorizontal: 24, marginBottom: 16 }}
+      style={{ flexDirection: 'row', paddingHorizontal: 24, marginBottom: 32 }}
     >
       {PRESETS.map(({ label, pct }, idx) => (
         // flex:1 on a static wrapper View so the four chips split the row
