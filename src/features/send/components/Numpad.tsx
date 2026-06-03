@@ -39,25 +39,20 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                   opacity: pressed ? 0.5 : 1,
                 })}
               >
-                {/* The delete key renders the chevron as a text glyph so it
-                    lays out exactly like the digits (same centring/baseline). */}
+                {/* The delete key renders the chevron as a text glyph (a
+                    symmetric bracket ornament) so it centres like the digits. */}
                 <Text
                   style={[
                     sansationBold,
                     {
-                      fontSize: k === '⌫' ? 40 : 28,
+                      fontSize: k === '⌫' ? 26 : 28,
                       color: palette.ink,
                       textAlign: 'center',
                       includeFontPadding: false,
-                      // The "‹" glyph is left-biased in its advance box; nudge
-                      // it right so it sits centred under the digit column.
-                      ...(k === '⌫'
-                        ? { transform: [{ translateX: 3 }] }
-                        : null),
                     },
                   ]}
                 >
-                  {k === '⌫' ? '‹' : k}
+                  {k === '⌫' ? '❮' : k}
                 </Text>
               </Pressable>
             </View>
