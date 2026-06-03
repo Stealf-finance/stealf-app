@@ -15,23 +15,31 @@ const ROWS: string[][] = [
   ['.', '0', '⌫'],
 ];
 
+// Left column hugs the left edge, middle centred, right column hugs the right
+// edge — so the keypad spans the full width of the slide button / chips above.
+const COL_ALIGN: ('flex-start' | 'center' | 'flex-end')[] = [
+  'flex-start',
+  'center',
+  'flex-end',
+];
+
 export function Numpad({ onKey, tone = 'silver' }: Props) {
   const palette = txPalette(tone);
   return (
-    <View style={{ width: '100%', paddingHorizontal: 24 }}>
+    <View style={{ width: '100%', paddingHorizontal: 24, gap: 10 }}>
       {ROWS.map((row, i) => (
         <View key={i} style={{ flexDirection: 'row', width: '100%' }}>
-          {row.map((k) => (
-            // flex:1 lives on a plain View so each key reliably takes a third
-            // of the row width; the Pressable fills it and centers the glyph.
+          {row.map((k, col) => (
+            // flex:1 cell = a third of the row (full touch target); the glyph is
+            // aligned to the edge/centre via COL_ALIGN.
             <View key={k} style={{ flex: 1 }}>
               <Pressable
                 onPress={() => onKey(k)}
                 accessibilityRole="button"
                 accessibilityLabel={k === '⌫' ? 'Backspace' : k}
                 style={({ pressed }) => ({
-                  height: 58,
-                  alignItems: 'center',
+                  height: 62,
+                  alignItems: COL_ALIGN[col],
                   justifyContent: 'center',
                   opacity: pressed ? 0.5 : 1,
                 })}
@@ -45,7 +53,6 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                       {
                         fontSize: 32,
                         color: palette.ink,
-                        textAlign: 'center',
                         includeFontPadding: false,
                       },
                     ]}
