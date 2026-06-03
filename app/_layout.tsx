@@ -150,6 +150,10 @@ function RootLayout() {
                             options={{ presentation: 'modal' }}
                           />
                           <Stack.Screen
+                            name="account-details"
+                            options={{ presentation: 'modal' }}
+                          />
+                          <Stack.Screen
                             name="tx/[id]"
                             options={{ presentation: 'modal' }}
                           />
