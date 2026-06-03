@@ -95,6 +95,10 @@ const moduleOverrides = {
     __dirname,
     'node_modules/@umbra-privacy/sdk/dist/primitives/crypto/aes/index.js',
   ),
+  '@umbra-privacy/sdk/solana': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/infrastructure/solana/index.js',
+  ),
 };
 
 const wrapped = withNativeWind(config, { input: './global.css' });
