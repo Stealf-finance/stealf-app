@@ -588,7 +588,7 @@ export function MoveFlow() {
         <View style={{ width: 36 }} />
       </View>
 
-      <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
+      <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 8, gap: 12 }}>
         <SourceAssetCard
           label="Move"
           fromLabel={config.fromLabel}

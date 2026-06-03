@@ -28,7 +28,7 @@ export function BackBtn({
         justifyContent: 'center',
       }}
     >
-      <Icons.arrLeft size={size} color={color} strokeWidth={1.6} />
+      <Icons.chevL size={size} color={color} strokeWidth={1.6} />
     </Pressable>
   );
 }
