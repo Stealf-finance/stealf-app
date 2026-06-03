@@ -227,7 +227,6 @@ export function ClaimsScreen() {
             <ClaimItem
               key={`claim-${i}`}
               tx={tx}
-              palette={palette}
               claiming={claimingIndex === i}
               disabled={claimingIndex !== null && claimingIndex !== i}
               onClaim={() => onClaim(tx, i)}
@@ -241,13 +240,11 @@ export function ClaimsScreen() {
 
 function ClaimItem({
   tx,
-  palette,
   claiming,
   disabled,
   onClaim,
 }: {
   tx: Item;
-  palette: Palette;
   claiming: boolean;
   disabled: boolean;
   onClaim: () => void;
