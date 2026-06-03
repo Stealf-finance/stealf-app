@@ -60,7 +60,7 @@ export function GlobeDisc() {
       source={require('@/assets/images/globe.png')}
       contentFit="contain"
       cachePolicy="memory-disk"
-      style={{ width: 44, height: STEALF_SIZE }}
+      style={{ width: 58, height: 44 }}
     />
   );
 }
