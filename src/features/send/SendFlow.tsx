@@ -401,11 +401,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       <Animated.View style={[{ flex: 1 }, contentStyle]}>
         {step === 1 && asset && (
           <>
-            <TxTitleBlock
-              kicker="Step 1 of 3"
-              title="Who's it for?"
-              subtitle="Solana address or .sol name"
-            />
             <View style={{ paddingHorizontal: 24, marginBottom: 10 }}>
               <View
                 style={{
