@@ -557,20 +557,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
 
         {step === 2 && asset && recipient && (
           <>
-            <TxTitleBlock
-              kicker="Step 2 of 3"
-              title={
-                isPrivate
-                  ? 'Send privately'
-                  : `For ${truncateAddress(recipient.name)}`
-              }
-              subtitle={
-                isPrivate
-                  ? `To ${truncateAddress(recipient.name)}`
-                  : 'Enter the amount to send'
-              }
-            />
-
             <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
               <SourceAssetCard
                 label={isPrivate ? 'Sending privately' : 'Sending'}
