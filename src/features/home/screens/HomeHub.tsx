@@ -12,6 +12,7 @@ import { HomeActivity } from '../components/HomeActivity';
 import { StealthActivity } from '../components/StealthActivity';
 import { AssetsList } from '../components/AssetsList';
 import { GetBankAccountCard } from '../components/GetBankAccountCard';
+import { BankClaimButton } from '../components/BankClaimButton';
 import { TonalHalo } from '../components/TonalHalo';
 import type { HomeCardId } from '../lib/homeCardActions';
 
@@ -23,6 +24,7 @@ function bottomFor(id: HomeCardId) {
     case 'bank':
       return (
         <>
+          <BankClaimButton />
           <GetBankAccountCard />
           <HomeActivity />
         </>
