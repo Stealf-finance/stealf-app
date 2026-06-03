@@ -1,5 +1,10 @@
-import { StealthHub } from '@/src/features/stealth/screens/StealthHub';
+import { StealthWalletGate } from '@/src/features/stealth/screens/StealthWalletGate';
+import { PayHub } from '@/src/features/stealth/screens/PayHub';
 
 export default function StealthTab() {
-  return <StealthHub />;
+  return (
+    <StealthWalletGate>
+      <PayHub />
+    </StealthWalletGate>
+  );
 }
