@@ -1,7 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 
@@ -9,8 +8,6 @@ import { T } from '@/src/design-system/tokens';
  *  same glassmorphism treatment as GetBankAccountCard. Opens the claims screen. */
 export function BankClaimButton() {
   const router = useSafeRouter();
-  const { data: pendingClaims } = usePendingClaims();
-  const count = pendingClaims?.length ?? 0;
 
   return (
     <Pressable
@@ -56,7 +53,7 @@ export function BankClaimButton() {
               },
             ]}
           >
-            {count > 0 ? `Claim · ${count}` : 'Claim'}
+            Claim
           </Text>
         </BlurView>
       </View>
