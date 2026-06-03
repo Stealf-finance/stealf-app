@@ -3,14 +3,14 @@ import { View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { GlassTile } from '@/src/features/receive/components/GlassTile';
 import {
-  StealfDisc,
+  UmbraDisc,
   UsdcDisc,
   BankDisc,
 } from '@/src/features/receive/components/Discs';
 import { PAY_METHODS } from '@/src/features/stealth/lib/payMethods';
 
 const DISCS = {
-  stealf: StealfDisc,
+  umbra: UmbraDisc,
   usdc: UsdcDisc,
   bank: BankDisc,
 } as const;

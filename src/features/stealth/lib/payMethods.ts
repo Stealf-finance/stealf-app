@@ -3,7 +3,7 @@
 export type PayMethod = {
   key: 'private' | 'simple' | 'bank';
   label: string;
-  discKey: 'stealf' | 'usdc' | 'bank';
+  discKey: 'umbra' | 'usdc' | 'bank';
   route?: string;
   disabled?: boolean;
 };
@@ -12,7 +12,7 @@ export const PAY_METHODS: PayMethod[] = [
   {
     key: 'private',
     label: 'Private',
-    discKey: 'stealf',
+    discKey: 'umbra',
     route: '/send/flow?tone=gold&wallet=stealth&mode=private',
   },
   {

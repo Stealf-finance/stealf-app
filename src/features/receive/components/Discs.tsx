@@ -21,6 +21,23 @@ export function StealfDisc() {
   );
 }
 
+/** Private-transfer (Umbra) icon — a square app-icon illustration, so it's
+ *  rendered as a rounded square rather than a circular disc to avoid cropping. */
+export function UmbraDisc() {
+  return (
+    <Image
+      source={require('@/assets/images/umbra-transfer.png')}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      style={{
+        width: STEALF_SIZE,
+        height: STEALF_SIZE,
+        borderRadius: 9,
+      }}
+    />
+  );
+}
+
 const STRIPE_HEIGHT = 4;
 const STRIPE_COUNT = Math.ceil(FLAG_SIZE / STRIPE_HEIGHT);
 

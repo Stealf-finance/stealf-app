@@ -8,7 +8,7 @@ describe('PAY_METHODS', () => {
   it('routes Private to the private stealth send flow', () => {
     const m = PAY_METHODS.find((m) => m.key === 'private');
     expect(m?.label).toBe('Private');
-    expect(m?.discKey).toBe('stealf');
+    expect(m?.discKey).toBe('umbra');
     expect(m?.route).toBe('/send/flow?tone=gold&wallet=stealth&mode=private');
     expect(m?.disabled).toBeFalsy();
   });
