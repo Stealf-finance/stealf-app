@@ -43,25 +43,12 @@ export function EncryptedSenderCard() {
           paddingHorizontal: 16,
         }}
       >
-        <View
-          style={{
-            width: 50,
-            height: 50,
-            borderRadius: 25,
-            borderWidth: 1,
-            borderColor: T.goldDim,
-            backgroundColor: T.goldFaint,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Image
-            source={require('@/assets/images/Lock.png')}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-            style={{ width: 24, height: 24 }}
-          />
-        </View>
+        <Image
+          source={require('@/assets/images/Lock.png')}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          style={{ width: 50, height: 50 }}
+        />
 
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[sansation, { fontSize: 16, color: T.ink, includeFontPadding: false }]}>
