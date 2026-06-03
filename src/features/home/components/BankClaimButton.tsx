@@ -34,8 +34,8 @@ export function BankClaimButton() {
           tint="dark"
           experimentalBlurMethod="dimezisBlurView"
           style={{
-            paddingVertical: 11,
-            paddingHorizontal: 30,
+            paddingVertical: 9,
+            paddingHorizontal: 22,
             alignItems: 'center',
             justifyContent: 'center',
             backgroundColor: 'rgba(255,255,255,0.05)',
