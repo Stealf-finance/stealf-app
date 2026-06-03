@@ -6,6 +6,7 @@ import {
   sansationLight,
 } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
+import { Tone, txPalette } from '@/src/design-system/palettes';
 
 export type InputMode = 'asset' | 'fiat';
 
@@ -20,6 +21,11 @@ type Props = {
   onToggleMode?: () => void;
   toggleDisabled?: boolean;
   maxLabel?: string;
+  /** When both are set, a "From → To" header is merged into the top of the
+   *  card (used by the Move flow instead of a separate DirectionRow). */
+  fromLabel?: string;
+  toLabel?: string;
+  tone?: Tone;
 };
 
 export function SourceAssetCard({
@@ -33,7 +39,11 @@ export function SourceAssetCard({
   onToggleMode,
   toggleDisabled = false,
   maxLabel,
+  fromLabel,
+  toLabel,
+  tone = 'silver',
 }: Props) {
+  const palette = txPalette(tone);
   const digitCount = primaryAmount.replace('.', '').length;
   const amountFontSize =
     digitCount >= 11 ? 32 : digitCount >= 9 ? 40 : digitCount >= 7 ? 52 : 64;
@@ -53,6 +63,64 @@ export function SourceAssetCard({
         borderColor: T.hairline,
       }}
     >
+      {fromLabel && toLabel ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingBottom: 14,
+            marginBottom: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: T.hairline,
+          }}
+        >
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 9,
+                letterSpacing: 2.52,
+                textTransform: 'uppercase',
+                fontWeight: '700',
+                color: T.inkFaint,
+              },
+            ]}
+          >
+            From
+          </Text>
+          <Text
+            style={[sansation, { fontSize: 13, color: T.ink, fontWeight: '500' }]}
+            numberOfLines={1}
+          >
+            {fromLabel}
+          </Text>
+          <View style={{ flex: 1 }} />
+          <Icons.arrRight size={14} color={palette.accent} />
+          <View style={{ flex: 1 }} />
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 9,
+                letterSpacing: 2.52,
+                textTransform: 'uppercase',
+                fontWeight: '700',
+                color: T.inkFaint,
+              },
+            ]}
+          >
+            To
+          </Text>
+          <Text
+            style={[sansation, { fontSize: 13, color: T.ink, fontWeight: '500' }]}
+            numberOfLines={1}
+          >
+            {toLabel}
+          </Text>
+        </View>
+      ) : null}
+
       <View
         style={{
           flexDirection: 'row',

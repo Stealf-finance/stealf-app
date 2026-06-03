@@ -14,7 +14,6 @@ import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
-import { DirectionRow } from '@/src/features/send/components/DirectionRow';
 import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
 import { PercentageChips } from '@/src/features/send/components/PercentageChips';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
@@ -589,17 +588,12 @@ export function MoveFlow() {
         <View style={{ width: 36 }} />
       </View>
 
-      <View style={{ paddingHorizontal: 20 }}>
-        <DirectionRow
-          fromLabel={config.fromLabel}
-          toLabel={config.toLabel}
-          tone={tone}
-        />
-      </View>
-
       <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
         <SourceAssetCard
           label="Move"
+          fromLabel={config.fromLabel}
+          toLabel={config.toLabel}
+          tone={tone}
           iconSource={{ uri: iconUri }}
           tokenLabel={assetSymbol}
           primaryAmount={primaryDisplay}
