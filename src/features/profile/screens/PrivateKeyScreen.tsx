@@ -150,14 +150,15 @@ export function PrivateKeyScreen() {
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontStyle: 'italic',
               color: T.ink,
               includeFontPadding: false,
               marginRight: 36,
             },
           ]}
         >
-          Solana Private Key
+          Private key
         </Text>
       </View>
 
