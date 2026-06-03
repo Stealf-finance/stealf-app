@@ -65,7 +65,6 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   const isStealth = resolvedWallet === 'stealth';
 
   const [network] = useState('Solana');
-  const destination = isStealth ? 'Stealth wallet' : 'Bank wallet';
   const fullAddress = (isStealth ? user?.stealfWallet : user?.bankWallet) ?? '';
   const displayAddress = fullAddress
     ? `${fullAddress.slice(0, 14)}...${fullAddress.slice(-6)}`
