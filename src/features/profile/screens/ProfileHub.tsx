@@ -13,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { Icons } from '@/src/design-system/icons';
+import { PillBtn } from '@/src/design-system/primitives/PillBtn';
+import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
 import {
   sansation,
   sansationLight,
@@ -80,6 +82,8 @@ export function ProfileHub() {
   const router = useSafeRouter();
   const { user } = useAuth();
   const turnkey = useTurnkey();
+  const { data: pendingClaims } = usePendingClaims();
+  const claimCount = pendingClaims?.length ?? 0;
   const logout = useLogout();
   const deleteAccount = useDeleteAccount();
 
@@ -429,6 +433,16 @@ export function ProfileHub() {
               {formatUsdShort(privateUSD)}
             </Text>
           </View>
+        </View>
+
+        {/* Claim pending private transfers */}
+        <View style={{ marginBottom: 28 }}>
+          <PillBtn
+            label={claimCount > 0 ? `Claim · ${claimCount}` : 'Claim'}
+            variant="primary"
+            tone="gold"
+            onPress={() => router.push('/receive/claims')}
+          />
         </View>
 
         {/* Points */}
