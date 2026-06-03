@@ -45,14 +45,14 @@ const MOVE_ENCRYPTED_TO_BANK: HomeAction = {
 const SHIELD: HomeAction = {
   key: 'shield',
   label: 'Shield',
-  iconKey: 'shieldCheck',
+  iconKey: 'shieldFull',
   route: '/shield',
 };
 // Unshield: move the encrypted balance back out to the public stealth wallet.
 const UNSHIELD: HomeAction = {
   key: 'unshield',
   label: 'Unshield',
-  iconKey: 'shieldOff',
+  iconKey: 'shieldSplit',
   route: '/unshield',
 };
 // Swap: not built yet — surfaces a "coming soon" toast.
