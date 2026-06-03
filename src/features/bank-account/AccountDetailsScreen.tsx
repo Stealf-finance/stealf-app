@@ -1,4 +1,12 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
@@ -7,24 +15,30 @@ import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { Icons } from '@/src/design-system/icons';
 import { serif, sansation, mono } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
-import { useToast } from '@/src/components/toast/ToastContext';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
 export function AccountDetailsScreen() {
   const insets = useSafeAreaInsets();
   const router = useSafeRouter();
-  const { show } = useToast();
   const { user } = useAuth();
   const address = user?.bankWallet ?? '';
+
+  const [copied, setCopied] = useState(false);
+  const pop = useSharedValue(1);
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pop.value }],
+  }));
 
   const copy = async () => {
     if (!address) return;
     await Clipboard.setStringAsync(address);
-    show({
-      kind: 'success',
-      title: 'Copied',
-      message: 'Bank wallet address copied.',
-    });
+    // Feedback is the icon animation only — no toast.
+    setCopied(true);
+    pop.value = withSequence(
+      withTiming(0.6, { duration: 90 }),
+      withSpring(1, { damping: 7, stiffness: 320 }),
+    );
+    setTimeout(() => setCopied(false), 1200);
   };
 
   return (
@@ -96,20 +110,25 @@ export function AccountDetailsScreen() {
           <View
             style={{
               flexDirection: 'row',
-              alignItems: 'flex-end',
+              alignItems: 'center',
               gap: 10,
               marginTop: 6,
             }}
           >
             <Text
-              style={[
-                mono,
-                { flex: 1, fontSize: 14, color: T.ink, lineHeight: 20 },
-              ]}
+              style={[mono, { flex: 1, fontSize: 14, color: T.ink }]}
+              numberOfLines={1}
+              ellipsizeMode="middle"
             >
               {address || '—'}
             </Text>
-            <Icons.copy size={16} color={T.inkFaint} />
+            <Animated.View style={iconStyle}>
+              {copied ? (
+                <Icons.check size={16} color={T.green} strokeWidth={2.4} />
+              ) : (
+                <Icons.copy size={16} color={T.inkFaint} />
+              )}
+            </Animated.View>
           </View>
         </Pressable>
       </ScrollView>
