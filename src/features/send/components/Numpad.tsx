@@ -1,5 +1,4 @@
 import { Pressable, Text, View } from 'react-native';
-import { Icons } from '@/src/design-system/icons';
 import { sansationBold } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
@@ -40,27 +39,21 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                   opacity: pressed ? 0.5 : 1,
                 })}
               >
-                {k === '⌫' ? (
-                  // Lift slightly: text digits sit ~2px above the geometric
-                  // centre, so nudge the icon up to line up with the row.
-                  <View style={{ transform: [{ translateY: -2 }] }}>
-                    <Icons.chevL size={28} color={palette.ink} strokeWidth={2} />
-                  </View>
-                ) : (
-                  <Text
-                    style={[
-                      sansationBold,
-                      {
-                        fontSize: 28,
-                        color: palette.ink,
-                        textAlign: 'center',
-                        includeFontPadding: false,
-                      },
-                    ]}
-                  >
-                    {k}
-                  </Text>
-                )}
+                {/* The delete key renders the chevron as a text glyph so it
+                    lays out exactly like the digits (same centring/baseline). */}
+                <Text
+                  style={[
+                    sansationBold,
+                    {
+                      fontSize: k === '⌫' ? 40 : 28,
+                      color: palette.ink,
+                      textAlign: 'center',
+                      includeFontPadding: false,
+                    },
+                  ]}
+                >
+                  {k === '⌫' ? '‹' : k}
+                </Text>
               </Pressable>
             </View>
           ))}
