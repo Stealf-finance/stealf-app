@@ -41,7 +41,11 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                 })}
               >
                 {k === '⌫' ? (
-                  <Icons.chevL size={28} color={palette.ink} strokeWidth={2} />
+                  // Lift slightly: text digits sit ~2px above the geometric
+                  // centre, so nudge the icon up to line up with the row.
+                  <View style={{ transform: [{ translateY: -2 }] }}>
+                    <Icons.chevL size={28} color={palette.ink} strokeWidth={2} />
+                  </View>
                 ) : (
                   <Text
                     style={[
