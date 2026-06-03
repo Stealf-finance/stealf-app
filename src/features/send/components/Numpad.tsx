@@ -49,6 +49,11 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                       color: palette.ink,
                       textAlign: 'center',
                       includeFontPadding: false,
+                      // The "‹" glyph is left-biased in its advance box; nudge
+                      // it right so it sits centred under the digit column.
+                      ...(k === '⌫'
+                        ? { transform: [{ translateX: 3 }] }
+                        : null),
                     },
                   ]}
                 >
