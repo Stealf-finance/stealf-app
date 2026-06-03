@@ -15,14 +15,15 @@ const ROWS: string[][] = [
   ['.', '0', '⌫'],
 ];
 
+// Disposition mirrors the design's "Send money · keypad": a 3-column grid with
+// a wide column gap and tight row gap, transparent keys, bold centred glyphs.
 export function Numpad({ onKey, tone = 'silver' }: Props) {
   const palette = txPalette(tone);
   return (
-    <View style={{ width: '100%', paddingHorizontal: 24, gap: 14 }}>
+    <View style={{ width: '100%', paddingHorizontal: 20, rowGap: 4 }}>
       {ROWS.map((row, i) => (
-        <View key={i} style={{ flexDirection: 'row', width: '100%' }}>
+        <View key={i} style={{ flexDirection: 'row', columnGap: 30 }}>
           {row.map((k) => (
-            // Each key is an equal third of the row, digit centred.
             <View key={k} style={{ flex: 1 }}>
               <Pressable
                 onPress={() => onKey(k)}
@@ -36,13 +37,13 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                 })}
               >
                 {k === '⌫' ? (
-                  <Icons.backspace size={28} color={palette.ink} />
+                  <Icons.backspace size={24} color={palette.ink} />
                 ) : (
                   <Text
                     style={[
                       sansationBold,
                       {
-                        fontSize: 32,
+                        fontSize: 26,
                         color: palette.ink,
                         textAlign: 'center',
                         includeFontPadding: false,
