@@ -28,6 +28,8 @@ export function PayMethodTiles() {
             key={m.key}
             leading={<Disc />}
             label={m.label}
+            labelNumberOfLines={1}
+            labelFontSize={12}
             disabled={m.disabled}
             onPress={m.route ? () => router.push(m.route as never) : undefined}
           />

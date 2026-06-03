@@ -12,6 +12,11 @@ type Props = {
   accessibilityLabel?: string;
   disabled?: boolean;
   trailing?: ReactNode;
+  /** Max lines for the label. Defaults to 2; pass 1 to keep it on one line
+   *  (the font auto-shrinks more aggressively to fit). */
+  labelNumberOfLines?: number;
+  /** Base label font size before auto-shrink. Defaults to 15. */
+  labelFontSize?: number;
 };
 
 export function GlassTile({
@@ -22,6 +27,8 @@ export function GlassTile({
   accessibilityLabel,
   disabled = false,
   trailing,
+  labelNumberOfLines = 2,
+  labelFontSize = 15,
 }: Props) {
   return (
     <Pressable
@@ -83,16 +90,16 @@ export function GlassTile({
             style={[
               sansation,
               {
-                fontSize: 15,
-                lineHeight: 19,
+                fontSize: labelFontSize,
+                lineHeight: labelFontSize + 4,
                 color: T.ink,
                 fontWeight: '400',
                 includeFontPadding: false,
               },
             ]}
-            numberOfLines={2}
+            numberOfLines={labelNumberOfLines}
             adjustsFontSizeToFit
-            minimumFontScale={0.85}
+            minimumFontScale={labelNumberOfLines === 1 ? 0.6 : 0.85}
           >
             {label}
           </Text>
