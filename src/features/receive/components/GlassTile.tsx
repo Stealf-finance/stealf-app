@@ -82,8 +82,16 @@ export function GlassTile({
           }}
         >
           {leading}
-          {trailing ?? (disabled ? <SoonPill /> : null)}
+          {trailing ?? null}
         </View>
+
+        {/* "Soon" sits as an absolute corner badge so it never competes with
+            the leading icon for horizontal space (lets wide icons go full size). */}
+        {disabled && !trailing ? (
+          <View style={{ position: 'absolute', top: 10, right: 10 }}>
+            <SoonPill />
+          </View>
+        ) : null}
 
         <View>
           <Text

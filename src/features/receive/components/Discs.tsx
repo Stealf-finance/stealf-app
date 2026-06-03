@@ -51,15 +51,16 @@ export function SolanaTokenDisc() {
   );
 }
 
-/** Bank-transfer icon — a wide three-coin illustration (transparent), so it's
- *  rendered with `contain` and kept narrow to sit beside the "Soon" pill. */
+/** Bank-transfer icon — a wide three-coin illustration (transparent), rendered
+ *  with `contain` at the same width as the Simple tile for visual consistency.
+ *  The "Soon" badge is absolutely positioned, so this can fill the row width. */
 export function GlobeDisc() {
   return (
     <Image
       source={require('@/assets/images/globe.png')}
       contentFit="contain"
       cachePolicy="memory-disk"
-      style={{ width: 36, height: STEALF_SIZE }}
+      style={{ width: 44, height: STEALF_SIZE }}
     />
   );
 }
