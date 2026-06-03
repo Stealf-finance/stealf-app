@@ -8,8 +8,7 @@ import { T } from '@/src/design-system/tokens';
 import { sansation } from '@/src/design-system/typography';
 import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
 
-/** Pinned hub card: entry point to the claims inbox for incoming private
- *  transfers. Badge shows the pending count (on-device via usePendingClaims). */
+
 export function EncryptedSenderCard() {
   const router = useSafeRouter();
   const { data: pendingClaims } = usePendingClaims();
@@ -19,7 +18,7 @@ export function EncryptedSenderCard() {
     <Pressable
       onPress={() => router.push('/receive/claims')}
       accessibilityRole="button"
-      accessibilityLabel="Encrypted sender, private transfers ready to claim"
+      accessibilityLabel="Vault, private transfers ready to claim"
       style={{
         borderRadius: 22,
         overflow: 'hidden',
@@ -64,7 +63,7 @@ export function EncryptedSenderCard() {
 
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={[sansation, { fontSize: 16, color: T.ink, includeFontPadding: false }]}>
-            Encrypted sender
+            Vault
           </Text>
           <Text
             style={[
