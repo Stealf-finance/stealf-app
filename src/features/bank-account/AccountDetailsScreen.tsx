@@ -76,37 +76,41 @@ export function AccountDetailsScreen() {
             borderColor: T.hairline,
             backgroundColor: 'rgba(255,255,255,0.03)',
             padding: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 12,
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 10,
-                  letterSpacing: 1.6,
-                  textTransform: 'uppercase',
-                  color: T.inkFaint,
-                  fontWeight: '700',
-                },
-              ]}
-            >
-              Bank wallet address
-            </Text>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 10,
+                letterSpacing: 1.6,
+                textTransform: 'uppercase',
+                color: T.inkFaint,
+                fontWeight: '700',
+              },
+            ]}
+          >
+            Wallet address
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-end',
+              gap: 10,
+              marginTop: 6,
+            }}
+          >
             <Text
               style={[
                 mono,
-                { fontSize: 14, color: T.ink, marginTop: 6, lineHeight: 20 },
+                { flex: 1, fontSize: 14, color: T.ink, lineHeight: 20 },
               ]}
             >
               {address || '—'}
             </Text>
+            <Icons.copy size={16} color={T.inkFaint} />
           </View>
-          <Icons.copy size={16} color={T.inkFaint} />
         </Pressable>
       </ScrollView>
     </CenterGlow>
