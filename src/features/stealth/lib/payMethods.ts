@@ -19,7 +19,9 @@ export const PAY_METHODS: PayMethod[] = [
     key: 'simple',
     label: 'Simple transfer',
     discKey: 'solana',
-    route: '/send/flow?tone=silver&wallet=bank',
+    // Both transfers originate from the stealth wallet — sending from the bank
+    // wallet is intentionally not offered here.
+    route: '/send/flow?tone=silver&wallet=stealth',
   },
   { key: 'bank', label: 'Bank transfer', discKey: 'globe', disabled: true },
 ];

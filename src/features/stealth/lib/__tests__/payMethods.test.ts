@@ -16,7 +16,7 @@ describe('PAY_METHODS', () => {
     const m = PAY_METHODS.find((m) => m.key === 'simple');
     expect(m?.label).toBe('Simple transfer');
     expect(m?.discKey).toBe('solana');
-    expect(m?.route).toBe('/send/flow?tone=silver&wallet=bank');
+    expect(m?.route).toBe('/send/flow?tone=silver&wallet=stealth');
     expect(m?.disabled).toBeFalsy();
   });
   it('marks Bank as coming-soon (disabled, no route)', () => {
