@@ -3,11 +3,15 @@ import { BlurView } from 'expo-blur';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
+import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
 
 /** Transparent (blurred glass) "Claim" pill shown right under the bank balance —
- *  same glassmorphism treatment as GetBankAccountCard. Opens the claims screen. */
+ *  same glassmorphism treatment as GetBankAccountCard. Opens the claims screen.
+ *  Shows a gold dot when there are private transfers waiting to be claimed. */
 export function BankClaimButton() {
   const router = useSafeRouter();
+  const { data: pending } = usePendingClaimsForCash();
+  const hasPending = (pending?.length ?? 0) > 0;
 
   return (
     <Pressable
@@ -55,6 +59,26 @@ export function BankClaimButton() {
           </Text>
         </BlurView>
       </View>
+
+      {/* Gold dot — signals private transfers are waiting to be claimed. */}
+      {hasPending ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: -2,
+            right: -2,
+            width: 9,
+            height: 9,
+            borderRadius: 5,
+            backgroundColor: '#e6c079',
+            shadowColor: '#e6c079',
+            shadowOpacity: 0.9,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 0 },
+          }}
+        />
+      ) : null}
     </Pressable>
   );
 }
