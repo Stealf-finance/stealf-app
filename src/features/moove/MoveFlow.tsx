@@ -435,7 +435,7 @@ export function MoveFlow() {
 
   if (stealthMissingForBankToShielded) {
     return (
-      <CenterGlow tone={tone}>
+      <CenterGlow tone={tone} flat>
         <View
           style={{
             paddingTop: insets.top,
@@ -559,7 +559,7 @@ export function MoveFlow() {
   }
 
   return (
-    <CenterGlow tone={tone}>
+    <CenterGlow tone={tone} flat>
       <View
         style={{
           paddingTop: insets.top,

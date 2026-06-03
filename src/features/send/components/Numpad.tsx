@@ -18,9 +18,9 @@ const ROWS: string[][] = [
 export function Numpad({ onKey, tone = 'silver' }: Props) {
   const palette = txPalette(tone);
   return (
-    <View style={{ paddingHorizontal: 24 }}>
+    <View style={{ width: '100%', paddingHorizontal: 24 }}>
       {ROWS.map((row, i) => (
-        <View key={i} style={{ flexDirection: 'row' }}>
+        <View key={i} style={{ flexDirection: 'row', width: '100%' }}>
           {row.map((k) => (
             // flex:1 lives on a plain View so each key reliably takes a third
             // of the row width; the Pressable fills it and centers the glyph.
@@ -45,6 +45,7 @@ export function Numpad({ onKey, tone = 'silver' }: Props) {
                       {
                         fontSize: 32,
                         color: palette.ink,
+                        textAlign: 'center',
                         includeFontPadding: false,
                       },
                     ]}
