@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
 import {
   Linking,
@@ -28,7 +28,7 @@ import {
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { TxHeader } from '@/src/features/send/components/TxHeader';
 import { TxTitleBlock } from '@/src/features/send/components/TxTitleBlock';
-import { AssetPill, Asset } from '@/src/features/send/components/AssetPill';
+import { Asset } from '@/src/features/send/components/AssetPill';
 import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
 import { PercentageChips } from '@/src/features/send/components/PercentageChips';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
@@ -98,6 +98,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const walletSource: WalletSource =
     wallet ?? (tone === 'gold' ? 'stealth' : 'bank');
   const isPrivate = mode === 'private';
+  const title = isPrivate ? 'Private transfer' : 'Simple transfer';
   const fromAddress =
     (walletSource === 'stealth' ? user?.stealfWallet : user?.bankWallet) ?? '';
   const fromLabel = isPrivate
@@ -161,14 +162,20 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   // Recent recipients endpoint not yet built — empty until the backend exposes it.
   const recents: Recipient[] = [];
 
-  const [step, setStep] = useState(0);
+  // Flow starts at the recipient step — the asset-select step was removed and
+  // the asset defaults to the first holding.
+  const [step, setStep] = useState(1);
   const [asset, setAsset] = useState<Asset | null>(null);
   const [recipient, setRecipient] = useState<Recipient | null>(null);
   const [recipientQuery, setRecipientQuery] = useState('');
-  const [assetQuery, setAssetQuery] = useState('');
   const [recipientError, setRecipientError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [txSig, setTxSig] = useState<string | null>(null);
+
+  // Default the asset to the first holding now that the select-asset step is gone.
+  useEffect(() => {
+    if (!asset && assets.length > 0) setAsset(assets[0]);
+  }, [asset, assets]);
   // Force-remount the swipe widget after a failed send so the thumb returns to start.
   const swipeAttempt = useRef(0);
 
@@ -193,7 +200,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
 
   const close = () => router.back();
   const handleBack = () => {
-    if (step === 0) close();
+    if (step <= 1) close();
     else transitionTo(step - 1, 'back');
   };
 
@@ -389,102 +396,13 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
 
   return (
     <CenterGlow tone={tone}>
-      <TxHeader
-        step={step}
-        total={4}
-        tone={tone}
-        onBack={handleBack}
-        onClose={close}
-      />
+      <TxHeader title={title} onBack={handleBack} />
 
       <Animated.View style={[{ flex: 1 }, contentStyle]}>
-        {step === 0 && (
-          <>
-            <TxTitleBlock
-              kicker="Step 1 of 4"
-              title="Select asset"
-              subtitle="What do you want to send?"
-            />
-            <View style={{ paddingHorizontal: 20, paddingBottom: 14 }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 10,
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: 14,
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  borderWidth: 1,
-                  borderColor: S.hairline,
-                }}
-              >
-                <Icons.search size={16} color={S.inkFaint} />
-                <TextInput
-                  value={assetQuery}
-                  onChangeText={setAssetQuery}
-                  placeholder="Search"
-                  placeholderTextColor={S.inkFaint}
-                  style={[
-                    sansation,
-                    { flex: 1, padding: 0, color: S.ink, fontSize: 14 },
-                  ]}
-                />
-              </View>
-            </View>
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={{
-                paddingHorizontal: 20,
-                paddingBottom: insets.bottom + 32,
-              }}
-              showsVerticalScrollIndicator={false}
-            >
-              {assets.length === 0 ? (
-                <Text
-                  style={[
-                    serif,
-                    {
-                      textAlign: 'center',
-                      marginTop: 48,
-                      fontStyle: 'italic',
-                      fontSize: 14,
-                      color: S.inkFaint,
-                    },
-                  ]}
-                >
-                  No assets to send yet.
-                </Text>
-              ) : (
-                assets
-                  .filter(
-                    (a) =>
-                      !assetQuery ||
-                      a.name.toLowerCase().includes(assetQuery.toLowerCase()) ||
-                      a.symbol
-                        .toLowerCase()
-                        .includes(assetQuery.toLowerCase()),
-                  )
-                  .map((a) => (
-                    <AssetPill
-                      key={a.mint ?? a.symbol}
-                      {...a}
-                      tone={tone}
-                      onPress={() => {
-                        setAsset(a);
-                        transitionTo(1, 'forward');
-                      }}
-                    />
-                  ))
-              )}
-            </ScrollView>
-          </>
-        )}
-
         {step === 1 && asset && (
           <>
             <TxTitleBlock
-              kicker="Step 2 of 4"
+              kicker="Step 1 of 3"
               title="Who's it for?"
               subtitle="Solana address or .sol name"
             />
@@ -645,7 +563,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         {step === 2 && asset && recipient && (
           <>
             <TxTitleBlock
-              kicker="Step 3 of 4"
+              kicker="Step 2 of 3"
               title={
                 isPrivate
                   ? 'Send privately'
@@ -670,7 +588,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                     : `${tokenAmountLabel} ${asset.symbol}`
                 }
                 inputMode={inputMode}
-                onPressTokenPill={() => transitionTo(0, 'back')}
                 onToggleMode={onToggleMode}
                 toggleDisabled={rate <= 0}
                 maxLabel={maxBalanceLabel}
@@ -705,7 +622,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         {step === 3 && asset && recipient && (
           <>
             <TxTitleBlock
-              kicker="Step 4 of 4"
+              kicker="Step 3 of 3"
               title={isPrivate ? 'Confirm private send' : 'Confirm'}
               subtitle={
                 isPrivate

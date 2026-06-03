@@ -1,40 +1,44 @@
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
-import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
-import { StepBar } from '@/src/design-system/primitives/StepBar';
-import { Tone } from '@/src/design-system/palettes';
+import { serif } from '@/src/design-system/typography';
+import { T } from '@/src/design-system/tokens';
 
 type Props = {
-  step: number;
-  total?: number;
-  tone?: Tone;
+  title: string;
   onBack: () => void;
-  onClose: () => void;
 };
 
-export function TxHeader({
-  step,
-  total = 4,
-  tone = 'silver',
-  onBack,
-  onClose,
-}: Props) {
+export function TxHeader({ title, onBack }: Props) {
   const insets = useSafeAreaInsets();
   return (
     <View
       style={{
         paddingTop: insets.top,
-        paddingHorizontal: 24,
-        paddingBottom: 14,
+        paddingHorizontal: 20,
+        paddingBottom: 12,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
       }}
     >
       <BackBtn onPress={onBack} />
-      <StepBar current={step} total={total} tone={tone} />
-      <CloseBtn onPress={onClose} />
+      <Text
+        style={[
+          serif,
+          {
+            flex: 1,
+            textAlign: 'center',
+            fontSize: 32,
+            fontStyle: 'italic',
+            color: T.ink,
+            includeFontPadding: false,
+          },
+        ]}
+      >
+        {title}
+      </Text>
+      <View style={{ width: 36 }} />
     </View>
   );
 }
