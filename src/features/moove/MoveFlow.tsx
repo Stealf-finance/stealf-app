@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
+import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
@@ -446,22 +446,23 @@ export function MoveFlow() {
             gap: 14,
           }}
         >
-          <View style={{ width: 36 }} />
+          <BackBtn onPress={close} />
           <Text
             style={[
               serif,
               {
                 flex: 1,
                 textAlign: 'center',
-                fontSize: 17,
+                fontSize: 32,
+                fontStyle: 'italic',
                 color: T.ink,
                 includeFontPadding: false,
               },
             ]}
           >
-            {config.title}
+            Move
           </Text>
-          <CloseBtn onPress={close} />
+          <View style={{ width: 36 }} />
         </View>
 
         <View
@@ -569,22 +570,23 @@ export function MoveFlow() {
           gap: 14,
         }}
       >
-        <View style={{ width: 36 }} />
+        <BackBtn onPress={close} />
         <Text
           style={[
             serif,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontStyle: 'italic',
               color: T.ink,
               includeFontPadding: false,
             },
           ]}
         >
-          {config.title}
+          Move
         </Text>
-        <CloseBtn onPress={close} />
+        <View style={{ width: 36 }} />
       </View>
 
       <View style={{ paddingHorizontal: 20 }}>
