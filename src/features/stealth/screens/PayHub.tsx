@@ -6,7 +6,6 @@ import { useFocusEffect } from 'expo-router';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { serif, sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
-import { EncryptedSenderCard } from '@/src/features/stealth/components/EncryptedSenderCard';
 import { PayMethodTiles } from '@/src/features/stealth/components/PayMethodTiles';
 import { PayRecents } from '@/src/features/stealth/components/PayRecents';
 import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
@@ -61,7 +60,7 @@ export function PayHub() {
             { fontSize: 32, fontStyle: 'italic', color: T.ink, includeFontPadding: false },
           ]}
         >
-          Pay
+          New Payment
         </Text>
       </View>
 
@@ -72,12 +71,7 @@ export function PayHub() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ marginBottom: 26 }}>
-          <EncryptedSenderCard />
-        </View>
-
-        <SectionLabel>New payment</SectionLabel>
-        <View style={{ marginBottom: 30 }}>
+        <View style={{ marginTop: 6, marginBottom: 30 }}>
           <PayMethodTiles />
         </View>
 

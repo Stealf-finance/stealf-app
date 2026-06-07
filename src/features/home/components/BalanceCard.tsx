@@ -2,7 +2,6 @@ import { Pressable, Text, View } from 'react-native';
 import { sansation, sansationLight, serif } from '@/src/design-system/typography';
 import { Icons } from '@/src/design-system/icons';
 
-// Large balance sizes, matching the Stealth hub.
 const FONT = { int: 76, dec: 32, dollar: 36 };
 
 type Props = {
@@ -17,8 +16,6 @@ type Props = {
 
 function splitUsd(usd: number): { int: string; dec: string } {
   const [int, dec = '00'] = Math.abs(usd).toFixed(2).split('.');
-  // Force en-US grouping so it's always "," for thousands + "." before cents,
-  // regardless of the device locale.
   const grouped = Number(int).toLocaleString('en-US');
   return { int: `${usd < 0 ? '-' : ''}${grouped}`, dec: `.${dec}` };
 }

@@ -103,9 +103,6 @@ export function ClaimsScreen() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
 
-  // `target` picks the claim destination:
-  //   bank      → claim self-burnable UTXOs out to the public bank wallet
-  //   encrypted → claim incoming transfers into the encrypted balance
   const params = useLocalSearchParams<{ target?: string }>();
   const isEncrypted = params.target === 'encrypted';
   const palette = txPalette(isEncrypted ? 'gold' : 'silver');
@@ -114,10 +111,6 @@ export function ClaimsScreen() {
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
   const { claimSelfToPublic, claimReceived } = useUmbra();
-  // Force a fresh scan on screen mount for the active target — this screen
-  // owns the truth of claimable UTXOs. The home pending-dots read the cache.
-  // Both hooks share the same underlying scan query, so the idle one just
-  // selects a different slice of the cached result.
   const cash = usePendingClaimsForCash({ fetch: !isEncrypted });
   const inbound = usePendingClaims({ fetch: isEncrypted });
   const {
