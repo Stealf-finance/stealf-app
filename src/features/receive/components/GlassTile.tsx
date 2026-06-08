@@ -145,8 +145,6 @@ function SoonPill() {
         paddingHorizontal: 7,
         paddingVertical: 3,
         borderRadius: 100,
-        borderWidth: 1,
-        borderColor: T.hairline,
         backgroundColor: 'rgba(255,255,255,0.04)',
       }}
     >

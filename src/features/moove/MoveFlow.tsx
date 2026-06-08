@@ -1,6 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
-import { Pressable, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
+} from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  interpolateColor,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   maxSpendableSol,
@@ -12,17 +25,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
-import { Numpad } from '@/src/features/send/components/Numpad';
-import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
-import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
-import { PercentageChips } from '@/src/features/send/components/PercentageChips';
+import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
+import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
+import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
+import { MoveFromToCards } from '@/src/features/moove/components/MoveFromToCards';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
   setSelectedAsset,
   useSelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
-import { Icons } from '@/src/design-system/icons';
-import { sansation, sansationLight, serif } from '@/src/design-system/typography';
+import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { toAddress } from '@/src/services/solana/kit';
@@ -77,23 +89,40 @@ type DirectionConfig = {
 
 const CONFIG: Record<MoveDirection, DirectionConfig> = {
   'bank-to-shielded': {
-    title: 'Bank to Encrypted Balance',
-    fromLabel: 'Bank',
+    title: 'Virtual Bank Account to Encrypted Balance',
+    fromLabel: 'Virtual Bank Account',
     toLabel: 'Encrypted balance',
     cta: 'Slide to move',
   },
   'shielded-to-bank': {
-    title: 'Encrypted Balance to Bank',
+    title: 'Encrypted Balance to Virtual Bank Account ',
     fromLabel: 'Encrypted balance',
-    toLabel: 'Bank',
+    toLabel: 'Virtual Bank Account',
     cta: 'Slide to move',
   },
   'stealth-to-bank': {
-    title: 'Wallet to Bank',
+    title: 'Wallet to Virtual Bank Account ',
     fromLabel: 'Wallet',
-    toLabel: 'Bank',
+    toLabel: 'Virtual Bank Account',
     cta: 'Slide to move',
   },
+};
+
+const DIRECTIONS: MoveDirection[] = [
+  'bank-to-shielded',
+  'shielded-to-bank',
+  'stealth-to-bank',
+];
+
+// Height of one page in the vertical From/To carousel.
+const DIR_ITEM_H = 92;
+
+type Account = 'bank' | 'stealth' | 'encrypted';
+
+const DIR_ACCOUNTS: Record<MoveDirection, { from: Account; to: Account }> = {
+  'bank-to-shielded': { from: 'bank', to: 'encrypted' },
+  'shielded-to-bank': { from: 'encrypted', to: 'bank' },
+  'stealth-to-bank': { from: 'stealth', to: 'bank' },
 };
 
 function formatBalance(amount: number): string {
@@ -101,12 +130,58 @@ function formatBalance(amount: number): string {
   return amount.toFixed(4).replace(/\.?0+$/, '');
 }
 
+/** A single pagination dot that smoothly elongates + tints toward the accent
+ *  as the carousel scrolls onto its page (driven by a 0..n-1 progress). */
+function DirDot({
+  index,
+  progress,
+  accent,
+}: {
+  index: number;
+  progress: SharedValue<number>;
+  accent: string;
+}) {
+  const style = useAnimatedStyle(() => {
+    const t = Math.max(0, 1 - Math.abs(progress.value - index));
+    return {
+      height: 6 + t * 12,
+      opacity: 0.4 + t * 0.6,
+      backgroundColor: interpolateColor(t, [0, 1], ['#6a6a70', accent]),
+    };
+  });
+  return <Animated.View style={[{ width: 6, borderRadius: 3 }, style]} />;
+}
+
 export function MoveFlow() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ direction?: string }>();
-  const direction = (params.direction as MoveDirection) ?? 'bank-to-shielded';
-  const config = CONFIG[direction];
+  const initialIndex = Math.max(
+    0,
+    DIRECTIONS.indexOf((params.direction as MoveDirection) ?? 'bank-to-shielded'),
+  );
+  // The active direction is swipeable (cycles the From/To pair through the 3
+  // valid directions); it starts from the route param.
+  const [directionIndex, setDirectionIndex] = useState(initialIndex);
+  const dirScrollRef = useRef<ScrollView>(null);
+  // Continuous 0..n-1 scroll position driving the smooth dot animation.
+  const dirProgress = useSharedValue(initialIndex);
+  const direction = DIRECTIONS[directionIndex];
+
+  const onDirScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const i = Math.round(e.nativeEvent.contentOffset.y / DIR_ITEM_H);
+    if (i !== directionIndex && i >= 0 && i < DIRECTIONS.length) {
+      setDirectionIndex(i);
+    }
+  };
+
+  // Keep the vertical pager in sync when the index changes via the dots.
+  useEffect(() => {
+    dirScrollRef.current?.scrollTo({
+      y: directionIndex * DIR_ITEM_H,
+      animated: true,
+    });
+  }, [directionIndex]);
 
   const tone: Tone = direction === 'shielded-to-bank' ? 'gold' : 'silver';
   const palette = txPalette(tone);
@@ -135,15 +210,13 @@ export function MoveFlow() {
     ensureRegistered,
   } = useUmbra();
 
-  const { data: bankBalanceData } = useBalance(
-    direction === 'bank-to-shielded' ? user?.bankWallet ?? null : null,
-  );
+  // Fetched unconditionally: it's the source for bank-to-shielded and the
+  // destination for the to-bank directions (shown in the From/To cards).
+  const { data: bankBalanceData } = useBalance(user?.bankWallet ?? null);
 
-  const { data: stealthBalanceData } = useBalance(
-    direction === 'stealth-to-bank' || direction === 'shielded-to-bank'
-      ? user?.stealfWallet ?? null
-      : null,
-  );
+  // Unconditional too — any of the three accounts can be source or
+  // destination depending on the swiped direction.
+  const { data: stealthBalanceData } = useBalance(user?.stealfWallet ?? null);
   const { data: shielded } = useShieldedSolBalance();
   const { data: encrypted } = useEncryptedBalances();
 
@@ -156,25 +229,21 @@ export function MoveFlow() {
   const decimals = selectionActive ? selected!.decimals : SOL_DECIMALS;
   const iconUri = selectionActive ? selected!.iconUri : SOL_ICON_URI;
 
-  let sourceBalance = 0;
-  if (direction === 'bank-to-shielded') {
-    const tokens = bankBalanceData?.tokens ?? [];
-    sourceBalance = selectionActive
-      ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
-      : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
-  } else if (direction === 'stealth-to-bank') {
-    const tokens = stealthBalanceData?.tokens ?? [];
-    sourceBalance = selectionActive
-      ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
-      : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
-  } else {
-    if (selectionActive) {
-      sourceBalance =
-        encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ?? 0;
-    } else {
-      sourceBalance = shielded?.sol ?? 0;
+  // Balance of any account in the currently-selected asset.
+  const balForAccount = (acct: Account): number => {
+    if (acct === 'encrypted') {
+      return selectionActive
+        ? encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ?? 0
+        : shielded?.sol ?? 0;
     }
-  }
+    const tokens =
+      (acct === 'bank' ? bankBalanceData : stealthBalanceData)?.tokens ?? [];
+    return selectionActive
+      ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
+      : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+  };
+
+  const sourceBalance = balForAccount(DIR_ACCOUNTS[direction].from);
 
   const rate = selectionActive
     ? selected!.price
@@ -209,7 +278,7 @@ export function MoveFlow() {
 
   useEffect(() => {
     setAmount('0');
-  }, [selected?.mint, setAmount]);
+  }, [selected?.mint, direction, setAmount]);
 
   useEffect(() => {
     return () => {
@@ -221,19 +290,11 @@ export function MoveFlow() {
     inputMode === 'asset'
       ? `$${fiatAmount.toFixed(2)}`
       : `${solAmount.toFixed(4)} ${assetSymbol}`;
-  const secondaryAmount = hasProtocolFee
-    ? `~${secondaryBase} (-0.30%)`
-    : `~${secondaryBase}`;
+  const secondaryAmount = `~${secondaryBase}`;
 
-  const maxBalanceLabel =
-    inputMode === 'fiat'
-      ? `$${(maxSol * rate).toFixed(2)}`
-      : `${maxSol.toFixed(4)} ${assetSymbol}`;
+  const fromBalanceLabel = `${formatBalance(sourceBalance)} ${assetSymbol}`;
 
   const close = () => router.back();
-
-  const stealthMissingForBankToShielded =
-    direction === 'bank-to-shielded' && !!user && !user.stealfWallet;
 
   const insufficient = solAmount > sourceBalance;
   const swipeDisabled = solAmount <= 0 || insufficient;
@@ -430,133 +491,6 @@ export function MoveFlow() {
     })();
   };
 
-  const ctaLabel = config.cta;
-
-  if (stealthMissingForBankToShielded) {
-    return (
-      <CenterGlow tone={tone} flat>
-        <View
-          style={{
-            paddingTop: insets.top,
-            paddingHorizontal: 20,
-            paddingBottom: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 14,
-          }}
-        >
-          <BackBtn onPress={close} />
-          <Text
-            style={[
-              serif,
-              {
-                flex: 1,
-                textAlign: 'center',
-                fontSize: 32,
-                fontStyle: 'italic',
-                color: T.ink,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            Move
-          </Text>
-          <View style={{ width: 36 }} />
-        </View>
-
-        <View
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 32,
-            gap: 14,
-          }}
-        >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 9,
-                letterSpacing: 2.52,
-                textTransform: 'uppercase',
-                color: palette.accent,
-                fontWeight: '700',
-              },
-            ]}
-          >
-            Stealth wallet required
-          </Text>
-          <Text
-            style={[
-              sansationLight,
-              {
-                fontSize: 26,
-                color: T.ink,
-                textAlign: 'center',
-                letterSpacing: -0.78,
-                lineHeight: 32,
-              },
-            ]}
-          >
-            Set up your stealth wallet first
-          </Text>
-          <Text
-            style={[
-              serif,
-              {
-                fontSize: 14,
-                fontStyle: 'italic',
-                color: palette.inkDim,
-                textAlign: 'center',
-                lineHeight: 21,
-                paddingHorizontal: 12,
-              },
-            ]}
-          >
-            You need a stealth wallet to receive funds privately. Open the
-            Stealth tab to create or import one, then come back here.
-          </Text>
-          <Pressable
-            onPress={() => {
-              router.replace('/(tabs)/stealth');
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Open stealth setup"
-            style={{
-              marginTop: 12,
-              paddingVertical: 12,
-              paddingHorizontal: 22,
-              borderRadius: 100,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)',
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 11,
-                  letterSpacing: 2.4,
-                  textTransform: 'uppercase',
-                  fontWeight: '700',
-                  color: T.ink,
-                },
-              ]}
-            >
-              Set up stealth wallet
-            </Text>
-            <Icons.arrRight size={12} color={T.ink} />
-          </Pressable>
-        </View>
-      </CenterGlow>
-    );
-  }
-
   return (
     <CenterGlow tone={tone} flat>
       <View
@@ -572,12 +506,12 @@ export function MoveFlow() {
         <BackBtn onPress={close} />
         <Text
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 32,
-              fontStyle: 'italic',
+              fontSize: 24,
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
             },
@@ -588,47 +522,112 @@ export function MoveFlow() {
         <View style={{ width: 36 }} />
       </View>
 
-      <View style={{ flex: 1, justifyContent: 'flex-start', paddingTop: 8, gap: 12 }}>
-        <SourceAssetCard
-          label="Move"
-          fromLabel={config.fromLabel}
-          toLabel={config.toLabel}
-          tone={tone}
+      {/* Amount card (no asset row — the From/To cards carry the context) */}
+      <View style={{ marginTop: 20 }}>
+        <AmountCardTiles
           iconSource={{ uri: iconUri }}
           tokenLabel={assetSymbol}
           primaryAmount={primaryDisplay}
           secondaryAmount={secondaryAmount}
           inputMode={inputMode}
-          onPressTokenPill={
+          onToggleMode={onToggleMode}
+          toggleDisabled={rate <= 0}
+          showAssetRow={false}
+        />
+      </View>
+
+      <View style={{ flex: 1 }} />
+
+      {/* Vertical From → To carousel: swipe up/down to cycle the 3 valid
+          directions; vertical dots on the right mirror the selection. */}
+      <View
+        style={{
+          marginBottom: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        <ScrollView
+          ref={dirScrollRef}
+          style={{ flex: 1, height: DIR_ITEM_H }}
+          pagingEnabled
+          showsVerticalScrollIndicator={false}
+          contentOffset={{ x: 0, y: initialIndex * DIR_ITEM_H }}
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            dirProgress.value = e.nativeEvent.contentOffset.y / DIR_ITEM_H;
+          }}
+          onMomentumScrollEnd={onDirScrollEnd}
+        >
+          {DIRECTIONS.map((dir) => {
+            const acc = DIR_ACCOUNTS[dir];
+            return (
+              <View
+                key={dir}
+                style={{
+                  height: DIR_ITEM_H,
+                  justifyContent: 'center',
+                  paddingLeft: 18,
+                }}
+              >
+                <MoveFromToCards
+                  tone={dir === 'shielded-to-bank' ? 'gold' : 'silver'}
+                  fromLabel={CONFIG[dir].fromLabel}
+                  fromBalance={`$${(balForAccount(acc.from) * rate).toFixed(2)}`}
+                  toLabel={CONFIG[dir].toLabel}
+                  toBalance={`$${(balForAccount(acc.to) * rate).toFixed(2)}`}
+                />
+              </View>
+            );
+          })}
+        </ScrollView>
+
+        {/* Vertical pagination dots */}
+        <View
+          style={{
+            width: 24,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 7,
+          }}
+        >
+          {DIRECTIONS.map((dir, i) => (
+            <Pressable
+              key={dir}
+              onPress={() => setDirectionIndex(i)}
+              accessibilityRole="button"
+              accessibilityLabel={`Direction ${i + 1}`}
+              hitSlop={8}
+            >
+              <DirDot index={i} progress={dirProgress} accent={palette.accent} />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* Asset selector + Use Max */}
+      <View style={{ marginBottom: 14 }}>
+        <AssetSelectRow
+          iconSource={{ uri: iconUri }}
+          name={assetSymbol}
+          balanceLabel={fromBalanceLabel}
+          onPressSelect={
             supportsMultiToken
               ? () => router.push(`/asset-picker?wallet=${pickerWalletParam}`)
               : undefined
           }
-          onToggleMode={onToggleMode}
-          toggleDisabled={rate <= 0}
-          maxLabel={maxBalanceLabel}
+          onPressMax={() => onPressPercent(1)}
         />
       </View>
 
-      <PercentageChips
-        onPressPercent={onPressPercent}
-        disabled={maxSol <= 0}
-      />
-
-      <Numpad onKey={onKey} tone={tone} />
-
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 24,
-          paddingBottom: insets.bottom + 16,
-        }}
-      >
-        <SwipeToSend
+      {/* Tiled keypad + CTA */}
+      <View style={{ paddingBottom: insets.bottom + 12 }}>
+        <TiledKeypadPanel
+          onKey={onKey}
           tone={tone}
-          label={insufficient ? 'Insufficient balance' : ctaLabel}
-          onSend={onSubmit}
-          disabled={swipeDisabled}
+          ctaLabel={insufficient ? 'Insufficient balance' : 'Move'}
+          onPressCta={onSubmit}
+          ctaDisabled={swipeDisabled}
         />
       </View>
 

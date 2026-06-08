@@ -22,7 +22,7 @@ import {
   setSelectedAsset,
   useSelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
-import { serif } from '@/src/design-system/typography';
+import { sansation } from '@/src/design-system/typography';
 import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -270,12 +270,12 @@ export function ShieldFlow({ direction }: Props) {
         <BackBtn onPress={close} />
         <Text
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 32,
-              fontStyle: 'italic',
+              fontSize: 24,
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
             },

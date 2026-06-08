@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
-import { sansation, sansationLight, serif } from '@/src/design-system/typography';
+import { sansation, serif } from '@/src/design-system/typography';
 import { Icons } from '@/src/design-system/icons';
 
 const FONT = { int: 76, dec: 32, dollar: 36 };
@@ -92,7 +92,7 @@ export function BalanceCard({
           )}
           <Text
             style={[
-              sansationLight,
+              sansation,
               {
                 fontSize: FONT.int,
                 letterSpacing: FONT.int * -0.04,
@@ -107,7 +107,7 @@ export function BalanceCard({
           {hidden ? null : (
             <Text
               style={[
-                sansationLight,
+                sansation,
                 {
                   fontSize: FONT.dec,
                   color: inkDim,

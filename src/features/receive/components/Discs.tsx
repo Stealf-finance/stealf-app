@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 import { Image } from 'expo-image';
+import { Icons } from '@/src/design-system/icons';
 import { T } from '@/src/design-system/tokens';
 
 const STEALF_SIZE = 36;
@@ -149,5 +150,25 @@ export function BankDisc() {
         borderRadius: 18,
       }}
     />
+  );
+}
+
+/** Move ("Moove") icon disc — the move glyph in a glass circle. */
+export function MoveDisc() {
+  return (
+    <View
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        borderWidth: 1,
+        borderColor: T.hairline,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Icons.move size={20} color={T.ink} />
+    </View>
   );
 }

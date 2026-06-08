@@ -42,20 +42,12 @@ export function TiledKeypadPanel({
 }: Props) {
   const palette = txPalette(tone);
   return (
-    <View
-      style={{
-        marginHorizontal: 12,
-        borderRadius: 30,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-        overflow: 'hidden',
-      }}
-    >
-      <LinearGradient
-        colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.015)']}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={{ padding: 16, paddingBottom: 18 }}
+      <View
+        style={{
+          marginHorizontal: 12,
+          padding: 16,
+          paddingBottom: 18,
+        }}
       >
         {/* Tile grid — rounding/flex live on static View wrappers because
             layout props set inside a Pressable style-function don't apply
@@ -77,7 +69,6 @@ export function TiledKeypadPanel({
                         borderRadius: 18,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        backgroundColor: 'rgba(255,255,255,0.05)',
                       }}
                     >
                       <Text
@@ -131,7 +122,6 @@ export function TiledKeypadPanel({
             </LinearGradient>
           </View>
         </Pressable>
-      </LinearGradient>
-    </View>
+      </View>
   );
 }

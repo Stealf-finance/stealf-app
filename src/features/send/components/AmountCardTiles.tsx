@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { Icons } from '@/src/design-system/icons';
-import { sansation, sansationBold, serif } from '@/src/design-system/typography';
+import { sansation, serif } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import type { InputMode } from './SourceAssetCard';
 
@@ -181,7 +181,7 @@ export function AmountCardTiles({
             ) : null}
             <Text
               style={[
-                sansationBold,
+                sansation,
                 {
                   fontSize: amountSize,
                   lineHeight: amountSize,
