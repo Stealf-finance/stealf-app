@@ -146,12 +146,12 @@ export function PrivateKeyScreen() {
         <BackBtn onPress={() => router.back()} />
         <Text
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
               fontSize: 32,
-              fontStyle: 'italic',
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
               marginRight: 36,

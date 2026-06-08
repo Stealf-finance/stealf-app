@@ -21,7 +21,6 @@ import { Icons } from '@/src/design-system/icons';
 import {
   mono,
   sansation,
-  serif,
 } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -206,12 +205,12 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
         <BackBtn onPress={back} />
         <Text
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
               fontSize: 32,
-              fontStyle: 'italic',
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
             },

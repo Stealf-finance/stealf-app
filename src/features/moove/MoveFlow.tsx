@@ -17,6 +17,7 @@ import Animated, {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   maxSpendableSol,
+  protocolFeeSol,
   SOL_DECIMALS,
   PRIVATE_OP_SOL_FEE_RESERVE,
 } from '@/src/features/send/lib/amount';
@@ -29,6 +30,7 @@ import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles'
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
 import { MoveFromToCards } from '@/src/features/moove/components/MoveFromToCards';
+import { MoveConfirm } from '@/src/features/moove/components/MoveConfirm';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
   setSelectedAsset,
@@ -116,6 +118,9 @@ const DIRECTIONS: MoveDirection[] = [
 
 // Height of one page in the vertical From/To carousel.
 const DIR_ITEM_H = 92;
+
+// Flat Solana network fee (same value the send flow uses).
+const NETWORK_FEE_SOL = 0.000005;
 
 type Account = 'bank' | 'stealth' | 'encrypted';
 
@@ -294,7 +299,21 @@ export function MoveFlow() {
 
   const fromBalanceLabel = `${formatBalance(sourceBalance)} ${assetSymbol}`;
 
+  // Confirmation step (slide-to-confirm) after the amount entry.
+  const [step, setStep] = useState<'amount' | 'confirm'>('amount');
+  const config = CONFIG[direction];
+
+  const networkFeeUsd =
+    typeof solPrice === 'number' && solPrice > 0
+      ? NETWORK_FEE_SOL * solPrice
+      : 0;
+  const privacyFeeUsd = protocolFeeSol(solAmount) * rate;
+
   const close = () => router.back();
+  const handleBack = () => {
+    if (step === 'confirm') setStep('amount');
+    else close();
+  };
 
   const insufficient = solAmount > sourceBalance;
   const swipeDisabled = solAmount <= 0 || insufficient;
@@ -503,14 +522,14 @@ export function MoveFlow() {
           gap: 14,
         }}
       >
-        <BackBtn onPress={close} />
+        <BackBtn onPress={handleBack} />
         <Text
           style={[
             sansation,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 24,
+              fontSize: 32,
               fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
@@ -625,11 +644,23 @@ export function MoveFlow() {
         <TiledKeypadPanel
           onKey={onKey}
           tone={tone}
-          ctaLabel={insufficient ? 'Insufficient balance' : 'Move'}
-          onPressCta={onSubmit}
+          ctaLabel={insufficient ? 'Insufficient balance' : 'Continue'}
+          onPressCta={() => setStep('confirm')}
           ctaDisabled={swipeDisabled}
         />
       </View>
+
+      <MoveConfirm
+        visible={step === 'confirm'}
+        onClose={() => setStep('amount')}
+        tone={tone}
+        title={`Move to ${config.toLabel}`}
+        fiat={fiatAmount}
+        amountLabel={`${formatBalance(solAmount)} ${assetSymbol}`}
+        networkFeeUsd={networkFeeUsd}
+        privacyFeeUsd={privacyFeeUsd}
+        onConfirm={onSubmit}
+      />
 
       <StealthSetupOverlay onClose={close} />
     </CenterGlow>

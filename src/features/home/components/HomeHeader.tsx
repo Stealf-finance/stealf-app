@@ -1,23 +1,17 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
 import { VaultGlyph } from '@/src/design-system/icons/VaultGlyph';
+import { GreetingSlot } from '@/src/components/GreetingSlot';
 import { useToast } from '@/src/components/toast/ToastContext';
-import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { getGreeting } from '@/src/lib/greeting';
-import { sansation } from '@/src/design-system/typography';
-import { T } from '@/src/design-system/tokens';
 import type { HomeCardId } from '../lib/homeCardActions';
 
-/** Top bar. The time-based greeting sits on the left; the right holds quick
- *  shortcuts — a Cards button on the public cards, and History + Claim on the
- *  private cards (Wallet / Encrypted balance). */
+/** Top bar. The greeting (or a live pending-op indicator) sits on the left;
+ *  the right holds quick shortcuts — Cards on the public cards, History +
+ *  Claim on the private ones, plus History on Bank. */
 export function HomeHeader({ card }: { card: HomeCardId }) {
   const { show } = useToast();
-  const { user } = useAuth();
   const router = useSafeRouter();
-  const greeting = getGreeting();
-  const username = user?.username ?? '';
   const soon = (label: string) =>
     show({ kind: 'info', title: 'Coming soon', message: `${label} are coming soon.` });
 
@@ -34,16 +28,7 @@ export function HomeHeader({ card }: { card: HomeCardId }) {
         paddingBottom: 8,
       }}
     >
-      <Text
-        style={[sansation, { flex: 1, fontSize: 14, color: T.inkDim }]}
-        numberOfLines={1}
-      >
-        {greeting}
-        {username ? ', ' : ''}
-        {username ? (
-          <Text style={{ color: T.ink, fontWeight: '600' }}>{username}</Text>
-        ) : null}
-      </Text>
+      <GreetingSlot />
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         {isPrivate ? (

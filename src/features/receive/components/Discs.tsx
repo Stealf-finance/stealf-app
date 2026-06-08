@@ -153,6 +153,18 @@ export function BankDisc() {
   );
 }
 
+/** Square variant (no circular crop) — used on the Pay hub tiles. */
+export function BankDiscSquare() {
+  return (
+    <Image
+      source={require('@/assets/images/bank-icon.png')}
+      contentFit="contain"
+      cachePolicy="memory-disk"
+      style={{ width: 38, height: 38 }}
+    />
+  );
+}
+
 /** Move ("Moove") icon disc — the move glyph in a glass circle. */
 export function MoveDisc() {
   return (

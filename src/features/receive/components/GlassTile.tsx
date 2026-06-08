@@ -17,6 +17,8 @@ type Props = {
   labelNumberOfLines?: number;
   /** Base label font size before auto-shrink. Defaults to 15. */
   labelFontSize?: number;
+  /** Drops the outer hairline border. */
+  borderless?: boolean;
 };
 
 export function GlassTile({
@@ -29,6 +31,7 @@ export function GlassTile({
   trailing,
   labelNumberOfLines = 2,
   labelFontSize = 15,
+  borderless = false,
 }: Props) {
   return (
     <Pressable
@@ -42,7 +45,7 @@ export function GlassTile({
         aspectRatio: 1,
         borderRadius: 18,
         overflow: 'hidden',
-        borderWidth: 1,
+        borderWidth: borderless ? 0 : 1,
         borderColor: 'rgba(255,255,255,0.10)',
         shadowColor: '#000',
         shadowOpacity: 0.4,

@@ -13,7 +13,7 @@ import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { Icons } from '@/src/design-system/icons';
-import { serif, sansation, mono } from '@/src/design-system/typography';
+import { sansation, mono } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
@@ -56,12 +56,12 @@ export function AccountDetailsScreen() {
         <BackBtn onPress={() => router.back()} />
         <Text
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
               fontSize: 32,
-              fontStyle: 'italic',
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
             },

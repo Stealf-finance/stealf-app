@@ -20,13 +20,11 @@ export function GetBankAccountCard() {
       }
       style={({ pressed }) => ({ marginTop: 22, opacity: pressed ? 0.85 : 1 })}
     >
-      {/* Outer view clips the blur to the rounded corners + carries the border. */}
+      {/* Outer view clips the blur to the rounded corners. */}
       <View
         style={{
           borderRadius: 22,
           overflow: 'hidden',
-          borderWidth: 1,
-          borderColor: T.hairlineStrong,
         }}
       >
         <BlurView

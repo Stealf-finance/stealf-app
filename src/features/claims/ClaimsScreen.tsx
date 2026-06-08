@@ -14,10 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { LoaderRefreshButton } from '@/src/design-system/primitives/LoaderRefreshButton';
-import { LoaderDots } from '@/src/design-system/primitives/LoaderDots';
 import { Icons } from '@/src/design-system/icons';
 import { mono, sansation, serif } from '@/src/design-system/typography';
-import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -105,7 +103,6 @@ export function ClaimsScreen() {
 
   const params = useLocalSearchParams<{ target?: string }>();
   const isEncrypted = params.target === 'encrypted';
-  const palette = txPalette(isEncrypted ? 'gold' : 'silver');
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -240,7 +237,7 @@ export function ClaimsScreen() {
     >
       <View
         style={{
-          paddingTop: insets.top,
+          paddingTop: insets.top + 32,
           paddingBottom: 12,
           paddingHorizontal: 20,
           flexDirection: 'row',
@@ -251,12 +248,12 @@ export function ClaimsScreen() {
         <BackBtn onPress={close} />
         <Text
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
               fontSize: 32,
-              fontStyle: 'italic',
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
             },
@@ -309,13 +306,8 @@ export function ClaimsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {isFetching && items.length === 0 ? (
-          <ScanningState palette={palette} />
-        ) : items.length === 0 ? (
-          <EmptyState
-            palette={palette}
-            destination={isEncrypted ? 'your encrypted balance' : 'your bank'}
-          />
+        {items.length === 0 ? (
+          <EmptyState />
         ) : (
           items.map((tx, i) => {
             if (__DEV__ && i === 0) {
@@ -426,48 +418,24 @@ function ClaimItem({
   );
 }
 
-function ScanningState({ palette }: { palette: Palette }) {
-  return (
-    <View style={{ paddingTop: 72, alignItems: 'center', gap: 20 }}>
-      <LoaderDots color={palette.accent} size={9} bounce={9} />
-      <Text
-        style={[
-          serif,
-          {
-            fontSize: 14,
-            fontStyle: 'italic',
-            color: palette.inkFaint,
-            textAlign: 'center',
-          },
-        ]}
-      >
-        Scanning encrypted notes…
-      </Text>
-    </View>
-  );
-}
-
-function EmptyState({
-  palette,
-  destination,
-}: {
-  palette: Palette;
-  destination: string;
-}) {
+function EmptyState() {
   return (
     <View style={{ paddingTop: 60, alignItems: 'center' }}>
       <Text
         style={[
-          serif,
+          sansation,
           {
-            fontSize: 15,
-            fontStyle: 'italic',
-            color: palette.inkFaint,
+            fontSize: 9,
+            letterSpacing: 2.52,
+            textTransform: 'uppercase',
+            color: T.inkDim,
+            fontWeight: '700',
             textAlign: 'center',
+            includeFontPadding: false,
           },
         ]}
       >
-        No transfers on the way to {destination}.
+        No private transfer on the way
       </Text>
     </View>
   );

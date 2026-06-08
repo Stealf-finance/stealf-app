@@ -274,7 +274,7 @@ export function ShieldFlow({ direction }: Props) {
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 24,
+              fontSize: 32,
               fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,

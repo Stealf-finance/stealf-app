@@ -81,13 +81,13 @@ export function BankClaimButton({
           pointerEvents="none"
           style={{
             position: 'absolute',
-            top: -2,
-            right: -2,
+            top: 3,
+            right: 2,
             width: 9,
             height: 9,
             borderRadius: 5,
-            backgroundColor: '#e6c079',
-            shadowColor: '#e6c079',
+            backgroundColor: '#dcdce1',
+            shadowColor: '#dcdce1',
             shadowOpacity: 0.9,
             shadowRadius: 4,
             shadowOffset: { width: 0, height: 0 },

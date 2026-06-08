@@ -5,7 +5,7 @@ import { GlassTile } from '@/src/features/receive/components/GlassTile';
 import {
   UmbraDisc,
   SolanaTokenDisc,
-  BankDisc,
+  BankDiscSquare,
   MoveDisc,
   StealfDisc,
 } from '@/src/features/receive/components/Discs';
@@ -14,7 +14,7 @@ import { PAY_METHODS, type PayMethod } from '@/src/features/stealth/lib/payMetho
 const DISCS = {
   umbra: UmbraDisc,
   solana: SolanaTokenDisc,
-  bank: BankDisc,
+  bank: BankDiscSquare,
   move: MoveDisc,
   stealf: StealfDisc,
 } as const;
@@ -50,6 +50,7 @@ export function PayMethodTiles() {
                 labelNumberOfLines={1}
                 labelFontSize={12}
                 disabled={m.disabled}
+                borderless
                 onPress={m.route ? () => router.push(m.route as never) : undefined}
               />
             );

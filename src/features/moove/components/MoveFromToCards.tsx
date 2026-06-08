@@ -57,13 +57,9 @@ export function MoveFromToCards({
               borderRadius: 18,
               padding: 14,
               backgroundColor: palette.accentSoft,
-              borderWidth: 1,
-              borderColor: palette.accentDim,
             }}
           >
-            <Text style={[sansation, { ...TAG, color: palette.accent }]}>
-              From
-            </Text>
+            <Text style={[sansation, { ...TAG, color: T.ink }]}>From</Text>
             <View
               style={{
                 flexDirection: 'row',
@@ -105,11 +101,9 @@ export function MoveFromToCards({
             borderRadius: 18,
             padding: 14,
             backgroundColor: T.bgRaised,
-            borderWidth: 1,
-            borderColor: T.hairline,
           }}
         >
-          <Text style={[sansation, { ...TAG, color: T.inkFaint }]}>To</Text>
+          <Text style={[sansation, { ...TAG, color: T.ink }]}>To</Text>
           <Text
             style={[
               sansation,
