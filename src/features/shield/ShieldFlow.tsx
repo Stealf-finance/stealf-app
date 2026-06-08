@@ -16,7 +16,7 @@ import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
-import { PercentageChips } from '@/src/features/send/components/PercentageChips';
+import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
   setSelectedAsset,
@@ -139,6 +139,8 @@ export function ShieldFlow({ direction }: Props) {
     inputMode === 'asset'
       ? `$${fiatAmount.toFixed(2)}`
       : `${solAmount.toFixed(4)} ${assetSymbol}`;
+
+  const balanceLabel = `${formatBalance(sourceBalance)} ${assetSymbol}`;
 
   const close = () => router.back();
 
@@ -284,7 +286,7 @@ export function ShieldFlow({ direction }: Props) {
         <View style={{ width: 36 }} />
       </View>
 
-      {/* Centered glass amount card */}
+      {/* Centered glass amount card (asset row moved below) */}
       <View style={{ marginTop: 20 }}>
         <AmountCardTiles
           iconSource={{ uri: iconUri ?? SOL_ICON_URI }}
@@ -292,24 +294,29 @@ export function ShieldFlow({ direction }: Props) {
           primaryAmount={primaryDisplay}
           secondaryAmount={secondaryAmount}
           inputMode={inputMode}
-          onPressTokenPill={() =>
+          onToggleMode={onToggleMode}
+          toggleDisabled={rate <= 0}
+          showAssetRow={false}
+        />
+      </View>
+
+      <View style={{ flex: 1 }} />
+
+      {/* Asset selector + balance + Use Max, below the amount */}
+      <View style={{ marginBottom: 14 }}>
+        <AssetSelectRow
+          iconSource={{ uri: iconUri ?? SOL_ICON_URI }}
+          name={assetSymbol}
+          balanceLabel={balanceLabel}
+          onPressSelect={() =>
             router.push(
               isShield
                 ? '/asset-picker?wallet=stealth'
                 : '/asset-picker?wallet=encrypted',
             )
           }
-          onToggleMode={onToggleMode}
-          toggleDisabled={rate <= 0}
+          onPressMax={() => onPressPercent(1)}
         />
-      </View>
-
-      <View style={{ flex: 1 }} />
-
-      {/* Negative margin pulls the chips down toward the keypad (the shared
-          PercentageChips carries a fixed marginBottom we don't want here). */}
-      <View style={{ marginBottom: -22 }}>
-        <PercentageChips onPressPercent={onPressPercent} disabled={maxSol <= 0} />
       </View>
 
       {/* Tiled keypad + CTA wrapped in one glass panel */}

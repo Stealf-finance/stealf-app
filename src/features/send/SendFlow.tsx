@@ -33,14 +33,14 @@ import {
   setSelectedAsset,
   type SelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
-import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
+import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
+import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { PercentageChips } from '@/src/features/send/components/PercentageChips';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
   RecipientRow,
   Recipient,
 } from '@/src/features/send/components/RecipientRow';
-import { Numpad } from '@/src/features/send/components/Numpad';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { SuccessScreen } from '@/src/features/transactions/SuccessScreen';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -280,10 +280,9 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const amountValid = amountNum > 0 && !exceedsBalance;
   const tokenAmountLabel =
     amountNum === 0 ? '0' : amountNum.toFixed(6).replace(/\.?0+$/, '');
-  const maxBalanceLabel =
-    inputMode === 'fiat'
-      ? `$${(maxSpendable * rate).toFixed(2)}`
-      : `${maxSpendable.toFixed(4).replace(/\.?0+$/, '') || '0'} ${asset?.symbol ?? ''}`;
+  const balanceLabel = `${
+    balanceNum.toFixed(4).replace(/\.?0+$/, '') || '0'
+  } ${asset?.symbol ?? ''}`;
   const feeUSD =
     typeof solPrice === 'number' && solPrice > 0
       ? NETWORK_FEE_SOL * solPrice
@@ -593,11 +592,8 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
 
         {step === 2 && asset && recipient && (
           <>
-            <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
-              <SourceAssetCard
-                label={isPrivate ? 'Sending privately' : 'Sending'}
-                toLabel={truncateAddress(recipient.name)}
-                tone={tone}
+            <View style={{ marginTop: 20 }}>
+              <AmountCardTiles
                 iconSource={asset.iconSource ?? { uri: SOL_ICON_URI }}
                 tokenLabel={asset.symbol}
                 primaryAmount={primaryDisplay}
@@ -612,30 +608,32 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                 }
                 onToggleMode={onToggleMode}
                 toggleDisabled={rate <= 0}
-                maxLabel={maxBalanceLabel}
+                balanceLabel={balanceLabel}
               />
             </View>
 
-            <PercentageChips
-              onPressPercent={onPressPercent}
-              disabled={maxSpendable <= 0}
-            />
+            <View style={{ flex: 1 }} />
 
-            <Numpad onKey={onKey} tone={tone} />
+            {/* Negative margin pulls the chips toward the keypad (the shared
+                PercentageChips carries a fixed marginBottom we don't want). */}
+            <View style={{ marginBottom: -22 }}>
+              <PercentageChips
+                onPressPercent={onPressPercent}
+                disabled={maxSpendable <= 0}
+              />
+            </View>
 
-            <View
-              style={{
-                paddingHorizontal: 24,
-                paddingTop: 16,
-                paddingBottom: insets.bottom + 24,
-              }}
-            >
-              <PillBtn
-                variant="primary"
+            <View style={{ paddingBottom: insets.bottom + 12 }}>
+              <TiledKeypadPanel
+                onKey={onKey}
                 tone={tone}
-                label={exceedsBalance && amountNum > 0 ? 'Insufficient balance' : 'Continue'}
-                disabled={!amountValid}
-                onPress={() => transitionTo(3, 'forward')}
+                ctaLabel={
+                  exceedsBalance && amountNum > 0
+                    ? 'Insufficient balance'
+                    : 'Continue'
+                }
+                onPressCta={() => transitionTo(3, 'forward')}
+                ctaDisabled={!amountValid}
               />
             </View>
           </>

@@ -78,8 +78,8 @@ export function BalanceCarousel({
             })}
           />
 
-          {/* Claim pill — glued under the balance on the bank & encrypted
-              cards (empty placeholder on the others so the slider stays in
+          {/* Claim pill — glued under the balance on the bank card only
+              (empty placeholder on the others so the slider stays in
               lockstep). */}
           <View style={{ marginTop: -40 }}>
             <SwipeSlider
@@ -87,11 +87,7 @@ export function BalanceCarousel({
               pageWidth={pageWidth}
               pages={HOME_CARDS.map((c) => (
                 <View key={c.id} style={{ alignItems: 'center' }}>
-                  {c.id === 'bank' ? (
-                    <BankClaimButton target="bank" />
-                  ) : c.id === 'encrypted' ? (
-                    <BankClaimButton target="encrypted" />
-                  ) : null}
+                  {c.id === 'bank' ? <BankClaimButton target="bank" /> : null}
                 </View>
               ))}
             />

@@ -9,7 +9,6 @@ import { useHomeBalances } from '../hooks/useHomeBalances';
 import { HomeHeader } from '../components/HomeHeader';
 import { BalanceCarousel, HOME_CARDS } from '../components/BalanceCarousel';
 import { HomeActivity } from '../components/HomeActivity';
-import { StealthActivity } from '../components/StealthActivity';
 import { AssetsList } from '../components/AssetsList';
 import { GetBankAccountCard } from '../components/GetBankAccountCard';
 import { TonalHalo } from '../components/TonalHalo';
@@ -28,12 +27,7 @@ function bottomFor(id: HomeCardId) {
         </>
       );
     case 'stealf':
-      return (
-        <>
-          <AssetsList card="stealf" />
-          <StealthActivity />
-        </>
-      );
+      return <AssetsList card="stealf" />;
     case 'encrypted':
       return <AssetsList card="encrypted" />;
     default:
@@ -57,7 +51,7 @@ export function HomeHub() {
         contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 90 }}
         showsVerticalScrollIndicator={false}
       >
-        <HomeHeader />
+        <HomeHeader card={HOME_CARDS[index]?.id ?? 'bank'} />
         <BalanceCarousel
           balances={balances}
           hidden={hidden}

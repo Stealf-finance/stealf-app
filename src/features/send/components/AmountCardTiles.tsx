@@ -1,8 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Icons } from '@/src/design-system/icons';
-import { sansation, sansationLight, serif } from '@/src/design-system/typography';
+import { sansation, sansationBold, serif } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import type { InputMode } from './SourceAssetCard';
 
@@ -17,6 +16,11 @@ type Props = {
   onPressTokenPill?: () => void;
   onToggleMode?: () => void;
   toggleDisabled?: boolean;
+  /** Available balance line shown under the asset pill (e.g. "1.5 SOL"). */
+  balanceLabel?: string;
+  /** When false, the top asset-pill + balance row is hidden (the caller
+   *  renders an AssetSelectRow below instead). Defaults to true. */
+  showAssetRow?: boolean;
 };
 
 // Fixed height for the amount row — sized for the largest figure (72) so
@@ -36,6 +40,8 @@ export function AmountCardTiles({
   onPressTokenPill,
   onToggleMode,
   toggleDisabled = false,
+  balanceLabel,
+  showAssetRow = true,
 }: Props) {
   // Split a leading "$" so it can render dimmer than the figure (matches
   // the reference's two-tone amount).
@@ -49,27 +55,25 @@ export function AmountCardTiles({
   const amountSize = digits >= 10 ? 48 : digits >= 8 ? 60 : 72;
 
   return (
-    <View
-      style={{
-        marginHorizontal: 18,
-        borderRadius: 28,
-        borderWidth: 1,
-        borderColor: T.hairline,
-        overflow: 'hidden',
-      }}
-    >
-      <LinearGradient
-        colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.018)']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+      <View
         style={{
+          marginHorizontal: 18,
           paddingTop: 18,
           paddingBottom: 20,
           paddingHorizontal: 18,
           alignItems: 'center',
         }}
       >
-        {/* Asset selector pill */}
+        {/* Asset selector (left) + available balance (right) on one row */}
+        {showAssetRow ? (
+        <View
+          style={{
+            alignSelf: 'stretch',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
         <Pressable
           onPress={onPressTokenPill}
           disabled={!onPressTokenPill}
@@ -120,6 +124,25 @@ export function AmountCardTiles({
           </View>
         </Pressable>
 
+          {/* Available balance — opposite the asset pill on the same row */}
+          {balanceLabel ? (
+            <Text
+              style={[
+                sansation,
+                {
+                  fontSize: 13,
+                  color: T.ink,
+                  fontWeight: '600',
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              {balanceLabel}
+            </Text>
+          ) : null}
+        </View>
+        ) : null}
+
         {/* Amount — wrapped in a fixed-height box so the figure's font size
             (which steps down for longer amounts) never changes the card
             height. Figure uses sansationLight to match the main screens; the
@@ -158,7 +181,7 @@ export function AmountCardTiles({
             ) : null}
             <Text
               style={[
-                sansationLight,
+                sansationBold,
                 {
                   fontSize: amountSize,
                   lineHeight: amountSize,
@@ -207,7 +230,6 @@ export function AmountCardTiles({
         >
           {secondaryAmount}
         </Text>
-      </LinearGradient>
-    </View>
+      </View>
   );
 }
