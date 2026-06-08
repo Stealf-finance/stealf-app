@@ -14,9 +14,8 @@ import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
-import { Numpad } from '@/src/features/send/components/Numpad';
-import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
-import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
+import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
+import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
 import { PercentageChips } from '@/src/features/send/components/PercentageChips';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
@@ -24,7 +23,7 @@ import {
   useSelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
 import { serif } from '@/src/design-system/typography';
-import { Tone, txPalette } from '@/src/design-system/palettes';
+import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -59,14 +58,8 @@ export function ShieldFlow({ direction }: Props) {
 
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
-  const palette = txPalette(tone);
 
   const title = isShield ? 'Shield' : 'Unshield';
-  const ctaLabel = isShield ? 'Slide to shield' : 'Slide to unshield';
-
-  const subtitle = isShield
-    ? 'Protect your assets'
-    : 'Bring assets back to public';
 
   const { user } = useAuth();
   const { deposit, withdraw } = useUmbra();
@@ -146,11 +139,6 @@ export function ShieldFlow({ direction }: Props) {
     inputMode === 'asset'
       ? `$${fiatAmount.toFixed(2)}`
       : `${solAmount.toFixed(4)} ${assetSymbol}`;
-
-  const maxBalanceLabel =
-    inputMode === 'fiat'
-      ? `$${(maxSol * rate).toFixed(2)}`
-      : `${maxSol.toFixed(4)} ${assetSymbol}`;
 
   const close = () => router.back();
 
@@ -266,6 +254,7 @@ export function ShieldFlow({ direction }: Props) {
 
   return (
     <CenterGlow tone={tone} flat>
+      {/* Standardized page header — BackBtn · serif italic 32 · spacer */}
       <View
         style={{
           paddingTop: insets.top,
@@ -295,24 +284,9 @@ export function ShieldFlow({ direction }: Props) {
         <View style={{ width: 36 }} />
       </View>
 
-      <Text
-        style={[
-          serif,
-          {
-            textAlign: 'center',
-            fontSize: 14,
-            fontStyle: 'italic',
-            color: palette.inkDim,
-            paddingHorizontal: 24,
-          },
-        ]}
-      >
-        {subtitle}
-      </Text>
-
-      <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
-        <SourceAssetCard
-          label={isShield ? 'Shielding' : 'Unshielding'}
+      {/* Centered glass amount card */}
+      <View style={{ marginTop: 20 }}>
+        <AmountCardTiles
           iconSource={{ uri: iconUri ?? SOL_ICON_URI }}
           tokenLabel={assetSymbol}
           primaryAmount={primaryDisplay}
@@ -320,34 +294,32 @@ export function ShieldFlow({ direction }: Props) {
           inputMode={inputMode}
           onPressTokenPill={() =>
             router.push(
-              isShield ? '/asset-picker?wallet=stealth' : '/asset-picker?wallet=encrypted',
+              isShield
+                ? '/asset-picker?wallet=stealth'
+                : '/asset-picker?wallet=encrypted',
             )
           }
           onToggleMode={onToggleMode}
           toggleDisabled={rate <= 0}
-          maxLabel={maxBalanceLabel}
         />
       </View>
 
-      <PercentageChips
-        onPressPercent={onPressPercent}
-        disabled={maxSol <= 0}
-      />
+      <View style={{ flex: 1 }} />
 
-      <Numpad onKey={onKey} tone={tone} />
+      {/* Negative margin pulls the chips down toward the keypad (the shared
+          PercentageChips carries a fixed marginBottom we don't want here). */}
+      <View style={{ marginBottom: -22 }}>
+        <PercentageChips onPressPercent={onPressPercent} disabled={maxSol <= 0} />
+      </View>
 
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 24,
-          paddingBottom: insets.bottom + 16,
-        }}
-      >
-        <SwipeToSend
+      {/* Tiled keypad + CTA wrapped in one glass panel */}
+      <View style={{ paddingBottom: insets.bottom + 12 }}>
+        <TiledKeypadPanel
+          onKey={onKey}
           tone={tone}
-          label={insufficient ? 'Insufficient balance' : ctaLabel}
-          onSend={onSubmit}
-          disabled={swipeDisabled}
+          ctaLabel={insufficient ? 'Insufficient balance' : title}
+          onPressCta={onSubmit}
+          ctaDisabled={swipeDisabled}
         />
       </View>
 
