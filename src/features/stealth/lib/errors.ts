@@ -98,11 +98,11 @@ const MSG: Record<StealthErrorCode, string> = {
   RPC_ERROR: 'Network error. Please check your connection and try again.',
   INDEXER_ERROR: 'Could not reach the network. Please check your connection.',
   VERIFYING_KEY_NOT_INITIALIZED:
-    'Stealth protocol is not fully deployed on this network. Please contact support.',
+    'Umbra Protocol unavailable on this network. Please contact support.',
   STALE_MERKLE_PROOF: 'This claim is out of date. Please refresh and try again.',
   SIGNING_FAILED: 'Signing failed. Please try again.',
   PROTOCOL_INSTRUCTION_MISMATCH:
-    "Umbra protocol version mismatch on this network — the on-chain program doesn't recognise this operation. Please contact support; this is not an issue with your balance.",
+    'Umbra Protocol unavailable on this network. Please contact support.',
   UNKNOWN: 'Something went wrong. Please try again.',
 };
 
@@ -141,6 +141,17 @@ function isProtocolInstructionMismatch(logs: string[]): boolean {
   );
 }
 
+function isVerifyingKeyNotInitialized(logs: string[]): boolean {
+  return logs.some(
+    (l) =>
+      /zero_knowledge_verifying_key/i.test(l) ||
+      (/AccountNotInitialized/i.test(l) &&
+        /verifying_key|verifyingKey/i.test(l)) ||
+      /Error Number:\s*3012\b/.test(l) ||
+      /custom program error:\s*0xbc4\b/i.test(l),
+  );
+}
+
 function build(
   err: unknown,
   op: StealthOp,
@@ -165,6 +176,9 @@ function buildFromTxSend(
   stage?: string,
 ): StealthError {
   const logs = logsOf(err);
+  if (isVerifyingKeyNotInitialized(logs)) {
+    return build(err, op, 'VERIFYING_KEY_NOT_INITIALIZED', stage);
+  }
   if (isProtocolInstructionMismatch(logs)) {
     return build(err, op, 'PROTOCOL_INSTRUCTION_MISMATCH', stage);
   }
@@ -273,7 +287,7 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
   if (/user is not registered|account.*not.*initialised|not registered/i.test(rawMessage)) {
     return build(err, op, 'USER_NOT_REGISTERED');
   }
-  if (simulationLogs.some((l) => /zero_knowledge_verifying_key/i.test(l))) {
+  if (isVerifyingKeyNotInitialized(simulationLogs)) {
     return build(err, op, 'VERIFYING_KEY_NOT_INITIALIZED');
   }
   if (isProtocolInstructionMismatch(simulationLogs)) {
