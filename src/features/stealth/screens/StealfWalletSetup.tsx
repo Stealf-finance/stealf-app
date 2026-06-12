@@ -607,7 +607,7 @@ function ImportStep({
                 paddingVertical: 12,
                 borderRadius: 12,
                 borderWidth: 1,
-                borderColor: error ? '#E5484D' : G.hairline,
+                borderColor: error ? T.error : G.hairline,
                 backgroundColor: 'rgba(255,255,255,0.03)',
               }}
             >
@@ -660,7 +660,7 @@ function ImportStep({
           <Text
             style={[
               sansation,
-              { fontSize: 12, color: '#E5484D', textAlign: 'center' },
+              { fontSize: 12, color: T.error, textAlign: 'center' },
             ]}
           >
             {error}

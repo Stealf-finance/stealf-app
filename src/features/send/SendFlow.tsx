@@ -20,6 +20,7 @@ import {
   serif,
 } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
+import { T } from '@/src/design-system/tokens';
 import { TxHeader } from '@/src/features/send/components/TxHeader';
 import { Asset } from '@/src/features/send/components/AssetPill';
 import {
@@ -428,7 +429,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                   paddingHorizontal: 18,
                   borderRadius: 18,
                   borderWidth: 1,
-                  borderColor: recipientError ? '#E5484D' : S.hairline,
+                  borderColor: recipientError ? T.error : S.hairline,
                   overflow: 'hidden',
                 }}
               >
@@ -502,7 +503,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                 }}
               >
                 {recipientError ? (
-                  <Text style={[sansation, { fontSize: 12, color: '#E5484D' }]}>
+                  <Text style={[sansation, { fontSize: 12, color: T.error }]}>
                     {recipientError}
                   </Text>
                 ) : null}
