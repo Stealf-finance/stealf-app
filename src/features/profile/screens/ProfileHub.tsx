@@ -1,5 +1,14 @@
 import { ReactNode, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -14,6 +23,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { Icons } from '@/src/design-system/icons';
 import {
+  AppleGlyph,
+  GoogleGlyph,
+  MailGlyph,
+} from '@/src/design-system/icons/auth';
+import {
   sansation,
   sansationLight,
   serif,
@@ -23,6 +37,7 @@ import { T } from '@/src/design-system/tokens';
 import { useTurnkey } from '@turnkey/react-native-wallet-kit';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useLogout } from '@/src/features/onboarding/hooks/useLogout';
+import { useUpdatePseudo } from '@/src/features/onboarding/hooks/useUpdatePseudo';
 import { useDeleteAccount } from '@/src/features/onboarding/hooks/useDeleteAccount';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
@@ -73,6 +88,171 @@ function formatUsdShort(usd: number): string {
   const safe = Math.max(0, usd);
   if (safe >= 1000) return `$${Math.round(safe).toLocaleString('en-US')}`;
   return `$${safe.toFixed(2)}`;
+}
+
+const PSEUDO_RE = /^[a-zA-Z0-9_-]+$/;
+
+/** The `@username` line with an inline editor. Tapping the pencil swaps the
+ *  label for a text field with confirm / cancel; validation mirrors the
+ *  backend (3–20 chars, letters/numbers/_/-), and the "already taken" 409 is
+ *  surfaced inline. */
+function PseudoRow({ username }: { username: string }) {
+  const { mutateAsync, isPending } = useUpdatePseudo();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(username);
+  const [error, setError] = useState<string | null>(null);
+
+  const open = () => {
+    setValue(username);
+    setError(null);
+    setEditing(true);
+  };
+  const cancel = () => {
+    setEditing(false);
+    setError(null);
+  };
+  const submit = async () => {
+    const next = value.trim();
+    if (next === username) return cancel();
+    if (next.length < 3 || next.length > 20) {
+      setError('3–20 characters');
+      return;
+    }
+    if (!PSEUDO_RE.test(next)) {
+      setError('Letters, numbers, _ and - only');
+      return;
+    }
+    try {
+      await mutateAsync(next);
+      setEditing(false);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update username');
+    }
+  };
+
+  if (!editing) {
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 6,
+        }}
+      >
+        <Text
+          style={[
+            serif,
+            { fontStyle: 'italic', fontSize: 30, lineHeight: 33, color: S.ink },
+          ]}
+        >
+          {username ? `@${username}` : '—'}
+        </Text>
+        <Pressable
+          onPress={open}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Edit username"
+          style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+        >
+          <Icons.pencil size={15} color={S.inkFaint} />
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ alignItems: 'center', marginBottom: 6 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderBottomWidth: 1,
+            borderColor: 'rgba(230,230,235,0.22)',
+            paddingBottom: 2,
+          }}
+        >
+          <Text
+            style={[
+              serif,
+              { fontStyle: 'italic', fontSize: 26, color: S.inkDim },
+            ]}
+          >
+            @
+          </Text>
+          <TextInput
+            value={value}
+            onChangeText={(t) => {
+              setValue(t);
+              if (error) setError(null);
+            }}
+            autoFocus
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={20}
+            editable={!isPending}
+            returnKeyType="done"
+            onSubmitEditing={submit}
+            selectionColor={S.accent}
+            style={[
+              serif,
+              {
+                fontStyle: 'italic',
+                fontSize: 26,
+                color: S.ink,
+                minWidth: 110,
+                padding: 0,
+                includeFontPadding: false,
+              },
+            ]}
+          />
+        </View>
+
+        {isPending ? (
+          <ActivityIndicator size="small" color={S.accent} />
+        ) : (
+          <>
+            <Pressable
+              onPress={submit}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Save username"
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+            >
+              <Icons.check size={18} color={T.green} strokeWidth={2.4} />
+            </Pressable>
+            <Pressable
+              onPress={cancel}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+            >
+              <Icons.close size={18} color={S.inkFaint} />
+            </Pressable>
+          </>
+        )}
+      </View>
+
+      {error ? (
+        <Text
+          style={[
+            sansation,
+            {
+              marginTop: 8,
+              fontSize: 11,
+              color: T.error,
+              includeFontPadding: false,
+            },
+          ]}
+        >
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
 }
 
 export function ProfileHub() {
@@ -129,8 +309,10 @@ export function ProfileHub() {
   const publicPct = totalUSD > 0 ? publicUSD / totalUSD : 0;
 
   const username = user?.username ?? '';
-  // Backend never holds plaintext email; pull it from Turnkey's user record.
-  const email = turnkey.user?.userEmail ?? '';
+  // Backend never holds plaintext email. Email-OTP users have it on the
+  // Turnkey record; OAuth (Apple/Google) users don't, so fall back to the
+  // email we decoded from the OIDC token at sign-in (kept on the user record).
+  const email = user?.email ?? turnkey.user?.userEmail ?? '';
 
   const [emailCopied, setEmailCopied] = useState(false);
   const emailPop = useSharedValue(1);
@@ -192,38 +374,33 @@ export function ProfileHub() {
               bottom: 0,
             }}
           />
-          <Text
-            style={[
-              serif,
-              {
-                fontStyle: 'italic',
-                fontSize: 44,
-                lineHeight: 48,
-                color: S.accent,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            {avatarLetter}
-          </Text>
+          {user?.authMethod === 'apple' ? (
+            <AppleGlyph size={42} color={S.ink} />
+          ) : user?.authMethod === 'google' ? (
+            <GoogleGlyph size={40} />
+          ) : user?.authMethod === 'email' ? (
+            <MailGlyph size={40} color={S.accent} />
+          ) : (
+            <Text
+              style={[
+                serif,
+                {
+                  fontStyle: 'italic',
+                  fontSize: 44,
+                  lineHeight: 48,
+                  color: S.accent,
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              {avatarLetter}
+            </Text>
+          )}
         </View>
 
         {/* Name + email */}
         <View style={{ alignItems: 'center', marginBottom: 22 }}>
-          <Text
-            style={[
-              serif,
-              {
-                fontStyle: 'italic',
-                fontSize: 30,
-                lineHeight: 33,
-                color: S.ink,
-                marginBottom: 6,
-              },
-            ]}
-          >
-            {username ? `@${username}` : '—'}
-          </Text>
+          <PseudoRow username={username} />
           {email ? (
             <Pressable
               onPress={copyEmail}

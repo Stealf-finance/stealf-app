@@ -87,10 +87,6 @@ export function BankClaimButton({
             height: 9,
             borderRadius: 5,
             backgroundColor: '#dcdce1',
-            shadowColor: '#dcdce1',
-            shadowOpacity: 0.9,
-            shadowRadius: 4,
-            shadowOffset: { width: 0, height: 0 },
           }}
         />
       ) : null}

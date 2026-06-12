@@ -202,6 +202,7 @@ export const Icons = {
   sparkle: make(<Path d="M12 3l2 7 7 2-7 2-2 7-2-7-7-2 7-2z" />),
   close: make(<Path d="M6 6l12 12M18 6L6 18" />),
   check: make(<Path d="M5 12l5 5 9-11" />),
+  pencil: make(<Path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />),
   mail: make(
     <>
       <Rect x="3" y="5" width="18" height="14" rx="2" />

@@ -21,6 +21,9 @@ type Props = {
   /** When false, the top asset-pill + balance row is hidden (the caller
    *  renders an AssetSelectRow below instead). Defaults to true. */
   showAssetRow?: boolean;
+  /** Trims the vertical padding so the figure sits close to the screen title
+   *  (used on the Move screen, which has no room to spare). */
+  compact?: boolean;
 };
 
 // Fixed height for the amount row — sized for the largest figure (72) so
@@ -42,6 +45,7 @@ export function AmountCardTiles({
   toggleDisabled = false,
   balanceLabel,
   showAssetRow = true,
+  compact = false,
 }: Props) {
   // Split a leading "$" so it can render dimmer than the figure (matches
   // the reference's two-tone amount).
@@ -58,8 +62,8 @@ export function AmountCardTiles({
       <View
         style={{
           marginHorizontal: 18,
-          paddingTop: 18,
-          paddingBottom: 20,
+          paddingTop: compact ? 0 : 18,
+          paddingBottom: compact ? 6 : 20,
           paddingHorizontal: 18,
           alignItems: 'center',
         }}
@@ -153,7 +157,7 @@ export function AmountCardTiles({
             alignSelf: 'stretch',
             justifyContent: 'center',
             position: 'relative',
-            marginTop: 12,
+            marginTop: compact || !showAssetRow ? 0 : 12,
           }}
         >
           <View

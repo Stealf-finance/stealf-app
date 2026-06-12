@@ -3,7 +3,6 @@ import {
   type TurnkeyProviderConfig,
   type TurnkeyCallbacks,
 } from '@turnkey/react-native-wallet-kit';
-import { Buffer } from 'buffer';
 import * as Sentry from '@sentry/react-native';
 import { decodeOidcEmail, decodeOidcSub } from '@/src/features/onboarding/lib/oidc';
 import { emitOauthAuthSuccess } from './oauthAuthEvents';
@@ -61,33 +60,12 @@ export const TURNKEY_CALLBACKS: TurnkeyCallbacks = {
       const email = decodeOidcEmail(identifier);
       const oauthSub = decodeOidcSub(identifier);
       if (__DEV__) {
-        const tokenParts = (identifier ?? '').split('.');
         console.log('[Turnkey] Auth success:', {
           action,
           method,
           hasIdentifier: !!identifier,
-          tokenSegments: tokenParts.length,
-          tokenLen: identifier?.length ?? 0,
           hasDecodedEmail: !!email,
         });
-        // TEMP DIAG — full decoded JWT payload so we can see exactly which
-        // claims Apple+Turnkey actually included. Remove once the missing-email
-        // Apple flow is understood.
-        try {
-          if (tokenParts.length === 3) {
-            const b64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-            const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
-            const payload = JSON.parse(
-              Buffer.from(padded, 'base64').toString('utf8'),
-            );
-            console.log(
-              '[Turnkey] OAuth JWT payload (DEV):',
-              JSON.stringify(payload, null, 2),
-            );
-          }
-        } catch (err) {
-          console.warn('[Turnkey] OAuth JWT payload decode failed:', err);
-        }
       }
       Sentry.addBreadcrumb({
         category: 'auth.oauth',

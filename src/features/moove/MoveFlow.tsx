@@ -165,11 +165,9 @@ export function MoveFlow() {
     0,
     DIRECTIONS.indexOf((params.direction as MoveDirection) ?? 'bank-to-shielded'),
   );
-  // The active direction is swipeable (cycles the From/To pair through the 3
-  // valid directions); it starts from the route param.
+
   const [directionIndex, setDirectionIndex] = useState(initialIndex);
   const dirScrollRef = useRef<ScrollView>(null);
-  // Continuous 0..n-1 scroll position driving the smooth dot animation.
   const dirProgress = useSharedValue(initialIndex);
   const direction = DIRECTIONS[directionIndex];
 
@@ -180,7 +178,6 @@ export function MoveFlow() {
     }
   };
 
-  // Keep the vertical pager in sync when the index changes via the dots.
   useEffect(() => {
     dirScrollRef.current?.scrollTo({
       y: directionIndex * DIR_ITEM_H,
@@ -215,12 +212,9 @@ export function MoveFlow() {
     ensureRegistered,
   } = useUmbra();
 
-  // Fetched unconditionally: it's the source for bank-to-shielded and the
-  // destination for the to-bank directions (shown in the From/To cards).
+
   const { data: bankBalanceData } = useBalance(user?.bankWallet ?? null);
 
-  // Unconditional too — any of the three accounts can be source or
-  // destination depending on the swiped direction.
   const { data: stealthBalanceData } = useBalance(user?.stealfWallet ?? null);
   const { data: shielded } = useShieldedSolBalance();
   const { data: encrypted } = useEncryptedBalances();
@@ -301,6 +295,8 @@ export function MoveFlow() {
 
   // Confirmation step (slide-to-confirm) after the amount entry.
   const [step, setStep] = useState<'amount' | 'confirm'>('amount');
+  // Tx signature of the move, surfaced in the pending sheet (Solscan link).
+  const [moveSig, setMoveSig] = useState<string | undefined>(undefined);
   const config = CONFIG[direction];
 
   const networkFeeUsd =
@@ -308,6 +304,14 @@ export function MoveFlow() {
       ? NETWORK_FEE_SOL * solPrice
       : 0;
   const privacyFeeUsd = protocolFeeSol(solAmount) * rate;
+
+  // Resolve the on-chain address backing an account (encrypted balance + stealth
+  // both live on the stealf wallet); shortened for the confirmation rows.
+  const addressForAccount = (a: Account): string | undefined =>
+    a === 'bank' ? user?.bankWallet ?? undefined : user?.stealfWallet ?? undefined;
+  const shortAddr = (s?: string): string | undefined =>
+    s ? `${s.slice(0, 4)}…${s.slice(-4)}` : undefined;
+  const dirAccounts = DIR_ACCOUNTS[direction];
 
   const close = () => router.back();
   const handleBack = () => {
@@ -401,6 +405,7 @@ export function MoveFlow() {
     const stealfWallet = user.stealfWallet ?? null;
     const bankWallet = user.bankWallet ?? null;
 
+    setMoveSig(undefined);
     const opId = pendingOps.enqueue({
       kind: kindForDirection(direction),
       tone,
@@ -408,15 +413,15 @@ export function MoveFlow() {
       assetSymbol,
     });
 
-
-    close();
-
+    // Note: the sheet stays open (showing the pending state) — the user
+    // dismisses it via the close button; we don't close here.
     void (async () => {
       const provingTimer = setTimeout(() => {
         pendingOps.setPhase(opId, 'proving');
       }, 700);
 
       try {
+        let res: any = null;
         if (direction === 'bank-to-shielded') {
           try {
             await ensureRegistered();
@@ -432,7 +437,7 @@ export function MoveFlow() {
           const create = getPublicBalanceToReceiverClaimableUtxoCreatorFunction({
             client: bankClient,
           });
-          await wrap(
+          res = await wrap(
             'getPublicBalanceToReceiverClaimableUtxoCreatorFunction',
             () =>
               create({
@@ -447,7 +452,7 @@ export function MoveFlow() {
           const create = getEncryptedBalanceToSelfClaimableUtxoCreatorFunction({
             client: stealthClient,
           });
-          await wrap(
+          res = await wrap(
             'getEncryptedBalanceToSelfClaimableUtxoCreatorFunction',
             () =>
               create({
@@ -462,7 +467,7 @@ export function MoveFlow() {
           const create = getPublicBalanceToSelfClaimableUtxoCreatorFunction({
             client: stealthClient,
           });
-          await wrap(
+          res = await wrap(
             'getPublicBalanceToSelfClaimableUtxoCreatorFunction',
             () =>
               create({
@@ -476,7 +481,12 @@ export function MoveFlow() {
         clearTimeout(provingTimer);
         pendingOps.setPhase(opId, 'confirming');
 
-        if (__DEV__) console.log('[MoveFlow] success →', direction);
+        // Surface the tx signature for the pending sheet's Solscan link.
+        const sig =
+          res?.signature ?? res?.transactionSignature ?? res?.txSignature;
+        if (typeof sig === 'string') setMoveSig(sig);
+
+        if (__DEV__) console.log('[MoveFlow] success →', direction, sig);
         await invalidateAll();
         posthogRef.current?.capture('move_completed', {
           direction,
@@ -541,9 +551,12 @@ export function MoveFlow() {
         <View style={{ width: 36 }} />
       </View>
 
-      {/* Amount card (no asset row — the From/To cards carry the context) */}
-      <View style={{ marginTop: 20 }}>
-        <AmountCardTiles
+      {/* Upper content flexes so the keypad + CTA always keep their space at
+          the bottom; content stays grouped up near the title. */}
+      <View style={{ flex: 1 }}>
+        {/* Amount card (no asset row — the From/To cards carry the context) */}
+        <View style={{ marginTop: 4 }}>
+          <AmountCardTiles
           iconSource={{ uri: iconUri }}
           tokenLabel={assetSymbol}
           primaryAmount={primaryDisplay}
@@ -552,16 +565,15 @@ export function MoveFlow() {
           onToggleMode={onToggleMode}
           toggleDisabled={rate <= 0}
           showAssetRow={false}
+          compact
         />
       </View>
-
-      <View style={{ flex: 1 }} />
 
       {/* Vertical From → To carousel: swipe up/down to cycle the 3 valid
           directions; vertical dots on the right mirror the selection. */}
       <View
         style={{
-          marginBottom: 12,
+          marginBottom: 8,
           flexDirection: 'row',
           alignItems: 'center',
         }}
@@ -625,7 +637,7 @@ export function MoveFlow() {
       </View>
 
       {/* Asset selector + Use Max */}
-      <View style={{ marginBottom: 14 }}>
+      <View style={{ marginBottom: 8 }}>
         <AssetSelectRow
           iconSource={{ uri: iconUri }}
           name={assetSymbol}
@@ -638,9 +650,10 @@ export function MoveFlow() {
           onPressMax={() => onPressPercent(1)}
         />
       </View>
+      </View>
 
-      {/* Tiled keypad + CTA */}
-      <View style={{ paddingBottom: insets.bottom + 12 }}>
+      {/* Tiled keypad + CTA — pinned to the bottom */}
+      <View style={{ paddingBottom: insets.bottom }}>
         <TiledKeypadPanel
           onKey={onKey}
           tone={tone}
@@ -653,13 +666,20 @@ export function MoveFlow() {
       <MoveConfirm
         visible={step === 'confirm'}
         onClose={() => setStep('amount')}
+        onDone={close}
         tone={tone}
         title={`Move to ${config.toLabel}`}
+        slideLabel="Slide to move"
         fiat={fiatAmount}
         amountLabel={`${formatBalance(solAmount)} ${assetSymbol}`}
+        fromLabel={config.fromLabel}
+        fromAddress={shortAddr(addressForAccount(dirAccounts.from))}
+        toLabel={config.toLabel}
+        toAddress={shortAddr(addressForAccount(dirAccounts.to))}
         networkFeeUsd={networkFeeUsd}
         privacyFeeUsd={privacyFeeUsd}
         onConfirm={onSubmit}
+        signature={moveSig}
       />
 
       <StealthSetupOverlay onClose={close} />

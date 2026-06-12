@@ -1,5 +1,4 @@
 import { Pressable, Text, View } from 'react-native';
-import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { getGreeting } from '@/src/lib/greeting';
 import { Icons } from '@/src/design-system/icons';
 import {
@@ -12,6 +11,7 @@ import type { PendingOp } from '@/src/components/pending-ops/types';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
 /** Status indicator (spinner / check / cross + label) shown while a stealth
  *  operation is in flight — the same indicator as the floating pill. */
@@ -79,10 +79,10 @@ function NavPendingIndicator({
 /** The navbar left slot: the time-based greeting, replaced by a live
  *  pending-op indicator while a stealth/Umbra operation is running. */
 export function GreetingSlot() {
-  const { user } = useAuth();
   const op = useTopPendingOp();
   const { dismiss } = usePendingOps();
   const greeting = getGreeting();
+  const { user } = useAuth();
   const username = user?.username ?? '';
 
   if (op) {

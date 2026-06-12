@@ -6,7 +6,7 @@ import {
   UmbraDisc,
   SolanaTokenDisc,
   BankDiscSquare,
-  MoveDisc,
+  MoveDiscSquare,
   StealfDisc,
 } from '@/src/features/receive/components/Discs';
 import { PAY_METHODS, type PayMethod } from '@/src/features/stealth/lib/payMethods';
@@ -15,7 +15,7 @@ const DISCS = {
   umbra: UmbraDisc,
   solana: SolanaTokenDisc,
   bank: BankDiscSquare,
-  move: MoveDisc,
+  move: MoveDiscSquare,
   stealf: StealfDisc,
 } as const;
 

@@ -43,11 +43,9 @@ export function HomeHeader({ card }: { card: HomeCardId }) {
               icon={<VaultGlyph width={26} />}
               tone="silver"
               accessibilityLabel="Claim pending transfers"
-              onPress={() =>
-                router.push(
-                  card === 'encrypted' ? '/claims?target=encrypted' : '/claims',
-                )
-              }
+              // Both private cards (Wallet + Encrypted balance) claim incoming
+              // private transfers into the encrypted balance.
+              onPress={() => router.push('/claims?target=encrypted')}
             />
           </>
         ) : (

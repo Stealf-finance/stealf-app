@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
@@ -12,10 +13,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
+import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { LoaderRefreshButton } from '@/src/design-system/primitives/LoaderRefreshButton';
 import { Icons } from '@/src/design-system/icons';
-import { mono, sansation, serif } from '@/src/design-system/typography';
+import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -32,13 +34,13 @@ import { reconstructAddressFromU128Parts } from '@umbra-privacy/sdk/solana';
 import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
 import {
   SOL_MINT,
+  SOL_ICON_URI,
   USDC_MINT,
   DUSDC_MINT,
   DUSDT_MINT,
 } from '@/src/constants/solana';
 import {
-  describeClaimLine,
-  CLAIM_FALLBACK_LABEL,
+  describeClaimParts,
   type ClaimToken,
 } from './lib/describeClaimLine';
 
@@ -53,16 +55,23 @@ function utxoToItem(utxo: any): Item {
   return { ago: 'Encrypted', utxo };
 }
 
+// Mainnet logos reused for the devnet stablecoins so the disc renders a
+// recognizable icon (same CDN as SOL_ICON_URI).
+const USDC_LOGO_URI =
+  'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png';
+const USDT_LOGO_URI =
+  'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png';
+
 function tokenForMint(mint: string | null, solUsd: number | null): ClaimToken | null {
   switch (mint) {
     case DUSDC_MINT:
-      return { symbol: 'dUSDC', decimals: 6, usdPerUnit: 1 };
+      return { symbol: 'dUSDC', decimals: 6, usdPerUnit: 1, iconUri: USDC_LOGO_URI };
     case DUSDT_MINT:
-      return { symbol: 'dUSDT', decimals: 6, usdPerUnit: 1 };
+      return { symbol: 'dUSDT', decimals: 6, usdPerUnit: 1, iconUri: USDT_LOGO_URI };
     case USDC_MINT:
-      return { symbol: 'USDC', decimals: 6, usdPerUnit: 1 };
+      return { symbol: 'USDC', decimals: 6, usdPerUnit: 1, iconUri: USDC_LOGO_URI };
     case SOL_MINT:
-      return { symbol: 'SOL', decimals: 9, usdPerUnit: solUsd };
+      return { symbol: 'SOL', decimals: 9, usdPerUnit: solUsd, iconUri: SOL_ICON_URI };
     default:
       return null;
   }
@@ -83,18 +92,36 @@ function addrFromParts(low: unknown, high: unknown): string | null {
 /** Reads sender / mint / amount off an Umbra note (the burn-ready note encodes
  *  the addresses as U128 low/high halves) and builds the display line. Degrades
  *  gracefully to "Encrypted to bank" when fields aren't present. */
-function claimLineForNote(note: any, solUsd: number | null): string {
+function claimPartsForNote(
+  note: any,
+  solUsd: number | null,
+): {
+  sender: string | null;
+  symbol: string | null;
+  iconUri: string | null;
+  tokenAmount: string | null;
+  usdValue: string | null;
+} {
+  // The sender / mint live inside `h1Components` (u128 low/high halves); only
+  // `amount` sits at the top level of the burnable note.
+  const h1 = note?.h1Components ?? note;
   const mint =
-    addrFromParts(note?.mintAddressLow, note?.mintAddressHigh) ??
+    addrFromParts(h1?.mintAddressLow, h1?.mintAddressHigh) ??
     (typeof note?.mint === 'string' ? note.mint : null);
   const sender =
-    addrFromParts(note?.senderAddressLow, note?.senderAddressHigh) ??
+    addrFromParts(h1?.senderAddressLow, h1?.senderAddressHigh) ??
     (typeof note?.sender === 'string' ? note.sender : null);
-  return describeClaimLine({
+  const token = tokenForMint(mint, solUsd);
+  const parts = describeClaimParts({
     sender,
-    token: tokenForMint(mint, solUsd),
+    token,
     amountRaw: note?.amount ?? null,
   });
+  return {
+    ...parts,
+    symbol: token?.symbol ?? null,
+    iconUri: token?.iconUri ?? null,
+  };
 }
 
 export function ClaimsScreen() {
@@ -168,8 +195,10 @@ export function ClaimsScreen() {
 
     setTimeout(() => {
       removeFromCache();
+      // Return to wherever the claims screen was opened from instead of
+      // force-navigating to the Pay hub / Bank tab.
       if (router.canGoBack()) {
-        router.replace(isEncrypted ? '/(tabs)/stealth' : '/(tabs)/bank');
+        router.back();
       }
     }, ANIM_HOLD_MS);
 
@@ -288,7 +317,7 @@ export function ClaimsScreen() {
             },
           ]}
         >
-          Incoming Assets
+          Incoming private transfers
         </Text>
         <LoaderRefreshButton
           onPress={() => refetch()}
@@ -310,13 +339,15 @@ export function ClaimsScreen() {
           <EmptyState />
         ) : (
           items.map((tx, i) => {
-            if (__DEV__ && i === 0) {
-              console.log('[claims] sample note keys', Object.keys(tx.utxo ?? {}));
-            }
+            const parts = claimPartsForNote(tx.utxo, solUsd);
             return (
               <ClaimItem
                 key={`claim-${i}`}
-                label={claimLineForNote(tx.utxo, solUsd)}
+                sender={parts.sender}
+                symbol={parts.symbol}
+                iconUri={parts.iconUri}
+                tokenAmount={parts.tokenAmount}
+                usdValue={parts.usdValue}
                 claiming={claimingIndex === i}
                 disabled={claimingIndex !== null && claimingIndex !== i}
                 onClaim={() => onClaim(tx, i)}
@@ -325,17 +356,106 @@ export function ClaimsScreen() {
           })
         )}
       </ScrollView>
+
+      {/* Claiming (to encrypted or to cash) requires the wallet to be
+          registered on Umbra. Self-hides once registered. */}
+      <StealthSetupOverlay onClose={close} />
     </BlurView>
   );
 }
 
+/** Token disc with a small "incoming" badge — the left glyph on a claim row.
+ *  Falls back to the symbol's first letters when no logo is available. */
+function ClaimTokenIcon({
+  iconUri,
+  symbol,
+}: {
+  iconUri: string | null;
+  symbol: string | null;
+}) {
+  return (
+    <View style={{ width: 42, height: 42 }}>
+      <View
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 21,
+          overflow: 'hidden',
+          backgroundColor: 'rgba(255,255,255,0.06)',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {iconUri ? (
+          <Image
+            source={{ uri: iconUri }}
+            style={{ width: 42, height: 42 }}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 13,
+                fontWeight: '700',
+                color: T.inkDim,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {(symbol ?? '•').slice(0, 3)}
+          </Text>
+        )}
+      </View>
+
+      {/* Incoming badge */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: -2,
+          left: -2,
+          width: 18,
+          height: 18,
+          borderRadius: 9,
+          backgroundColor: T.bg,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <View
+          style={{
+            width: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: 'rgba(255,255,255,0.12)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icons.arrDownLeft size={11} color={T.ink} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function ClaimItem({
-  label,
+  sender,
+  symbol,
+  iconUri,
+  tokenAmount,
+  usdValue,
   claiming,
   disabled,
   onClaim,
 }: {
-  label: string;
+  sender: string | null;
+  symbol: string | null;
+  iconUri: string | null;
+  tokenAmount: string | null;
+  usdValue: string | null;
   claiming: boolean;
   disabled: boolean;
   onClaim: () => void;
@@ -354,7 +474,7 @@ function ClaimItem({
         colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
-        style={{ paddingVertical: 14, paddingHorizontal: 16 }}
+        style={{ paddingVertical: 16, paddingHorizontal: 18 }}
       >
         <View
           pointerEvents="none"
@@ -367,45 +487,78 @@ function ClaimItem({
             backgroundColor: 'rgba(255,255,255,0.12)',
           }}
         />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <IconChip />
+
+        {/* Top: token + sender on the left, amount + $ on the right */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <ClaimTokenIcon iconUri={iconUri} symbol={symbol} />
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
               numberOfLines={1}
               style={[
-                label === CLAIM_FALLBACK_LABEL ? sansation : serif,
+                sansation,
                 {
-                  fontStyle:
-                    label === CLAIM_FALLBACK_LABEL ? 'normal' : 'italic',
-                  fontSize: 14,
+                  fontSize: 16,
+                  fontWeight: '700',
                   color: T.ink,
-                  fontWeight: '500',
                   includeFontPadding: false,
                 },
               ]}
             >
-              {label}
+              {symbol ?? 'Private transfer'}
             </Text>
-            {label !== CLAIM_FALLBACK_LABEL ? (
+            {sender ? (
               <Text
+                numberOfLines={1}
                 style={[
-                  mono,
+                  sansation,
+                  { fontSize: 12, marginTop: 3, includeFontPadding: false },
+                ]}
+              >
+                <Text style={{ color: T.inkFaint }}>from: </Text>
+                <Text style={{ color: T.gold, fontWeight: '600' }}>
+                  {sender}
+                </Text>
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={{ alignItems: 'flex-end', minWidth: 0 }}>
+            <Text
+              numberOfLines={1}
+              style={[
+                sansation,
+                {
+                  fontSize: 16,
+                  fontWeight: '700',
+                  color: T.ink,
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              {tokenAmount ?? '—'}
+            </Text>
+            {usdValue ? (
+              <Text
+                numberOfLines={1}
+                style={[
+                  sansation,
                   {
-                    fontSize: 10,
+                    fontSize: 12,
                     color: T.inkFaint,
                     marginTop: 3,
-                    letterSpacing: 0.4,
+                    includeFontPadding: false,
                   },
                 ]}
               >
-                Private transfer
+                {usdValue}
               </Text>
             ) : null}
           </View>
         </View>
 
-        <View style={{ marginTop: 12 }}>
+        {/* Bottom: claim action (full width) */}
+        <View style={{ marginTop: 14 }}>
           <ClaimButton
             accentGlow={GOLD_GLOW}
             claiming={claiming}
@@ -437,22 +590,6 @@ function EmptyState() {
       >
         No private transfer on the way
       </Text>
-    </View>
-  );
-}
-
-function IconChip() {
-  // Received-transaction arrow, matching the history rows (borderless, size 26).
-  return (
-    <View
-      style={{
-        width: 36,
-        height: 36,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Icons.arrDownLeft size={26} color="#ffffff" />
     </View>
   );
 }
@@ -491,7 +628,7 @@ function ClaimButton({
       onPress={onPress}
       disabled={claiming || disabled}
       style={{
-        alignSelf: 'flex-end',
+        alignSelf: 'stretch',
         borderRadius: 100,
         overflow: 'hidden',
         borderWidth: 1,

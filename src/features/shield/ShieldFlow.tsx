@@ -330,7 +330,9 @@ export function ShieldFlow({ direction }: Props) {
         />
       </View>
 
-      <StealthSetupOverlay onClose={close} />
+      {/* Registration overlay only on Shield (public → encrypted). Unshield
+          already implies a registered encrypted balance, so it's not gated. */}
+      {isShield ? <StealthSetupOverlay onClose={close} /> : null}
     </CenterGlow>
   );
 }

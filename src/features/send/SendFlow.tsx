@@ -1,13 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
-import {
-  Linking,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,10 +12,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
+import { MoveConfirm } from '@/src/features/moove/components/MoveConfirm';
+import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { Icons } from '@/src/design-system/icons';
 import {
   sansation,
-  sansationLight,
   serif,
 } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -35,14 +29,12 @@ import {
 } from '@/src/features/send/lib/selectedAssetStore';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
-import { PercentageChips } from '@/src/features/send/components/PercentageChips';
+import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
   RecipientRow,
   Recipient,
 } from '@/src/features/send/components/RecipientRow';
-import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
-import { SuccessScreen } from '@/src/features/transactions/SuccessScreen';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from './hooks/useSolPrice';
@@ -60,7 +52,6 @@ import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import {
   PROTOCOL_FEE_RATE,
-  protocolFeeSol,
   SOL_DECIMALS,
   toRawAmount,
   PRIVATE_OP_SOL_FEE_RESERVE,
@@ -109,6 +100,19 @@ function selectedToAsset(sel: SelectedAsset): Asset {
 type WalletSource = 'bank' | 'stealth';
 type SendMode = 'public' | 'private';
 
+// Rendered for a simple transfer when the wallet has no public holdings yet,
+// so the screen shows the SOL amount entry instead of a blank page.
+const SOL_FALLBACK_ASSET: Asset = {
+  mint: null,
+  symbol: 'SOL',
+  name: 'SOL',
+  balance: '0',
+  fiat: '$0.00',
+  gradient: ['#9945FF', '#14F195'],
+  iconSource: { uri: SOL_ICON_URI },
+  decimals: SOL_DECIMALS,
+};
+
 type Props = { tone?: Tone; wallet?: WalletSource; mode?: SendMode };
 
 export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
@@ -132,7 +136,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     : walletSource === 'stealth'
       ? 'Stealth wallet'
       : 'Bank wallet';
-  const { data: balance } = useBalance(fromAddress);
+  const { data: balance, isLoading: balanceLoading } = useBalance(fromAddress);
   const { data: encrypted } = useEncryptedBalances();
   const { data: solPrice } = useSolPrice();
   const sendMutation = useSendSimple();
@@ -208,10 +212,18 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   useEffect(() => {
     if (selected) setAsset(selectedToAsset(selected));
   }, [selected]);
-  // Default to the first holding when nothing has been picked yet.
+  // Default to the first holding when nothing has been picked yet. For a
+  // simple (public) transfer, fall back to a 0-balance SOL asset once the
+  // balance has loaded empty — otherwise an unfunded stealth wallet would
+  // render a blank screen (only the title) with no asset to send.
   useEffect(() => {
-    if (!selected && !asset && assets.length > 0) setAsset(assets[0]);
-  }, [selected, asset, assets]);
+    if (selected || asset) return;
+    if (assets.length > 0) {
+      setAsset(assets[0]);
+    } else if (!isPrivate && !balanceLoading) {
+      setAsset(SOL_FALLBACK_ASSET);
+    }
+  }, [selected, asset, assets, isPrivate, balanceLoading]);
   // Force-remount the swipe widget after a failed send so the thumb returns to start.
   const swipeAttempt = useRef(0);
 
@@ -257,7 +269,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   );
 
   const {
-    setAmount,
     inputMode,
     solAmount: typedAssetAmount,
     fiatAmount,
@@ -287,7 +298,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     typeof solPrice === 'number' && solPrice > 0
       ? NETWORK_FEE_SOL * solPrice
       : null;
-  const feeLabel = feeUSD === null ? '—' : `$${feeUSD.toFixed(4)}`;
 
   const submitRecipient = () => {
     const trimmed = recipientQuery.trim();
@@ -349,7 +359,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
           wallet_source: walletSource,
         });
         setTxSig(result?.queueSignature ?? null);
-        transitionTo(4, 'forward');
         return;
       }
       const sig = await sendMutation.mutateAsync({
@@ -369,7 +378,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         wallet_source: walletSource,
       });
       setTxSig(sig);
-      transitionTo(4, 'forward');
     } catch (err: any) {
       if (__DEV__) console.warn('[SendFlow] send failed:', err);
       const msg =
@@ -392,42 +400,16 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   };
 
 
-  if (step === 4 && asset && recipient) {
-
-    const finishToOrigin = () => {
-      if (walletSource === 'bank') {
-        router.replace('/(tabs)/bank');
-        return;
-      }
-      setMode(isPrivate ? 'private' : 'public');
-      router.replace('/(tabs)/stealth');
-    };
-    const onDone = finishToOrigin;
-    const onSuccessClose = finishToOrigin;
-    return (
-      <SuccessScreen
-        tone={tone}
-        kicker="Sent"
-        prefix="$"
-        amount={fiatValue}
-        subtitle={`to ${truncateAddress(recipient.name)}`}
-        onClose={onSuccessClose}
-        onDone={onDone}
-        onNewTransfer={() => {
-          setRecipient(null);
-          setRecipientQuery('');
-          setRecipientError(null);
-          setAmount('0');
-          setSendError(null);
-          setTxSig(null);
-          setStep(1);
-        }}
-        onViewExplorer={() => {
-          if (txSig) void Linking.openURL(`https://solscan.io/tx/${txSig}`);
-        }}
-      />
-    );
-  }
+  // Navigate back to the originating tab when the user closes the confirm
+  // sheet's pending state.
+  const finishToOrigin = () => {
+    if (walletSource === 'bank') {
+      router.replace('/(tabs)/bank');
+      return;
+    }
+    setMode(isPrivate ? 'private' : 'public');
+    router.replace('/(tabs)/stealth');
+  };
 
   return (
     <CenterGlow tone={tone}>
@@ -436,7 +418,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       <Animated.View style={[{ flex: 1 }, contentStyle]}>
         {step === 1 && asset && (
           <>
-            <View style={{ paddingHorizontal: 24, marginBottom: 10 }}>
+            <View style={{ paddingHorizontal: 24, marginTop: 24, marginBottom: 10 }}>
               <View
                 style={{
                   flexDirection: 'row',
@@ -590,8 +572,10 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
           </>
         )}
 
-        {step === 2 && asset && recipient && (
+        {(step === 2 || step === 3) && asset && recipient && (
           <>
+            {/* Centered glass amount card (asset row moved below) — same
+                layout as the shield/unshield screens. */}
             <View style={{ marginTop: 20 }}>
               <AmountCardTiles
                 iconSource={asset.iconSource ?? { uri: SOL_ICON_URI }}
@@ -603,23 +587,24 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                     : `${tokenAmountLabel} ${asset.symbol}`
                 }
                 inputMode={inputMode}
-                onPressTokenPill={() =>
-                  router.push(`/asset-picker?wallet=${pickerWalletParam}`)
-                }
                 onToggleMode={onToggleMode}
                 toggleDisabled={rate <= 0}
-                balanceLabel={balanceLabel}
+                showAssetRow={false}
               />
             </View>
 
             <View style={{ flex: 1 }} />
 
-            {/* Negative margin pulls the chips toward the keypad (the shared
-                PercentageChips carries a fixed marginBottom we don't want). */}
-            <View style={{ marginBottom: -22 }}>
-              <PercentageChips
-                onPressPercent={onPressPercent}
-                disabled={maxSpendable <= 0}
+            {/* Asset selector + balance + Use Max, below the amount */}
+            <View style={{ marginBottom: 14 }}>
+              <AssetSelectRow
+                iconSource={asset.iconSource ?? { uri: SOL_ICON_URI }}
+                name={asset.symbol}
+                balanceLabel={balanceLabel}
+                onPressSelect={() =>
+                  router.push(`/asset-picker?wallet=${pickerWalletParam}`)
+                }
+                onPressMax={() => onPressPercent(1)}
               />
             </View>
 
@@ -632,224 +617,43 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                     ? 'Insufficient balance'
                     : 'Continue'
                 }
-                onPressCta={() => transitionTo(3, 'forward')}
+                onPressCta={() => setStep(3)}
                 ctaDisabled={!amountValid}
               />
             </View>
           </>
         )}
 
-        {step === 3 && asset && recipient && (
-          <>
-            <ScrollView
-              contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 48 }}
-              showsVerticalScrollIndicator={false}
-            >
-              <View
-                style={{
-                  borderRadius: 22,
-                  borderWidth: 1,
-                  borderColor: S.hairline,
-                  overflow: 'hidden',
-                }}
-              >
-                <LinearGradient
-                  colors={[
-                    'rgba(255,255,255,0.04)',
-                    'rgba(255,255,255,0.01)',
-                  ]}
-                  start={{ x: 0.2, y: 0 }}
-                  end={{ x: 0.8, y: 1 }}
-                  style={{ padding: 24 }}
-                >
-                  {/* Amount hero */}
-                  <View
-                    style={{
-                      alignItems: 'center',
-                      paddingBottom: 22,
-                      borderBottomWidth: 1,
-                      borderBottomColor: S.hairline,
-                    }}
-                  >
-                    <Text
-                      style={[
-                        sansation,
-                        {
-                          fontSize: 9,
-                          letterSpacing: 2.88,
-                          textTransform: 'uppercase',
-                          color: S.inkFaint,
-                          fontWeight: '700',
-                          marginBottom: 8,
-                        },
-                      ]}
-                    >
-                      Amount
-                    </Text>
-                    <View
-                      style={{ flexDirection: 'row', alignItems: 'baseline' }}
-                    >
-                      <Text
-                        style={[
-                          serif,
-                          {
-                            fontSize: 26,
-                            color: S.accent,
-                            fontStyle: 'italic',
-                            lineHeight: 26,
-                            includeFontPadding: false,
-                          },
-                        ]}
-                      >
-                        $
-                      </Text>
-                      <Text
-                        style={[
-                          sansationLight,
-                          {
-                            fontSize: 54,
-                            letterSpacing: -1.62,
-                            color: S.ink,
-                            lineHeight: 54,
-                            includeFontPadding: false,
-                          },
-                        ]}
-                      >
-                        {fiatValue}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        serif,
-                        {
-                          fontSize: 13,
-                          color: S.inkDim,
-                          fontStyle: 'italic',
-                          marginTop: 8,
-                        },
-                      ]}
-                    >
-                      ≈ {tokenAmountLabel} {asset.symbol}
-                    </Text>
-                  </View>
-
-                  {(
-                    [
-                      ['From', fromLabel],
-                      ['To', truncateAddress(recipient.name)],
-                      ['Asset', `${asset.symbol} · ${asset.name}`],
-                      ['Network fee', feeLabel],
-                      ...(isPrivate
-                        ? ([
-                            [
-                              `Privacy fee · ${(PROTOCOL_FEE_RATE * 100).toFixed(2)}%`,
-                              `${protocolFeeSol(amountNum)
-                                .toFixed(4)
-                                .replace(/\.?0+$/, '')} ${asset.symbol}`,
-                            ],
-                          ] as const)
-                        : []),
-                    ] as const
-                  ).map(([l, v], i, arr) => (
-                    <View
-                      key={l}
-                      style={{
-                        paddingVertical: 12,
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        borderBottomWidth: i < arr.length - 1 ? 1 : 0,
-                        borderBottomColor: S.hairline,
-                      }}
-                    >
-                      <Text style={{ fontSize: 12, color: S.inkFaint }}>
-                        {l}
-                      </Text>
-                      <Text style={{ fontSize: 14, color: S.ink }}>{v}</Text>
-                    </View>
-                  ))}
-                </LinearGradient>
-              </View>
-
-              <View
-                style={{
-                  marginTop: 14,
-                  paddingHorizontal: 8,
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'baseline',
-                }}
-              >
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 10,
-                      letterSpacing: 2.8,
-                      textTransform: 'uppercase',
-                      color: S.inkFaint,
-                      fontWeight: '700',
-                    },
-                  ]}
-                >
-                  Total debit
-                </Text>
-                <Text
-                  style={[
-                    serif,
-                    {
-                      fontSize: 20,
-                      fontStyle: 'italic',
-                      color: S.ink,
-                    },
-                  ]}
-                >
-                  ${(Number(fiatValue) + (feeUSD ?? 0)).toFixed(2)}
-                </Text>
-              </View>
-            </ScrollView>
-
-            <View
-              style={{
-                paddingHorizontal: 24,
-                paddingTop: 8,
-                paddingBottom: insets.bottom + 24,
-              }}
-            >
-              {sendError ? (
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 12,
-                      color: '#E5484D',
-                      textAlign: 'center',
-                      marginBottom: 10,
-                    },
-                  ]}
-                >
-                  {sendError}
-                </Text>
-              ) : null}
-              <SwipeToSend
-                key={swipeAttempt.current}
-                tone={tone}
-                label={
-                  sendMutation.isPending || privateSending
-                    ? 'Sending…'
-                    : 'Swipe to send'
-                }
-                onSend={onSwipeSend}
-                disabled={
-                  !amountValid || sendMutation.isPending || privateSending
-                }
-                loading={sendMutation.isPending || privateSending}
-              />
-            </View>
-          </>
-        )}
-
       </Animated.View>
+
+      {/* Confirmation — same bottom sheet as the Move flow, including the
+          in-sheet "submitted / pending" state after the slide. */}
+      {asset && recipient ? (
+        <MoveConfirm
+          visible={step === 3}
+          onClose={() => setStep(2)}
+          onDone={finishToOrigin}
+          tone={tone}
+          title={title}
+          slideLabel="Slide to send"
+          fiat={Number(fiatValue)}
+          amountLabel={`${tokenAmountLabel} ${asset.symbol}`}
+          fromLabel={fromLabel}
+          fromAddress={truncateAddress(fromAddress)}
+          toLabel={truncateAddress(recipient.name)}
+          networkFeeUsd={feeUSD ?? 0}
+          privacyFeeUsd={isPrivate ? PROTOCOL_FEE_RATE * Number(fiatValue) : 0}
+          showPrivacyFee={isPrivate}
+          onConfirm={onSwipeSend}
+          submitting={sendMutation.isPending || privateSending}
+          error={sendError ?? undefined}
+          signature={txSig ?? undefined}
+        />
+      ) : null}
+
+      {/* Private transfers spend the encrypted balance — gate on Umbra
+          registration. Simple/public sends don't need it. */}
+      {isPrivate ? <StealthSetupOverlay onClose={close} /> : null}
     </CenterGlow>
   );
 }

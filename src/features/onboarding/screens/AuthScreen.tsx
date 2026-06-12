@@ -1,20 +1,14 @@
 import { useEffect } from 'react';
-import { Linking, Platform, Text, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthBtn } from '@/src/design-system/primitives/AuthBtn';
 import { AppleGlyph, GoogleGlyph, MailGlyph } from '@/src/design-system/icons/auth';
-import {
-  sansation,
-  sansationBold,
-  sansationItalic,
-} from '@/src/design-system/typography';
-import { txPalette } from '@/src/design-system/palettes';
+import { sansation, sansationBold } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { useAuthFlow } from '../hooks/useAuthFlow';
 import { useToast } from '@/src/components/toast/ToastContext';
-
-const SILVER = txPalette('silver');
 
 type Props = {
   onEmail: () => void;
@@ -25,6 +19,7 @@ export function AuthScreen({ onEmail }: Props) {
   const { show: showToast } = useToast();
   const {
     signInWithGoogle,
+    signInWithApple,
     isAuthenticating,
     pendingProvider,
     error,
@@ -36,11 +31,7 @@ export function AuthScreen({ onEmail }: Props) {
   }, [error, showToast]);
 
   const onApple = () => {
-    showToast({
-      kind: 'info',
-      title: 'Coming soon',
-      message: 'Sign in with Apple is coming soon. Use Google or Email for now.',
-    });
+    void signInWithApple();
   };
 
   const onGoogle = () => {
@@ -50,78 +41,70 @@ export function AuthScreen({ onEmail }: Props) {
   const disabled = isAuthenticating;
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* Hero — logo + wordmark + kicker. Background tone comes from the
-          (auth) layout's <CenterGlow tone="silver">; this screen never
-          paints its own halo. */}
-      <View
-        style={{
-          flex: 1,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 28,
-          paddingTop: insets.top,
-        }}
-      >
+    <View style={{ flex: 1, backgroundColor: T.bg }}>
+      {/* Hero — full-bleed city backdrop with the logo, fading into the dark
+          auth section below so the two halves blend (no hard cut). */}
+      <View style={{ flex: 1 }}>
         <Image
-          source={require('@/assets/images/logo-transparent.png')}
-          style={{ width: 96, height: 96, marginBottom: 18 }}
-          contentFit="contain"
+          source={require('@/assets/images/fond.png')}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
           cachePolicy="memory-disk"
         />
-        {/* Wrapper sizes to the wordmark and stays centered by the parent's
-            alignItems; (beta) is absolutely pinned to its bottom-right so the
-            title itself never shifts off-center. */}
-        <View style={{ marginBottom: 12 }}>
-          <Text
-            style={[
-              sansationItalic,
-              {
-                fontSize: 80,
-                lineHeight: 80,
-                color: T.ink,
-                letterSpacing: -3.2,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            stealf
-          </Text>
-          <Text
-            style={[
-              sansationBold,
-              {
-                position: 'absolute',
-                right: -48,
-                bottom: 8,
-                fontSize: 12,
-                letterSpacing: 1,
-                color: SILVER.accent,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            (beta)
-          </Text>
-        </View>
-        <Text
+        {/* Subtle scrim — adds mood and keeps the white logo legible. */}
+        <View
           style={[
-            sansationBold,
-            {
-              fontSize: 9,
-              letterSpacing: 3.78,
-              textTransform: 'uppercase',
-              color: SILVER.accent,
-            },
+            StyleSheet.absoluteFill,
+            { backgroundColor: 'rgba(8,8,10,0.18)' },
           ]}
+        />
+        {/* Bottom fade — melts the image into T.bg toward the auth section. */}
+        <LinearGradient
+          colors={['transparent', 'transparent', T.bg]}
+          locations={[0, 0.58, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+
+        {/* Logo + beta, centered over the image */}
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingTop: insets.top,
+          }}
         >
-          Private Banking
-        </Text>
+          <View style={{ width: 280, height: 280 }}>
+            <Image
+              source={require('@/assets/images/logo-transparent.png')}
+              style={{ width: 280, height: 280 }}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+            />
+            {/* Pinned to the glyph's bottom-right (the glyph sits centered in
+                the PNG's transparent padding, hence the large offsets). */}
+            <Text
+              style={[
+                sansationBold,
+                {
+                  position: 'absolute',
+                  right: 60,
+                  bottom: 88,
+                  fontSize: 17,
+                  letterSpacing: 0.5,
+                  color: 'rgba(255,255,255,0.92)',
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              beta
+            </Text>
+          </View>
+        </View>
       </View>
 
-      {/* Auth options — flat layout, buttons direct on the (auth) layout's
-          CenterGlow background. No container/wash; the Stack route disables
-          its fade so AuthFlow's internal animation owns transitions. */}
+      {/* Auth options — on the dark section the hero fades into. */}
       <View
         style={{
           paddingHorizontal: 28,
@@ -154,23 +137,26 @@ export function AuthScreen({ onEmail }: Props) {
           <View style={{ flex: 1, height: 1, backgroundColor: T.hairline }} />
         </View>
 
+        {/* On Apple devices, Apple is the prominent (white) option; Google
+            steps back to glass so there's a single primary button. */}
+        {Platform.OS === 'ios' && (
+          <AuthBtn
+            variant="primary"
+            icon={<AppleGlyph size={18} color={T.bg} />}
+            label="Continue with Apple"
+            disabled={disabled}
+            loading={pendingProvider === 'apple'}
+            onPress={onApple}
+          />
+        )}
         <AuthBtn
-          variant="primary"
+          variant={Platform.OS === 'ios' ? 'glass' : 'primary'}
           icon={<GoogleGlyph size={18} />}
           label="Continue with Google"
           disabled={disabled}
           loading={pendingProvider === 'google'}
           onPress={onGoogle}
         />
-        {Platform.OS === 'ios' && (
-          <AuthBtn
-            variant="glass"
-            icon={<AppleGlyph size={18} color={T.ink} />}
-            label="Apple · Coming soon"
-            onPress={onApple}
-            style={{ opacity: 0.5 }}
-          />
-        )}
         <AuthBtn
           variant="glass"
           icon={<MailGlyph size={18} color={T.ink} />}

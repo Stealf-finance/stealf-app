@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -17,12 +18,7 @@ import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { LoaderOverlay } from '@/src/design-system/primitives/LoaderOverlay';
 import { Icons } from '@/src/design-system/icons';
-import {
-  mono,
-  sansation,
-  sansationLight,
-  serif,
-} from '@/src/design-system/typography';
+import { mono, sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { validateMnemonic } from '@/src/services/solana/transactionsGuard';
@@ -43,6 +39,9 @@ type Props = {
   onCancel?: () => void;
   loading: boolean;
   generatedMnemonic?: string;
+  /** When set, the choose step shows a back button that calls this (used by
+   *  the Home takeover to return to the Bank card). */
+  onExit?: () => void;
 };
 
 export function StealfWalletSetup({
@@ -50,6 +49,7 @@ export function StealfWalletSetup({
   onCancel,
   loading,
   generatedMnemonic,
+  onExit,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState<Step>(
@@ -139,17 +139,23 @@ export function StealfWalletSetup({
 
   return (
     <CenterGlow tone={TONE}>
+      {/* Standardized page header — BackBtn · sansation 32 · spacer */}
       <View
         style={{
-          paddingTop: insets.top + 24,
+          paddingTop: insets.top + 32,
           paddingBottom: 12,
-          paddingHorizontal: 16,
+          paddingHorizontal: 20,
           flexDirection: 'row',
           alignItems: 'center',
+          gap: 14,
         }}
       >
         {step === 'choose' ? (
-          <View style={{ width: 36 }} />
+          onExit ? (
+            <BackBtn onPress={onExit} />
+          ) : (
+            <View style={{ width: 36 }} />
+          )
         ) : (
           <BackBtn
             onPress={() => {
@@ -163,20 +169,24 @@ export function StealfWalletSetup({
           />
         )}
         <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
-              marginRight: 36,
             },
           ]}
         >
-          Stealth wallet
+          Setup Your Wallet
         </Text>
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
@@ -251,43 +261,12 @@ type ChooseProps = {
 
 function ChooseStep({ loading, onComplete, setStep }: ChooseProps) {
   return (
-    <View style={{ paddingTop: 16 }}>
+    <View style={{ paddingTop: 24 }}>
       <Text
         style={[
           sansation,
           {
-            fontSize: 9,
-            letterSpacing: 2.52,
-            textTransform: 'uppercase',
-            color: G.accent,
-            fontWeight: '700',
-            textAlign: 'center',
-            marginBottom: 12,
-          },
-        ]}
-      >
-        Get started
-      </Text>
-      <Text
-        style={[
-          sansationLight,
-          {
-            fontSize: 28,
-            color: T.ink,
-            textAlign: 'center',
-            letterSpacing: -0.84,
-            marginBottom: 10,
-          },
-        ]}
-      >
-        Set up your stealth wallet
-      </Text>
-      <Text
-        style={[
-          serif,
-          {
             fontSize: 15,
-            fontStyle: 'italic',
             color: T.inkDim,
             textAlign: 'center',
             lineHeight: 22,
@@ -295,21 +274,21 @@ function ChooseStep({ loading, onComplete, setStep }: ChooseProps) {
           },
         ]}
       >
-        Create a new wallet or restore one with your recovery phrase.
+        Create a new wallet locally or import an existing one.
       </Text>
 
       <SetupOption
-        iconKey="plus"
+        image={require('@/assets/images/Create-wallet.png')}
         label="Create new wallet"
-        sub="Generate a brand new wallet"
+        sub="Create a brand new wallet locally"
         onPress={() => onComplete({ mode: 'create' })}
         disabled={loading}
       />
       <View style={{ height: 12 }} />
       <SetupOption
-        iconKey="key"
+        image={require('@/assets/images/Key.png')}
         label="Import wallet"
-        sub="Use an existing recovery phrase"
+        sub="Import your wallet with a seed phrase"
         onPress={() => setStep('importWallet')}
         disabled={loading}
       />
@@ -318,15 +297,14 @@ function ChooseStep({ loading, onComplete, setStep }: ChooseProps) {
 }
 
 type SetupOptionProps = {
-  iconKey: 'plus' | 'key';
+  image: number;
   label: string;
   sub: string;
   onPress: () => void;
   disabled?: boolean;
 };
 
-function SetupOption({ iconKey, label, sub, onPress, disabled }: SetupOptionProps) {
-  const Icon = iconKey === 'plus' ? Icons.plus : Icons.key;
+function SetupOption({ image, label, sub, onPress, disabled }: SetupOptionProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -336,8 +314,6 @@ function SetupOption({ iconKey, label, sub, onPress, disabled }: SetupOptionProp
       style={{
         borderRadius: 18,
         overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
         opacity: disabled ? 0.5 : 1,
       }}
     >
@@ -353,19 +329,12 @@ function SetupOption({ iconKey, label, sub, onPress, disabled }: SetupOptionProp
           paddingHorizontal: 18,
         }}
       >
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            borderWidth: 1,
-            borderColor: G.hairline,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon size={20} color={G.accent} />
-        </View>
+        <Image
+          source={image}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          style={{ width: 46, height: 46 }}
+        />
         <View style={{ flex: 1 }}>
           <Text
             style={[
@@ -422,48 +391,15 @@ function ShowMnemonicStep({
         style={[
           sansation,
           {
-            fontSize: 9,
-            letterSpacing: 2.52,
-            textTransform: 'uppercase',
-            color: G.accent,
-            fontWeight: '700',
-            textAlign: 'center',
-            marginBottom: 12,
-          },
-        ]}
-      >
-        Recovery phrase
-      </Text>
-      <Text
-        style={[
-          sansationLight,
-          {
-            fontSize: 26,
+            fontSize: 22,
+            fontWeight: '600',
             color: T.ink,
             textAlign: 'center',
-            letterSpacing: -0.78,
             marginBottom: 10,
           },
         ]}
       >
         Save these 12 words
-      </Text>
-      <Text
-        style={[
-          serif,
-          {
-            fontSize: 14,
-            fontStyle: 'italic',
-            color: T.inkDim,
-            textAlign: 'center',
-            lineHeight: 21,
-            paddingHorizontal: 12,
-            marginBottom: 28,
-          },
-        ]}
-      >
-        Anyone with these words owns the wallet. Write them down somewhere
-        safe — we can&apos;t recover them for you.
       </Text>
 
       <View
@@ -626,26 +562,10 @@ function ImportStep({
         style={[
           sansation,
           {
-            fontSize: 9,
-            letterSpacing: 2.52,
-            textTransform: 'uppercase',
-            color: G.accent,
-            fontWeight: '700',
-            textAlign: 'center',
-            marginBottom: 12,
-          },
-        ]}
-      >
-        Restore wallet
-      </Text>
-      <Text
-        style={[
-          sansationLight,
-          {
-            fontSize: 26,
+            fontSize: 22,
+            fontWeight: '600',
             color: T.ink,
             textAlign: 'center',
-            letterSpacing: -0.78,
             marginBottom: 10,
           },
         ]}
@@ -654,10 +574,9 @@ function ImportStep({
       </Text>
       <Text
         style={[
-          serif,
+          sansation,
           {
             fontSize: 14,
-            fontStyle: 'italic',
             color: T.inkDim,
             textAlign: 'center',
             lineHeight: 21,
