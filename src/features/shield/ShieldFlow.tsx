@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
@@ -22,7 +22,6 @@ import {
   setSelectedAsset,
   useSelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
-import { sansation } from '@/src/design-system/typography';
 import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -42,6 +41,7 @@ import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
+import * as Sentry from '@sentry/react-native';
 
 type Direction = 'shield' | 'unshield';
 
@@ -164,7 +164,7 @@ export function ShieldFlow({ direction }: Props) {
 
     if (!user?.stealfWallet) {
       return failPre(
-        'Set up your stealth wallet first. Open the Stealth tab to create or import one.',
+        'Set up your wallet first. Open the Payment tab to create or import one.',
       );
     }
     if (num > sourceBalance) {
@@ -244,6 +244,17 @@ export function ShieldFlow({ direction }: Props) {
         clearTimeout(provingTimer);
         const msg = err?.userMessage || err?.message || 'Operation failed';
         if (__DEV__) console.warn('[ShieldFlow] failed:', msg);
+        // wrap() already captures StealthError — skip to avoid dup.
+        if (err?.name !== 'StealthError') {
+          Sentry.captureException(err, {
+            tags: { 'op.kind': `shield-${direction}`, 'wallet.source': 'stealf' },
+            extra: {
+              userMessage: msg,
+              amountBand: amountBand(num),
+              asset: assetSymbol,
+            },
+          });
+        }
         posthogRef.current?.capture('shield_failed', {
           direction,
           asset_symbol: assetSymbol,
@@ -256,35 +267,7 @@ export function ShieldFlow({ direction }: Props) {
 
   return (
     <CenterGlow tone={tone} flat>
-      {/* Standardized page header — BackBtn · serif italic 32 · spacer */}
-      <View
-        style={{
-          paddingTop: insets.top,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        }}
-      >
-        <BackBtn onPress={close} />
-        <Text
-          style={[
-            sansation,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 32,
-              fontWeight: '600',
-              color: T.ink,
-              includeFontPadding: false,
-            },
-          ]}
-        >
-          {title}
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
+      <PageTitleHeader title={title} onBack={close} />
 
       {/* Centered glass amount card (asset row moved below) */}
       <View style={{ marginTop: 20 }}>

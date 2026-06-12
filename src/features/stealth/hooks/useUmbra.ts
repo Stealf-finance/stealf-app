@@ -60,9 +60,11 @@ export function clearStealthState(): void {
 export { umbraClearSeed };
 
 export function useUmbra() {
+  // TODO(refactor): migrate `wrap()` to `useMutation` per op so consumers can
+  // read per-op loading + error state directly. Currently `loading` is the only
+  // surviving useUmbra-level state — `currentOp` and `error` were dropped after
+  // verifying zero external readers (commit 4 of the Big Review polish sprint).
   const [loading, setLoading] = useState(false);
-  const [currentOp, setCurrentOp] = useState<StealthOp | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const {
     signTransaction: turnkeySignTransaction,
@@ -74,8 +76,6 @@ export function useUmbra() {
   const wrap = useCallback(
     async <T>(op: StealthOp, fn: () => Promise<T>): Promise<T> => {
       setLoading(true);
-      setCurrentOp(op);
-      setError(null);
       try {
         return await fn();
       } catch (err: any) {
@@ -117,11 +117,9 @@ export function useUmbra() {
             simLogs,
           },
         });
-        setError(stealthErr.userMessage);
         throw stealthErr;
       } finally {
         setLoading(false);
-        setCurrentOp(null);
       }
     },
     [],
@@ -135,7 +133,7 @@ export function useUmbra() {
       !turnkeySignTransaction ||
       !turnkeySignMessage
     ) {
-      throw new Error('Bank wallet not ready');
+      throw new Error('Virtual bank account not ready');
     }
     return sdkGetBankClient({
       walletAccount: bankWalletAccount as any,
@@ -146,8 +144,6 @@ export function useUmbra() {
 
   return {
     loading,
-    currentOp,
-    error,
     wrap,
 
     getStealthClient,

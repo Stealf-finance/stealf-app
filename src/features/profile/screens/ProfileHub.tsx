@@ -29,6 +29,7 @@ import {
 } from '@/src/design-system/icons/auth';
 import {
   sansation,
+  sansationBold,
   sansationLight,
   serif,
 } from '@/src/design-system/typography';
@@ -66,7 +67,7 @@ const SETTINGS: SettingsItem[] = [
   { iconKey: 'info', label: 'About us', href: 'https://www.stealf.xyz' },
   {
     iconKey: 'folder',
-    label: 'Terms of Services',
+    label: 'Terms of Service',
     href: 'https://stealf.xyz/terms',
   },
   {
@@ -462,13 +463,12 @@ export function ProfileHub() {
         >
           <Text
             style={[
-              sansation,
+              sansationBold,
               {
                 fontSize: 10,
-                letterSpacing: 3.2,
+                letterSpacing: 2.8,
                 textTransform: 'uppercase',
                 color: T.gold,
-                fontWeight: '700',
               },
             ]}
           >
@@ -476,13 +476,12 @@ export function ProfileHub() {
           </Text>
           <Text
             style={[
-              sansation,
+              sansationBold,
               {
                 fontSize: 10,
                 letterSpacing: 2.8,
                 textTransform: 'uppercase',
                 color: S.inkFaint,
-                fontWeight: '500',
               },
             ]}
           >
@@ -698,7 +697,7 @@ export function ProfileHub() {
         <SettingsCard>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Logout"
+            accessibilityLabel="Log out"
             disabled={logout.isPending}
             onPress={confirmLogout}
             style={{
@@ -717,7 +716,7 @@ export function ProfileHub() {
                 { flex: 1, fontSize: 14, color: S.ink },
               ]}
             >
-              {logout.isPending ? 'Logging out…' : 'Logout'}
+              {logout.isPending ? 'Logging out…' : 'Log out'}
             </Text>
             <Icons.chevR size={14} color={S.inkFaint} />
           </Pressable>

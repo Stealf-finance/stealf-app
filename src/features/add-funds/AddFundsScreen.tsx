@@ -432,7 +432,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             ) : claimResult?.kind === 'success' ? (
               <Icons.check size={14} color="#3AAA5A" strokeWidth={2.4} />
             ) : claimResult?.kind === 'error' ? (
-              <Icons.info size={14} color="#E5484D" />
+              <Icons.info size={14} color={T.error} />
             ) : (
               <Icons.plus size={14} color={T.ink} />
             )}
@@ -448,7 +448,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
                     claimResult?.kind === 'success'
                       ? '#3AAA5A'
                       : claimResult?.kind === 'error'
-                        ? '#E5484D'
+                        ? T.error
                         : T.ink,
                 },
               ]}

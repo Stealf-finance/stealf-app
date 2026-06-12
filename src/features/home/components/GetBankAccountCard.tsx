@@ -47,7 +47,7 @@ export function GetBankAccountCard() {
           />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={[sansation, { fontSize: 16, color: T.ink, fontWeight: '600' }]}>
-              Get your bank account
+              Get your virtual bank account
             </Text>
             <Text
               style={[sansationLight, { fontSize: 12, color: T.inkDim, marginTop: 3 }]}

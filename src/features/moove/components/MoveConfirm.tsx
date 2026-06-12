@@ -543,7 +543,7 @@ export function MoveConfirm({
                       sansation,
                       {
                         fontSize: 12,
-                        color: '#E5484D',
+                        color: T.error,
                         textAlign: 'center',
                         marginBottom: 10,
                         includeFontPadding: false,

@@ -79,15 +79,15 @@ export class StealthError extends Error {
  * failure surfaces from a simulation log or from the local balance check.
  */
 export const INSUFFICIENT_FEE_SOL_MESSAGE =
-  "Your stealth wallet doesn't have enough SOL to pay network fees. Send a small amount of SOL (around 0.01) to your stealth wallet, then try again.";
+  "Your wallet doesn't have enough SOL to pay network fees. Send a small amount of SOL (around 0.01) to your wallet, then try again.";
 
 const MSG: Record<StealthErrorCode, string> = {
   REGISTRATION_REJECTED: 'Registration cancelled.',
   REGISTRATION_PROOF_FAILED: 'Failed to generate proof. Please try again.',
   USER_NOT_REGISTERED:
-    'Your stealth wallet is not registered yet. Try again in a few seconds.',
+    'Your wallet is not registered yet. Try again in a few seconds.',
   RECEIVER_NOT_REGISTERED:
-    'Recipient is not a Stealf user yet. Ask them to set up their stealth wallet first.',
+    'Recipient is not a Stealf user yet. Ask them to set up their wallet first.',
   INSUFFICIENT_BALANCE: 'Insufficient balance to complete this transaction.',
   INSUFFICIENT_FEE_SOL: INSUFFICIENT_FEE_SOL_MESSAGE,
   ZK_PROOF_ERROR: 'Failed to generate the privacy proof. Please try again.',
@@ -98,11 +98,11 @@ const MSG: Record<StealthErrorCode, string> = {
   RPC_ERROR: 'Network error. Please check your connection and try again.',
   INDEXER_ERROR: 'Could not reach the network. Please check your connection.',
   VERIFYING_KEY_NOT_INITIALIZED:
-    'Umbra Protocol unavailable on this network. Please contact support.',
+    'Umbra Privacy unavailable on this network. Please contact support.',
   STALE_MERKLE_PROOF: 'This claim is out of date. Please refresh and try again.',
   SIGNING_FAILED: 'Signing failed. Please try again.',
   PROTOCOL_INSTRUCTION_MISMATCH:
-    'Umbra Protocol unavailable on this network. Please contact support.',
+    'Umbra Privacy unavailable on this network. Please contact support.',
   UNKNOWN: 'Something went wrong. Please try again.',
 };
 

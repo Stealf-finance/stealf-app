@@ -105,7 +105,7 @@ export function StealthSetupOverlay({ onClose }: Props) {
       <LoaderOverlay
         tone="gold"
         label="Checking your private setup…"
-        sub="Verifying registration with the privacy protocol."
+        sub="Verifying registration with Umbra Privacy."
       />
     );
   }

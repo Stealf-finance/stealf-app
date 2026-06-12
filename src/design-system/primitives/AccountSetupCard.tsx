@@ -44,7 +44,7 @@ const COPY: Record<
     insufficientBody: [
       'More SOL is required on your wallets to register your ',
       'wallets',
-      ' on Umbra Protocol.',
+      ' on Umbra Privacy.',
     ],
     ctaInsufficient: 'Go back',
     cost: '~0.024 SOL',
@@ -52,7 +52,7 @@ const COPY: Record<
   bank: {
     kicker: 'bank account · not yet activated',
     title: 'Activate your',
-    titleEm: 'cash account',
+    titleEm: 'virtual bank account',
     body: [
       'Required to receive a personal ',
       'EUR IBAN',
@@ -63,7 +63,7 @@ const COPY: Record<
     insufficientTitleEm: 'required',
     insufficientBody: [
       'Complete KYC to activate your ',
-      'cash account',
+      'virtual bank account',
       ' and receive a personal IBAN.',
     ],
     ctaInsufficient: 'Start verification',

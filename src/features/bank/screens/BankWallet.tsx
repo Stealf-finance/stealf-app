@@ -175,7 +175,7 @@ export function BankWallet() {
               },
             ]}
           >
-            Bank Wallet
+            Virtual bank account
           </Text>
           <Pressable
             onPress={toggleBalanceHidden}

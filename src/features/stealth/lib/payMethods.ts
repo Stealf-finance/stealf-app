@@ -23,7 +23,7 @@ export const PAY_METHODS: PayMethod[] = [
     // wallet is intentionally not offered here.
     route: '/send/flow?tone=silver&wallet=stealth',
   },
-  { key: 'moove', label: 'Moove', discKey: 'move', route: '/moove' },
+  { key: 'moove', label: 'Move', discKey: 'move', route: '/moove' },
   { key: 'bank', label: 'Bank transfer', discKey: 'bank', disabled: true },
   { key: 'stealf-tag', label: 'Stealf tag', discKey: 'stealf', disabled: true },
 ];

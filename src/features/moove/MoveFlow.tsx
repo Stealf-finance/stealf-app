@@ -24,7 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
@@ -36,7 +36,6 @@ import {
   setSelectedAsset,
   useSelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
-import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { toAddress } from '@/src/services/solana/kit';
@@ -65,6 +64,7 @@ import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import type { PendingOpKind } from '@/src/components/pending-ops/types';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
+import * as Sentry from '@sentry/react-native';
 
 function kindForDirection(d: MoveDirection): PendingOpKind {
   switch (d) {
@@ -91,21 +91,21 @@ type DirectionConfig = {
 
 const CONFIG: Record<MoveDirection, DirectionConfig> = {
   'bank-to-shielded': {
-    title: 'Virtual Bank Account to Encrypted Balance',
-    fromLabel: 'Virtual Bank Account',
+    title: 'Virtual bank account to encrypted balance',
+    fromLabel: 'Virtual bank account',
     toLabel: 'Encrypted balance',
     cta: 'Slide to move',
   },
   'shielded-to-bank': {
-    title: 'Encrypted Balance to Virtual Bank Account ',
+    title: 'Encrypted balance to virtual bank account',
     fromLabel: 'Encrypted balance',
-    toLabel: 'Virtual Bank Account',
+    toLabel: 'Virtual bank account',
     cta: 'Slide to move',
   },
   'stealth-to-bank': {
-    title: 'Wallet to Virtual Bank Account ',
+    title: 'Wallet to virtual bank account',
     fromLabel: 'Wallet',
-    toLabel: 'Virtual Bank Account',
+    toLabel: 'Virtual bank account',
     cta: 'Slide to move',
   },
 };
@@ -369,17 +369,17 @@ export function MoveFlow() {
     if (!user) return failPre('Please sign in again before continuing.');
     if (direction === 'bank-to-shielded' && !user.stealfWallet) {
       return failPre(
-        'Set up your stealth wallet first. Open the Stealth tab to create or import one.',
+        'Set up your wallet first. Open the Payment tab to create or import one.',
       );
     }
     if (direction === 'shielded-to-bank' && !user.bankWallet) {
-      return failPre('Bank wallet missing. Sign out and back in to restore it.');
+      return failPre('Virtual bank account missing. Sign out and back in to restore it.');
     }
     if (direction === 'stealth-to-bank' && (!user.bankWallet || !user.stealfWallet)) {
       return failPre(
         !user.stealfWallet
-          ? 'Set up your stealth wallet first.'
-          : 'Bank wallet missing. Sign out and back in to restore it.',
+          ? 'Set up your wallet first.'
+          : 'Virtual bank account missing. Sign out and back in to restore it.',
       );
     }
     if (num > sourceBalance) {
@@ -428,7 +428,7 @@ export function MoveFlow() {
           } catch (regErr: any) {
             const reason = regErr?.userMessage || regErr?.message || '';
             throw Object.assign(new Error('Privacy registration failed'), {
-              userMessage: `Couldn't register your stealth wallet with the privacy protocol${
+              userMessage: `Couldn't register your wallet with Umbra Privacy${
                 reason ? `: ${reason}` : '.'
               } Try again in a moment.`,
             });
@@ -510,6 +510,17 @@ export function MoveFlow() {
         clearTimeout(provingTimer);
         const msg = err?.userMessage || err?.message || 'Move failed';
         if (__DEV__) console.warn('[MoveFlow] failed:', direction, msg);
+        // wrap() already captures StealthError — skip to avoid dup.
+        if (err?.name !== 'StealthError') {
+          Sentry.captureException(err, {
+            tags: { 'op.kind': `move-${direction}`, 'wallet.source': 'mixed' },
+            extra: {
+              userMessage: msg,
+              amountBand: amountBand(num),
+              asset: assetSymbol,
+            },
+          });
+        }
         posthogRef.current?.capture('move_failed', {
           direction,
           asset_symbol: assetSymbol,
@@ -522,34 +533,7 @@ export function MoveFlow() {
 
   return (
     <CenterGlow tone={tone} flat>
-      <View
-        style={{
-          paddingTop: insets.top,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        }}
-      >
-        <BackBtn onPress={handleBack} />
-        <Text
-          style={[
-            sansation,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 32,
-              fontWeight: '600',
-              color: T.ink,
-              includeFontPadding: false,
-            },
-          ]}
-        >
-          Move
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
+      <PageTitleHeader title="Move" onBack={handleBack} />
 
       {/* Upper content flexes so the keypad + CTA always keep their space at
           the bottom; content stays grouped up near the title. */}

@@ -72,7 +72,7 @@ export async function getStealfKeypair(): Promise<CryptoKeyPair> {
     const { privateKey } = await deriveStealfKeypairFromMnemonic(storedMnemonic);
     return await createKeyPairFromPrivateKeyBytes(privateKey);
   }
-  throw new Error('No stealf wallet key found');
+  throw new Error('No wallet key found');
 }
 
 export async function getStealfAddress(): Promise<Address> {

@@ -20,7 +20,8 @@ import {
   serif,
 } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
-import { TxHeader } from '@/src/features/send/components/TxHeader';
+import { T } from '@/src/design-system/tokens';
+import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
 import { Asset } from '@/src/features/send/components/AssetPill';
 import {
   useSelectedAsset,
@@ -59,6 +60,7 @@ import {
 import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
 import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
+import * as Sentry from '@sentry/react-native';
 
 const FADE_OUT = 160;
 const FADE_IN = 220;
@@ -134,8 +136,8 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const fromLabel = isPrivate
     ? 'Encrypted balance'
     : walletSource === 'stealth'
-      ? 'Stealth wallet'
-      : 'Bank wallet';
+      ? 'Wallet'
+      : 'Virtual bank account';
   const { data: balance, isLoading: balanceLoading } = useBalance(fromAddress);
   const { data: encrypted } = useEncryptedBalances();
   const { data: solPrice } = useSolPrice();
@@ -385,6 +387,20 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         (err instanceof Error
           ? err.message
           : 'Could not send the transaction.');
+      // wrap() already captures StealthError to Sentry — skip to avoid dup.
+      if (err?.name !== 'StealthError') {
+        Sentry.captureException(err, {
+          tags: {
+            'op.kind': isPrivate ? 'send-private' : 'send-public',
+            'wallet.source': walletSource,
+          },
+          extra: {
+            userMessage: msg,
+            amountBand: amountBand(Number(fiatValue)),
+            asset: asset?.symbol,
+          },
+        });
+      }
       posthog?.capture('send_failed', {
         mode: isPrivate ? 'private' : 'public',
         asset_symbol: asset.symbol,
@@ -413,7 +429,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
 
   return (
     <CenterGlow tone={tone}>
-      <TxHeader title={title} onBack={handleBack} />
+      <PageTitleHeader title={title} onBack={handleBack} />
 
       <Animated.View style={[{ flex: 1 }, contentStyle]}>
         {step === 1 && asset && (
@@ -428,7 +444,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                   paddingHorizontal: 18,
                   borderRadius: 18,
                   borderWidth: 1,
-                  borderColor: recipientError ? '#E5484D' : S.hairline,
+                  borderColor: recipientError ? T.error : S.hairline,
                   overflow: 'hidden',
                 }}
               >
@@ -502,7 +518,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                 }}
               >
                 {recipientError ? (
-                  <Text style={[sansation, { fontSize: 12, color: '#E5484D' }]}>
+                  <Text style={[sansation, { fontSize: 12, color: T.error }]}>
                     {recipientError}
                   </Text>
                 ) : null}

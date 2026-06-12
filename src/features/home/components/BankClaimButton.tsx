@@ -6,13 +6,9 @@ import { T } from '@/src/design-system/tokens';
 import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
 import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
 
-/** Transparent (blurred glass) "Claim" pill shown right under the balance —
- *  same glassmorphism treatment as GetBankAccountCard. Opens the claims screen.
- *  Shows a gold dot when there are private transfers waiting to be claimed.
- *
- *  `target` selects the claim destination (and therefore which pending notes
- *  the dot reflects): `bank` → claim out to the public bank wallet, `encrypted`
- *  → claim into the encrypted balance. */
+/** Transparent (blurred glass) "Claim" pill shown right under the balance.
+ *  Dot tone tracks `target`: silver for bank-destination claims, gold for
+ *  encrypted-destination claims. Matches the wallet's tone palette. */
 export function BankClaimButton({
   target = 'bank',
 }: {
@@ -75,7 +71,7 @@ export function BankClaimButton({
         </BlurView>
       </View>
 
-      {/* Gold dot — signals private transfers are waiting to be claimed. */}
+      {/* Tone-driven dot: silver for bank, gold for encrypted. */}
       {hasPending ? (
         <View
           pointerEvents="none"
@@ -86,7 +82,7 @@ export function BankClaimButton({
             width: 9,
             height: 9,
             borderRadius: 5,
-            backgroundColor: '#dcdce1',
+            backgroundColor: isEncrypted ? '#e6c079' : '#dcdce1',
           }}
         />
       ) : null}

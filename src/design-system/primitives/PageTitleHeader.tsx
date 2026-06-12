@@ -6,10 +6,16 @@ import { T } from '@/src/design-system/tokens';
 
 type Props = {
   title: string;
-  onBack: () => void;
+  onBack?: () => void;
+  /** When true, allow the title to shrink to fit. Used by long titles like
+   *  "Set up your Wallet" that risk wrapping on small devices. */
+  adjustFontSize?: boolean;
 };
 
-export function TxHeader({ title, onBack }: Props) {
+/** The 32pt centered page title + leading BackBtn row used at the top of
+ *  every modal screen. Single source of truth — extracted from ~10
+ *  duplicates with subtly drifting padding/letterSpacing. */
+export function PageTitleHeader({ title, onBack, adjustFontSize }: Props) {
   const insets = useSafeAreaInsets();
   return (
     <View
@@ -22,8 +28,11 @@ export function TxHeader({ title, onBack }: Props) {
         gap: 14,
       }}
     >
-      <BackBtn onPress={onBack} />
+      {onBack ? <BackBtn onPress={onBack} /> : <View style={{ width: 36 }} />}
       <Text
+        adjustsFontSizeToFit={adjustFontSize}
+        minimumFontScale={adjustFontSize ? 0.75 : undefined}
+        numberOfLines={adjustFontSize ? 1 : undefined}
         style={[
           sansation,
           {
