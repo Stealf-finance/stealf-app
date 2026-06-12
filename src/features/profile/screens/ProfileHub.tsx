@@ -29,6 +29,7 @@ import {
 } from '@/src/design-system/icons/auth';
 import {
   sansation,
+  sansationBold,
   sansationLight,
   serif,
 } from '@/src/design-system/typography';
@@ -462,13 +463,12 @@ export function ProfileHub() {
         >
           <Text
             style={[
-              sansation,
+              sansationBold,
               {
                 fontSize: 10,
-                letterSpacing: 3.2,
+                letterSpacing: 2.8,
                 textTransform: 'uppercase',
                 color: T.gold,
-                fontWeight: '700',
               },
             ]}
           >
@@ -476,13 +476,12 @@ export function ProfileHub() {
           </Text>
           <Text
             style={[
-              sansation,
+              sansationBold,
               {
                 fontSize: 10,
                 letterSpacing: 2.8,
                 textTransform: 'uppercase',
                 color: S.inkFaint,
-                fontWeight: '500',
               },
             ]}
           >

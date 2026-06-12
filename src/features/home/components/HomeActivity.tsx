@@ -1,5 +1,5 @@
 import { Text, View } from 'react-native';
-import { sansation } from '@/src/design-system/typography';
+import { sansationLight } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { TxRow } from '@/src/design-system/primitives/TxRow';
@@ -35,14 +35,8 @@ export function HomeActivity() {
     <View style={{ marginTop: 22 }}>
       <Text
         style={[
-          sansation,
-          {
-            fontSize: 9,
-            letterSpacing: 2,
-            textTransform: 'uppercase',
-            color: T.inkFaint,
-            marginBottom: 8,
-          },
+          sansationLight,
+          { fontSize: 22, letterSpacing: -0.44, color: T.ink, marginBottom: 8 },
         ]}
       >
         Recent activity
