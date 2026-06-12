@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
@@ -22,7 +22,6 @@ import {
   setSelectedAsset,
   useSelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
-import { sansation } from '@/src/design-system/typography';
 import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -256,35 +255,7 @@ export function ShieldFlow({ direction }: Props) {
 
   return (
     <CenterGlow tone={tone} flat>
-      {/* Standardized page header — BackBtn · serif italic 32 · spacer */}
-      <View
-        style={{
-          paddingTop: insets.top,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        }}
-      >
-        <BackBtn onPress={close} />
-        <Text
-          style={[
-            sansation,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 32,
-              fontWeight: '600',
-              color: T.ink,
-              includeFontPadding: false,
-            },
-          ]}
-        >
-          {title}
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
+      <PageTitleHeader title={title} onBack={close} />
 
       {/* Centered glass amount card (asset row moved below) */}
       <View style={{ marginTop: 20 }}>

@@ -21,7 +21,7 @@ import {
 } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
-import { TxHeader } from '@/src/features/send/components/TxHeader';
+import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
 import { Asset } from '@/src/features/send/components/AssetPill';
 import {
   useSelectedAsset,
@@ -414,7 +414,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
 
   return (
     <CenterGlow tone={tone}>
-      <TxHeader title={title} onBack={handleBack} />
+      <PageTitleHeader title={title} onBack={handleBack} />
 
       <Animated.View style={[{ flex: 1 }, contentStyle]}>
         {step === 1 && asset && (

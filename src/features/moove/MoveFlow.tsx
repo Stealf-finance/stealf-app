@@ -24,7 +24,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
@@ -36,7 +36,6 @@ import {
   setSelectedAsset,
   useSelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
-import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { toAddress } from '@/src/services/solana/kit';
@@ -522,34 +521,7 @@ export function MoveFlow() {
 
   return (
     <CenterGlow tone={tone} flat>
-      <View
-        style={{
-          paddingTop: insets.top,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        }}
-      >
-        <BackBtn onPress={handleBack} />
-        <Text
-          style={[
-            sansation,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 32,
-              fontWeight: '600',
-              color: T.ink,
-              includeFontPadding: false,
-            },
-          ]}
-        >
-          Move
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
+      <PageTitleHeader title="Move" onBack={handleBack} />
 
       {/* Upper content flexes so the keypad + CTA always keep their space at
           the bottom; content stays grouped up near the title. */}

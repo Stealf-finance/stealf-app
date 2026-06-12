@@ -11,7 +11,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
 import { Icons } from '@/src/design-system/icons';
 import { sansation, mono } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
@@ -43,34 +43,7 @@ export function AccountDetailsScreen() {
 
   return (
     <CenterGlow tone="silver" flat>
-      <View
-        style={{
-          paddingTop: insets.top,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        }}
-      >
-        <BackBtn onPress={() => router.back()} />
-        <Text
-          style={[
-            sansation,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 32,
-              fontWeight: '600',
-              color: T.ink,
-              includeFontPadding: false,
-            },
-          ]}
-        >
-          Account details
-        </Text>
-        <View style={{ width: 36 }} />
-      </View>
+      <PageTitleHeader title="Account details" onBack={() => router.back()} />
 
       <ScrollView
         contentContainerStyle={{
