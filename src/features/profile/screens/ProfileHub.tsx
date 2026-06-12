@@ -66,7 +66,7 @@ const SETTINGS: SettingsItem[] = [
   { iconKey: 'info', label: 'About us', href: 'https://www.stealf.xyz' },
   {
     iconKey: 'folder',
-    label: 'Terms of Services',
+    label: 'Terms of Service',
     href: 'https://stealf.xyz/terms',
   },
   {
@@ -698,7 +698,7 @@ export function ProfileHub() {
         <SettingsCard>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Logout"
+            accessibilityLabel="Log out"
             disabled={logout.isPending}
             onPress={confirmLogout}
             style={{
@@ -717,7 +717,7 @@ export function ProfileHub() {
                 { flex: 1, fontSize: 14, color: S.ink },
               ]}
             >
-              {logout.isPending ? 'Logging out…' : 'Logout'}
+              {logout.isPending ? 'Logging out…' : 'Log out'}
             </Text>
             <Icons.chevR size={14} color={S.inkFaint} />
           </Pressable>

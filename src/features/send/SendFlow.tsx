@@ -134,8 +134,8 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const fromLabel = isPrivate
     ? 'Encrypted balance'
     : walletSource === 'stealth'
-      ? 'Stealth wallet'
-      : 'Bank wallet';
+      ? 'Wallet'
+      : 'Virtual bank account';
   const { data: balance, isLoading: balanceLoading } = useBalance(fromAddress);
   const { data: encrypted } = useEncryptedBalances();
   const { data: solPrice } = useSolPrice();

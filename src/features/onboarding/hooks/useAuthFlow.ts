@@ -74,7 +74,7 @@ export function useAuthFlow() {
         walletsDump: JSON.stringify(wallets, null, 2),
       });
     }
-        throw new Error('Bank wallet not provisioned');
+        throw new Error('Virtual bank account not provisioned');
       }
 
       const subOrgId = tk.session?.organizationId;

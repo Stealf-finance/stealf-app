@@ -83,7 +83,7 @@ export function AccountDetailsScreen() {
         <Pressable
           onPress={copy}
           accessibilityRole="button"
-          accessibilityLabel="Copy bank wallet address"
+          accessibilityLabel="Copy virtual bank account address"
           style={({ pressed }) => ({
             borderRadius: 18,
             borderWidth: 1,

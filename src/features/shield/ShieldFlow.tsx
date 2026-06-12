@@ -164,7 +164,7 @@ export function ShieldFlow({ direction }: Props) {
 
     if (!user?.stealfWallet) {
       return failPre(
-        'Set up your stealth wallet first. Open the Stealth tab to create or import one.',
+        'Set up your wallet first. Open the Payment tab to create or import one.',
       );
     }
     if (num > sourceBalance) {

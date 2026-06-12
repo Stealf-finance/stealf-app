@@ -51,7 +51,7 @@ export function StealthWalletGate({
         <ProgressOverlay
           tone="gold"
           label="Syncing your wallet"
-          sub="Setup can take up to a minute. Sit tight — we're scanning the privacy pool for any encrypted balance tied to your wallet."
+          sub="Setup can take up to a minute. Sit tight — we're scanning Umbra Privacy for any encrypted balance tied to your wallet."
           progress={syncProgress}
         />
       ) : null}

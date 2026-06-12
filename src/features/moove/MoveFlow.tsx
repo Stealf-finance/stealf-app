@@ -91,21 +91,21 @@ type DirectionConfig = {
 
 const CONFIG: Record<MoveDirection, DirectionConfig> = {
   'bank-to-shielded': {
-    title: 'Virtual Bank Account to Encrypted Balance',
-    fromLabel: 'Virtual Bank Account',
+    title: 'Virtual bank account to encrypted balance',
+    fromLabel: 'Virtual bank account',
     toLabel: 'Encrypted balance',
     cta: 'Slide to move',
   },
   'shielded-to-bank': {
-    title: 'Encrypted Balance to Virtual Bank Account ',
+    title: 'Encrypted balance to virtual bank account',
     fromLabel: 'Encrypted balance',
-    toLabel: 'Virtual Bank Account',
+    toLabel: 'Virtual bank account',
     cta: 'Slide to move',
   },
   'stealth-to-bank': {
-    title: 'Wallet to Virtual Bank Account ',
+    title: 'Wallet to virtual bank account',
     fromLabel: 'Wallet',
-    toLabel: 'Virtual Bank Account',
+    toLabel: 'Virtual bank account',
     cta: 'Slide to move',
   },
 };
@@ -369,17 +369,17 @@ export function MoveFlow() {
     if (!user) return failPre('Please sign in again before continuing.');
     if (direction === 'bank-to-shielded' && !user.stealfWallet) {
       return failPre(
-        'Set up your stealth wallet first. Open the Stealth tab to create or import one.',
+        'Set up your wallet first. Open the Payment tab to create or import one.',
       );
     }
     if (direction === 'shielded-to-bank' && !user.bankWallet) {
-      return failPre('Bank wallet missing. Sign out and back in to restore it.');
+      return failPre('Virtual bank account missing. Sign out and back in to restore it.');
     }
     if (direction === 'stealth-to-bank' && (!user.bankWallet || !user.stealfWallet)) {
       return failPre(
         !user.stealfWallet
-          ? 'Set up your stealth wallet first.'
-          : 'Bank wallet missing. Sign out and back in to restore it.',
+          ? 'Set up your wallet first.'
+          : 'Virtual bank account missing. Sign out and back in to restore it.',
       );
     }
     if (num > sourceBalance) {
@@ -428,7 +428,7 @@ export function MoveFlow() {
           } catch (regErr: any) {
             const reason = regErr?.userMessage || regErr?.message || '';
             throw Object.assign(new Error('Privacy registration failed'), {
-              userMessage: `Couldn't register your stealth wallet with the privacy protocol${
+              userMessage: `Couldn't register your wallet with Umbra Privacy${
                 reason ? `: ${reason}` : '.'
               } Try again in a moment.`,
             });

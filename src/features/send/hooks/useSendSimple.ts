@@ -117,7 +117,7 @@ export function useSendSimple() {
 
       const privateKeyB58 = await walletKeyCache.getPrivateKey();
       if (!privateKeyB58) {
-        throw new Error('Stealth wallet key unavailable. Please re-import or unlock.');
+        throw new Error('Wallet key unavailable. Please re-import or unlock.');
       }
       const signer = await createSignerFromBase58(privateKeyB58);
       const signed = await signTransaction([signer.keyPair], compiled);

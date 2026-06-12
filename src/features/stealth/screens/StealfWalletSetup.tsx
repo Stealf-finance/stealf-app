@@ -128,7 +128,7 @@ export function StealfWalletSetup({
     const mnemonic = words.map((w) => w.trim().toLowerCase()).join(' ');
     const result = validateMnemonic(mnemonic);
     if (!result.valid) {
-      setImportError(result.error ?? 'Invalid seed phrase');
+      setImportError(result.error ?? 'Invalid recovery phrase');
       return;
     }
     setImportError(null);
@@ -243,7 +243,7 @@ export function StealfWalletSetup({
             step === 'importWallet'
               ? 'Restoring your wallet…'
               : step === 'showMnemonic'
-                ? 'Setting up your stealth wallet…'
+                ? 'Setting up your wallet…'
                 : 'Generating wallet…'
           }
           sub="This can take a moment. Hang tight."
@@ -288,7 +288,7 @@ function ChooseStep({ loading, onComplete, setStep }: ChooseProps) {
       <SetupOption
         image={require('@/assets/images/Key.png')}
         label="Import wallet"
-        sub="Import your wallet with a seed phrase"
+        sub="Import your wallet with a recovery phrase"
         onPress={() => setStep('importWallet')}
         disabled={loading}
       />

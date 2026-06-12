@@ -135,7 +135,7 @@ export function useUmbra() {
       !turnkeySignTransaction ||
       !turnkeySignMessage
     ) {
-      throw new Error('Bank wallet not ready');
+      throw new Error('Virtual bank account not ready');
     }
     return sdkGetBankClient({
       walletAccount: bankWalletAccount as any,
