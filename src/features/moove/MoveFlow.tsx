@@ -64,6 +64,7 @@ import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import type { PendingOpKind } from '@/src/components/pending-ops/types';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
+import * as Sentry from '@sentry/react-native';
 
 function kindForDirection(d: MoveDirection): PendingOpKind {
   switch (d) {
@@ -509,6 +510,17 @@ export function MoveFlow() {
         clearTimeout(provingTimer);
         const msg = err?.userMessage || err?.message || 'Move failed';
         if (__DEV__) console.warn('[MoveFlow] failed:', direction, msg);
+        // wrap() already captures StealthError — skip to avoid dup.
+        if (err?.name !== 'StealthError') {
+          Sentry.captureException(err, {
+            tags: { 'op.kind': `move-${direction}`, 'wallet.source': 'mixed' },
+            extra: {
+              userMessage: msg,
+              amountBand: amountBand(num),
+              asset: assetSymbol,
+            },
+          });
+        }
         posthogRef.current?.capture('move_failed', {
           direction,
           asset_symbol: assetSymbol,

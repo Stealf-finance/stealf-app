@@ -41,6 +41,7 @@ import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
+import * as Sentry from '@sentry/react-native';
 
 type Direction = 'shield' | 'unshield';
 
@@ -243,6 +244,17 @@ export function ShieldFlow({ direction }: Props) {
         clearTimeout(provingTimer);
         const msg = err?.userMessage || err?.message || 'Operation failed';
         if (__DEV__) console.warn('[ShieldFlow] failed:', msg);
+        // wrap() already captures StealthError — skip to avoid dup.
+        if (err?.name !== 'StealthError') {
+          Sentry.captureException(err, {
+            tags: { 'op.kind': `shield-${direction}`, 'wallet.source': 'stealf' },
+            extra: {
+              userMessage: msg,
+              amountBand: amountBand(num),
+              asset: assetSymbol,
+            },
+          });
+        }
         posthogRef.current?.capture('shield_failed', {
           direction,
           asset_symbol: assetSymbol,

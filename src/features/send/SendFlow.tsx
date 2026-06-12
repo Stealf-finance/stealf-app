@@ -60,6 +60,7 @@ import {
 import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
 import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
+import * as Sentry from '@sentry/react-native';
 
 const FADE_OUT = 160;
 const FADE_IN = 220;
@@ -386,6 +387,20 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         (err instanceof Error
           ? err.message
           : 'Could not send the transaction.');
+      // wrap() already captures StealthError to Sentry — skip to avoid dup.
+      if (err?.name !== 'StealthError') {
+        Sentry.captureException(err, {
+          tags: {
+            'op.kind': isPrivate ? 'send-private' : 'send-public',
+            'wallet.source': walletSource,
+          },
+          extra: {
+            userMessage: msg,
+            amountBand: amountBand(Number(fiatValue)),
+            asset: asset?.symbol,
+          },
+        });
+      }
       posthog?.capture('send_failed', {
         mode: isPrivate ? 'private' : 'public',
         asset_symbol: asset.symbol,

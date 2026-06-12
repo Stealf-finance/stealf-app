@@ -25,6 +25,7 @@ import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePending
 import { usePendingClaims } from '@/src/features/stealth/hooks/usePendingClaims';
 import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
+import * as Sentry from '@sentry/react-native';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
@@ -252,6 +253,13 @@ export function ClaimsScreen() {
         }
         const msg = err?.userMessage || err?.message || 'Claim failed';
         if (__DEV__) console.warn('[ClaimsScreen] claim failed:', msg);
+        // wrap() already captures StealthError — skip to avoid dup.
+        if (err?.name !== 'StealthError') {
+          Sentry.captureException(err, {
+            tags: { 'op.kind': isEncrypted ? 'claim-encrypted' : 'claim-bank', 'wallet.source': 'stealf' },
+            extra: { userMessage: msg },
+          });
+        }
         pendingOps.complete(opId, 'failed', msg);
       }
     })();
