@@ -5,6 +5,7 @@ import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StepBar } from '@/src/design-system/primitives/StepBar';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { FormError } from '@/src/design-system/primitives/FormError';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { CodeInput } from '../components/CodeInput';
 import {
   sansation,
@@ -111,20 +112,9 @@ export function OtpScreen({ email, otpId: initialOtpId, onBack }: Props) {
           }}
         >
           <View style={{ width: 18, height: 1, backgroundColor: S.accentDim }} />
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 3.2,
-                textTransform: 'uppercase',
-                color: S.accent,
-                fontWeight: '700',
-              },
-            ]}
-          >
+          <Kicker color={S.accent} style={{ letterSpacing: 3.2 }}>
             Almost there
-          </Text>
+          </Kicker>
           <View style={{ width: 18, height: 1, backgroundColor: S.accentDim }} />
         </View>
 

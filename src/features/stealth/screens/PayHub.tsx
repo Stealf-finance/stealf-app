@@ -9,6 +9,7 @@ import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
 import { GreetingSlot } from '@/src/components/GreetingSlot';
 import { useToast } from '@/src/components/toast/ToastContext';
 import { sansation } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { T } from '@/src/design-system/tokens';
 import { PayMethodTiles } from '@/src/features/stealth/components/PayMethodTiles';
 import { PayRecents } from '@/src/features/stealth/components/PayRecents';
@@ -16,23 +17,18 @@ import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <Text
-      style={[
-        sansation,
-        {
-          fontSize: 11,
-          fontWeight: '600',
-          letterSpacing: 1.6,
-          textTransform: 'uppercase',
-          color: T.inkFaint,
-          marginBottom: 12,
-          marginLeft: 4,
-          includeFontPadding: false,
-        },
-      ]}
+    <Kicker
+      color={T.inkFaint}
+      style={{
+        fontSize: 11,
+        letterSpacing: 1.6,
+        marginBottom: 12,
+        marginLeft: 4,
+        includeFontPadding: false,
+      }}
     >
       {children}
-    </Text>
+    </Kicker>
   );
 }
 
