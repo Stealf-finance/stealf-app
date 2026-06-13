@@ -749,7 +749,7 @@ export function ProfileHub() {
               },
             ]}
           >
-            VERSION 0.2
+            VERSION BETA
           </Text>
         </View>
       </ScrollView>

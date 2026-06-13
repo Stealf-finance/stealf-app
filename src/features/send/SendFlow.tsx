@@ -654,6 +654,10 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
           submitting={sendMutation.isPending || privateSending}
           error={sendError ?? undefined}
           signature={txSig ?? undefined}
+          // Private sends take longer (ZK proving) so we optimistically show
+          // the pending state; simple transfers settle quickly on Turnkey, so
+          // we just wait for the real signature and show "confirmed".
+          autoPending={isPrivate}
         />
       ) : null}
 

@@ -222,6 +222,13 @@ export function MoveConfirm({
     if (error) setSubmitted(false);
   }, [error]);
 
+  // Non-optimistic flows (e.g. simple transfers, which settle quickly on
+  // Turnkey) wait for the real signature before celebrating, so we surface
+  // the success state only once the transaction has actually executed.
+  useEffect(() => {
+    if (!autoPending && signature) setSubmitted(true);
+  }, [autoPending, signature]);
+
   const handleSlide = () => {
     if (autoPending) setSubmitted(true);
     onConfirm();
@@ -301,7 +308,7 @@ export function MoveConfirm({
                     },
                   ]}
                 >
-                  Transaction submitted
+                  {autoPending ? 'Transaction submitted' : 'Transaction sent'}
                 </Text>
                 <Text
                   style={[
@@ -315,42 +322,56 @@ export function MoveConfirm({
                   ]}
                 >
                   Status:{' '}
-                  <Text style={{ color: T.gold, fontWeight: '600' }}>
-                    pending
-                  </Text>
+                  {autoPending ? (
+                    <Text style={{ color: T.gold, fontWeight: '600' }}>
+                      pending
+                    </Text>
+                  ) : (
+                    <Text style={{ color: T.green, fontWeight: '600' }}>
+                      confirmed
+                    </Text>
+                  )}
                 </Text>
               </View>
 
-              {/* Solscan link — just above the Close button */}
+              {/* Solscan link — pill button recovered from the old success
+                  screen, sitting just above the Close button */}
               {signature ? (
-                <Pressable
-                  onPress={() =>
-                    Linking.openURL(`https://solscan.io/tx/${signature}`)
-                  }
-                  accessibilityRole="link"
-                  accessibilityLabel="View on Solscan"
-                  hitSlop={8}
-                  style={({ pressed }) => ({
-                    alignSelf: 'center',
-                    marginBottom: 14,
-                    opacity: pressed ? 0.7 : 1,
-                  })}
-                >
-                  <Text
-                    style={[
-                      sansation,
-                      {
-                        fontSize: 13,
-                        fontWeight: '600',
-                        color: T.ink,
-                        textDecorationLine: 'underline',
-                        includeFontPadding: false,
-                      },
-                    ]}
+                <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                  <Pressable
+                    onPress={() =>
+                      Linking.openURL(`https://solscan.io/tx/${signature}`)
+                    }
+                    accessibilityRole="link"
+                    accessibilityLabel="View on Solscan"
+                    style={({ pressed }) => ({
+                      paddingVertical: 12,
+                      paddingHorizontal: 22,
+                      borderRadius: 100,
+                      backgroundColor: 'rgba(255,255,255,0.03)',
+                      borderWidth: 1,
+                      borderColor: T.hairline,
+                      opacity: pressed ? 0.7 : 1,
+                    })}
                   >
-                    View on Solscan ↗
-                  </Text>
-                </Pressable>
+                    {/* arrow as an inline glyph so it shares the text baseline */}
+                    <Text
+                      style={[
+                        sansation,
+                        {
+                          fontSize: 10,
+                          letterSpacing: 2.4,
+                          textTransform: 'uppercase',
+                          color: T.ink,
+                          fontWeight: '600',
+                          includeFontPadding: false,
+                        },
+                      ]}
+                    >
+                      View on Solscan ↗
+                    </Text>
+                  </Pressable>
+                </View>
               ) : null}
 
               {/* Close — same slot as the slide-to-move CTA */}
