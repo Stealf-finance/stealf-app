@@ -14,6 +14,7 @@ import {
   sansation,
   serif,
 } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -321,20 +322,9 @@ function KeyCard({
             marginBottom: 4,
           }}
         >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 9,
-                letterSpacing: 2.52,
-                textTransform: 'uppercase',
-                color: accent,
-                fontWeight: '700',
-              },
-            ]}
-          >
+          <Kicker color={accent} style={{ fontSize: 9, letterSpacing: 2.52 }}>
             {title}
-          </Text>
+          </Kicker>
           {onDelete ? (
             <Pressable
               accessibilityRole="button"
@@ -367,21 +357,12 @@ function KeyCard({
           }}
         >
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 9,
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                  color: S.inkFaint,
-                  fontWeight: '700',
-                  marginBottom: 4,
-                },
-              ]}
+            <Kicker
+              color={S.inkFaint}
+              style={{ fontSize: 9, letterSpacing: 2, marginBottom: 4 }}
             >
               Address
-            </Text>
+            </Kicker>
             <Text
               style={[
                 mono,
