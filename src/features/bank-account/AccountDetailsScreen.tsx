@@ -13,7 +13,8 @@ import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
 import { Icons } from '@/src/design-system/icons';
-import { sansation, mono } from '@/src/design-system/typography';
+import { mono } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
@@ -66,20 +67,9 @@ export function AccountDetailsScreen() {
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 1.6,
-                textTransform: 'uppercase',
-                color: T.inkFaint,
-                fontWeight: '700',
-              },
-            ]}
-          >
+          <Kicker color={T.inkFaint} style={{ letterSpacing: 1.6 }}>
             Wallet address
-          </Text>
+          </Kicker>
           <View
             style={{
               flexDirection: 'row',

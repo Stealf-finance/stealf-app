@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { sansation, sansationLight, serif } from '@/src/design-system/typography';
 import { Icons } from '@/src/design-system/icons';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 
 const FONT = { int: 76, dec: 32, dollar: 36 };
 
@@ -43,20 +44,9 @@ export function BalanceCard({
           gap: 18,
         }}
       >
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 10,
-              letterSpacing: 3.2,
-              textTransform: 'uppercase',
-              color: ink,
-              fontWeight: '700',
-            },
-          ]}
-        >
+        <Kicker color={ink} style={{ letterSpacing: 3.2 }}>
           {kicker}
-        </Text>
+        </Kicker>
         <Pressable
           onPress={onToggleHidden}
           accessibilityRole="button"
