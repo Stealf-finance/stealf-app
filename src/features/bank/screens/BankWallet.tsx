@@ -15,6 +15,7 @@ import {
   sansationLight,
   serif,
 } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useBalanceVisibility } from '@/src/features/wallet/BalanceVisibilityContext';
@@ -163,20 +164,9 @@ export function BankWallet() {
             gap: 18,
           }}
         >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 3.2,
-                textTransform: 'uppercase',
-                color: T.ink,
-                fontWeight: '700',
-              },
-            ]}
-          >
+          <Kicker color={T.ink} style={{ letterSpacing: 3.2 }}>
             Virtual bank account
-          </Text>
+          </Kicker>
           <Pressable
             onPress={toggleBalanceHidden}
             accessibilityRole="button"

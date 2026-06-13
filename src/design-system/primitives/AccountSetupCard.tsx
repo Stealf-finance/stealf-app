@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Icons } from '@/src/design-system/icons';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 
@@ -138,21 +139,12 @@ export function AccountSetupCard({
           />
         </View>
 
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 9,
-            letterSpacing: 2.52,
-            textTransform: 'uppercase',
-            color: tones.accent,
-            fontWeight: '700',
-            marginBottom: 12,
-          },
-        ]}
+      <Kicker
+        color={tones.accent}
+        style={{ fontSize: 9, marginBottom: 12 }}
       >
         {copy.kicker}
-      </Text>
+      </Kicker>
 
       {/* Safe image to the right of the title */}
       <View

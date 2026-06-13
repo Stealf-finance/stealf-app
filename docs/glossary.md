@@ -165,3 +165,31 @@ the public key the client encrypts deposits against.
 
 **mxePubkey** — Public key fetched from the MXE; used by the client with
 RescueCipher + x25519 to encrypt the deposit memo.
+
+---
+
+## Design system conventions
+
+### Spacing scale (`src/design-system/spacing.ts`)
+
+Canonical spacing tokens. Name `Sp` (not `S`) because `S` is the widely
+used `txPalette('silver')` alias.
+
+| Token | Value | Intent |
+|---|---|---|
+| `Sp.xs` | 4 | Tight gap inside a tile / between icon and label |
+| `Sp.sm` | 8 | Standard inline gap (gap between siblings in a row) |
+| `Sp.md` | 12 | Default vertical gap between content blocks |
+| `Sp.lg` | 16 | Comfortable padding inside cards / between sections |
+| `Sp.xl` | 24 | Default screen horizontal gutter |
+
+Two named gutters live alongside the scale:
+
+- `SCREEN_GUTTER = Sp.xl` (24) — body content horizontal padding.
+- `HEADER_GUTTER = 20` — intentional tighter padding on page headers
+  (`PageTitleHeader`, `TxHeader`). Kept distinct so header rhythm
+  doesn't widen with content.
+
+**Rule** — use the tokens in new code. Existing literal values (18, 20,
+22, 24, 28 mixed in feature screens) are grandfathered until touched —
+migrate opportunistically when modifying a file, not as a sweep.

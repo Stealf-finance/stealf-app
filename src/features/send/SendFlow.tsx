@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { MoveConfirm } from '@/src/features/moove/components/MoveConfirm';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
@@ -527,20 +528,9 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             {recents.length > 0 ? (
               <>
                 <View style={{ paddingHorizontal: 24, marginBottom: 6 }}>
-                  <Text
-                    style={[
-                      sansation,
-                      {
-                        fontSize: 9,
-                        letterSpacing: 2.52,
-                        textTransform: 'uppercase',
-                        color: S.inkFaint,
-                        fontWeight: '700',
-                      },
-                    ]}
-                  >
+                  <Kicker color={S.inkFaint} style={{ fontSize: 9 }}>
                     Recent
-                  </Text>
+                  </Kicker>
                 </View>
                 <ScrollView
                   style={{ flex: 1 }}

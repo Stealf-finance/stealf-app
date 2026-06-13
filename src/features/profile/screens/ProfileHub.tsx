@@ -33,6 +33,7 @@ import {
   sansationLight,
   serif,
 } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useTurnkey } from '@turnkey/react-native-wallet-kit';
@@ -461,32 +462,8 @@ export function ProfileHub() {
             marginBottom: 10,
           }}
         >
-          <Text
-            style={[
-              sansationBold,
-              {
-                fontSize: 10,
-                letterSpacing: 2.8,
-                textTransform: 'uppercase',
-                color: T.gold,
-              },
-            ]}
-          >
-            Capital Summary
-          </Text>
-          <Text
-            style={[
-              sansationBold,
-              {
-                fontSize: 10,
-                letterSpacing: 2.8,
-                textTransform: 'uppercase',
-                color: S.inkFaint,
-              },
-            ]}
-          >
-            USD
-          </Text>
+          <Kicker color={T.gold}>Capital Summary</Kicker>
+          <Kicker color={S.inkFaint}>USD</Kicker>
         </View>
 
         {/* Total balance */}
@@ -782,21 +759,12 @@ export function ProfileHub() {
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <Text
-      style={[
-        sansation,
-        {
-          fontSize: 10,
-          letterSpacing: 3.2,
-          textTransform: 'uppercase',
-          color: S.inkFaint,
-          fontWeight: '700',
-          marginBottom: 10,
-        },
-      ]}
+    <Kicker
+      color={S.inkFaint}
+      style={{ letterSpacing: 3.2, marginBottom: 10 }}
     >
       {children}
-    </Text>
+    </Kicker>
   );
 }
 
@@ -847,21 +815,12 @@ function StatCard({
             style={{ flex: 1 }}
           />
         </View>
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2.88,
-              textTransform: 'uppercase',
-              color: S.accent,
-              fontWeight: '700',
-              marginBottom: 10,
-            },
-          ]}
+        <Kicker
+          color={S.accent}
+          style={{ fontSize: 9, marginBottom: 10 }}
         >
           {label}
-        </Text>
+        </Kicker>
         {children}
       </LinearGradient>
     </View>

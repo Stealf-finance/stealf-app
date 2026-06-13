@@ -18,6 +18,7 @@ import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { LoaderRefreshButton } from '@/src/design-system/primitives/LoaderRefreshButton';
 import { Icons } from '@/src/design-system/icons';
 import { sansation } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -313,20 +314,9 @@ export function ClaimsScreen() {
           gap: 10,
         }}
       >
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2.52,
-              textTransform: 'uppercase',
-              color: T.inkDim,
-              fontWeight: '700',
-            },
-          ]}
-        >
+        <Kicker color={T.inkDim} style={{ fontSize: 9 }}>
           Incoming private transfers
-        </Text>
+        </Kicker>
         <LoaderRefreshButton
           onPress={() => refetch()}
           spinning={isFetching}
@@ -582,22 +572,16 @@ function ClaimItem({
 function EmptyState() {
   return (
     <View style={{ paddingTop: 60, alignItems: 'center' }}>
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 9,
-            letterSpacing: 2.52,
-            textTransform: 'uppercase',
-            color: T.inkDim,
-            fontWeight: '700',
-            textAlign: 'center',
-            includeFontPadding: false,
-          },
-        ]}
+      <Kicker
+        color={T.inkDim}
+        style={{
+          fontSize: 9,
+          textAlign: 'center',
+          includeFontPadding: false,
+        }}
       >
         No private transfer on the way
-      </Text>
+      </Kicker>
     </View>
   );
 }

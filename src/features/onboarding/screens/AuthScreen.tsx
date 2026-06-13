@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthBtn } from '@/src/design-system/primitives/AuthBtn';
 import { AppleGlyph, GoogleGlyph, MailGlyph } from '@/src/design-system/icons/auth';
 import { sansation, sansationBold } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { T } from '@/src/design-system/tokens';
 import { useAuthFlow } from '../hooks/useAuthFlow';
 import { useToast } from '@/src/components/toast/ToastContext';
@@ -121,19 +122,9 @@ export function AuthScreen({ onEmail }: Props) {
           }}
         >
           <View style={{ flex: 1, height: 1, backgroundColor: T.hairline }} />
-          <Text
-            style={[
-              sansationBold,
-              {
-                fontSize: 9,
-                letterSpacing: 2.88,
-                textTransform: 'uppercase',
-                color: T.inkFaint,
-              },
-            ]}
-          >
+          <Kicker color={T.inkFaint} style={{ fontSize: 9 }}>
             Continue with
-          </Text>
+          </Kicker>
           <View style={{ flex: 1, height: 1, backgroundColor: T.hairline }} />
         </View>
 

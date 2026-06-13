@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 import { Icons } from '@/src/design-system/icons';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -14,12 +15,7 @@ type Props = {
   tone?: Tone;
 };
 
-const TAG = {
-  fontSize: 9,
-  letterSpacing: 2,
-  textTransform: 'uppercase' as const,
-  fontWeight: '700' as const,
-};
+const TAG_STYLE = { fontSize: 9, letterSpacing: 2 };
 
 /**
  * Move "From → To" pair — two fully-rounded cards sitting flush against each
@@ -59,7 +55,9 @@ export function MoveFromToCards({
               backgroundColor: palette.accentSoft,
             }}
           >
-            <Text style={[sansation, { ...TAG, color: T.ink }]}>From</Text>
+            <Kicker color={T.ink} style={TAG_STYLE}>
+              From
+            </Kicker>
             <View
               style={{
                 flexDirection: 'row',
@@ -103,7 +101,9 @@ export function MoveFromToCards({
             backgroundColor: T.bgRaised,
           }}
         >
-          <Text style={[sansation, { ...TAG, color: T.ink }]}>To</Text>
+          <Kicker color={T.ink} style={TAG_STYLE}>
+            To
+          </Kicker>
           <Text
             style={[
               sansation,
