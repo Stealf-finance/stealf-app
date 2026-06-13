@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
+import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { usePendingClaimsForCash } from '@/src/features/stealth/hooks/usePendingClaimsForCash';
@@ -34,42 +34,30 @@ export function BankClaimButton({
         opacity: pressed ? 0.85 : 1,
       })}
     >
-      {/* Rounding + border live on a static View (clips the blur to the
-          rounded corners) — same pattern as GetBankAccountCard. */}
-      <View
-        style={{
-          borderRadius: 100,
-          overflow: 'hidden',
+      <BlurGlass
+        radius={100}
+        innerStyle={{
+          paddingVertical: 9,
+          paddingHorizontal: 22,
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
-        <BlurView
-          intensity={28}
-          tint="dark"
-          experimentalBlurMethod="dimezisBlurView"
-          style={{
-            paddingVertical: 9,
-            paddingHorizontal: 22,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(255,255,255,0.05)',
-          }}
+        <Text
+          style={[
+            sansation,
+            {
+              fontSize: 13,
+              fontWeight: '600',
+              letterSpacing: 1,
+              color: T.ink,
+              includeFontPadding: false,
+            },
+          ]}
         >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 13,
-                fontWeight: '600',
-                letterSpacing: 1,
-                color: T.ink,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            Claim
-          </Text>
-        </BlurView>
-      </View>
+          Claim
+        </Text>
+      </BlurGlass>
 
       {/* Tone-driven dot: silver for bank, gold for encrypted. */}
       {hasPending ? (
