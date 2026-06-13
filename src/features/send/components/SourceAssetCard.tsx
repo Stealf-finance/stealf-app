@@ -1,10 +1,8 @@
 import { Pressable, Text, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { Icons } from '@/src/design-system/icons';
-import {
-  sansation,
-  sansationLight,
-} from '@/src/design-system/typography';
+import { sansation, sansationLight } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { T } from '@/src/design-system/tokens';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
@@ -75,20 +73,9 @@ export function SourceAssetCard({
             borderBottomColor: T.hairline,
           }}
         >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 9,
-                letterSpacing: 2.52,
-                textTransform: 'uppercase',
-                fontWeight: '700',
-                color: T.inkFaint,
-              },
-            ]}
-          >
+          <Kicker color={T.inkFaint} style={{ fontSize: 9 }}>
             From
-          </Text>
+          </Kicker>
           <Text
             style={[sansation, { fontSize: 13, color: T.ink, fontWeight: '500' }]}
             numberOfLines={1}
@@ -98,20 +85,9 @@ export function SourceAssetCard({
           <View style={{ flex: 1 }} />
           <Icons.arrRight size={14} color={palette.accent} />
           <View style={{ flex: 1 }} />
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 9,
-                letterSpacing: 2.52,
-                textTransform: 'uppercase',
-                fontWeight: '700',
-                color: T.inkFaint,
-              },
-            ]}
-          >
+          <Kicker color={T.inkFaint} style={{ fontSize: 9 }}>
             To
-          </Text>
+          </Kicker>
           <Text
             style={[sansation, { fontSize: 13, color: T.ink, fontWeight: '500' }]}
             numberOfLines={1}
@@ -131,20 +107,9 @@ export function SourceAssetCard({
             borderBottomColor: T.hairline,
           }}
         >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 9,
-                letterSpacing: 2.52,
-                textTransform: 'uppercase',
-                fontWeight: '700',
-                color: T.inkFaint,
-              },
-            ]}
-          >
+          <Kicker color={T.inkFaint} style={{ fontSize: 9 }}>
             To
-          </Text>
+          </Kicker>
           <Text
             style={[
               sansation,

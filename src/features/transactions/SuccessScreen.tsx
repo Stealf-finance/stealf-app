@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { Icons } from '@/src/design-system/icons';
 import {
@@ -172,21 +173,12 @@ export function SuccessScreen({
           contentStyle,
         ]}
       >
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 10,
-              letterSpacing: 3.2,
-              textTransform: 'uppercase',
-              color: palette.accent,
-              fontWeight: '700',
-              marginBottom: 14,
-            },
-          ]}
+        <Kicker
+          color={palette.accent}
+          style={{ letterSpacing: 3.2, marginBottom: 14 }}
         >
           {kicker}
-        </Text>
+        </Kicker>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 }}>
           {prefix ? (
             <Text
