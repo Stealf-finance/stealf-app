@@ -21,6 +21,9 @@ const config: ExpoConfig = {
     bundleIdentifier: 'com.stealf.app',
     associatedDomains: ['webcredentials:stealf.xyz'],
     appleTeamId: '63724CT6P8',
+    // Native Sign in with Apple (expo-apple-authentication) — adds the
+    // com.apple.developer.applesignin entitlement on prebuild.
+    usesAppleSignIn: true,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       NSAppTransportSecurity: {

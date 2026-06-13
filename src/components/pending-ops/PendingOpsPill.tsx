@@ -9,6 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePathname } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -33,6 +34,10 @@ export function PendingOpsPill() {
   const op = useTopPendingOp();
   const { dismiss } = usePendingOps();
   const insets = useSafeAreaInsets();
+  // On the Home and Pay tabs the pending status is surfaced inside the
+  // header (in place of the greeting), so the floating pill is suppressed.
+  const pathname = usePathname();
+  const onHome = pathname === '/bank' || pathname === '/stealth';
 
   const enter = useSharedValue(0);
 
@@ -50,6 +55,8 @@ export function PendingOpsPill() {
       { scale: 0.96 + enter.value * 0.04 },
     ],
   }));
+
+  if (onHome) return null;
 
   if (!op) {
     // Keep mounted-but-empty so the animation can run on the next op without
@@ -99,7 +106,7 @@ const SPINNER_STROKE = 2;
 const SPINNER_RADIUS = (SPINNER_SIZE - SPINNER_STROKE) / 2;
 const SPINNER_CIRC = 2 * Math.PI * SPINNER_RADIUS;
 
-function Spinner({ color }: { color: string }) {
+export function Spinner({ color }: { color: string }) {
   const rot = useSharedValue(0);
   useEffect(() => {
     rot.value = withRepeat(

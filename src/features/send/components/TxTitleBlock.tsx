@@ -1,9 +1,6 @@
 import { Text, View } from 'react-native';
-import {
-  sansation,
-  sansationLight,
-  serif,
-} from '@/src/design-system/typography';
+import { sansationLight, serif } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
 type Props = {
@@ -22,22 +19,16 @@ export function TxTitleBlock({
   const palette = txPalette(tone);
   return (
     <View style={{ paddingHorizontal: 28, marginBottom: 28 }}>
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 10,
-            letterSpacing: 3.2,
-            textTransform: 'uppercase',
-            color: palette.accent,
-            fontWeight: '700',
-            marginBottom: 10,
-            textAlign: 'center',
-          },
-        ]}
+      <Kicker
+        color={palette.accent}
+        style={{
+          letterSpacing: 3.2,
+          marginBottom: 10,
+          textAlign: 'center',
+        }}
       >
         {kicker}
-      </Text>
+      </Kicker>
       <Text
         style={[
           sansationLight,

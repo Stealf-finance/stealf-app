@@ -4,10 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { TxRow } from '@/src/design-system/primitives/TxRow';
-import {
-  sansation,
-  serif,
-} from '@/src/design-system/typography';
+import { sansation, serif } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -20,8 +18,8 @@ const CONFIG: Record<
   WalletKind,
   { title: string; tone: Tone }
 > = {
-  bank: { title: 'Bank transactions history', tone: 'silver' },
-  stealth: { title: 'Stealth transactions history', tone: 'gold' },
+  bank: { title: 'Transactions', tone: 'silver' },
+  stealth: { title: 'Transactions', tone: 'gold' },
 };
 
 function formatTxRow(tx: Transaction): {
@@ -69,11 +67,12 @@ export function TransactionsScreen() {
         <BackBtn onPress={() => router.back()} />
         <Text
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
               marginRight: 36,
@@ -104,20 +103,9 @@ export function TransactionsScreen() {
                 justifyContent: 'space-between',
               }}
             >
-              <Text
-                style={[
-                  sansation,
-                  {
-                    fontSize: 9,
-                    letterSpacing: 2.52,
-                    textTransform: 'uppercase',
-                    color: palette.inkFaint,
-                    fontWeight: '700',
-                  },
-                ]}
-              >
+              <Kicker color={palette.inkFaint} style={{ fontSize: 9 }}>
                 {txs.length} {txs.length === 1 ? 'transaction' : 'transactions'}
-              </Text>
+              </Kicker>
             </View>
             {txs.map((tx, i) => {
               const row = formatTxRow(tx);

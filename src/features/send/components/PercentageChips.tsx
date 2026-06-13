@@ -17,16 +17,21 @@ type Props = {
 
 export function PercentageChips({ onPressPercent, disabled = false }: Props) {
   return (
-    <View style={{ paddingHorizontal: 24, marginBottom: 12 }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-        }}
-      >
-        {PRESETS.map(({ label, pct }) => (
+    <View
+      style={{ flexDirection: 'row', paddingHorizontal: 24, marginBottom: 32 }}
+    >
+      {PRESETS.map(({ label, pct }, idx) => (
+        // flex:1 on a static wrapper View so the four chips split the row
+        // evenly; horizontal gaps come from padding (not flex `gap`).
+        <View
+          key={label}
+          style={{
+            flex: 1,
+            paddingLeft: idx === 0 ? 0 : 5,
+            paddingRight: idx === PRESETS.length - 1 ? 0 : 5,
+          }}
+        >
           <Pressable
-            key={label}
             onPress={() => onPressPercent(pct)}
             accessibilityRole="button"
             accessibilityLabel={`Set amount to ${label} of balance`}
@@ -44,15 +49,11 @@ export function PercentageChips({ onPressPercent, disabled = false }: Props) {
               }}
             >
               <LinearGradient
-                colors={[
-                  'rgba(255,255,255,0.06)',
-                  'rgba(255,255,255,0.015)',
-                ]}
+                colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.015)']}
                 start={{ x: 0.2, y: 0 }}
                 end={{ x: 0.8, y: 1 }}
                 style={{
-                  paddingVertical: 11,
-                  paddingHorizontal: 22,
+                  paddingVertical: 14,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
@@ -61,7 +62,7 @@ export function PercentageChips({ onPressPercent, disabled = false }: Props) {
                   style={[
                     sansationBold,
                     {
-                      fontSize: 11,
+                      fontSize: 13,
                       letterSpacing: 1,
                       color: T.ink,
                       includeFontPadding: false,
@@ -73,8 +74,8 @@ export function PercentageChips({ onPressPercent, disabled = false }: Props) {
               </LinearGradient>
             </View>
           </Pressable>
-        ))}
-      </View>
+        </View>
+      ))}
     </View>
   );
 }

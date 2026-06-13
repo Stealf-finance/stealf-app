@@ -12,19 +12,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
+import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
-import { Numpad } from '@/src/features/send/components/Numpad';
-import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
-import { SourceAssetCard } from '@/src/features/send/components/SourceAssetCard';
-import { PercentageChips } from '@/src/features/send/components/PercentageChips';
+import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
+import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
+import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
   setSelectedAsset,
   useSelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
-import { serif } from '@/src/design-system/typography';
-import { Tone, txPalette } from '@/src/design-system/palettes';
+import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -43,6 +41,7 @@ import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
+import * as Sentry from '@sentry/react-native';
 
 type Direction = 'shield' | 'unshield';
 
@@ -59,14 +58,8 @@ export function ShieldFlow({ direction }: Props) {
 
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
-  const palette = txPalette(tone);
 
   const title = isShield ? 'Shield' : 'Unshield';
-  const ctaLabel = isShield ? 'Slide to shield' : 'Slide to unshield';
-
-  const subtitle = isShield
-    ? 'Protect your assets'
-    : 'Bring assets back to public';
 
   const { user } = useAuth();
   const { deposit, withdraw } = useUmbra();
@@ -147,10 +140,7 @@ export function ShieldFlow({ direction }: Props) {
       ? `$${fiatAmount.toFixed(2)}`
       : `${solAmount.toFixed(4)} ${assetSymbol}`;
 
-  const maxBalanceLabel =
-    inputMode === 'fiat'
-      ? `$${(maxSol * rate).toFixed(2)}`
-      : `${maxSol.toFixed(4)} ${assetSymbol}`;
+  const balanceLabel = `${formatBalance(sourceBalance)} ${assetSymbol}`;
 
   const close = () => router.back();
 
@@ -174,7 +164,7 @@ export function ShieldFlow({ direction }: Props) {
 
     if (!user?.stealfWallet) {
       return failPre(
-        'Set up your stealth wallet first. Open the Stealth tab to create or import one.',
+        'Set up your wallet first. Open the Payment tab to create or import one.',
       );
     }
     if (num > sourceBalance) {
@@ -254,6 +244,17 @@ export function ShieldFlow({ direction }: Props) {
         clearTimeout(provingTimer);
         const msg = err?.userMessage || err?.message || 'Operation failed';
         if (__DEV__) console.warn('[ShieldFlow] failed:', msg);
+        // wrap() already captures StealthError — skip to avoid dup.
+        if (err?.name !== 'StealthError') {
+          Sentry.captureException(err, {
+            tags: { 'op.kind': `shield-${direction}`, 'wallet.source': 'stealf' },
+            extra: {
+              userMessage: msg,
+              amountBand: amountBand(num),
+              asset: assetSymbol,
+            },
+          });
+        }
         posthogRef.current?.capture('shield_failed', {
           direction,
           asset_symbol: assetSymbol,
@@ -265,92 +266,56 @@ export function ShieldFlow({ direction }: Props) {
   };
 
   return (
-    <CenterGlow tone={tone}>
-      <View
-        style={{
-          paddingTop: insets.top,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        }}
-      >
-        <View style={{ width: 36 }} />
-        <Text
-          style={[
-            serif,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 17,
-              color: T.ink,
-              includeFontPadding: false,
-            },
-          ]}
-        >
-          {title}
-        </Text>
-        <CloseBtn onPress={close} />
-      </View>
+    <CenterGlow tone={tone} flat>
+      <PageTitleHeader title={title} onBack={close} />
 
-      <Text
-        style={[
-          serif,
-          {
-            textAlign: 'center',
-            fontSize: 14,
-            fontStyle: 'italic',
-            color: palette.inkDim,
-            paddingHorizontal: 24,
-          },
-        ]}
-      >
-        {subtitle}
-      </Text>
-
-      <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
-        <SourceAssetCard
-          label={isShield ? 'Shielding' : 'Unshielding'}
+      {/* Centered glass amount card (asset row moved below) */}
+      <View style={{ marginTop: 20 }}>
+        <AmountCardTiles
           iconSource={{ uri: iconUri ?? SOL_ICON_URI }}
           tokenLabel={assetSymbol}
           primaryAmount={primaryDisplay}
           secondaryAmount={secondaryAmount}
           inputMode={inputMode}
-          onPressTokenPill={() =>
-            router.push(
-              isShield ? '/asset-picker?wallet=stealth' : '/asset-picker?wallet=encrypted',
-            )
-          }
           onToggleMode={onToggleMode}
           toggleDisabled={rate <= 0}
-          maxLabel={maxBalanceLabel}
+          showAssetRow={false}
         />
       </View>
 
-      <PercentageChips
-        onPressPercent={onPressPercent}
-        disabled={maxSol <= 0}
-      />
+      <View style={{ flex: 1 }} />
 
-      <Numpad onKey={onKey} tone={tone} />
+      {/* Asset selector + balance + Use Max, below the amount */}
+      <View style={{ marginBottom: 14 }}>
+        <AssetSelectRow
+          iconSource={{ uri: iconUri ?? SOL_ICON_URI }}
+          name={assetSymbol}
+          balanceLabel={balanceLabel}
+          onPressSelect={() =>
+            router.push(
+              isShield
+                ? '/asset-picker?wallet=stealth'
+                : '/asset-picker?wallet=encrypted',
+            )
+          }
+          onPressMax={() => onPressPercent(1)}
+        />
+      </View>
 
-      <View
-        style={{
-          paddingHorizontal: 24,
-          paddingTop: 24,
-          paddingBottom: insets.bottom + 16,
-        }}
-      >
-        <SwipeToSend
+      {/* Tiled keypad + CTA wrapped in one glass panel */}
+      <View style={{ paddingBottom: insets.bottom + 12 }}>
+        <TiledKeypadPanel
+          onKey={onKey}
           tone={tone}
-          label={insufficient ? 'Insufficient balance' : ctaLabel}
-          onSend={onSubmit}
-          disabled={swipeDisabled}
+          ctaLabel={insufficient ? 'Insufficient balance' : title}
+          onPressCta={onSubmit}
+          ctaDisabled={swipeDisabled}
         />
       </View>
 
-      <StealthSetupOverlay onClose={close} />
+      {/* Registration overlay only on Shield (public → encrypted). Unshield
+          already implies a registered encrypted balance, so it's not gated. */}
+      {isShield ? <StealthSetupOverlay onClose={close} /> : null}
     </CenterGlow>
   );
 }

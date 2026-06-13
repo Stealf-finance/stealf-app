@@ -64,15 +64,15 @@ export function validateNotSelf(from: string, to: string): GuardResult {
 
 export function validateMnemonic(mnemonic: string): GuardResult {
   if (!mnemonic || mnemonic.trim() === '') {
-    return { valid: false, error: 'Please enter your seed phrase' };
+    return { valid: false, error: 'Please enter your recovery phrase' };
   }
   const normalized = mnemonic.trim().toLowerCase();
   const words = normalized.split(/\s+/);
   if (words.length !== 12 && words.length !== 24) {
-    return { valid: false, error: 'Seed phrase must be 12 or 24 words' };
+    return { valid: false, error: 'Recovery phrase must be 12 or 24 words' };
   }
   if (!bip39.validateMnemonic(normalized)) {
-    return { valid: false, error: 'Invalid seed phrase. Please check for typos.' };
+    return { valid: false, error: 'Invalid recovery phrase. Please check for typos.' };
   }
   return { valid: true };
 }

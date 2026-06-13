@@ -16,6 +16,7 @@ import { RefreshBtn } from '@/src/design-system/primitives/RefreshBtn';
 import { LoaderDots } from '@/src/design-system/primitives/LoaderDots';
 import { Icons } from '@/src/design-system/icons';
 import { mono, sansation, serif } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { Palette, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -179,22 +180,11 @@ export function ClaimPendingScreen() {
           gap: 10,
         }}
       >
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2.52,
-              textTransform: 'uppercase',
-              color: 'rgba(230,192,121,0.85)',
-              fontWeight: '700',
-            },
-          ]}
-        >
+        <Kicker color="rgba(230,192,121,0.85)" style={{ fontSize: 9 }}>
           {isFetching && items.length === 0
             ? 'Scanning encrypted notes…'
             : `${items.length} pending · into encrypted balance`}
-        </Text>
+        </Kicker>
         <RefreshBtn onPress={() => refetch()} spinning={isFetching} />
       </View>
 
