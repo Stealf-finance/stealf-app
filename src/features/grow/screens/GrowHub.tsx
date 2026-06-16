@@ -15,6 +15,7 @@ import {
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { JitoMark } from '@/src/features/grow/JitoMark';
+import { UsdcPlusCard } from '@/src/features/grow/components/UsdcPlusCard';
 import { useFeatureFlag } from '@/src/services/observability/featureFlags';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { getGreeting } from '@/src/lib/greeting';
@@ -329,6 +330,9 @@ export function GrowHub() {
               </View>
             </LinearGradient>
           </View>
+
+          {/* USDC+ (Reflect) — live yield position */}
+          <UsdcPlusCard />
         </View>
       </ScrollView>
     </TonalBackground>
