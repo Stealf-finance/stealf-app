@@ -30,6 +30,7 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { getEnv } from '@/src/services/env';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { claimFaucet } from '@/src/features/add-funds/api/faucet';
+import { BuyWithCard } from '@/src/features/add-funds/components/BuyWithCard';
 import { ApiError } from '@/src/services/api/errors';
 
 type WalletSource = 'bank' | 'stealth';
@@ -193,6 +194,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
       // user cancel — no-op
     }
   };
+
 
   return (
     <CenterGlow tone={tone}>
@@ -479,6 +481,10 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             </Text>
           </Pressable>
         </View>
+      ) : null}
+
+      {resolvedWallet === 'bank' && user?.bankWallet ? (
+        <BuyWithCard walletAddress={user.bankWallet} />
       ) : null}
 
       <View style={{ flex: 1 }} />
