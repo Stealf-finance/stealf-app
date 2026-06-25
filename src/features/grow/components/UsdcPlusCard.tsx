@@ -1,5 +1,8 @@
 /**
- * USDC+ (Reflect) position card — live balance + APY, with Mint / Burn actions.
+ * STLF (Reflect-backed) savings card — live balance + holder APY, with Buy / Sell.
+ * STLF is Stealf's branded yield-bearing stablecoin (backed by Reflect USDC+).
+ * Internal api fields keep the `usdcPlus*` names (backend contract); the UI shows
+ * the brand "STLF".
  *
  * Wires the ported Reflect api/hooks into the Grow screen. Bank-wallet flow
  * only (Turnkey signing). Amount entry uses Alert.prompt (iOS); Android shows a
@@ -71,14 +74,14 @@ export function UsdcPlusCard() {
   const usdValue = balance?.usdValue ?? 0;
 
   const handleMint = useCallback(() => {
-    promptAmount('Mint USDC+', async (amount) => {
+    promptAmount('Buy STLF', async (amount) => {
       try {
         const res = await mint(amount);
-        Alert.alert('Mint sent', `Tx: ${res.signature.slice(0, 16)}…`);
+        Alert.alert('Order sent', `Tx: ${res.signature.slice(0, 16)}…`);
         invalidate(wallet ?? undefined);
       } catch (err) {
         Alert.alert(
-          'Mint failed',
+          'Buy failed',
           err instanceof Error ? err.message : 'Unknown error',
         );
       }
@@ -86,14 +89,14 @@ export function UsdcPlusCard() {
   }, [mint, invalidate, wallet]);
 
   const handleBurn = useCallback(() => {
-    promptAmount('Burn USDC+ → USDC', async (amount) => {
+    promptAmount('Sell STLF → USDC', async (amount) => {
       try {
         const res = await burn(amount);
-        Alert.alert('Burn sent', `Tx: ${res.signature.slice(0, 16)}…`);
+        Alert.alert('Order sent', `Tx: ${res.signature.slice(0, 16)}…`);
         invalidate(wallet ?? undefined);
       } catch (err) {
         Alert.alert(
-          'Burn failed',
+          'Sell failed',
           err instanceof Error ? err.message : 'Unknown error',
         );
       }
@@ -166,7 +169,7 @@ export function UsdcPlusCard() {
                 letterSpacing: -0.16,
               }}
             >
-              USDC+
+              STLF
             </Text>
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}
@@ -241,8 +244,8 @@ export function UsdcPlusCard() {
 
         {/* Actions */}
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-          <ActionButton label="Mint" onPress={handleMint} disabled={loading} primary />
-          <ActionButton label="Burn" onPress={handleBurn} disabled={loading} />
+          <ActionButton label="Buy" onPress={handleMint} disabled={loading} primary />
+          <ActionButton label="Sell" onPress={handleBurn} disabled={loading} />
         </View>
       </LinearGradient>
     </View>
