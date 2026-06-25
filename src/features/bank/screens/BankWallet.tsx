@@ -291,6 +291,11 @@ export function BankWallet() {
             label="Send"
             onPress={() => router.push('/send')}
           />
+          <SquareActionTile
+            iconKey="bolt"
+            label="Borrow"
+            onPress={() => router.push('/borrow')}
+          />
         </View>
 
         <CardPromo />
