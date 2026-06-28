@@ -29,8 +29,9 @@ export function GrowHub() {
   const { width: screenW } = useWindowDimensions();
   const [range, setRange] = useState<Range>('1Y');
 
-  // Disabled until devnet ships. Toggle the PostHog flag to enable.
-  const growEnabled = useFeatureFlag('slice-grow-enabled', false);
+  // TEMP: default forced to `true` so the Grow/STLF card shows in any build
+  // (dev bypasses PostHog). Revert to `false` for a PostHog-gated prod rollout.
+  const growEnabled = useFeatureFlag('slice-grow-enabled', true);
   const { user } = useAuth();
   const username = user?.username ?? '';
   const greeting = getGreeting();
