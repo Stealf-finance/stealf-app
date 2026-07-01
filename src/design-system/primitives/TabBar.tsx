@@ -7,7 +7,7 @@ import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 
-export type TabId = 'bank' | 'stealth' | 'profile';
+export type TabId = 'bank' | 'grow' | 'stealth' | 'profile';
 
 type Props = {
   active: TabId;
@@ -17,6 +17,7 @@ type Props = {
 
 const TABS: { id: TabId; label: string; iconKey: keyof typeof Icons }[] = [
   { id: 'bank', label: 'BANK', iconKey: 'bank' },
+  { id: 'grow', label: 'GROW', iconKey: 'trend' },
   { id: 'stealth', label: 'STEALTH', iconKey: 'shield' },
   { id: 'profile', label: 'PROFILE', iconKey: 'user' },
 ];

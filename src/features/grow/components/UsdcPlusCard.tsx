@@ -12,6 +12,7 @@ import { useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
   Text,
   TouchableOpacity,
@@ -143,22 +144,11 @@ export function UsdcPlusCard() {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-          <View
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              backgroundColor: 'rgba(38,116,255,0.16)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={[sansation, { fontSize: 18, color: '#4c8dff', fontWeight: '700' }]}
-            >
-              $+
-            </Text>
-          </View>
+          <Image
+            source={require('@/assets/images/icon.png')}
+            style={{ width: 48, height: 48, borderRadius: 24 }}
+            resizeMode="cover"
+          />
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
