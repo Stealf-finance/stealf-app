@@ -7,7 +7,7 @@ import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 
-export type TabId = 'bank' | 'stealth' | 'profile';
+export type TabId = 'bank' | 'grow' | 'stealth' | 'profile';
 
 type Props = {
   active: TabId;
@@ -18,6 +18,7 @@ type Props = {
 // `id` stays internal (route segment + tone logic); only label/icon are UI.
 const TABS: { id: TabId; label: string; iconKey: keyof typeof Icons }[] = [
   { id: 'bank', label: 'Home', iconKey: 'tabHome' },
+  { id: 'grow', label: 'Grow', iconKey: 'invest' },
   { id: 'stealth', label: 'Payment', iconKey: 'tabPayment' },
   { id: 'profile', label: 'Profile', iconKey: 'tabProfile' },
 ];

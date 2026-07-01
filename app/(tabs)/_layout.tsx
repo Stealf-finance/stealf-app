@@ -7,7 +7,7 @@ import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { PendingOpsPill } from '@/src/components/pending-ops/PendingOpsPill';
 
-const TAB_IDS: TabId[] = ['bank', 'stealth', 'profile'];
+const TAB_IDS: TabId[] = ['bank', 'grow', 'stealth', 'profile'];
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -32,6 +32,9 @@ export default function TabsLayout() {
     switch (id) {
       case 'bank':
         router.replace('/(tabs)/bank');
+        break;
+      case 'grow':
+        router.replace('/(tabs)/grow');
         break;
       case 'stealth':
         router.replace('/(tabs)/stealth');

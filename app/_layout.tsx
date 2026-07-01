@@ -194,15 +194,18 @@ function RootLayout() {
     </GestureHandlerRootView>
   );
 
-  if (!env.EXPO_PUBLIC_POSTHOG_API_KEY) return tree;
+  // Always mount the provider so `usePostHog()` never throws — even in local
+  // dev without a key. With no real key we mount a placeholder client with
+  // lifecycle capture off, so nothing flushes to a bogus project.
+  const hasPostHog = Boolean(env.EXPO_PUBLIC_POSTHOG_API_KEY);
 
   return (
     <PostHogProvider
-      apiKey={env.EXPO_PUBLIC_POSTHOG_API_KEY}
+      apiKey={env.EXPO_PUBLIC_POSTHOG_API_KEY ?? 'phc_localdev_placeholder'}
       options={{
         host: env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com',
         enableSessionReplay: false,
-        captureAppLifecycleEvents: true,
+        captureAppLifecycleEvents: hasPostHog,
       }}
       autocapture={false}
     >

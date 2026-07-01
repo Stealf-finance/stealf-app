@@ -16,6 +16,7 @@ import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { JitoMark } from '@/src/features/grow/JitoMark';
+import { UsdcPlusCard } from '@/src/features/grow/components/UsdcPlusCard';
 import { useFeatureFlag } from '@/src/services/observability/featureFlags';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { getGreeting } from '@/src/lib/greeting';
@@ -29,8 +30,9 @@ export function GrowHub() {
   const { width: screenW } = useWindowDimensions();
   const [range, setRange] = useState<Range>('1Y');
 
-  // Disabled until devnet ships. Toggle the PostHog flag to enable.
-  const growEnabled = useFeatureFlag('slice-grow-enabled', false);
+  // TEMP: default forced to `true` so the Grow/STLF card shows in any build
+  // (dev bypasses PostHog). Revert to `false` for a PostHog-gated prod rollout.
+  const growEnabled = useFeatureFlag('slice-grow-enabled', true);
   const { user } = useAuth();
   const username = user?.username ?? '';
   const greeting = getGreeting();
@@ -302,6 +304,9 @@ export function GrowHub() {
               </View>
             </LinearGradient>
           </View>
+
+          {/* USDC+ (Reflect) — live yield position */}
+          <UsdcPlusCard />
         </View>
       </ScrollView>
     </TonalBackground>
