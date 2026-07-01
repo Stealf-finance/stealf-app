@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { StepBar } from '@/src/design-system/primitives/StepBar';
 import { UnderlineField } from '@/src/design-system/primitives/UnderlineField';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { Icons } from '@/src/design-system/icons';
 import {
@@ -85,20 +86,9 @@ export function EmailEntryScreen({ onBack, onSent }: Props) {
           }}
         >
           <View style={{ width: 18, height: 1, backgroundColor: S.accentDim }} />
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 3.2,
-                textTransform: 'uppercase',
-                color: S.accent,
-                fontWeight: '700',
-              },
-            ]}
-          >
+          <Kicker color={S.accent} style={{ letterSpacing: 3.2 }}>
             Verify your email
-          </Text>
+          </Kicker>
           <View style={{ width: 18, height: 1, backgroundColor: S.accentDim }} />
         </View>
 

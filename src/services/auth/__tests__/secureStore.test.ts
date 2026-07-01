@@ -12,28 +12,20 @@ vi.mock('expo-secure-store', () => ({
 import { resolveOptions, HIGH_SENSITIVITY_KEYS, SECURE_STORE_KEYS } from '../secureStore';
 
 describe('secureStore options', () => {
-  it('returns biometric-gated options for high-sensitivity keys', () => {
-    for (const key of HIGH_SENSITIVITY_KEYS) {
-      const opts = resolveOptions(key);
-      expect(opts.requireAuthentication).toBe(true);
-      expect(opts.authenticationPrompt).toBeTruthy();
-      expect(opts.keychainAccessible).toBeDefined();
-    }
-  });
-
-  it('returns non-biometric options for routine keys', () => {
-    const routine = [
-      SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS,
-      SECURE_STORE_KEYS.USER_DATA,
-    ];
-    for (const key of routine) {
+  // Biometric ACL on HIGH_SENSITIVITY_KEYS is currently OFF (devnet decision).
+  // resolveOptions returns BASE_OPTIONS for every key — biometric prompt
+  // restoration is deferred until the mainnet ramp. The test below pins
+  // the current contract; flip both sides when biometric is re-enabled.
+  it('returns BASE_OPTIONS for every key (biometric gating deferred)', () => {
+    const everyKey = [...HIGH_SENSITIVITY_KEYS, SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS, SECURE_STORE_KEYS.USER_DATA];
+    for (const key of everyKey) {
       const opts = resolveOptions(key);
       expect(opts.requireAuthentication).toBeFalsy();
       expect(opts.keychainAccessible).toBeDefined();
     }
   });
 
-  it('classifies PK, mnemonic, and session token as high-sensitivity', () => {
+  it('classifies PK, mnemonic, and session token as the keys to gate first when biometric is restored', () => {
     expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.STEALF_PRIVATE_KEY);
     expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.STEALF_MNEMONIC);
     expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.SESSION_TOKEN);

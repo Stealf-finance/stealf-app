@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -5,7 +6,10 @@ import { Icons } from '@/src/design-system/icons';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
 type Props = {
-  iconKey: keyof typeof Icons;
+  iconKey?: keyof typeof Icons;
+  /** Custom icon node — overrides `iconKey` (e.g. a multi-fill SVG glyph
+   *  that doesn't fit the monochrome stroke-icon convention). */
+  icon?: ReactNode;
   size?: number;
   iconSize?: number;
   hasDot?: boolean;
@@ -21,6 +25,7 @@ const TINT_COLORS: [string, string] = [
 
 export function CircleIconBtn({
   iconKey,
+  icon,
   size = 44,
   iconSize = 18,
   hasDot,
@@ -29,14 +34,14 @@ export function CircleIconBtn({
   accessibilityLabel,
 }: Props) {
   const palette = txPalette(tone);
-  const Icon = Icons[iconKey];
+  const Icon = iconKey ? Icons[iconKey] : null;
   const radius = size / 2;
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? iconKey}
+      accessibilityLabel={accessibilityLabel ?? iconKey ?? 'button'}
       hitSlop={6}
       style={{
         width: size,
@@ -85,7 +90,7 @@ export function CircleIconBtn({
           justifyContent: 'center',
         }}
       >
-        <Icon size={iconSize} color={palette.ink} />
+        {icon ?? (Icon ? <Icon size={iconSize} color={palette.ink} /> : null)}
       </View>
 
       {hasDot ? (

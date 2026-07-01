@@ -14,6 +14,7 @@ import {
   sansation,
   serif,
 } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -61,8 +62,8 @@ export function PrivateKeyScreen() {
       setStealth({ phase: 'idle' });
       showToast({
         kind: 'success',
-        title: 'Stealth wallet deleted',
-        message: 'Re-create or import one from the Stealth tab.',
+        title: 'Wallet deleted',
+        message: 'Re-create or import one from the Payment tab.',
       });
       router.back();
     } catch (err: any) {
@@ -86,7 +87,7 @@ export function PrivateKeyScreen() {
 
   const revealBank = async () => {
     if (!bankWalletId) {
-      setBank({ phase: 'error', message: 'Bank wallet not set up.' });
+      setBank({ phase: 'error', message: 'Virtual bank account not set up.' });
       return;
     }
     setBank({ phase: 'loading' });
@@ -119,7 +120,7 @@ export function PrivateKeyScreen() {
         setStealth({
           phase: 'error',
           message:
-            'Recovery phrase unavailable. Set up the stealth wallet first.',
+            'Recovery phrase unavailable. Set up the wallet first.',
         });
         return;
       }
@@ -146,18 +147,19 @@ export function PrivateKeyScreen() {
         <BackBtn onPress={() => router.back()} />
         <Text
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
               marginRight: 36,
             },
           ]}
         >
-          Solana Private Key
+          Private key
         </Text>
       </View>
 
@@ -172,7 +174,7 @@ export function PrivateKeyScreen() {
         <WarningBanner />
 
         <KeyCard
-          title="Bank wallet"
+          title="Virtual bank account"
           accent={S.accent}
           address={bankAddress}
           state={bank}
@@ -181,7 +183,7 @@ export function PrivateKeyScreen() {
         />
 
         <KeyCard
-          title="Stealth wallet"
+          title="Wallet"
           accent={G.accent}
           address={stealthAddress}
           state={stealth}
@@ -320,24 +322,13 @@ function KeyCard({
             marginBottom: 4,
           }}
         >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 9,
-                letterSpacing: 2.52,
-                textTransform: 'uppercase',
-                color: accent,
-                fontWeight: '700',
-              },
-            ]}
-          >
+          <Kicker color={accent} style={{ fontSize: 9, letterSpacing: 2.52 }}>
             {title}
-          </Text>
+          </Kicker>
           {onDelete ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Delete stealth wallet"
+              accessibilityLabel="Delete wallet"
               onPress={onDelete}
               hitSlop={10}
               style={({ pressed }) => ({
@@ -366,21 +357,12 @@ function KeyCard({
           }}
         >
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 9,
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                  color: S.inkFaint,
-                  fontWeight: '700',
-                  marginBottom: 4,
-                },
-              ]}
+            <Kicker
+              color={S.inkFaint}
+              style={{ fontSize: 9, letterSpacing: 2, marginBottom: 4 }}
             >
               Address
-            </Text>
+            </Kicker>
             <Text
               style={[
                 mono,
@@ -1046,7 +1028,7 @@ function ConfirmDeleteStealthSheet({
                 },
               ]}
             >
-              Delete stealth wallet?
+              Delete wallet?
             </Text>
 
             <View style={{ gap: 14 }}>
@@ -1060,7 +1042,7 @@ function ConfirmDeleteStealthSheet({
               />
               <Bullet
                 iconKey="info"
-                text="Your bank wallet and account stay untouched."
+                text="Your virtual bank account stays untouched."
               />
             </View>
 
@@ -1120,7 +1102,7 @@ function ConfirmDeleteStealthSheet({
               onPress={handleConfirm}
               disabled={!acknowledged || deleting}
               accessibilityRole="button"
-              accessibilityLabel="Delete stealth wallet"
+              accessibilityLabel="Delete wallet"
               style={({ pressed }) => ({
                 width: '100%',
                 paddingVertical: 12,
@@ -1146,7 +1128,7 @@ function ConfirmDeleteStealthSheet({
                   },
                 ]}
               >
-                {deleting ? 'Deleting…' : 'Delete stealth wallet'}
+                {deleting ? 'Deleting…' : 'Delete wallet'}
               </Text>
             </Pressable>
           </LinearGradient>

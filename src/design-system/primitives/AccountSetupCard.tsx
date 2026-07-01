@@ -1,11 +1,9 @@
 import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Icons } from '@/src/design-system/icons';
-import {
-  sansation,
-  sansationLight,
-  serif,
-} from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
+import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 
 type Kind = 'stealth' | 'bank';
@@ -33,9 +31,9 @@ const COPY: Record<
   }
 > = {
   stealth: {
-    kicker: 'wallets · not initialized',
+    kicker: 'wallets · not registered',
     title: 'Register your',
-    titleEm: 'accounts',
+    titleEm: 'wallets',
     body: [
       'Required to use ',
       'private balances',
@@ -46,8 +44,8 @@ const COPY: Record<
     insufficientTitleEm: 'SOL',
     insufficientBody: [
       'More SOL is required on your wallets to register your ',
-      'accounts',
-      ' on Stealf.',
+      'wallets',
+      ' on Umbra Privacy.',
     ],
     ctaInsufficient: 'Go back',
     cost: '~0.024 SOL',
@@ -55,7 +53,7 @@ const COPY: Record<
   bank: {
     kicker: 'bank account · not yet activated',
     title: 'Activate your',
-    titleEm: 'cash account',
+    titleEm: 'virtual bank account',
     body: [
       'Required to receive a personal ',
       'EUR IBAN',
@@ -66,7 +64,7 @@ const COPY: Record<
     insufficientTitleEm: 'required',
     insufficientBody: [
       'Complete KYC to activate your ',
-      'cash account',
+      'virtual bank account',
       ' and receive a personal IBAN.',
     ],
     ctaInsufficient: 'Start verification',
@@ -141,47 +139,46 @@ export function AccountSetupCard({
           />
         </View>
 
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 9,
-            letterSpacing: 2.52,
-            textTransform: 'uppercase',
-            color: tones.accent,
-            fontWeight: '700',
-            marginBottom: 12,
-          },
-        ]}
+      <Kicker
+        color={tones.accent}
+        style={{ fontSize: 9, marginBottom: 12 }}
       >
         {copy.kicker}
-      </Text>
+      </Kicker>
 
-      <Text
-        style={[
-          sansationLight,
-          {
-            fontSize: 26,
-            color: T.ink,
-            letterSpacing: -0.65,
-            lineHeight: 30,
-            marginBottom: 22,
-          },
-        ]}
+      {/* Safe image to the right of the title */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+          marginBottom: 22,
+        }}
       >
-        {titleText}{' '}
         <Text
           style={[
-            serif,
+            sansation,
             {
-              fontStyle: 'italic',
-              color: tones.accent,
+              flex: 1,
+              fontSize: 24,
+              fontWeight: '600',
+              color: T.ink,
+              lineHeight: 30,
             },
           ]}
         >
-          {titleEmText}
+          {titleText}{' '}
+          <Text style={[sansation, { color: tones.accent, fontWeight: '700' }]}>
+            {titleEmText}
+          </Text>
         </Text>
-      </Text>
+        <Image
+          source={require('@/assets/images/safe.png')}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          style={{ width: 52, height: 52 }}
+        />
+      </View>
 
       <Text
         style={[
@@ -195,12 +192,7 @@ export function AccountSetupCard({
         ]}
       >
         {body[0]}
-        <Text
-          style={[
-            serif,
-            { fontStyle: 'italic', color: tones.accent },
-          ]}
-        >
+        <Text style={[sansation, { color: tones.accent, fontWeight: '600' }]}>
           {body[1]}
         </Text>
         {body[2]}
@@ -309,7 +301,12 @@ export function AccountSetupCard({
           ]}
         >
           {kind === 'stealth' ? 'One-time setup · ' : 'Setup · '}
-          <Text style={[serif, { fontStyle: 'italic', color: T.inkDim, fontSize: 12 }]}>
+          <Text
+            style={[
+              sansation,
+              { color: T.inkDim, fontSize: 11, fontWeight: '600' },
+            ]}
+          >
             {copy.cost}
           </Text>
           {kind === 'stealth' ? ' network fee' : ' to verify'}

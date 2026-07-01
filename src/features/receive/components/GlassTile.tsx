@@ -12,6 +12,13 @@ type Props = {
   accessibilityLabel?: string;
   disabled?: boolean;
   trailing?: ReactNode;
+  /** Max lines for the label. Defaults to 2; pass 1 to keep it on one line
+   *  (the font auto-shrinks more aggressively to fit). */
+  labelNumberOfLines?: number;
+  /** Base label font size before auto-shrink. Defaults to 15. */
+  labelFontSize?: number;
+  /** Drops the outer hairline border. */
+  borderless?: boolean;
 };
 
 export function GlassTile({
@@ -22,6 +29,9 @@ export function GlassTile({
   accessibilityLabel,
   disabled = false,
   trailing,
+  labelNumberOfLines = 2,
+  labelFontSize = 15,
+  borderless = false,
 }: Props) {
   return (
     <Pressable
@@ -35,7 +45,7 @@ export function GlassTile({
         aspectRatio: 1,
         borderRadius: 18,
         overflow: 'hidden',
-        borderWidth: 1,
+        borderWidth: borderless ? 0 : 1,
         borderColor: 'rgba(255,255,255,0.10)',
         shadowColor: '#000',
         shadowOpacity: 0.4,
@@ -75,24 +85,32 @@ export function GlassTile({
           }}
         >
           {leading}
-          {trailing ?? (disabled ? <SoonPill /> : null)}
+          {trailing ?? null}
         </View>
+
+        {/* "Soon" sits as an absolute corner badge so it never competes with
+            the leading icon for horizontal space (lets wide icons go full size). */}
+        {disabled && !trailing ? (
+          <View style={{ position: 'absolute', top: 10, right: 10 }}>
+            <SoonPill />
+          </View>
+        ) : null}
 
         <View>
           <Text
             style={[
               sansation,
               {
-                fontSize: 15,
-                lineHeight: 19,
+                fontSize: labelFontSize,
+                lineHeight: labelFontSize + 4,
                 color: T.ink,
                 fontWeight: '400',
                 includeFontPadding: false,
               },
             ]}
-            numberOfLines={2}
+            numberOfLines={labelNumberOfLines}
             adjustsFontSizeToFit
-            minimumFontScale={0.85}
+            minimumFontScale={labelNumberOfLines === 1 ? 0.6 : 0.85}
           >
             {label}
           </Text>
@@ -126,11 +144,10 @@ function SoonPill() {
   return (
     <View
       style={{
-        paddingHorizontal: 10,
-        paddingVertical: 4,
+        flexShrink: 0,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
         borderRadius: 100,
-        borderWidth: 1,
-        borderColor: T.hairline,
         backgroundColor: 'rgba(255,255,255,0.04)',
       }}
     >
@@ -139,7 +156,7 @@ function SoonPill() {
           sansation,
           {
             fontSize: 9,
-            letterSpacing: 1.6,
+            letterSpacing: 1,
             textTransform: 'uppercase',
             color: T.inkFaint,
             fontWeight: '700',

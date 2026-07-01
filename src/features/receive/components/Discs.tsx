@@ -21,6 +21,50 @@ export function StealfDisc() {
   );
 }
 
+/** Private-transfer (Umbra) icon — a square app-icon illustration, so it's
+ *  rendered as a rounded square rather than a circular disc to avoid cropping. */
+export function UmbraDisc() {
+  return (
+    <Image
+      source={require('@/assets/images/umbra-transfer.png')}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      style={{
+        width: STEALF_SIZE,
+        height: STEALF_SIZE,
+        borderRadius: 9,
+      }}
+    />
+  );
+}
+
+/** Simple-transfer icon — two overlapping token coins (wide, transparent),
+ *  so it's rendered with `contain` and extra width to avoid clipping. */
+export function SolanaTokenDisc() {
+  return (
+    <Image
+      source={require('@/assets/images/solana-token.png')}
+      contentFit="contain"
+      cachePolicy="memory-disk"
+      style={{ width: 44, height: STEALF_SIZE }}
+    />
+  );
+}
+
+/** Bank-transfer icon — a wide three-coin illustration (transparent), rendered
+ *  with `contain` at the same width as the Simple tile for visual consistency.
+ *  The "Soon" badge is absolutely positioned, so this can fill the row width. */
+export function GlobeDisc() {
+  return (
+    <Image
+      source={require('@/assets/images/globe.png')}
+      contentFit="contain"
+      cachePolicy="memory-disk"
+      style={{ width: 70, height: 44 }}
+    />
+  );
+}
+
 const STRIPE_HEIGHT = 4;
 const STRIPE_COUNT = Math.ceil(FLAG_SIZE / STRIPE_HEIGHT);
 
@@ -104,6 +148,30 @@ export function BankDisc() {
         height: 36,
         borderRadius: 18,
       }}
+    />
+  );
+}
+
+/** Square variant (no circular crop) — used on the Pay hub tiles. */
+export function BankDiscSquare() {
+  return (
+    <Image
+      source={require('@/assets/images/bank-icon.png')}
+      contentFit="contain"
+      cachePolicy="memory-disk"
+      style={{ width: 38, height: 38 }}
+    />
+  );
+}
+
+/** Square variant (move.png, no circular crop) — used on the Pay hub tiles. */
+export function MoveDiscSquare() {
+  return (
+    <Image
+      source={require('@/assets/images/move.png')}
+      contentFit="contain"
+      cachePolicy="memory-disk"
+      style={{ width: 38, height: 38 }}
     />
   );
 }

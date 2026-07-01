@@ -12,6 +12,7 @@ import {
   sansationLight,
   serif,
 } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { JitoMark } from '@/src/features/grow/JitoMark';
@@ -48,21 +49,12 @@ export function GrowHub() {
             paddingHorizontal: 32,
           }}
         >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 3.2,
-                textTransform: 'uppercase',
-                color: S.accent,
-                fontWeight: '700',
-                marginBottom: 12,
-              },
-            ]}
+          <Kicker
+            color={S.accent}
+            style={{ letterSpacing: 3.2, marginBottom: 12 }}
           >
             Grow
-          </Text>
+          </Kicker>
           <Text
             style={[
               sansationLight,
@@ -122,20 +114,9 @@ export function GrowHub() {
             <View
               style={{ width: 18, height: 1, backgroundColor: T.goldDim }}
             />
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 10,
-                  letterSpacing: 3.2,
-                  textTransform: 'uppercase',
-                  color: T.gold,
-                  fontWeight: '700',
-                },
-              ]}
-            >
+            <Kicker color={T.gold} style={{ letterSpacing: 3.2 }}>
               Grow
-            </Text>
+            </Kicker>
             <View
               style={{ width: 18, height: 1, backgroundColor: T.goldDim }}
             />
@@ -299,20 +280,12 @@ export function GrowHub() {
                 </Text>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 9,
-                      letterSpacing: 1.98,
-                      textTransform: 'uppercase',
-                      color: S.inkFaint,
-                      fontWeight: '600',
-                    },
-                  ]}
+                <Kicker
+                  color={S.inkFaint}
+                  style={{ fontSize: 9, letterSpacing: 1.98 }}
                 >
                   APY
-                </Text>
+                </Kicker>
                 <Text
                   style={[
                     mono,

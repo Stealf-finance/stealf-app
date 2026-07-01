@@ -17,12 +17,10 @@ import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
-import { CloseBtn } from '@/src/design-system/primitives/CloseBtn';
 import { Icons } from '@/src/design-system/icons';
 import {
   mono,
   sansation,
-  serif,
 } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -67,14 +65,12 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   const isStealth = resolvedWallet === 'stealth';
 
   const [network] = useState('Solana');
-  const destination = isStealth ? 'Stealth wallet' : 'Bank wallet';
   const fullAddress = (isStealth ? user?.stealfWallet : user?.bankWallet) ?? '';
   const displayAddress = fullAddress
     ? `${fullAddress.slice(0, 14)}...${fullAddress.slice(-6)}`
     : '—';
 
   const back = () => router.back();
-  const close = () => router.replace('/(tabs)/bank');
   const [copied, setCopied] = useState(false);
 
   // Tap feedback: a soft squish + a brief lift, plus a cross-fade between
@@ -197,7 +193,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
 
 
   return (
-    <CenterGlow tone={tone}>
+    <CenterGlow tone={tone} flat>
       <View
         style={{
           paddingTop: insets.top,
@@ -211,19 +207,20 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
         <BackBtn onPress={back} />
         <Text
           style={[
-            serif,
+            sansation,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 17,
+              fontSize: 32,
+              fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
             },
           ]}
         >
-          Add funds
+          Receive
         </Text>
-        <CloseBtn onPress={close} />
+        <View style={{ width: 36 }} />
       </View>
 
       <View style={{ paddingHorizontal: 24, paddingBottom: 14, alignItems: 'center' }}>
@@ -239,7 +236,6 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             },
           ]}
         >
-          Deposit to {destination}
         </Text>
       </View>
 
@@ -266,20 +262,6 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             cachePolicy="memory-disk"
             style={{ width: 24, height: 24, borderRadius: 12 }}
           />
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 9,
-                letterSpacing: 2.52,
-                textTransform: 'uppercase',
-                color: T.inkFaint,
-                fontWeight: '700',
-              },
-            ]}
-          >
-            Network
-          </Text>
           <Text
             style={[sansation, { fontSize: 14, color: T.ink, fontWeight: '500' }]}
           >
@@ -452,7 +434,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             ) : claimResult?.kind === 'success' ? (
               <Icons.check size={14} color="#3AAA5A" strokeWidth={2.4} />
             ) : claimResult?.kind === 'error' ? (
-              <Icons.info size={14} color="#E5484D" />
+              <Icons.info size={14} color={T.error} />
             ) : (
               <Icons.plus size={14} color={T.ink} />
             )}
@@ -468,7 +450,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
                     claimResult?.kind === 'success'
                       ? '#3AAA5A'
                       : claimResult?.kind === 'error'
-                        ? '#E5484D'
+                        ? T.error
                         : T.ink,
                 },
               ]}

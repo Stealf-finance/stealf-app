@@ -14,7 +14,10 @@ export const UserSchema = z.object({
   points: z.number().int().nonnegative().default(0),
   stealthRegistered: z.boolean().optional(),
   bankRegistered: z.boolean().optional(),
+  email: z.string().nullish(),
+  authMethod: z.enum(['google', 'apple', 'email']).nullish(),
 });
+
 export type User = z.infer<typeof UserSchema>;
 
 export const SessionSchema = z.object({
