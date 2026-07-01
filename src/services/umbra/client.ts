@@ -48,7 +48,7 @@ export function getCachedSignerKey(): string | null {
 async function buildStealthClient(): Promise<UmbraClient> {
   const privateKeyB58 = await walletKeyCache.getPrivateKey();
   if (!privateKeyB58) {
-    throw new Error('No stealth wallet key — wallet setup required');
+    throw new Error('No wallet key — wallet setup required');
   }
 
   setActiveWallet(privateKeyB58);

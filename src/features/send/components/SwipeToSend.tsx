@@ -49,8 +49,11 @@ export function SwipeToSend({
     loadingProgress.value = withTiming(loading ? 1 : 0, { duration: 180 });
   }, [loading, loadingProgress]);
 
-  const thumbColors: [string, string] =
-    tone === 'gold' ? ['#e6c079', '#a37b2e'] : ['#e8e8ea', '#9a9a9f'];
+  // Transparent glass thumb (matches the percentage chips), not a metallic fill.
+  const thumbColors: [string, string] = [
+    'rgba(255,255,255,0.06)',
+    'rgba(255,255,255,0.015)',
+  ];
 
   const onLayout = (e: LayoutChangeEvent) => {
     trackW.value = e.nativeEvent.layout.width;
@@ -234,10 +237,8 @@ export function SwipeToSend({
               height: THUMB,
               borderRadius: THUMB / 2,
               overflow: 'hidden',
-              shadowColor: palette.accentGlow,
-              shadowOpacity: 1,
-              shadowRadius: 24,
-              shadowOffset: { width: 0, height: 0 },
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.08)',
             },
             thumbStyle,
           ]}
@@ -262,7 +263,7 @@ export function SwipeToSend({
                 arrowStyle,
               ]}
             >
-              <Icons.arrRight size={20} color="#0a0a0a" />
+              <Icons.arrRight size={20} color={palette.ink} />
             </Animated.View>
             <Animated.View
               style={[
@@ -274,7 +275,7 @@ export function SwipeToSend({
                 checkStyle,
               ]}
             >
-              <Icons.check size={22} color="#0a0a0a" strokeWidth={2.6} />
+              <Icons.check size={22} color={palette.ink} strokeWidth={2.6} />
             </Animated.View>
             <Animated.View
               style={[
@@ -286,7 +287,7 @@ export function SwipeToSend({
                 loaderStyle,
               ]}
             >
-              <LoaderDots color="#0a0a0a" size={4} gap={4} bounce={4} />
+              <LoaderDots color={palette.ink} size={4} gap={4} bounce={4} />
             </Animated.View>
           </LinearGradient>
         </Animated.View>

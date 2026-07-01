@@ -2,6 +2,7 @@ import { Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Icons } from '@/src/design-system/icons';
 import { sansation } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
 type Props = {
@@ -34,20 +35,9 @@ export function DirectionRow({ fromLabel, toLabel, tone = 'silver' }: Props) {
           gap: 10,
         }}
       >
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2.52,
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              color: palette.inkFaint,
-            },
-          ]}
-        >
+        <Kicker color={palette.inkFaint} style={{ fontSize: 9 }}>
           From
-        </Text>
+        </Kicker>
         <Text
           style={[
             sansation,
@@ -64,20 +54,9 @@ export function DirectionRow({ fromLabel, toLabel, tone = 'silver' }: Props) {
         <View style={{ flex: 1 }} />
         <Icons.arrRight size={14} color={palette.accent} />
         <View style={{ flex: 1 }} />
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2.52,
-              textTransform: 'uppercase',
-              fontWeight: '700',
-              color: palette.inkFaint,
-            },
-          ]}
-        >
+        <Kicker color={palette.inkFaint} style={{ fontSize: 9 }}>
           To
-        </Text>
+        </Kicker>
         <Text
           style={[
             sansation,

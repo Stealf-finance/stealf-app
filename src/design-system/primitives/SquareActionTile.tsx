@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Icons } from '@/src/design-system/icons';
 import { sansation } from '@/src/design-system/typography';
 import { Tone } from '@/src/design-system/palettes';
+import { T } from '@/src/design-system/tokens';
 
 type Props = {
   iconKey: keyof typeof Icons;
@@ -95,7 +96,7 @@ export function SquareActionTile({
               height: 18,
               paddingHorizontal: 5,
               borderRadius: 9,
-              backgroundColor: '#E5484D',
+              backgroundColor: T.error,
               alignItems: 'center',
               justifyContent: 'center',
             }}

@@ -1,7 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Icons } from '@/src/design-system/icons';
-import { sansationLight } from '@/src/design-system/typography';
+import { sansationBold } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
 type Props = {
@@ -19,57 +17,45 @@ const ROWS: string[][] = [
 export function Numpad({ onKey, tone = 'silver' }: Props) {
   const palette = txPalette(tone);
   return (
-    <View style={{ paddingHorizontal: 24, gap: 8 }}>
+    <View style={{ width: '100%', paddingHorizontal: 5 }}>
       {ROWS.map((row, i) => (
-        <View key={i} style={{ flexDirection: 'row', gap: 8 }}>
+        <View
+          key={i}
+          style={{
+            flexDirection: 'row',
+            marginBottom: i < ROWS.length - 1 ? 30 : 0,
+          }}
+        >
           {row.map((k) => (
-            <Pressable
-              key={k}
-              onPress={() => onKey(k)}
-              accessibilityRole="button"
-              accessibilityLabel={k === '⌫' ? 'Backspace' : k}
-              style={{
-                flex: 1,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.08)',
-                overflow: 'hidden',
-              }}
-            >
-              <LinearGradient
-                colors={[
-                  'rgba(255,255,255,0.06)',
-                  'rgba(255,255,255,0.015)',
-                ]}
-                start={{ x: 0.2, y: 0 }}
-                end={{ x: 0.8, y: 1 }}
-                style={{
-                  paddingVertical: 12,
+            <View key={k} style={{ flex: 1 }}>
+              <Pressable
+                onPress={() => onKey(k)}
+                accessibilityRole="button"
+                accessibilityLabel={k === '⌫' ? 'Backspace' : k}
+                style={({ pressed }) => ({
+                  height: 58,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  minHeight: 50,
-                }}
+                  opacity: pressed ? 0.5 : 1,
+                })}
               >
-                {k === '⌫' ? (
-                  <View style={{ height: 26, alignItems: 'center', justifyContent: 'center' }}>
-                    <Icons.backspace size={22} color={palette.ink} />
-                  </View>
-                ) : (
-                  <Text
-                    style={[
-                      sansationLight,
-                      {
-                        fontSize: 26,
-                        color: palette.ink,
-                        includeFontPadding: false,
-                      },
-                    ]}
-                  >
-                    {k}
-                  </Text>
-                )}
-              </LinearGradient>
-            </Pressable>
+                {/* The delete key renders the chevron as a text glyph (a
+                    symmetric bracket ornament) so it centres like the digits. */}
+                <Text
+                  style={[
+                    sansationBold,
+                    {
+                      fontSize: k === '⌫' ? 26 : 28,
+                      color: palette.ink,
+                      textAlign: 'center',
+                      includeFontPadding: false,
+                    },
+                  ]}
+                >
+                  {k === '⌫' ? '❮' : k}
+                </Text>
+              </Pressable>
+            </View>
           ))}
         </View>
       ))}

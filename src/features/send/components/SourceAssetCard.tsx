@@ -1,11 +1,10 @@
 import { Pressable, Text, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { Icons } from '@/src/design-system/icons';
-import {
-  sansation,
-  sansationLight,
-} from '@/src/design-system/typography';
+import { sansation, sansationLight } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { T } from '@/src/design-system/tokens';
+import { Tone, txPalette } from '@/src/design-system/palettes';
 
 export type InputMode = 'asset' | 'fiat';
 
@@ -20,6 +19,11 @@ type Props = {
   onToggleMode?: () => void;
   toggleDisabled?: boolean;
   maxLabel?: string;
+  /** When both are set, a "From → To" header is merged into the top of the
+   *  card (used by the Move flow instead of a separate DirectionRow). */
+  fromLabel?: string;
+  toLabel?: string;
+  tone?: Tone;
 };
 
 export function SourceAssetCard({
@@ -33,7 +37,11 @@ export function SourceAssetCard({
   onToggleMode,
   toggleDisabled = false,
   maxLabel,
+  fromLabel,
+  toLabel,
+  tone = 'silver',
 }: Props) {
+  const palette = txPalette(tone);
   const digitCount = primaryAmount.replace('.', '').length;
   const amountFontSize =
     digitCount >= 11 ? 32 : digitCount >= 9 ? 40 : digitCount >= 7 ? 52 : 64;
@@ -53,6 +61,68 @@ export function SourceAssetCard({
         borderColor: T.hairline,
       }}
     >
+      {fromLabel && toLabel ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingBottom: 14,
+            marginBottom: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: T.hairline,
+          }}
+        >
+          <Kicker color={T.inkFaint} style={{ fontSize: 9 }}>
+            From
+          </Kicker>
+          <Text
+            style={[sansation, { fontSize: 13, color: T.ink, fontWeight: '500' }]}
+            numberOfLines={1}
+          >
+            {fromLabel}
+          </Text>
+          <View style={{ flex: 1 }} />
+          <Icons.arrRight size={14} color={palette.accent} />
+          <View style={{ flex: 1 }} />
+          <Kicker color={T.inkFaint} style={{ fontSize: 9 }}>
+            To
+          </Kicker>
+          <Text
+            style={[sansation, { fontSize: 13, color: T.ink, fontWeight: '500' }]}
+            numberOfLines={1}
+          >
+            {toLabel}
+          </Text>
+        </View>
+      ) : toLabel ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingBottom: 14,
+            marginBottom: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: T.hairline,
+          }}
+        >
+          <Kicker color={T.inkFaint} style={{ fontSize: 9 }}>
+            To
+          </Kicker>
+          <Text
+            style={[
+              sansation,
+              { flex: 1, fontSize: 13, color: T.ink, fontWeight: '500' },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="middle"
+          >
+            {toLabel}
+          </Text>
+        </View>
+      ) : null}
+
       <View
         style={{
           flexDirection: 'row',

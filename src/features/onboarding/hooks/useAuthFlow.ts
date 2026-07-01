@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTurnkey, ClientState } from '@turnkey/react-native-wallet-kit';
 import { OtpType } from '@turnkey/core';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import * as Sentry from '@sentry/react-native';
 import { usePostHog } from 'posthog-react-native';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
@@ -70,7 +74,7 @@ export function useAuthFlow() {
         walletsDump: JSON.stringify(wallets, null, 2),
       });
     }
-        throw new Error('Bank wallet not provisioned');
+        throw new Error('Virtual bank account not provisioned');
       }
 
       const subOrgId = tk.session?.organizationId;
@@ -91,9 +95,15 @@ export function useAuthFlow() {
       });
 
       const persistedStealf = await readPersistedStealfWallet();
-      const enriched = persistedStealf
-        ? { ...profile, stealfWallet: persistedStealf }
-        : profile;
+      const enriched = {
+        ...profile,
+        ...(persistedStealf ? { stealfWallet: persistedStealf } : null),
+        // Carry the OIDC email on the client-side user record so the profile
+        // can show it (OAuth users have no `userEmail` on the Turnkey record).
+        ...(email ? { email } : null),
+        // Remember how they signed in — drives the profile avatar glyph.
+        authMethod,
+      };
 
       queryClient.removeQueries({
         queryKey: balanceQueries.byAddress(cashWallet),
@@ -186,7 +196,7 @@ export function useAuthFlow() {
               errorStatus: (err as { status?: number })?.status,
             },
           });
-          setError(softenMissingEmailError(method, email, err));
+          setError(toMessage(err));
         })
         .finally(() => {
           finalizingRef.current = false;
@@ -201,13 +211,41 @@ export function useAuthFlow() {
   const runOAuth = useCallback(
     async (provider: 'google' | 'apple') => {
       const tk = turnkeyRef.current;
-      const handler =
-        provider === 'google' ? tk.handleGoogleOauth : tk.handleAppleOauth;
       setError(null);
       setPendingOauth(provider);
       try {
+        if (provider === 'apple' && Platform.OS === 'ios') {
+          // Native Sign in with Apple: the web flow hardcodes an empty Apple
+          // `scope`, so it never returns the user's email; the native sheet
+          // requests EMAIL and yields a token carrying the email claim. The
+          // embedded key's SHA-256 hash is the OIDC nonce — Turnkey verifies
+          // `sha256(publicKey) === token.nonce` (same scheme as the wallet-kit
+          // OAuth handlers). Google keeps the web flow (its scope has `email`).
+          const publicKey = await tk.createApiKeyPair();
+          if (!publicKey) throw new Error('Failed to create embedded key');
+          const nonce = bytesToHex(sha256(utf8ToBytes(publicKey)));
 
-        await handler({});
+          const credential = await AppleAuthentication.signInAsync({
+            requestedScopes: [
+              AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+              AppleAuthentication.AppleAuthenticationScope.EMAIL,
+            ],
+            nonce,
+          });
+          if (!credential.identityToken) {
+            throw new Error('Apple did not return an identity token');
+          }
+
+          await tk.completeOauth({
+            oidcToken: credential.identityToken,
+            publicKey,
+            providerName: 'apple',
+          });
+        } else {
+          const handler =
+            provider === 'google' ? tk.handleGoogleOauth : tk.handleAppleOauth;
+          await handler({});
+        }
       } catch (err) {
         setPendingOauth(null);
         if (isCancellationError(err)) return;
@@ -305,28 +343,11 @@ function toMessage(err: unknown): string {
   return 'Authentication failed';
 }
 
-
-function softenMissingEmailError(
-  method: AuthMethod,
-  email: string | undefined,
-  err: unknown,
-): string {
-  const raw = toMessage(err);
-  if (
-    method === 'apple' &&
-    !email &&
-    /email and pseudo are required/i.test(raw)
-  ) {
-    Sentry.captureMessage(
-      'OAuth Apple new-user signup missing email (private relay?)',
-      { level: 'warning' },
-    );
-    return "We couldn't get your email from Apple. Try signing in with Email or Google instead.";
-  }
-  return raw;
-}
-
 function isCancellationError(err: unknown): boolean {
+  // Native Sign in with Apple reports a cancelled sheet via this code.
+  if ((err as { code?: string } | undefined)?.code === 'ERR_REQUEST_CANCELED') {
+    return true;
+  }
   const rawMsg = String((err as Error | undefined)?.message ?? '');
   const msg = rawMsg.toLowerCase();
   const matches =

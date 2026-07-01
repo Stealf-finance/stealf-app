@@ -1,20 +1,45 @@
-import { ReactNode } from 'react';
-import { Alert, Linking, Pressable, ScrollView, Text, View } from 'react-native';
+import { ReactNode, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import * as Clipboard from 'expo-clipboard';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { Icons } from '@/src/design-system/icons';
 import {
+  AppleGlyph,
+  GoogleGlyph,
+  MailGlyph,
+} from '@/src/design-system/icons/auth';
+import {
   sansation,
+  sansationBold,
   sansationLight,
   serif,
 } from '@/src/design-system/typography';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useTurnkey } from '@turnkey/react-native-wallet-kit';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useLogout } from '@/src/features/onboarding/hooks/useLogout';
+import { useUpdatePseudo } from '@/src/features/onboarding/hooks/useUpdatePseudo';
 import { useDeleteAccount } from '@/src/features/onboarding/hooks/useDeleteAccount';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useShieldedSolBalance } from '@/src/features/stealth/hooks/useShieldedSolBalance';
@@ -43,7 +68,7 @@ const SETTINGS: SettingsItem[] = [
   { iconKey: 'info', label: 'About us', href: 'https://www.stealf.xyz' },
   {
     iconKey: 'folder',
-    label: 'Terms of Services',
+    label: 'Terms of Service',
     href: 'https://stealf.xyz/terms',
   },
   {
@@ -65,6 +90,171 @@ function formatUsdShort(usd: number): string {
   const safe = Math.max(0, usd);
   if (safe >= 1000) return `$${Math.round(safe).toLocaleString('en-US')}`;
   return `$${safe.toFixed(2)}`;
+}
+
+const PSEUDO_RE = /^[a-zA-Z0-9_-]+$/;
+
+/** The `@username` line with an inline editor. Tapping the pencil swaps the
+ *  label for a text field with confirm / cancel; validation mirrors the
+ *  backend (3–20 chars, letters/numbers/_/-), and the "already taken" 409 is
+ *  surfaced inline. */
+function PseudoRow({ username }: { username: string }) {
+  const { mutateAsync, isPending } = useUpdatePseudo();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(username);
+  const [error, setError] = useState<string | null>(null);
+
+  const open = () => {
+    setValue(username);
+    setError(null);
+    setEditing(true);
+  };
+  const cancel = () => {
+    setEditing(false);
+    setError(null);
+  };
+  const submit = async () => {
+    const next = value.trim();
+    if (next === username) return cancel();
+    if (next.length < 3 || next.length > 20) {
+      setError('3–20 characters');
+      return;
+    }
+    if (!PSEUDO_RE.test(next)) {
+      setError('Letters, numbers, _ and - only');
+      return;
+    }
+    try {
+      await mutateAsync(next);
+      setEditing(false);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update username');
+    }
+  };
+
+  if (!editing) {
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 6,
+        }}
+      >
+        <Text
+          style={[
+            serif,
+            { fontStyle: 'italic', fontSize: 30, lineHeight: 33, color: S.ink },
+          ]}
+        >
+          {username ? `@${username}` : '—'}
+        </Text>
+        <Pressable
+          onPress={open}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Edit username"
+          style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+        >
+          <Icons.pencil size={15} color={S.inkFaint} />
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ alignItems: 'center', marginBottom: 6 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderBottomWidth: 1,
+            borderColor: 'rgba(230,230,235,0.22)',
+            paddingBottom: 2,
+          }}
+        >
+          <Text
+            style={[
+              serif,
+              { fontStyle: 'italic', fontSize: 26, color: S.inkDim },
+            ]}
+          >
+            @
+          </Text>
+          <TextInput
+            value={value}
+            onChangeText={(t) => {
+              setValue(t);
+              if (error) setError(null);
+            }}
+            autoFocus
+            autoCapitalize="none"
+            autoCorrect={false}
+            maxLength={20}
+            editable={!isPending}
+            returnKeyType="done"
+            onSubmitEditing={submit}
+            selectionColor={S.accent}
+            style={[
+              serif,
+              {
+                fontStyle: 'italic',
+                fontSize: 26,
+                color: S.ink,
+                minWidth: 110,
+                padding: 0,
+                includeFontPadding: false,
+              },
+            ]}
+          />
+        </View>
+
+        {isPending ? (
+          <ActivityIndicator size="small" color={S.accent} />
+        ) : (
+          <>
+            <Pressable
+              onPress={submit}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Save username"
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+            >
+              <Icons.check size={18} color={T.green} strokeWidth={2.4} />
+            </Pressable>
+            <Pressable
+              onPress={cancel}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+            >
+              <Icons.close size={18} color={S.inkFaint} />
+            </Pressable>
+          </>
+        )}
+      </View>
+
+      {error ? (
+        <Text
+          style={[
+            sansation,
+            {
+              marginTop: 8,
+              fontSize: 11,
+              color: T.error,
+              includeFontPadding: false,
+            },
+          ]}
+        >
+          {error}
+        </Text>
+      ) : null}
+    </View>
+  );
 }
 
 export function ProfileHub() {
@@ -121,8 +311,26 @@ export function ProfileHub() {
   const publicPct = totalUSD > 0 ? publicUSD / totalUSD : 0;
 
   const username = user?.username ?? '';
-  // Backend never holds plaintext email; pull it from Turnkey's user record.
-  const email = turnkey.user?.userEmail ?? '';
+  // Backend never holds plaintext email. Email-OTP users have it on the
+  // Turnkey record; OAuth (Apple/Google) users don't, so fall back to the
+  // email we decoded from the OIDC token at sign-in (kept on the user record).
+  const email = user?.email ?? turnkey.user?.userEmail ?? '';
+
+  const [emailCopied, setEmailCopied] = useState(false);
+  const emailPop = useSharedValue(1);
+  const emailIconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: emailPop.value }],
+  }));
+  const copyEmail = async () => {
+    if (!email) return;
+    await Clipboard.setStringAsync(email);
+    setEmailCopied(true);
+    emailPop.value = withSequence(
+      withTiming(0.6, { duration: 90 }),
+      withSpring(1, { damping: 7, stiffness: 320 }),
+    );
+    setTimeout(() => setEmailCopied(false), 1200);
+  };
   const avatarLetter = (username[0] ?? '·').toUpperCase();
   const points = user?.points ?? 0;
 
@@ -168,44 +376,72 @@ export function ProfileHub() {
               bottom: 0,
             }}
           />
-          <Text
-            style={[
-              serif,
-              {
-                fontStyle: 'italic',
-                fontSize: 44,
-                lineHeight: 48,
-                color: S.accent,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            {avatarLetter}
-          </Text>
+          {user?.authMethod === 'apple' ? (
+            <AppleGlyph size={42} color={S.ink} />
+          ) : user?.authMethod === 'google' ? (
+            <GoogleGlyph size={40} />
+          ) : user?.authMethod === 'email' ? (
+            <MailGlyph size={40} color={S.accent} />
+          ) : (
+            <Text
+              style={[
+                serif,
+                {
+                  fontStyle: 'italic',
+                  fontSize: 44,
+                  lineHeight: 48,
+                  color: S.accent,
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              {avatarLetter}
+            </Text>
+          )}
         </View>
 
         {/* Name + email */}
         <View style={{ alignItems: 'center', marginBottom: 22 }}>
-          <Text
-            style={[
-              serif,
-              {
-                fontStyle: 'italic',
-                fontSize: 30,
-                lineHeight: 33,
-                color: S.ink,
-                marginBottom: 6,
-              },
-            ]}
-          >
-            {username ? `@${username}` : '—'}
-          </Text>
+          <PseudoRow username={username} />
           {email ? (
-            <Text
-              style={{ fontSize: 12, color: S.inkDim, letterSpacing: 0.2 }}
+            <Pressable
+              onPress={copyEmail}
+              accessibilityRole="button"
+              accessibilityLabel="Copy email"
+              hitSlop={8}
+              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
             >
-              {email}
-            </Text>
+              {/* row layout on a static View — flexDirection in a Pressable
+                  style-fn doesn't apply reliably, which dropped the icon below */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={{
+                    flexShrink: 1,
+                    fontSize: 12,
+                    color: S.inkDim,
+                    letterSpacing: 0.2,
+                    includeFontPadding: false,
+                  }}
+                >
+                  {email}
+                </Text>
+                <Animated.View style={emailIconStyle}>
+                  {emailCopied ? (
+                    <Icons.check size={13} color={T.green} strokeWidth={2.4} />
+                  ) : (
+                    <Icons.copy size={13} color={S.inkFaint} />
+                  )}
+                </Animated.View>
+              </View>
+            </Pressable>
           ) : null}
         </View>
 
@@ -226,34 +462,8 @@ export function ProfileHub() {
             marginBottom: 10,
           }}
         >
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 3.2,
-                textTransform: 'uppercase',
-                color: T.gold,
-                fontWeight: '700',
-              },
-            ]}
-          >
-            Capital Summary
-          </Text>
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 10,
-                letterSpacing: 2.8,
-                textTransform: 'uppercase',
-                color: S.inkFaint,
-                fontWeight: '500',
-              },
-            ]}
-          >
-            USD
-          </Text>
+          <Kicker color={T.gold}>Capital Summary</Kicker>
+          <Kicker color={S.inkFaint}>USD</Kicker>
         </View>
 
         {/* Total balance */}
@@ -464,7 +674,7 @@ export function ProfileHub() {
         <SettingsCard>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Logout"
+            accessibilityLabel="Log out"
             disabled={logout.isPending}
             onPress={confirmLogout}
             style={{
@@ -483,7 +693,7 @@ export function ProfileHub() {
                 { flex: 1, fontSize: 14, color: S.ink },
               ]}
             >
-              {logout.isPending ? 'Logging out…' : 'Logout'}
+              {logout.isPending ? 'Logging out…' : 'Log out'}
             </Text>
             <Icons.chevR size={14} color={S.inkFaint} />
           </Pressable>
@@ -539,7 +749,7 @@ export function ProfileHub() {
               },
             ]}
           >
-            VERSION 0.2
+            VERSION BETA
           </Text>
         </View>
       </ScrollView>
@@ -549,21 +759,12 @@ export function ProfileHub() {
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <Text
-      style={[
-        sansation,
-        {
-          fontSize: 10,
-          letterSpacing: 3.2,
-          textTransform: 'uppercase',
-          color: S.inkFaint,
-          fontWeight: '700',
-          marginBottom: 10,
-        },
-      ]}
+    <Kicker
+      color={S.inkFaint}
+      style={{ letterSpacing: 3.2, marginBottom: 10 }}
     >
       {children}
-    </Text>
+    </Kicker>
   );
 }
 
@@ -614,21 +815,12 @@ function StatCard({
             style={{ flex: 1 }}
           />
         </View>
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 9,
-              letterSpacing: 2.88,
-              textTransform: 'uppercase',
-              color: S.accent,
-              fontWeight: '700',
-              marginBottom: 10,
-            },
-          ]}
+        <Kicker
+          color={S.accent}
+          style={{ fontSize: 9, marginBottom: 10 }}
         >
           {label}
-        </Text>
+        </Kicker>
         {children}
       </LinearGradient>
     </View>

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { sansation, sansationLight } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
+import { T } from '@/src/design-system/tokens';
 
 const S = txPalette('silver');
 
@@ -60,7 +61,7 @@ export function CodeInput({
                 borderRadius: 12,
                 borderWidth: 1,
                 borderColor: errored
-                  ? '#E5484D'
+                  ? T.error
                   : filled
                     ? S.accent
                     : active
