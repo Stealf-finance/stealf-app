@@ -24,28 +24,53 @@ export function useEvmAddress() {
     const walletId = wallet?.walletId;
     if (!walletId) throw new Error('No Turnkey wallet available');
 
-    // Fast path: reuse an Ethereum account already derived on this wallet.
-    const existing = wallet?.accounts?.find(
+    // Fast path: reuse an Ethereum account already present in the cached
+    // wallet state (no network round-trip).
+    const cached = wallet?.accounts?.find(
       (a) => a.addressFormat === ETH_ADDRESS_FORMAT,
     );
-    if (existing?.address) return existing.address;
+    if (cached?.address) return cached.address;
 
     setLoading(true);
     try {
-      const { addresses } = await httpClient.createWalletAccounts({
-        walletId,
-        accounts: [
-          {
-            curve: 'CURVE_SECP256K1',
-            pathFormat: 'PATH_FORMAT_BIP32',
-            path: ETH_PATH,
-            addressFormat: ETH_ADDRESS_FORMAT,
-          },
-        ],
-      });
-      const addr = addresses[0];
-      if (!addr) throw new Error('No EVM address returned');
-      return addr;
+      // The cached `wallet.accounts` can be stale — e.g. the ETH account was
+      // created in a previous attempt but the local wallet state hasn't been
+      // re-hydrated. Query Turnkey directly before trying to create, otherwise
+      // `createWalletAccounts` throws "path already exists in wallet account".
+      const fetchEthAddress = async (): Promise<string | undefined> => {
+        const res = await httpClient.getWalletAccounts({ walletId });
+        return res.accounts?.find(
+          (a) => a.addressFormat === ETH_ADDRESS_FORMAT && a.path === ETH_PATH,
+        )?.address;
+      };
+
+      const alreadyDerived = await fetchEthAddress();
+      if (alreadyDerived) return alreadyDerived;
+
+      try {
+        const { addresses } = await httpClient.createWalletAccounts({
+          walletId,
+          accounts: [
+            {
+              curve: 'CURVE_SECP256K1',
+              pathFormat: 'PATH_FORMAT_BIP32',
+              path: ETH_PATH,
+              addressFormat: ETH_ADDRESS_FORMAT,
+            },
+          ],
+        });
+        const addr = addresses[0];
+        if (!addr) throw new Error('No EVM address returned');
+        return addr;
+      } catch (err) {
+        // Race / stale state: the path exists after all → fetch and return it.
+        const msg = err instanceof Error ? err.message : String(err);
+        if (/already exists/i.test(msg)) {
+          const addr = await fetchEthAddress();
+          if (addr) return addr;
+        }
+        throw err;
+      }
     } finally {
       setLoading(false);
     }
