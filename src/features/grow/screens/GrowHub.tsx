@@ -1,6 +1,13 @@
 import { useState } from 'react';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
@@ -28,6 +35,7 @@ type Range = (typeof RANGES)[number];
 export function GrowHub() {
   const insets = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
+  const router = useRouter();
   const [range, setRange] = useState<Range>('1Y');
 
   // TEMP: default forced to `true` so the Grow/STLF card shows in any build
@@ -307,6 +315,84 @@ export function GrowHub() {
 
           {/* USDC+ (Reflect) — live yield position */}
           <UsdcPlusCard />
+
+          {/* Tokenized stocks — entry point into the xStocks flow */}
+          <TouchableOpacity
+            onPress={() => router.push('/xstocks')}
+            activeOpacity={0.7}
+            style={{
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.06)',
+              overflow: 'hidden',
+              marginTop: 12,
+              shadowColor: '#000',
+              shadowOpacity: 0.6,
+              shadowRadius: 20,
+              shadowOffset: { width: 0, height: 20 },
+            }}
+          >
+            <LinearGradient
+              colors={['rgba(22,22,24,0.95)', 'rgba(10,10,12,0.98)']}
+              start={{ x: 0.2, y: 0 }}
+              end={{ x: 0.8, y: 1 }}
+              style={{
+                paddingVertical: 20,
+                paddingHorizontal: 22,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 16,
+              }}
+            >
+              {/* top sheen */}
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '45%',
+                }}
+              >
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.04)', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={{ flex: 1 }}
+                />
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: S.ink,
+                    fontWeight: '500',
+                    letterSpacing: -0.16,
+                  }}
+                >
+                  Stocks
+                </Text>
+                <Text
+                  style={[
+                    mono,
+                    {
+                      fontSize: 12,
+                      color: S.inkFaint,
+                      marginTop: 3,
+                      letterSpacing: 0.24,
+                    },
+                  ]}
+                >
+                  Tokenized equities · Buy & sell
+                </Text>
+              </View>
+              <Kicker color={T.gold} style={{ letterSpacing: 2.2 }}>
+                Invest
+              </Kicker>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </TonalBackground>

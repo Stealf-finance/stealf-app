@@ -177,6 +177,10 @@ function RootLayout() {
                             name="asset-picker"
                             options={{ presentation: 'modal' }}
                           />
+                          <Stack.Screen
+                            name="xstocks"
+                            options={{ presentation: 'modal' }}
+                          />
                         </Stack>
                         <ToastHost />
                         <OfflineBanner />
