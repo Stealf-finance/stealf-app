@@ -130,6 +130,25 @@ export function BorrowFlow() {
         mediaCapturePermissionGrantType="grant"
         allowsInlineMediaPlayback
         originWhitelist={['https://*']}
+        // Safety net: the backend serves the embed same-origin so its
+        // localStorage works natively in iOS WKWebView. If a frame's storage is
+        // ever still blocked (SecurityError), fall back to an in-memory Storage
+        // so the embed SPA doesn't crash to a blank screen. Runs in every frame
+        // before the SPA.
+        injectedJavaScriptBeforeContentLoadedForMainFrameOnly={false}
+        injectedJavaScriptBeforeContentLoaded={`(function(){
+          try {
+            var mem = {};
+            var P = window.Storage && window.Storage.prototype;
+            if (!P) return;
+            var oS=P.setItem, oG=P.getItem, oR=P.removeItem, oC=P.clear, oK=P.key;
+            P.setItem = function(k,v){ try{ return oS.call(this,k,v); }catch(e){ mem[k]=String(v); } };
+            P.getItem = function(k){ try{ return oG.call(this,k); }catch(e){ return Object.prototype.hasOwnProperty.call(mem,k)?mem[k]:null; } };
+            P.removeItem = function(k){ try{ return oR.call(this,k); }catch(e){ delete mem[k]; } };
+            P.clear = function(){ try{ return oC.call(this); }catch(e){ mem={}; } };
+            P.key = function(i){ try{ return oK.call(this,i); }catch(e){ return Object.keys(mem)[i]||null; } };
+          } catch(e){}
+        })(); true;`}
         style={{ flex: 1, backgroundColor: T.bg }}
       />
     </View>
