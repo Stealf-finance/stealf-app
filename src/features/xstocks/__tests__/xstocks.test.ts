@@ -54,9 +54,9 @@ const validAsset = {
 
 const validMultiplier = {
   currentMultiplier: 1,
-  newMultiplier: 1,
-  activationDateTime: '2026-06-03T12:00:00.000Z',
-  reason: 'none',
+  newMultiplier: 0,
+  activationDateTime: 0,
+  reason: null,
 };
 
 const validStatus = {
@@ -152,7 +152,7 @@ describe('BuildBuyResponseSchema', () => {
     inUsdcBaseUnits: 10_000_000,
     outXstockRawBaseUnits: 5_200_000,
     referencePrice: 192.34,
-    multiplier: validMultiplier,
+    multiplier: 1,
     slippageBps: 50,
   };
 
@@ -176,7 +176,7 @@ describe('BuildSellResponseSchema', () => {
     inXstockRawBaseUnits: 5_200_000,
     outUsdcBaseUnits: 9_950_000,
     referencePrice: 192.34,
-    multiplier: validMultiplier,
+    multiplier: 1,
     slippageBps: 50,
   };
 

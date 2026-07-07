@@ -33,8 +33,8 @@ export type XstockAsset = z.infer<typeof XstockAssetSchema>;
 export const XstockMultiplierSchema = z.object({
   currentMultiplier: z.number(),
   newMultiplier: z.number(),
-  activationDateTime: z.string(),
-  reason: z.string(),
+  activationDateTime: z.number(),
+  reason: z.string().nullable(),
 });
 export type XstockMultiplier = z.infer<typeof XstockMultiplierSchema>;
 
@@ -57,7 +57,7 @@ export const XstockBalanceSchema = z.object({
   symbol: z.string(),
   ata: z.string(),
   rawBaseUnits: z.number(),
-  uiAmount: z.number(),
+  uiAmount: z.number().nullable(),
   uiAmountString: z.string(),
   ataExists: z.boolean(),
 });
@@ -71,7 +71,8 @@ export const BuildBuyResponseSchema = z.object({
   inUsdcBaseUnits: z.number(),
   outXstockRawBaseUnits: z.number(),
   referencePrice: z.number().nullable(),
-  multiplier: XstockMultiplierSchema,
+  // build-buy/sell return the numeric current multiplier, not the full object.
+  multiplier: z.number(),
   slippageBps: z.number(),
 });
 export type BuildBuyResponse = z.infer<typeof BuildBuyResponseSchema>;
@@ -84,7 +85,7 @@ export const BuildSellResponseSchema = z.object({
   inXstockRawBaseUnits: z.number(),
   outUsdcBaseUnits: z.number(),
   referencePrice: z.number().nullable(),
-  multiplier: XstockMultiplierSchema,
+  multiplier: z.number(),
   slippageBps: z.number(),
 });
 export type BuildSellResponse = z.infer<typeof BuildSellResponseSchema>;
