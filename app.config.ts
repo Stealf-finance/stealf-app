@@ -17,6 +17,12 @@ const config: ExpoConfig = {
   scheme: 'stealf',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
+  // EAS Update (OTA): JS-only changes ship instantly to installed builds with
+  // the same runtimeVersion — no 30-min rebuild. Native changes still need a build.
+  runtimeVersion: { policy: 'appVersion' },
+  updates: {
+    url: 'https://u.expo.dev/9a158029-d062-48ff-b7b7-33854514570f',
+  },
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.stealf.app',

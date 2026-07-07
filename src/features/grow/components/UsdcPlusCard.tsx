@@ -8,12 +8,11 @@
  * only (Turnkey signing). Amount entry uses Alert.prompt (iOS); Android shows a
  * not-yet-available notice — a proper numpad sheet can replace this later.
  */
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
-  Platform,
   Text,
   TouchableOpacity,
   View,
@@ -22,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { mono, sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { AmountSheet } from '@/src/design-system/primitives/AmountSheet';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import {
   useInvalidateUsdcYield,
@@ -32,34 +32,6 @@ import { useUsdcYield } from '../hooks/useUsdcYield';
 
 const S = txPalette('silver');
 
-function promptAmount(title: string, onSubmit: (amount: number) => void) {
-  if (Platform.OS !== 'ios') {
-    Alert.alert('Coming soon', 'Amount entry is available on iOS for now.');
-    return;
-  }
-  Alert.prompt(
-    title,
-    'Enter amount in USDC (up to 6 decimals)',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: (raw?: string) => {
-          const amount = Number((raw ?? '').replace(',', '.'));
-          if (!Number.isFinite(amount) || amount <= 0) {
-            Alert.alert('Invalid amount');
-            return;
-          }
-          onSubmit(amount);
-        },
-      },
-    ],
-    'plain-text',
-    '',
-    'decimal-pad',
-  );
-}
-
 export function UsdcPlusCard() {
   const { user } = useAuth();
   const wallet = user?.bankWallet;
@@ -69,43 +41,35 @@ export function UsdcPlusCard() {
     useUsdcYieldBalance(wallet);
   const invalidate = useInvalidateUsdcYield();
   const { mint, burn, loading } = useUsdcYield('bank');
+  const [sheet, setSheet] = useState<'buy' | 'sell' | null>(null);
 
   const apy = stats?.calculatedApy;
   const uiAmount = balance?.usdcPlusUiAmount ?? 0;
   const usdValue = balance?.usdValue ?? 0;
 
-  const handleMint = useCallback(() => {
-    promptAmount('Buy STLF', async (amount) => {
+  const handleSubmit = useCallback(
+    async (amount: number) => {
+      const mode = sheet;
+      if (!mode) return;
       try {
-        const res = await mint(amount);
+        const res = mode === 'buy' ? await mint(amount) : await burn(amount);
+        setSheet(null);
         Alert.alert('Order sent', `Tx: ${res.signature.slice(0, 16)}…`);
         invalidate(wallet ?? undefined);
       } catch (err) {
+        setSheet(null);
         Alert.alert(
-          'Buy failed',
+          mode === 'buy' ? 'Buy failed' : 'Sell failed',
           err instanceof Error ? err.message : 'Unknown error',
         );
       }
-    });
-  }, [mint, invalidate, wallet]);
-
-  const handleBurn = useCallback(() => {
-    promptAmount('Sell STLF → USDC', async (amount) => {
-      try {
-        const res = await burn(amount);
-        Alert.alert('Order sent', `Tx: ${res.signature.slice(0, 16)}…`);
-        invalidate(wallet ?? undefined);
-      } catch (err) {
-        Alert.alert(
-          'Sell failed',
-          err instanceof Error ? err.message : 'Unknown error',
-        );
-      }
-    });
-  }, [burn, invalidate, wallet]);
+    },
+    [sheet, mint, burn, invalidate, wallet],
+  );
 
   return (
-    <View
+    <>
+      <View
       style={{
         borderRadius: 20,
         borderWidth: 1,
@@ -234,11 +198,38 @@ export function UsdcPlusCard() {
 
         {/* Actions */}
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-          <ActionButton label="Buy" onPress={handleMint} disabled={loading} primary />
-          <ActionButton label="Sell" onPress={handleBurn} disabled={loading} />
+          <ActionButton
+            label="Buy"
+            onPress={() => setSheet('buy')}
+            disabled={loading}
+            primary
+          />
+          <ActionButton
+            label="Sell"
+            onPress={() => setSheet('sell')}
+            disabled={loading}
+          />
         </View>
       </LinearGradient>
-    </View>
+      </View>
+
+      <AmountSheet
+        visible={sheet !== null}
+        title={sheet === 'sell' ? 'Sell STLF' : 'Buy STLF'}
+        subtitle={
+          sheet === 'sell'
+            ? `Balance ${uiAmount.toFixed(2)} STLF`
+            : 'Pay with USDC'
+        }
+        currency={sheet === 'sell' ? '' : '$'}
+        submitLabel={sheet === 'sell' ? 'Sell' : 'Buy'}
+        presets={sheet === 'sell' ? undefined : [10, 50, 100]}
+        max={sheet === 'sell' ? uiAmount : undefined}
+        loading={loading}
+        onSubmit={handleSubmit}
+        onClose={() => setSheet(null)}
+      />
+    </>
   );
 }
 

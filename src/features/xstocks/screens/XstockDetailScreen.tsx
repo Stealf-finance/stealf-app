@@ -6,12 +6,11 @@
  * the on-chain holdings. Trading is disabled with a "halted" pill when the
  * asset is halted. On success we surface the tx signature (mirrors UsdcPlusCard).
  */
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
-  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -29,36 +28,9 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useXstockBalance, useXstockDetail, useInvalidateXstock } from '../hooks/useXstocksData';
 import { useXstocksTrade, type SellPct } from '../hooks/useXstocksTrade';
 import { HaltedPill } from '../components/XstockRow';
+import { AmountSheet } from '@/src/design-system/primitives/AmountSheet';
 
 const S = txPalette('silver');
-
-function promptUsdAmount(title: string, onSubmit: (amount: number) => void) {
-  if (Platform.OS !== 'ios') {
-    Alert.alert('Coming soon', 'Amount entry is available on iOS for now.');
-    return;
-  }
-  Alert.prompt(
-    title,
-    'Enter amount in USD (up to 6 decimals)',
-    [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Confirm',
-        onPress: (raw?: string) => {
-          const amount = Number((raw ?? '').replace(',', '.'));
-          if (!Number.isFinite(amount) || amount <= 0) {
-            Alert.alert('Invalid amount');
-            return;
-          }
-          onSubmit(amount);
-        },
-      },
-    ],
-    'plain-text',
-    '',
-    'decimal-pad',
-  );
-}
 
 export function XstockDetailScreen({ symbol }: { symbol: string }) {
   const insets = useSafeAreaInsets();
@@ -84,20 +56,25 @@ export function XstockDetailScreen({ symbol }: { symbol: string }) {
   const uiAmount = balance?.uiAmount ?? 0;
   const usdValue = referencePrice != null ? uiAmount * referencePrice : null;
 
-  const handleBuy = useCallback(() => {
-    promptUsdAmount(`Buy ${symbol}`, async (amount) => {
+  const [buyOpen, setBuyOpen] = useState(false);
+
+  const handleBuySubmit = useCallback(
+    async (amount: number) => {
       try {
         const res = await buy(symbol, amount);
+        setBuyOpen(false);
         Alert.alert('Order sent', `Tx: ${res.signature.slice(0, 16)}…`);
         invalidate(wallet ?? undefined, symbol);
       } catch (err) {
+        setBuyOpen(false);
         Alert.alert(
           'Buy failed',
           err instanceof Error ? err.message : 'Unknown error',
         );
       }
-    });
-  }, [buy, invalidate, symbol, wallet]);
+    },
+    [buy, invalidate, symbol, wallet],
+  );
 
   const handleSell = useCallback(
     (pct: SellPct) => {
@@ -318,7 +295,7 @@ export function XstockDetailScreen({ symbol }: { symbol: string }) {
             {/* Buy */}
             <ActionButton
               label={halted ? 'Trading halted' : 'Buy'}
-              onPress={handleBuy}
+              onPress={() => setBuyOpen(true)}
               disabled={loading || halted}
               primary
             />
@@ -351,6 +328,22 @@ export function XstockDetailScreen({ symbol }: { symbol: string }) {
           </>
         )}
       </ScrollView>
+
+      <AmountSheet
+        visible={buyOpen}
+        title={`Buy ${detail?.symbol ?? symbol}`}
+        subtitle={
+          referencePrice != null
+            ? `≈ $${referencePrice.toFixed(2)} / share`
+            : 'Pay with USDC'
+        }
+        currency="$"
+        submitLabel="Buy"
+        presets={[10, 50, 100]}
+        loading={loading}
+        onSubmit={handleBuySubmit}
+        onClose={() => setBuyOpen(false)}
+      />
     </TonalBackground>
   );
 }
