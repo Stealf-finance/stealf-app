@@ -11,6 +11,7 @@ import {
   Modal,
   Pressable,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -73,6 +74,9 @@ export function AmountSheet({
   onClose,
 }: AmountSheetProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenW } = useWindowDimensions();
+  // Fixed key width from the screen: 24px sheet padding each side + two 8px gaps.
+  const keyW = (screenW - 48 - 16) / 3;
   const [value, setValue] = useState('');
 
   // Reset the field each time the sheet opens.
@@ -106,6 +110,7 @@ export function AmountSheet({
       {/* Sheet */}
       <View
         style={{
+          width: '100%',
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
           overflow: 'hidden',
@@ -246,33 +251,38 @@ export function AmountSheet({
             </View>
           ) : null}
 
-          {/* Keypad — explicit 3-column rows (reliable grid) */}
+          {/* Keypad — fixed-width 3-column grid (bulletproof inside a Modal) */}
           <View>
             {KEY_ROWS.map((row, ri) => (
-              <View key={ri} style={{ flexDirection: 'row' }}>
+              <View
+                key={ri}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  marginBottom: 8,
+                }}
+              >
                 {row.map((k) => (
                   <Pressable
                     key={k}
                     onPress={() => setValue((v) => appendKey(v, k))}
                     android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
                     style={({ pressed }) => ({
-                      flex: 1,
-                      height: 56,
-                      marginHorizontal: 5,
-                      marginVertical: 4,
+                      width: keyW,
+                      height: 58,
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderRadius: 16,
                       backgroundColor: pressed
                         ? 'rgba(255,255,255,0.12)'
-                        : 'rgba(255,255,255,0.035)',
+                        : 'rgba(255,255,255,0.04)',
                     })}
                   >
                     <Text
                       style={[
                         sansation,
                         {
-                          fontSize: k === 'del' ? 20 : 23,
+                          fontSize: k === 'del' ? 22 : 24,
                           color: T.ink,
                           fontWeight: '500',
                         },
