@@ -10,6 +10,7 @@ const allowArbitraryHttp =
 const config: ExpoConfig = {
   name: 'stealf',
   slug: 'stealf',
+  owner: 'stealf-back',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -89,6 +90,11 @@ const config: ExpoConfig = {
     'expo-notifications',
     './plugins/withMoproExcludedArchs',
   ],
+  extra: {
+    eas: {
+      projectId: '9a158029-d062-48ff-b7b7-33854514570f',
+    },
+  },
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
