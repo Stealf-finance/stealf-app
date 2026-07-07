@@ -20,7 +20,12 @@ import { T } from '@/src/design-system/tokens';
 
 const MAX_DECIMALS = 6;
 
-const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del'] as const;
+const KEY_ROWS: string[][] = [
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  ['.', '0', 'del'],
+];
 
 export type AmountSheetProps = {
   visible: boolean;
@@ -241,40 +246,43 @@ export function AmountSheet({
             </View>
           ) : null}
 
-          {/* Keypad */}
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              justifyContent: 'space-between',
-              rowGap: 10,
-            }}
-          >
-            {KEYS.map((k) => (
-              <Pressable
-                key={k}
-                onPress={() => setValue((v) => appendKey(v, k))}
-                android_ripple={{ color: 'rgba(255,255,255,0.08)', borderless: true }}
-                style={({ pressed }) => ({
-                  width: '31%',
-                  height: 56,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 16,
-                  backgroundColor: pressed
-                    ? 'rgba(255,255,255,0.08)'
-                    : 'transparent',
-                })}
-              >
-                <Text
-                  style={[
-                    sansationLight,
-                    { fontSize: k === 'del' ? 22 : 26, color: T.ink },
-                  ]}
-                >
-                  {k === 'del' ? '⌫' : k}
-                </Text>
-              </Pressable>
+          {/* Keypad — explicit 3-column rows (reliable grid) */}
+          <View>
+            {KEY_ROWS.map((row, ri) => (
+              <View key={ri} style={{ flexDirection: 'row' }}>
+                {row.map((k) => (
+                  <Pressable
+                    key={k}
+                    onPress={() => setValue((v) => appendKey(v, k))}
+                    android_ripple={{ color: 'rgba(255,255,255,0.10)' }}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      height: 56,
+                      marginHorizontal: 5,
+                      marginVertical: 4,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 16,
+                      backgroundColor: pressed
+                        ? 'rgba(255,255,255,0.12)'
+                        : 'rgba(255,255,255,0.035)',
+                    })}
+                  >
+                    <Text
+                      style={[
+                        sansation,
+                        {
+                          fontSize: k === 'del' ? 20 : 23,
+                          color: T.ink,
+                          fontWeight: '500',
+                        },
+                      ]}
+                    >
+                      {k === 'del' ? '⌫' : k}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
             ))}
           </View>
 
