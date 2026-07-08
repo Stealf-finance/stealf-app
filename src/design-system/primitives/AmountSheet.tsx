@@ -66,7 +66,7 @@ export function AmountSheet({
   onClose,
 }: AmountSheetProps) {
   const insets = useSafeAreaInsets();
-  const { width: screenW } = useWindowDimensions();
+  const { width: screenW, height: screenH } = useWindowDimensions();
   const [value, setValue] = useState('');
 
   useEffect(() => {
@@ -84,9 +84,16 @@ export function AmountSheet({
 
   const sheetW = screenW;
   const PAD = 24;
+  const compactY = screenH < 760;
+  const sheetMaxH = screenH - Math.max(insets.top, 12);
+  const sheetBottomPad = insets.bottom + (compactY ? 8 : 12);
   const keypadW = sheetW - PAD * 2;
   const keyW = keypadW / 3;
-  const keyH = 60;
+  const keyH = compactY ? 56 : 60;
+  const keyCircle = compactY ? 50 : 54;
+  const keyCircleRadius = keyCircle / 2;
+  const ctaH = compactY ? 56 : 58;
+  const ctaTop = compactY ? 12 : 14;
 
   return (
     <Modal
@@ -123,6 +130,7 @@ export function AmountSheet({
             overflow: 'hidden',
             borderTopWidth: 1,
             borderColor: 'rgba(241,236,225,0.08)',
+            maxHeight: sheetMaxH,
           }}
         >
           <LinearGradient
@@ -131,7 +139,7 @@ export function AmountSheet({
             end={{ x: 0.5, y: 1 }}
             style={{
               paddingTop: 10,
-              paddingBottom: insets.bottom + 12,
+              paddingBottom: sheetBottomPad,
             }}
           >
             {/* Grabber */}
@@ -197,6 +205,7 @@ export function AmountSheet({
                   sansationLight,
                   {
                     fontSize: 34,
+                    lineHeight: 40,
                     color: value ? T.inkDim : T.inkFaint,
                     marginRight: 6,
                   },
@@ -209,6 +218,7 @@ export function AmountSheet({
                   sansationLight,
                   {
                     fontSize: 58,
+                    lineHeight: 66,
                     letterSpacing: 0,
                     color: overMax ? T.error : value ? T.ink : T.inkFaint,
                   },
@@ -253,6 +263,8 @@ export function AmountSheet({
                     onPress={() => setValue(String(p))}
                     style={({ pressed }) => ({
                       minWidth: 96,
+                      flex: 1,
+                      maxWidth: 108,
                       height: 46,
                       paddingHorizontal: 18,
                       borderRadius: 23,
@@ -310,9 +322,9 @@ export function AmountSheet({
                       {({ pressed }) => (
                         <View
                           style={{
-                            width: 54,
-                            height: 54,
-                            borderRadius: 27,
+                            width: keyCircle,
+                            height: keyCircle,
+                            borderRadius: keyCircleRadius,
                             alignItems: 'center',
                             justifyContent: 'center',
                             backgroundColor: pressed
@@ -347,9 +359,9 @@ export function AmountSheet({
               onPress={submit}
               disabled={!valid || loading}
               style={({ pressed }) => ({
-                marginTop: 16,
+                marginTop: ctaTop,
                 marginHorizontal: PAD,
-                height: 58,
+                height: ctaH,
                 borderRadius: 18,
                 alignItems: 'center',
                 justifyContent: 'center',
