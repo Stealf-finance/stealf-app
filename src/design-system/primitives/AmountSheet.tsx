@@ -11,6 +11,7 @@ import {
   Modal,
   Pressable,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -73,6 +74,9 @@ export function AmountSheet({
   onClose,
 }: AmountSheetProps) {
   const insets = useSafeAreaInsets();
+  const { width: screenW } = useWindowDimensions();
+  // Full-width keys: 3 cols, 12px gaps, 24px horizontal padding each side
+  const keyW = Math.floor((screenW - 48 - 24) / 3);
   const [value, setValue] = useState('');
 
   // Reset the field each time the sheet opens.
@@ -247,42 +251,40 @@ export function AmountSheet({
             </View>
           ) : null}
 
-          {/* Keypad — centered round keys (iOS-dialer style) */}
-          <View style={{ alignItems: 'center' }}>
+          {/* Keypad */}
+          <View style={{ marginTop: 4 }}>
             {KEY_ROWS.map((row, ri) => (
               <View
                 key={ri}
-                style={{ flexDirection: 'row', gap: 20, marginBottom: 12 }}
+                style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}
               >
                 {row.map((k) => (
                   <Pressable
                     key={k}
                     onPress={() => setValue((v) => appendKey(v, k))}
-                    android_ripple={{
-                      color: 'rgba(255,255,255,0.14)',
-                      borderless: true,
-                    }}
+                    android_ripple={{ color: 'rgba(255,255,255,0.14)', borderless: false }}
                     style={({ pressed }) => ({
-                      width: 68,
-                      height: 68,
-                      borderRadius: 34,
+                      width: keyW,
+                      height: 64,
+                      borderRadius: 14,
                       alignItems: 'center',
                       justifyContent: 'center',
                       backgroundColor:
                         k === 'del'
-                          ? 'transparent'
+                          ? pressed ? 'rgba(255,255,255,0.08)' : 'transparent'
                           : pressed
-                            ? 'rgba(255,255,255,0.16)'
-                            : 'rgba(255,255,255,0.05)',
+                            ? 'rgba(255,255,255,0.14)'
+                            : 'rgba(255,255,255,0.07)',
                     })}
                   >
                     <Text
                       style={[
                         sansation,
                         {
-                          fontSize: k === 'del' ? 24 : 27,
+                          fontSize: k === 'del' ? 22 : 32,
                           color: k === 'del' ? T.inkDim : T.ink,
                           fontWeight: '400',
+                          lineHeight: k === 'del' ? 26 : 38,
                         },
                       ]}
                     >
