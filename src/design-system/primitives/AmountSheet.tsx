@@ -86,7 +86,7 @@ export function AmountSheet({
   const PAD = 24;
   const keypadW = sheetW - PAD * 2;
   const keyW = keypadW / 3;
-  const keyH = 70;
+  const keyH = 60;
 
   return (
     <Modal
@@ -187,8 +187,8 @@ export function AmountSheet({
                 flexDirection: 'row',
                 alignItems: 'baseline',
                 justifyContent: 'center',
-                marginTop: 22,
-                marginBottom: overMax ? 6 : 16,
+                marginTop: 16,
+                marginBottom: overMax ? 6 : 12,
                 paddingHorizontal: PAD,
               }}
             >
@@ -242,8 +242,8 @@ export function AmountSheet({
                 style={{
                   flexDirection: 'row',
                   justifyContent: 'center',
-                  gap: 10,
-                  marginBottom: 12,
+                  gap: 12,
+                  marginBottom: 14,
                   paddingHorizontal: PAD,
                 }}
               >
@@ -252,22 +252,22 @@ export function AmountSheet({
                     key={p}
                     onPress={() => setValue(String(p))}
                     style={({ pressed }) => ({
-                      minWidth: 74,
-                      height: 34,
-                      paddingHorizontal: 16,
-                      borderRadius: 17,
+                      minWidth: 96,
+                      height: 46,
+                      paddingHorizontal: 18,
+                      borderRadius: 23,
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderWidth: 1,
                       borderColor: pressed
-                        ? 'rgba(201,168,106,0.28)'
-                        : 'rgba(241,236,225,0.1)',
+                        ? 'rgba(201,168,106,0.4)'
+                        : 'rgba(241,236,225,0.12)',
                       backgroundColor: pressed
-                        ? 'rgba(201,168,106,0.12)'
-                        : 'rgba(241,236,225,0.045)',
+                        ? 'rgba(201,168,106,0.14)'
+                        : 'rgba(241,236,225,0.05)',
                     })}
                   >
-                    <Text style={[mono, { fontSize: 13, color: T.inkDim }]}>
+                    <Text style={[mono, { fontSize: 17, color: T.ink }]}>
                       {currency}{p}
                     </Text>
                   </Pressable>
@@ -347,16 +347,20 @@ export function AmountSheet({
               onPress={submit}
               disabled={!valid || loading}
               style={({ pressed }) => ({
-                marginTop: 12,
+                marginTop: 16,
                 marginHorizontal: PAD,
-                height: 54,
-                borderRadius: 17,
+                height: 58,
+                borderRadius: 18,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: valid && !loading
                   ? T.gold
-                  : 'rgba(241,236,225,0.08)',
-                opacity: valid || loading ? (pressed ? 0.88 : 1) : 0.55,
+                  : 'rgba(241,236,225,0.1)',
+                opacity: valid || loading ? (pressed ? 0.88 : 1) : 1,
+                shadowColor: valid && !loading ? T.gold : 'transparent',
+                shadowOpacity: 0.35,
+                shadowRadius: 16,
+                shadowOffset: { width: 0, height: 6 },
               })}
             >
               {loading ? (
@@ -366,10 +370,10 @@ export function AmountSheet({
                   style={[
                     sansation,
                     {
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: '700',
-                      letterSpacing: 0,
-                      color: valid ? '#0a0a0a' : T.inkFaint,
+                      letterSpacing: 0.2,
+                      color: valid ? '#0a0a0a' : T.inkDim,
                     },
                   ]}
                 >
