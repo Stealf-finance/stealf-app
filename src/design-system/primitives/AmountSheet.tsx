@@ -84,16 +84,55 @@ export function AmountSheet({
 
   const sheetW = screenW;
   const PAD = 24;
-  const compactY = screenH < 760;
-  const sheetMaxH = screenH - Math.max(insets.top, 12);
-  const sheetBottomPad = insets.bottom + (compactY ? 8 : 12);
+  const SHEET_DESIRED_H = 690;
+  const SHEET_TOP_GAP = 8;
+  const SHEET_PADDING_TOP = 10;
+  const SHEET_BOTTOM_GAP = 12;
+  const GRABBER_H = 4;
+  const GRABBER_MB = 18;
+  const TITLE_H = 22;
+  const SUBTITLE_MT = 5;
+  const SUBTITLE_H = 15;
+  const AMOUNT_MT = 16;
+  const AMOUNT_H = 66;
+  const AMOUNT_MB = overMax ? 6 : 12;
+  const ERROR_H = 14;
+  const ERROR_MB = 12;
+  const PRESETS_H = 46;
+  const PRESETS_MB = 14;
+  const KEYPAD_MT = 2;
+  const CTA_MT = 14;
+  const CTA_H = 58;
+  const KEY_MIN_H = 46;
+  const KEY_MAX_H = 64;
+  const hasSubtitle = Boolean(subtitle);
+  const hasPresets = Boolean(presets && presets.length > 0);
+  const availableSheetH = Math.max(
+    0,
+    Math.min(SHEET_DESIRED_H, screenH - insets.top - SHEET_TOP_GAP),
+  );
+  const sheetBottomPad = insets.bottom + SHEET_BOTTOM_GAP;
+  const fixedChromeH =
+    SHEET_PADDING_TOP +
+    GRABBER_H +
+    GRABBER_MB +
+    TITLE_H +
+    (hasSubtitle ? SUBTITLE_MT + SUBTITLE_H : 0) +
+    AMOUNT_MT +
+    AMOUNT_H +
+    AMOUNT_MB +
+    (overMax ? ERROR_H + ERROR_MB : 0) +
+    (hasPresets ? PRESETS_H + PRESETS_MB : 0) +
+    KEYPAD_MT +
+    CTA_MT +
+    CTA_H +
+    sheetBottomPad;
+  const computedKeyH = (availableSheetH - fixedChromeH) / KEY_ROWS.length;
   const keypadW = sheetW - PAD * 2;
   const keyW = keypadW / 3;
-  const keyH = compactY ? 56 : 60;
-  const keyCircle = compactY ? 50 : 54;
+  const keyH = Math.max(KEY_MIN_H, Math.min(KEY_MAX_H, computedKeyH));
+  const keyCircle = Math.max(40, Math.min(56, keyH - 8));
   const keyCircleRadius = keyCircle / 2;
-  const ctaH = compactY ? 56 : 58;
-  const ctaTop = compactY ? 12 : 14;
 
   return (
     <Modal
@@ -130,7 +169,7 @@ export function AmountSheet({
             overflow: 'hidden',
             borderTopWidth: 1,
             borderColor: 'rgba(241,236,225,0.08)',
-            maxHeight: sheetMaxH,
+            maxHeight: availableSheetH,
           }}
         >
           <LinearGradient
@@ -138,7 +177,7 @@ export function AmountSheet({
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={{
-              paddingTop: 10,
+              paddingTop: SHEET_PADDING_TOP,
               paddingBottom: sheetBottomPad,
             }}
           >
@@ -147,10 +186,10 @@ export function AmountSheet({
               style={{
                 alignSelf: 'center',
                 width: 38,
-                height: 4,
+                height: GRABBER_H,
                 borderRadius: 2,
                 backgroundColor: 'rgba(241,236,225,0.16)',
-                marginBottom: 18,
+                marginBottom: GRABBER_MB,
               }}
             />
 
@@ -160,6 +199,7 @@ export function AmountSheet({
                 sansation,
                 {
                   fontSize: 17,
+                  lineHeight: TITLE_H,
                   color: T.ink,
                   fontWeight: '600',
                   textAlign: 'center',
@@ -167,6 +207,7 @@ export function AmountSheet({
                   paddingHorizontal: PAD,
                 },
               ]}
+              numberOfLines={1}
             >
               {title}
             </Text>
@@ -177,13 +218,15 @@ export function AmountSheet({
                   mono,
                   {
                     fontSize: 12,
+                    lineHeight: SUBTITLE_H,
                     color: T.inkFaint,
                     textAlign: 'center',
-                    marginTop: 5,
+                    marginTop: SUBTITLE_MT,
                     letterSpacing: 0,
                     paddingHorizontal: PAD,
                   },
                 ]}
+                numberOfLines={1}
               >
                 {subtitle}
               </Text>
@@ -195,8 +238,8 @@ export function AmountSheet({
                 flexDirection: 'row',
                 alignItems: 'baseline',
                 justifyContent: 'center',
-                marginTop: 16,
-                marginBottom: overMax ? 6 : 12,
+                marginTop: AMOUNT_MT,
+                marginBottom: AMOUNT_MB,
                 paddingHorizontal: PAD,
               }}
             >
@@ -210,6 +253,7 @@ export function AmountSheet({
                     marginRight: 6,
                   },
                 ]}
+                numberOfLines={1}
               >
                 {currency}
               </Text>
@@ -223,6 +267,9 @@ export function AmountSheet({
                     color: overMax ? T.error : value ? T.ink : T.inkFaint,
                   },
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.55}
               >
                 {value || '0'}
               </Text>
@@ -234,13 +281,15 @@ export function AmountSheet({
                   mono,
                   {
                     fontSize: 11,
+                    lineHeight: ERROR_H,
                     color: T.error,
                     textAlign: 'center',
-                    marginBottom: 12,
+                    marginBottom: ERROR_MB,
                     paddingHorizontal: PAD,
                     letterSpacing: 0,
                   },
                 ]}
+                numberOfLines={1}
               >
                 Max {max}
               </Text>
@@ -253,7 +302,7 @@ export function AmountSheet({
                   flexDirection: 'row',
                   justifyContent: 'center',
                   gap: 12,
-                  marginBottom: 14,
+                  marginBottom: PRESETS_MB,
                   paddingHorizontal: PAD,
                 }}
               >
@@ -265,7 +314,7 @@ export function AmountSheet({
                       minWidth: 96,
                       flex: 1,
                       maxWidth: 108,
-                      height: 46,
+                      height: PRESETS_H,
                       paddingHorizontal: 18,
                       borderRadius: 23,
                       alignItems: 'center',
@@ -292,7 +341,7 @@ export function AmountSheet({
               style={{
                 width: keypadW,
                 alignSelf: 'center',
-                marginTop: 2,
+                marginTop: KEYPAD_MT,
               }}
             >
               {KEY_ROWS.map((row, ri) => (
@@ -359,9 +408,9 @@ export function AmountSheet({
               onPress={submit}
               disabled={!valid || loading}
               style={({ pressed }) => ({
-                marginTop: ctaTop,
+                marginTop: CTA_MT,
                 marginHorizontal: PAD,
-                height: ctaH,
+                height: CTA_H,
                 borderRadius: 18,
                 alignItems: 'center',
                 justifyContent: 'center',
