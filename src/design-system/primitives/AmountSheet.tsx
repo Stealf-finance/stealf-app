@@ -82,11 +82,11 @@ export function AmountSheet({
     onSubmit(amount);
   };
 
-  // Each key is 1/3 of the sheet interior (sheet has 20px padding each side)
-  const PAD = 20;
-  const KEY_GAP = 0; // no gap — keys are flush columns, touch area is the full cell
-  const keyW = (screenW - PAD * 2) / 3;
-  const keyH = 72;
+  const sheetW = screenW;
+  const PAD = 24;
+  const keypadW = sheetW - PAD * 2;
+  const keyW = keypadW / 3;
+  const keyH = 70;
 
   return (
     <Modal
@@ -96,250 +96,289 @@ export function AmountSheet({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      {/* Backdrop */}
-      <Pressable
-        onPress={onClose}
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}
-      />
-
-      {/* Sheet */}
       <View
         style={{
-          width: '100%',
-          borderTopLeftRadius: 24,
-          borderTopRightRadius: 24,
-          overflow: 'hidden',
-          borderTopWidth: 1,
-          borderColor: 'rgba(255,255,255,0.07)',
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: 'rgba(0,0,0,0.64)',
         }}
       >
-        <LinearGradient
-          colors={['rgba(24,24,26,1)', 'rgba(10,10,12,1)']}
-          start={{ x: 0.2, y: 0 }}
-          end={{ x: 0.8, y: 1 }}
+        <Pressable
+          onPress={onClose}
           style={{
-            paddingTop: 10,
-            paddingBottom: insets.bottom + 12,
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            left: 0,
+          }}
+        />
+
+        {/* Sheet */}
+        <View
+          style={{
+            width: sheetW,
+            borderTopLeftRadius: 28,
+            borderTopRightRadius: 28,
+            overflow: 'hidden',
+            borderTopWidth: 1,
+            borderColor: 'rgba(241,236,225,0.08)',
           }}
         >
-          {/* Grabber */}
-          <View
+          <LinearGradient
+            colors={['#191918', '#0d0d0d']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
             style={{
-              alignSelf: 'center',
-              width: 36,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor: 'rgba(255,255,255,0.12)',
-              marginBottom: 14,
+              paddingTop: 10,
+              paddingBottom: insets.bottom + 12,
             }}
-          />
-
-          {/* Title */}
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 17,
-                color: T.ink,
-                fontWeight: '600',
-                textAlign: 'center',
-                letterSpacing: -0.17,
-                paddingHorizontal: PAD,
-              },
-            ]}
           >
-            {title}
-          </Text>
+            {/* Grabber */}
+            <View
+              style={{
+                alignSelf: 'center',
+                width: 38,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: 'rgba(241,236,225,0.16)',
+                marginBottom: 18,
+              }}
+            />
 
-          {subtitle ? (
+            {/* Title */}
             <Text
               style={[
-                mono,
+                sansation,
                 {
-                  fontSize: 12,
-                  color: T.inkFaint,
+                  fontSize: 17,
+                  color: T.ink,
+                  fontWeight: '600',
                   textAlign: 'center',
-                  marginTop: 4,
-                  letterSpacing: 0.2,
+                  letterSpacing: 0,
                   paddingHorizontal: PAD,
                 },
               ]}
             >
-              {subtitle}
+              {title}
             </Text>
-          ) : null}
 
-          {/* Amount display */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'baseline',
-              justifyContent: 'center',
-              marginTop: 20,
-              marginBottom: 14,
-              paddingHorizontal: PAD,
-            }}
-          >
-            <Text
-              style={[
-                sansationLight,
-                {
-                  fontSize: 24,
-                  color: value ? T.inkDim : T.inkFaint,
-                  marginRight: 4,
-                },
-              ]}
-            >
-              {currency}
-            </Text>
-            <Text
-              style={[
-                sansationLight,
-                {
-                  fontSize: 56,
-                  letterSpacing: -2,
-                  color: overMax ? T.error : value ? T.ink : T.inkFaint,
-                },
-              ]}
-            >
-              {value || '0'}
-            </Text>
-          </View>
+            {subtitle ? (
+              <Text
+                style={[
+                  mono,
+                  {
+                    fontSize: 12,
+                    color: T.inkFaint,
+                    textAlign: 'center',
+                    marginTop: 5,
+                    letterSpacing: 0,
+                    paddingHorizontal: PAD,
+                  },
+                ]}
+              >
+                {subtitle}
+              </Text>
+            ) : null}
 
-          {overMax ? (
-            <Text
-              style={[
-                mono,
-                {
-                  fontSize: 11,
-                  color: T.error,
-                  textAlign: 'center',
-                  marginBottom: 6,
-                  paddingHorizontal: PAD,
-                },
-              ]}
-            >
-              Max {max}
-            </Text>
-          ) : null}
-
-          {/* Presets */}
-          {presets && presets.length > 0 ? (
+            {/* Amount display */}
             <View
               style={{
                 flexDirection: 'row',
+                alignItems: 'baseline',
                 justifyContent: 'center',
-                gap: 8,
-                marginBottom: 14,
+                marginTop: 22,
+                marginBottom: overMax ? 6 : 16,
                 paddingHorizontal: PAD,
               }}
             >
-              {presets.map((p) => (
-                <Pressable
-                  key={p}
-                  onPress={() => setValue(String(p))}
-                  style={{
-                    paddingHorizontal: 18,
-                    paddingVertical: 8,
-                    borderRadius: 100,
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                  }}
-                >
-                  <Text style={[mono, { fontSize: 13, color: T.inkDim }]}>
-                    {currency}{p}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-
-          {/* Divider above keypad */}
-          <View
-            style={{
-              height: 1,
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              marginBottom: 4,
-            }}
-          />
-
-          {/* Keypad — full-width, no cell background, large centered digits */}
-          <View>
-            {KEY_ROWS.map((row, ri) => (
-              <View
-                key={ri}
-                style={{ flexDirection: 'row' }}
+              <Text
+                style={[
+                  sansationLight,
+                  {
+                    fontSize: 34,
+                    color: value ? T.inkDim : T.inkFaint,
+                    marginRight: 6,
+                  },
+                ]}
               >
-                {row.map((k, ki) => (
+                {currency}
+              </Text>
+              <Text
+                style={[
+                  sansationLight,
+                  {
+                    fontSize: 58,
+                    letterSpacing: 0,
+                    color: overMax ? T.error : value ? T.ink : T.inkFaint,
+                  },
+                ]}
+              >
+                {value || '0'}
+              </Text>
+            </View>
+
+            {overMax ? (
+              <Text
+                style={[
+                  mono,
+                  {
+                    fontSize: 11,
+                    color: T.error,
+                    textAlign: 'center',
+                    marginBottom: 12,
+                    paddingHorizontal: PAD,
+                    letterSpacing: 0,
+                  },
+                ]}
+              >
+                Max {max}
+              </Text>
+            ) : null}
+
+            {/* Presets */}
+            {presets && presets.length > 0 ? (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 10,
+                  marginBottom: 12,
+                  paddingHorizontal: PAD,
+                }}
+              >
+                {presets.map((p) => (
                   <Pressable
-                    key={k}
-                    onPress={() => setValue((v) => appendKey(v, k))}
-                    android_ripple={{ color: 'rgba(255,255,255,0.12)', borderless: false }}
+                    key={p}
+                    onPress={() => setValue(String(p))}
                     style={({ pressed }) => ({
-                      width: keyW,
-                      height: keyH,
+                      minWidth: 74,
+                      height: 34,
+                      paddingHorizontal: 16,
+                      borderRadius: 17,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: pressed ? 'rgba(255,255,255,0.08)' : 'transparent',
-                      // subtle right border between columns (not after last)
-                      borderRightWidth: ki < 2 ? 1 : 0,
-                      borderBottomWidth: ri < 3 ? 1 : 0,
-                      borderColor: 'rgba(255,255,255,0.05)',
+                      borderWidth: 1,
+                      borderColor: pressed
+                        ? 'rgba(201,168,106,0.28)'
+                        : 'rgba(241,236,225,0.1)',
+                      backgroundColor: pressed
+                        ? 'rgba(201,168,106,0.12)'
+                        : 'rgba(241,236,225,0.045)',
                     })}
                   >
-                    <Text
-                      style={[
-                        sansation,
-                        {
-                          fontSize: k === 'del' ? 22 : 30,
-                          color: k === 'del' ? T.inkDim : T.ink,
-                          fontWeight: '300',
-                        },
-                      ]}
-                    >
-                      {k === 'del' ? '⌫' : k}
+                    <Text style={[mono, { fontSize: 13, color: T.inkDim }]}>
+                      {currency}{p}
                     </Text>
                   </Pressable>
                 ))}
               </View>
-            ))}
-          </View>
+            ) : null}
 
-          {/* CTA */}
-          <Pressable
-            onPress={submit}
-            disabled={!valid || loading}
-            style={{
-              marginTop: 14,
-              marginHorizontal: PAD,
-              height: 54,
-              borderRadius: 16,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: valid && !loading ? T.gold : 'rgba(255,255,255,0.08)',
-              opacity: valid || loading ? 1 : 0.55,
-            }}
-          >
-            {loading ? (
-              <ActivityIndicator color={valid ? '#0a0a0a' : T.inkFaint} />
-            ) : (
-              <Text
-                style={[
-                  sansation,
-                  {
-                    fontSize: 15,
-                    fontWeight: '700',
-                    letterSpacing: 0.2,
-                    color: valid ? '#0a0a0a' : T.inkFaint,
-                  },
-                ]}
-              >
-                {submitLabel}
-              </Text>
-            )}
-          </Pressable>
-        </LinearGradient>
+            {/* Keypad */}
+            <View
+              style={{
+                width: keypadW,
+                alignSelf: 'center',
+                marginTop: 2,
+              }}
+            >
+              {KEY_ROWS.map((row, ri) => (
+                <View
+                  key={ri}
+                  style={{
+                    width: keypadW,
+                    height: keyH,
+                    flexDirection: 'row',
+                  }}
+                >
+                  {row.map((k) => (
+                    <Pressable
+                      key={k}
+                      onPress={() => setValue((v) => appendKey(v, k))}
+                      android_ripple={{
+                        color: 'rgba(241,236,225,0.08)',
+                        borderless: true,
+                      }}
+                      style={{
+                        width: keyW,
+                        height: keyH,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {({ pressed }) => (
+                        <View
+                          style={{
+                            width: 54,
+                            height: 54,
+                            borderRadius: 27,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: pressed
+                              ? 'rgba(241,236,225,0.10)'
+                              : 'transparent',
+                          }}
+                        >
+                          <Text
+                            style={[
+                              sansation,
+                              {
+                                fontSize: k === 'del' ? 23 : 30,
+                                lineHeight: k === 'del' ? 28 : 36,
+                                color: k === 'del' ? T.inkDim : T.ink,
+                                textAlign: 'center',
+                                letterSpacing: 0,
+                              },
+                            ]}
+                          >
+                            {k === 'del' ? '⌫' : k}
+                          </Text>
+                        </View>
+                      )}
+                    </Pressable>
+                  ))}
+                </View>
+              ))}
+            </View>
+
+            {/* CTA */}
+            <Pressable
+              onPress={submit}
+              disabled={!valid || loading}
+              style={({ pressed }) => ({
+                marginTop: 12,
+                marginHorizontal: PAD,
+                height: 54,
+                borderRadius: 17,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: valid && !loading
+                  ? T.gold
+                  : 'rgba(241,236,225,0.08)',
+                opacity: valid || loading ? (pressed ? 0.88 : 1) : 0.55,
+              })}
+            >
+              {loading ? (
+                <ActivityIndicator color={valid ? '#0a0a0a' : T.inkFaint} />
+              ) : (
+                <Text
+                  style={[
+                    sansation,
+                    {
+                      fontSize: 15,
+                      fontWeight: '700',
+                      letterSpacing: 0,
+                      color: valid ? '#0a0a0a' : T.inkFaint,
+                    },
+                  ]}
+                >
+                  {submitLabel}
+                </Text>
+              )}
+            </Pressable>
+          </LinearGradient>
+        </View>
       </View>
     </Modal>
   );
