@@ -66,6 +66,11 @@ export function AmountSheet({
   onSubmit,
   onClose,
 }: AmountSheetProps) {
+  // React Compiler (enabled globally via app.config.ts, currently a beta with
+  // known memoization-correctness gaps) mis-memoized this component's CTA on the
+  // invalid→valid transition, making the Buy button vanish. This tiny modal
+  // gains nothing from auto-memo, so opt it out entirely as a definitive guard.
+  'use no memo';
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const [value, setValue] = useState('');
