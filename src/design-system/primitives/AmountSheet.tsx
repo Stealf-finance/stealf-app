@@ -10,6 +10,7 @@ import {
   Modal,
   Pressable,
   Text,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -133,6 +134,20 @@ export function AmountSheet({
   const keyH = Math.max(KEY_MIN_H, Math.min(KEY_MAX_H, computedKeyH));
   const keyCircle = Math.max(40, Math.min(56, keyH - 8));
   const keyCircleRadius = keyCircle / 2;
+  const ctaEnabled = valid && !loading;
+  const ctaStyle = {
+    marginTop: CTA_MT,
+    marginHorizontal: PAD,
+    height: CTA_H,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: ctaEnabled
+      ? 'rgba(201,168,106,0.92)'
+      : 'rgba(241,236,225,0.16)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: ctaEnabled ? T.gold : 'rgba(241,236,225,0.1)',
+  };
 
   return (
     <Modal
@@ -404,25 +419,11 @@ export function AmountSheet({
             </View>
 
             {/* CTA */}
-            <Pressable
+            <TouchableOpacity
               onPress={submit}
               disabled={!valid || loading}
-              style={({ pressed }) => ({
-                marginTop: CTA_MT,
-                marginHorizontal: PAD,
-                height: CTA_H,
-                borderRadius: 18,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: valid && !loading
-                  ? T.gold
-                  : 'rgba(241,236,225,0.1)',
-                opacity: valid || loading ? (pressed ? 0.88 : 1) : 1,
-                shadowColor: valid && !loading ? T.gold : 'transparent',
-                shadowOpacity: 0.35,
-                shadowRadius: 16,
-                shadowOffset: { width: 0, height: 6 },
-              })}
+              activeOpacity={0.85}
+              style={ctaStyle}
             >
               {loading ? (
                 <ActivityIndicator color={valid ? '#0a0a0a' : T.inkFaint} />
@@ -441,7 +442,7 @@ export function AmountSheet({
                   {submitLabel}
                 </Text>
               )}
-            </Pressable>
+            </TouchableOpacity>
           </LinearGradient>
         </View>
       </View>
