@@ -46,11 +46,18 @@ const DETAILS: HomeAction = {
   iconKey: 'bank',
   route: '/account-details',
 };
+// Borrow: open the Portola loan flow (KYC + uncollateralized loan) in a WebView.
+const BORROW: HomeAction = {
+  key: 'borrow',
+  label: 'Borrow',
+  iconKey: 'bolt',
+  route: '/borrow',
+};
 
 export function homeCardActions(card: HomeCardId): HomeAction[] {
   switch (card) {
     case 'bank':
-      return [DETAILS];
+      return [DETAILS, BORROW];
     case 'stealf':
       return [RECEIVE_STEALTH, SHIELD];
     case 'encrypted':
