@@ -6,7 +6,14 @@
  * wallet via Turnkey and inject the signatures back. `complete` dismisses;
  * `session_expired` re-mints.
  */
-import { useCallback, useEffect, useRef, type ComponentType, type Ref } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentType,
+  type Ref,
+} from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -40,6 +47,15 @@ export function BorrowFlow() {
   const { embedUrl, start, remint, loading, step, error } = usePortolaBorrow();
   const { httpClient } = useTurnkey();
   const webRef = useRef<WebView>(null);
+
+  // Diagnostics: the cross-origin Portola embed is a black box from RN, so we
+  // surface WebView load/HTTP/JS events + the iframe's load status on-screen to
+  // pin down a blank/black render (iframe blocked vs HTTP error vs blank SPA).
+  const [debug, setDebug] = useState<string[]>([]);
+  const log = useCallback(
+    (m: string) => setDebug((d) => [...d.slice(-8), m]),
+    [],
+  );
 
   useEffect(() => {
     void start();
@@ -76,6 +92,11 @@ export function BorrowFlow() {
         return;
       }
 
+      if (data.type === 'portola:debug') {
+        log(String(data.msg ?? ''));
+        return;
+      }
+
       if (data.type === 'portola:complete') {
         // status: FUNDED | DECLINED | WITHDRAWN | EXPIRED
         router.back();
@@ -83,7 +104,7 @@ export function BorrowFlow() {
         void remint();
       }
     },
-    [httpClient, remint, router],
+    [httpClient, remint, router, log],
   );
 
   if (error) {
@@ -132,6 +153,39 @@ export function BorrowFlow() {
         ref={webRef}
         source={{ uri: src }}
         onMessage={handleMessage}
+        onLoadStart={(e) =>
+          log(`load:start ${String(e.nativeEvent?.url ?? '').slice(0, 44)}`)
+        }
+        onLoadEnd={(e) =>
+          log(`load:end ${String(e.nativeEvent?.url ?? '').slice(0, 44)}`)
+        }
+        onError={(e) =>
+          log(`ERR ${e.nativeEvent?.code ?? ''} ${e.nativeEvent?.description ?? ''}`)
+        }
+        onHttpError={(e) =>
+          log(
+            `HTTP ${e.nativeEvent?.statusCode ?? ''} ${String(
+              e.nativeEvent?.url ?? '',
+            ).slice(0, 40)}`,
+          )
+        }
+        // Monitor the host page + Portola iframe from the main frame and report
+        // status back over the bridge (portola:debug). Cross-origin content is
+        // opaque, but the iframe's load/error events + presence tell us whether
+        // the frame was blocked (X-Frame-Options) or just rendered blank.
+        injectedJavaScript={`(function(){
+          try{
+            function rn(m){ try{ if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify({type:'portola:debug',msg:String(m)})); }catch(e){} }
+            window.addEventListener('error', function(ev){ rn('winerr '+((ev&&ev.message)||'')); });
+            rn('host '+location.host+location.pathname);
+            var f=document.getElementById('portola');
+            if(!f){ rn('NO iframe el'); return; }
+            rn('iframe.src '+String(f.src||'').slice(0,46));
+            f.addEventListener('load', function(){ rn('iframe LOAD ok'); });
+            f.addEventListener('error', function(){ rn('iframe ERROR'); });
+            setTimeout(function(){ var cw=false; try{ cw=!!f.contentWindow; }catch(e){} rn('after6s contentWindow='+cw); }, 6000);
+          }catch(e){ }
+        })(); true;`}
         // KYC needs the camera; grant inline media for the capture flow.
         mediaCapturePermissionGrantType="grant"
         allowsInlineMediaPlayback
@@ -157,6 +211,33 @@ export function BorrowFlow() {
         })(); true;`}
         style={{ flex: 1, backgroundColor: T.bg }}
       />
+
+      {/* On-screen diagnostics overlay (temporary) — screenshot this if the
+          embed shows blank/black so we can see what the WebView is doing. */}
+      {debug.length > 0 ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: insets.top + 6,
+            left: 8,
+            right: 8,
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            borderRadius: 8,
+            paddingVertical: 6,
+            paddingHorizontal: 8,
+          }}
+        >
+          {debug.map((d, i) => (
+            <Text
+              key={i}
+              style={{ color: '#7CFC00', fontSize: 10, lineHeight: 14 }}
+            >
+              {d}
+            </Text>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
