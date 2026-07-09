@@ -37,7 +37,7 @@ type SignMessage = { portola: 1; kind: 'sign'; id: string; items: PortolaSignIte
 export function BorrowFlow() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { embedUrl, start, remint, loading, error } = usePortolaBorrow();
+  const { embedUrl, start, remint, loading, step, error } = usePortolaBorrow();
   const { httpClient } = useTurnkey();
   const webRef = useRef<WebView>(null);
 
@@ -109,11 +109,17 @@ export function BorrowFlow() {
   }
 
   if (loading || !embedUrl) {
+    const stepLabel =
+      step === 'wallet'
+        ? 'Preparing your wallet…'
+        : step === 'session'
+          ? 'Requesting your loan session…'
+          : 'Preparing your loan…';
     return (
       <View style={center(insets.top)}>
         <ActivityIndicator color={T.ink} />
         <Text style={[sansation, { color: T.inkFaint, marginTop: 12 }]}>
-          Preparing your loan…
+          {stepLabel}
         </Text>
       </View>
     );
