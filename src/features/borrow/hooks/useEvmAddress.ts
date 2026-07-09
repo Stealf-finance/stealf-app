@@ -15,12 +15,20 @@ const ETH_PATH = "m/44'/60'/0'/0/0";
 const ETH_ADDRESS_FORMAT = 'ADDRESS_FORMAT_ETHEREUM';
 
 export function useEvmAddress() {
-  const { httpClient, wallets } = useTurnkey();
+  const { httpClient, wallets, refreshWallets } = useTurnkey();
   const [loading, setLoading] = useState(false);
 
   const deriveEvmAddress = useCallback(async (): Promise<string> => {
     if (!httpClient) throw new Error('Turnkey client not ready');
-    const wallet = wallets?.[0];
+    // The reactive `wallets` array is often still empty right after this screen
+    // mounts (the Turnkey session hydrates asynchronously). Force a refresh
+    // before giving up so the borrow flow doesn't fail with a spurious
+    // "No Turnkey wallet available" on the first open.
+    let wallet = wallets?.[0];
+    if (!wallet?.walletId) {
+      const refreshed = await refreshWallets();
+      wallet = refreshed?.[0];
+    }
     const walletId = wallet?.walletId;
     if (!walletId) throw new Error('No Turnkey wallet available');
 
@@ -74,7 +82,7 @@ export function useEvmAddress() {
     } finally {
       setLoading(false);
     }
-  }, [httpClient, wallets]);
+  }, [httpClient, wallets, refreshWallets]);
 
   return { deriveEvmAddress, loading };
 }
