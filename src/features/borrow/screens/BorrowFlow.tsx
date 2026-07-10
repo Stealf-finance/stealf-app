@@ -110,6 +110,9 @@ export function BorrowFlow() {
   if (error) {
     return (
       <View style={center(insets.top)}>
+        <Text style={{ color: '#7CFC00', fontWeight: '900', fontSize: 18, marginBottom: 14 }}>
+          ⟨ OTA CHECK v9 ⟩
+        </Text>
         <Text style={[sansation, { color: T.ink, marginBottom: 16, textAlign: 'center' }]}>
           {error}
         </Text>
@@ -138,6 +141,9 @@ export function BorrowFlow() {
           : 'Preparing your loan…';
     return (
       <View style={center(insets.top)}>
+        <Text style={{ color: '#7CFC00', fontWeight: '900', fontSize: 18, marginBottom: 14 }}>
+          ⟨ OTA CHECK v9 ⟩
+        </Text>
         <ActivityIndicator color={T.ink} />
         <Text style={[sansation, { color: T.inkFaint, marginTop: 12 }]}>
           {stepLabel}
