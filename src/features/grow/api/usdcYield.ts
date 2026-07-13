@@ -61,6 +61,9 @@ export const UnsignedReflectTxResponseSchema = z.object({
   rate: z.number(),
   slippageBps: z.number(),
   signer: z.string(),
+  // Cluster RPC to broadcast on. Reflect/STLF is mainnet, but the app's bundled
+  // EXPO_PUBLIC_SOLANA_RPC_URL is devnet — the backend hands us the right one.
+  rpcUrl: z.string(),
 });
 export type UnsignedReflectTxResponse = z.infer<
   typeof UnsignedReflectTxResponseSchema

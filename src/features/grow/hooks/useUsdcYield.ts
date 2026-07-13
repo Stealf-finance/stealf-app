@@ -45,7 +45,7 @@ export interface UsdcYieldOpts {
 
 export function useUsdcYield(walletContext: UsdcYieldWalletContext = 'bank') {
   const { user, session } = useAuth();
-  const { signAndSendTransaction, wallets } = useTurnkey();
+  const { signAndSendTransaction, wallets, refreshWallets } = useTurnkey();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,9 +54,21 @@ export function useUsdcYield(walletContext: UsdcYieldWalletContext = 'bank') {
    * in the build body), Turnkey signs + broadcasts the returned tx.
    */
   const signAndBroadcastBank = useCallback(
-    async (unsignedTransactionBase64: string, signerAddress: string) => {
-      const wallet = wallets?.[0];
-      const walletAccount = wallet?.accounts?.find(
+    async (
+      unsignedTransactionBase64: string,
+      signerAddress: string,
+      rpcUrl: string,
+    ) => {
+      // Turnkey's reactive `wallets` can be empty right after mount — refresh
+      // once before resolving the account (mirrors useEvmAddress).
+      let accounts = wallets?.[0]?.accounts;
+      if (!accounts?.length) {
+        const refreshed = await refreshWallets();
+        accounts = refreshed?.[0]?.accounts;
+      }
+      // Match the exact Solana bank account by address — never fall back to
+      // accounts[0] (the wallet can hold a mixed Solana+EVM account list).
+      const walletAccount = accounts?.find(
         (account) => account.address === signerAddress,
       );
       if (!walletAccount) {
@@ -66,10 +78,12 @@ export function useUsdcYield(walletContext: UsdcYieldWalletContext = 'bank') {
         walletAccount,
         unsignedTransaction: base64ToHex(unsignedTransactionBase64),
         transactionType: 'TRANSACTION_TYPE_SOLANA',
-        rpcUrl: process.env.EXPO_PUBLIC_SOLANA_RPC_URL as string,
+        // Reflect/STLF is mainnet; broadcast on the cluster the backend built
+        // the tx for (its bundled EXPO_PUBLIC_SOLANA_RPC_URL is devnet).
+        rpcUrl,
       });
     },
-    [signAndSendTransaction, wallets],
+    [signAndSendTransaction, wallets, refreshWallets],
   );
 
   const exec = useCallback(
@@ -106,6 +120,7 @@ export function useUsdcYield(walletContext: UsdcYieldWalletContext = 'bank') {
         const signature = await signAndBroadcastBank(
           built.unsignedTransactionBase64,
           built.signer,
+          built.rpcUrl,
         );
 
         // Record server-side (best-effort — never block the UI on this).

@@ -93,6 +93,7 @@ describe('UnsignedReflectTxResponseSchema', () => {
     rate: 1.04,
     slippageBps: 50,
     signer: 'GsbwXfJraMomNxBcjK7xK2xQx5MdWXBfM6hVz7Qx5Mdw',
+    rpcUrl: 'https://api.mainnet-beta.solana.com',
   };
 
   it('parses a valid build-mint/burn response', () => {
