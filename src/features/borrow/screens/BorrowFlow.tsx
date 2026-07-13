@@ -212,9 +212,10 @@ export function BorrowFlow() {
         style={{ flex: 1, backgroundColor: T.bg }}
       />
 
-      {/* On-screen diagnostics overlay (temporary) — screenshot this if the
-          embed shows blank/black so we can see what the WebView is doing. */}
-      {debug.length > 0 ? (
+      {/* On-screen diagnostics overlay — dev-only. Screenshot this if the embed
+          shows blank/black to see what the WebView is doing. Never shown in a
+          production/release build. */}
+      {__DEV__ && debug.length > 0 ? (
         <View
           pointerEvents="none"
           style={{
