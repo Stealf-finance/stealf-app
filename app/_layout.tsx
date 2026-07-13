@@ -181,6 +181,10 @@ function RootLayout() {
                             name="xstocks"
                             options={{ presentation: 'modal' }}
                           />
+                          <Stack.Screen
+                            name="borrow"
+                            options={{ presentation: 'modal' }}
+                          />
                         </Stack>
                         <ToastHost />
                         <OfflineBanner />

@@ -5,10 +5,11 @@ describe('homeCardActions', () => {
   it('Total card has no actions (read-only)', () => {
     expect(homeCardActions('total')).toEqual([]);
   });
-  it('Bank card exposes details only', () => {
+  it('Bank card exposes details and borrow', () => {
     const actions = homeCardActions('bank');
-    expect(actions.map((a) => a.key)).toEqual(['details']);
+    expect(actions.map((a) => a.key)).toEqual(['details', 'borrow']);
     expect(actions.find((a) => a.key === 'details')?.route).toBe('/account-details');
+    expect(actions.find((a) => a.key === 'borrow')?.route).toBe('/borrow');
   });
   it('Stealf card receives into the stealth wallet and shields', () => {
     const actions = homeCardActions('stealf');

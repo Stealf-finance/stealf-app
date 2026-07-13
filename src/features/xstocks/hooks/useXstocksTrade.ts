@@ -42,7 +42,7 @@ export type SellPct = 0.25 | 0.5 | 1;
 
 export function useXstocksTrade() {
   const { user, session } = useAuth();
-  const { signTransaction, wallets } = useTurnkey();
+  const { signTransaction, wallets, refreshWallets } = useTurnkey();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,11 +52,20 @@ export function useXstocksTrade() {
    */
   const signBank = useCallback(
     async (unsignedTransactionBase64: string, signerAddress: string) => {
-      const bankAccount =
-        wallets?.[0]?.accounts?.find((a) => a.address === signerAddress) ??
-        wallets?.[0]?.accounts?.[0];
+      // The reactive `wallets` can be empty right after mount (Turnkey session
+      // hydrates async) — refresh once before resolving. Mirrors useEvmAddress.
+      let accounts = wallets?.[0]?.accounts;
+      if (!accounts?.length) {
+        const refreshed = await refreshWallets();
+        accounts = refreshed?.[0]?.accounts;
+      }
+      // Match the EXACT Solana bank account by address — never fall back to
+      // accounts[0]. The borrow flow adds an EVM (Ethereum) account to the same
+      // Turnkey wallet, so accounts is a mixed Solana+EVM list with no
+      // guaranteed order; a fallback could sign a Solana tx with the wrong key.
+      const bankAccount = accounts?.find((a) => a.address === signerAddress);
       if (!bankAccount) {
-        throw new Error(`Turnkey wallet account not found for ${signerAddress}`);
+        throw new Error(`Turnkey Solana account not found for ${signerAddress}`);
       }
       const signedHex: string = await signTransaction({
         walletAccount: bankAccount,
@@ -65,7 +74,7 @@ export function useXstocksTrade() {
       });
       return hexToBase64(signedHex);
     },
-    [signTransaction, wallets],
+    [signTransaction, wallets, refreshWallets],
   );
 
   const buy = useCallback(
