@@ -5,11 +5,15 @@ export const SOL_MINT = 'So11111111111111111111111111111111111111112';
 
 export const SOL_ICON_URI = `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${SOL_MINT}/logo.png`;
 
-export const USDC_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+// MAINNET USDC.
+export const USDC_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 export const USDC_DECIMALS = 6;
 
-export const DUSDC_MINT = '4oG4sjmopf5MzvTHLE8rpVJ2uyczxfsw2K84SUTpNDx7';
-export const DUSDT_MINT = 'DXQwBNGgyQ2BzGWxEriJPVmXYFQBsQbXvfvfSNTaJkL6';
+// Umbra stealth stablecoins. On MAINNET the stealth stablecoins ARE the real
+// USDC / USDT (unlike devnet's dUSDC/dUSDT test tokens). Kept under the same
+// export names so importers don't break; `DUSDC_MINT === USDC_MINT` on mainnet.
+export const DUSDC_MINT = USDC_MINT;
+export const DUSDT_MINT = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB';
 
 export type KnownTokenMeta = {
   symbol: string;
@@ -18,31 +22,30 @@ export type KnownTokenMeta = {
   iconUri?: string;
 };
 
-// Reuse the official USDC/USDT logos (same CDN as SOL_ICON_URI) so the devnet
-// stablecoins render with recognizable icons.
+// Official USDC/USDT logos (same CDN as SOL_ICON_URI).
 const USDC_LOGO_URI =
   'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png';
 const USDT_LOGO_URI =
   'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png';
 
 export const KNOWN_TOKENS_BY_MINT: Record<string, KnownTokenMeta> = {
-  [DUSDC_MINT]: {
-    symbol: 'dUSDC',
-    name: 'Devnet USDC',
+  [USDC_MINT]: {
+    symbol: 'USDC',
+    name: 'USD Coin',
     decimals: 6,
     iconUri: USDC_LOGO_URI,
   },
   [DUSDT_MINT]: {
-    symbol: 'dUSDT',
-    name: 'Devnet USDT',
+    symbol: 'USDT',
+    name: 'Tether USD',
     decimals: 6,
     iconUri: USDT_LOGO_URI,
   },
 };
 
 /** Client-side metadata override for mints that on-chain registries can't
- *  resolve (currently the Umbra devnet test stablecoins). Returns undefined
- *  for everything else so normal resolution is untouched. */
+ *  resolve (the Umbra stealth stablecoins). Returns undefined for everything
+ *  else so normal resolution is untouched. */
 export function knownTokenByMint(
   mint: string | null | undefined,
 ): KnownTokenMeta | undefined {

@@ -20,7 +20,7 @@ import {
   pipe,
   airdropFactory,
   AccountRole,
-  devnet,
+  mainnet,
   type Address,
   type KeyPairSigner,
 } from '@solana/kit';
@@ -32,7 +32,7 @@ let _rpcSubscriptions: ReturnType<typeof createSolanaRpcSubscriptions> | null = 
 export function getRpc() {
   if (!_rpc) {
     const { EXPO_PUBLIC_SOLANA_RPC_URL } = getEnv();
-    _rpc = createSolanaRpc(devnet(EXPO_PUBLIC_SOLANA_RPC_URL));
+    _rpc = createSolanaRpc(mainnet(EXPO_PUBLIC_SOLANA_RPC_URL));
   }
   return _rpc;
 }
@@ -40,7 +40,7 @@ export function getRpc() {
 export function getRpcSubscriptions() {
   if (!_rpcSubscriptions) {
     const { EXPO_PUBLIC_SOLANA_WSS_URL } = getEnv();
-    _rpcSubscriptions = createSolanaRpcSubscriptions(devnet(EXPO_PUBLIC_SOLANA_WSS_URL));
+    _rpcSubscriptions = createSolanaRpcSubscriptions(mainnet(EXPO_PUBLIC_SOLANA_WSS_URL));
   }
   return _rpcSubscriptions;
 }

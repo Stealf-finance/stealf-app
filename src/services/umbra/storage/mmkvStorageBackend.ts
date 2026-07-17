@@ -35,7 +35,11 @@ export function hasMmkvStorageBackendData(namespace: string): boolean {
   return storage.getAllKeys().some((k) => k.startsWith(prefix));
 }
 
-const STORE_MIGRATION_VERSION = 'mmkv-legacy-v4-1';
+// Bumped for the devnet→mainnet flip: the wipe keys ONLY on this constant (not
+// on the Umbra NETWORK), and the mainnet build keeps the same bundle id + wallet
+// address, so bumping this is the ONLY thing that forces a clean re-scan and
+// clears stale devnet UTXO/nullifier state. Do not revert.
+const STORE_MIGRATION_VERSION = 'mmkv-mainnet-v1';
 
 export async function migrateUmbraStoreIfNeeded(
   namespace: string,

@@ -28,9 +28,11 @@ import {
   migrateUmbraStoreIfNeeded,
 } from './storage/mmkvStorageBackend';
 
-export const NETWORK = 'devnet' as const;
-export const RELAYER_API = 'https://relayer.api-devnet.umbraprivacy.com';
-export const INDEXER_API = 'https://utxo-indexer.api-devnet.umbraprivacy.com';
+// MAINNET. Umbra mainnet hosts drop the `-devnet` suffix (→ base `api.` host);
+// confirmed against the @umbra-privacy/sdk README + live health checks.
+export const NETWORK = 'mainnet' as const;
+export const RELAYER_API = 'https://relayer.api.umbraprivacy.com';
+export const INDEXER_API = 'https://utxo-indexer.api.umbraprivacy.com';
 
 const LEGACY_MASTER_SEED_SCHEMES = [masterSeedSchemeV4] as const;
 

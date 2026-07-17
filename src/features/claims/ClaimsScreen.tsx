@@ -38,7 +38,6 @@ import {
   SOL_MINT,
   SOL_ICON_URI,
   USDC_MINT,
-  DUSDC_MINT,
   DUSDT_MINT,
 } from '@/src/constants/solana';
 import {
@@ -66,12 +65,11 @@ const USDT_LOGO_URI =
 
 function tokenForMint(mint: string | null, solUsd: number | null): ClaimToken | null {
   switch (mint) {
-    case DUSDC_MINT:
-      return { symbol: 'dUSDC', decimals: 6, usdPerUnit: 1, iconUri: USDC_LOGO_URI };
-    case DUSDT_MINT:
-      return { symbol: 'dUSDT', decimals: 6, usdPerUnit: 1, iconUri: USDT_LOGO_URI };
+    // On mainnet DUSDC_MINT === USDC_MINT, so a single USDC case covers both.
     case USDC_MINT:
       return { symbol: 'USDC', decimals: 6, usdPerUnit: 1, iconUri: USDC_LOGO_URI };
+    case DUSDT_MINT:
+      return { symbol: 'USDT', decimals: 6, usdPerUnit: 1, iconUri: USDT_LOGO_URI };
     case SOL_MINT:
       return { symbol: 'SOL', decimals: 9, usdPerUnit: solUsd, iconUri: SOL_ICON_URI };
     default:

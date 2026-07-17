@@ -29,6 +29,23 @@
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
+    "mainnet": {
+      "distribution": "internal",
+      "channel": "mainnet",
+      "ios": {
+        "simulator": false
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "__SET_MAINNET_BACKEND_URL__",
+        "EXPO_PUBLIC_SOLANA_RPC_URL": "https://mainnet.helius-rpc.com/?api-key=__SET_MAINNET_HELIUS_KEY__",
+        "EXPO_PUBLIC_SOLANA_WSS_URL": "wss://mainnet.helius-rpc.com/?api-key=__SET_MAINNET_HELIUS_KEY__",
+        "EXPO_PUBLIC_ORGANIZATION_ID": "287a3940-612f-4472-b94f-faf8971748ee",
+        "EXPO_PUBLIC_AUTH_PROXY_CONFIG_ID": "276b73eb-f1e6-41ef-ab2b-5c0f783a194a",
+        "EXPO_PUBLIC_DEV_BYPASS_AUTH": "false",
+        "EXPO_PUBLIC_POSTHOG_API_KEY": "__SET_REAL_POSTHOG_KEY__",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    },
     "production": {
       "autoIncrement": true
     }
