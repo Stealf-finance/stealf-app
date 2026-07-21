@@ -1,7 +1,31 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
+
 const BURNT_UTXOS_KEY_PREFIX = 'umbra_burnt_utxos_';
 
 const burntUtxoIds = new Set<string>();
-let loadedForKey: string | null = null;
+/** The hashed SecureStore key name — never the private key itself. */
+let loadedStorageKey: string | null = null;
+
+/**
+ * SecureStore key names are stored in the Keychain's `kSecAttrAccount`
+ * attribute — an indexed, unencrypted column readable via `SecItemCopyMatching`
+ * without decrypting the value or triggering the item's ACL. Never derive a key
+ * name from secret material. Mirrors `services/umbra/seed.ts`.
+ */
+export function buildBurntUtxosKey(privateKeyB58: string): string {
+  const digest = bytesToHex(sha256(utf8ToBytes(privateKeyB58))).slice(0, 16);
+  return `${BURNT_UTXOS_KEY_PREFIX}${digest}`;
+}
+
+/**
+ * Pre-fix key name — embedded the raw base58 private key verbatim. The
+ * sanitizer was a no-op: base58's alphabet is a subset of `[A-Za-z0-9]`, so the
+ * character class matched nothing. Kept only to find and delete legacy entries.
+ */
+export function buildLegacyBurntUtxosKey(privateKeyB58: string): string {
+  return `${BURNT_UTXOS_KEY_PREFIX}${privateKeyB58.replace(/[^A-Za-z0-9._-]/g, '_')}`;
+}
 
 interface UtxoLike {
   treeIndex?: bigint | number | string;
@@ -32,21 +56,45 @@ export function isBurnt(utxo: UtxoLike): boolean {
 /** Reset the in-memory blacklist on logout / wallet switch. */
 export function clearBurntUtxos(): void {
   burntUtxoIds.clear();
-  loadedForKey = null;
+  loadedStorageKey = null;
+}
+
+/**
+ * One-time move off the leaked key name. The blacklist is a self-healing cache
+ * — a lost entry costs one failed claim that `recoverFromAlreadyBurnt` relearns
+ * — but the legacy delete must run regardless, since scrubbing the exposed
+ * Keychain attribute is the point of the migration.
+ */
+async function migrateLegacyEntry(
+  privateKeyB58: string,
+  key: string,
+): Promise<string | null> {
+  const legacyKey = buildLegacyBurntUtxosKey(privateKeyB58);
+  const { getSecure, setSecure, deleteSecure } =
+    await import('@/src/services/auth/secureStore');
+  let stored: string | null = null;
+  try {
+    stored = await getSecure(legacyKey);
+    if (stored) await setSecure(key, stored);
+  } catch {
+    // Content migration is best-effort; the delete below still has to run.
+  }
+  await deleteSecure(legacyKey).catch(() => undefined);
+  return stored;
 }
 
 export async function loadBurntUtxosForCurrentWallet(
   privateKeyB58: string,
 ): Promise<void> {
-  if (loadedForKey === privateKeyB58) return;
+  const key = buildBurntUtxosKey(privateKeyB58);
+  if (loadedStorageKey === key) return;
   burntUtxoIds.clear();
-  const safe = privateKeyB58.replace(/[^A-Za-z0-9._-]/g, '_');
-  const key = `${BURNT_UTXOS_KEY_PREFIX}${safe}`;
   try {
     // Lazy import keeps `expo-secure-store` (and RN) out of the module graph
     // at load time, while still routing through the centralized service.
     const { getSecure } = await import('@/src/services/auth/secureStore');
-    const stored = await getSecure(key);
+    const stored =
+      (await getSecure(key)) ?? (await migrateLegacyEntry(privateKeyB58, key));
     if (stored) {
       const ids: string[] = JSON.parse(stored);
       for (const id of ids) burntUtxoIds.add(id);
@@ -54,16 +102,14 @@ export async function loadBurntUtxosForCurrentWallet(
   } catch {
     // Best-effort; missing storage is fine.
   }
-  loadedForKey = privateKeyB58;
+  loadedStorageKey = key;
 }
 
 export async function persistBurntUtxos(): Promise<void> {
-  if (!loadedForKey) return;
-  const safe = loadedForKey.replace(/[^A-Za-z0-9._-]/g, '_');
-  const key = `${BURNT_UTXOS_KEY_PREFIX}${safe}`;
+  if (!loadedStorageKey) return;
   try {
     const { setSecure } = await import('@/src/services/auth/secureStore');
-    await setSecure(key, JSON.stringify(Array.from(burntUtxoIds)));
+    await setSecure(loadedStorageKey, JSON.stringify(Array.from(burntUtxoIds)));
   } catch {
     // Best-effort.
   }
