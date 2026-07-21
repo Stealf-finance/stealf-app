@@ -36,6 +36,7 @@ export type StealthErrorCode =
   | 'RECEIVER_NOT_REGISTERED'
   | 'INSUFFICIENT_BALANCE'
   | 'INSUFFICIENT_FEE_SOL'
+  | 'RELAYER_OUT_OF_FUNDS'
   | 'ZK_PROOF_ERROR'
   | 'USER_CANCELLED'
   | 'TX_TIMEOUT'
@@ -90,6 +91,8 @@ const MSG: Record<StealthErrorCode, string> = {
     'Recipient is not a Stealf user yet. Ask them to set up their wallet first.',
   INSUFFICIENT_BALANCE: 'Insufficient balance to complete this transaction.',
   INSUFFICIENT_FEE_SOL: INSUFFICIENT_FEE_SOL_MESSAGE,
+  RELAYER_OUT_OF_FUNDS:
+    'Claiming is temporarily unavailable — the relayer that covers claim fees has run out. Nothing is wrong with your wallet; please try again shortly.',
   ZK_PROOF_ERROR: 'Failed to generate the privacy proof. Please try again.',
   USER_CANCELLED: 'Transaction cancelled.',
   TX_TIMEOUT:
@@ -99,7 +102,8 @@ const MSG: Record<StealthErrorCode, string> = {
   INDEXER_ERROR: 'Could not reach the network. Please check your connection.',
   VERIFYING_KEY_NOT_INITIALIZED:
     'Umbra Privacy unavailable on this network. Please contact support.',
-  STALE_MERKLE_PROOF: 'This claim is out of date. Please refresh and try again.',
+  STALE_MERKLE_PROOF:
+    'This claim is out of date. Please refresh and try again.',
   SIGNING_FAILED: 'Signing failed. Please try again.',
   PROTOCOL_INSTRUCTION_MISMATCH:
     'Umbra Privacy unavailable on this network. Please contact support.',
@@ -116,11 +120,35 @@ function logsOf(err: unknown): string[] {
   return e?.cause?.context?.logs ?? [];
 }
 
+/**
+ * Operations broadcast by Umbra's relayer, which pays their fees. A lamport
+ * shortfall on these is the *relayer's* account, never the user's — telling
+ * them to top up their wallet would be wrong and unactionable.
+ */
+const RELAYER_PAID_OPS: ReadonlySet<StealthOp> = new Set([
+  'claimReceived',
+  'claimSelfToPublic',
+]);
+
+function feeCodeFor(op: StealthOp): StealthErrorCode {
+  return RELAYER_PAID_OPS.has(op)
+    ? 'RELAYER_OUT_OF_FUNDS'
+    : 'INSUFFICIENT_FEE_SOL';
+}
+
 function classifyInsufficient(
   logs: string[],
   rawMessage: string,
 ): 'fee' | 'balance' | null {
-  if (logs.some((l) => /transfer:\s*insufficient lamports/i.test(l))) {
+  // The RPC returns simulation logs inside the error *message* as well as in
+  // `cause.context.logs`, and on the sendTransaction path there is no `cause`
+  // at all. Reading only the logs array left this branch dead, so every lamport
+  // shortfall fell through to 'balance'.
+  if (
+    [...logs, rawMessage].some((l) =>
+      /transfer:\s*insufficient lamports/i.test(l),
+    )
+  ) {
     return 'fee';
   }
   if (
@@ -183,7 +211,7 @@ function buildFromTxSend(
     return build(err, op, 'PROTOCOL_INSTRUCTION_MISMATCH', stage);
   }
   const cls = classifyInsufficient(logs, rawMessageOf(err));
-  if (cls === 'fee') return build(err, op, 'INSUFFICIENT_FEE_SOL', stage);
+  if (cls === 'fee') return build(err, op, feeCodeFor(op), stage);
   if (cls === 'balance') return build(err, op, 'INSUFFICIENT_BALANCE', stage);
   return build(err, op, 'TX_TIMEOUT', stage);
 }
@@ -210,7 +238,13 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
   if (isEncryptedDepositError(err)) {
     switch (err.stage) {
       case 'validation':
-        return build(err, op, 'UNKNOWN', err.stage, 'Invalid deposit parameters.');
+        return build(
+          err,
+          op,
+          'UNKNOWN',
+          err.stage,
+          'Invalid deposit parameters.',
+        );
       case 'mint-fetch':
       case 'account-fetch':
         return build(err, op, 'RPC_ERROR', err.stage);
@@ -284,7 +318,11 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
   if (/receiver is not registered/i.test(rawMessage)) {
     return build(err, op, 'RECEIVER_NOT_REGISTERED');
   }
-  if (/user is not registered|account.*not.*initialised|not registered/i.test(rawMessage)) {
+  if (
+    /user is not registered|account.*not.*initialised|not registered/i.test(
+      rawMessage,
+    )
+  ) {
     return build(err, op, 'USER_NOT_REGISTERED');
   }
   if (isVerifyingKeyNotInitialized(simulationLogs)) {
@@ -294,7 +332,7 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
     return build(err, op, 'PROTOCOL_INSTRUCTION_MISMATCH');
   }
   const cls = classifyInsufficient(simulationLogs, rawMessage);
-  if (cls === 'fee') return build(err, op, 'INSUFFICIENT_FEE_SOL');
+  if (cls === 'fee') return build(err, op, feeCodeFor(op));
   if (cls === 'balance') return build(err, op, 'INSUFFICIENT_BALANCE');
   if (/rpc|network|fetch|timeout/i.test(rawMessage)) {
     return build(err, op, 'RPC_ERROR');
