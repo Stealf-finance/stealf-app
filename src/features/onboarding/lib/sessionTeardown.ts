@@ -3,6 +3,7 @@ import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
 import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
 import { umbraClearSeed } from '@/src/services/umbra/seed';
+import { clearAllMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { persister } from '@/src/services/queryClient';
 import { purgeTurnkeyState } from './passkeyHelpers';
 
@@ -27,10 +28,16 @@ async function run(
 ): Promise<void> {
   const { turnkeyLogout, reset, queryClient, capture, resetAnalytics } = deps;
 
-  capture?.(reason === 'session_expired' ? 'auth_session_expired' : 'auth_signed_out');
+  capture?.(
+    reason === 'session_expired' ? 'auth_session_expired' : 'auth_signed_out',
+  );
   socketService.disconnect();
   clearStealthState();
   await umbraClearSeed();
+  // Drops the decrypted UTXO / nullifier store. It belongs here rather than in
+  // useLogout so the session_expired path wipes it too — that's the case where
+  // the user did *not* choose to sign out, on a possibly shared device.
+  await clearAllMmkvStorageBackend();
   await walletKeyCache.clearAll();
   try {
     await turnkeyLogout();
