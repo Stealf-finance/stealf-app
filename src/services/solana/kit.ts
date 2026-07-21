@@ -5,6 +5,7 @@ import {
   address,
   isAddress,
   lamports,
+  signature,
   createKeyPairSignerFromPrivateKeyBytes,
   createTransactionMessage,
   setTransactionMessageFeePayer,
@@ -23,11 +24,13 @@ import {
   devnet,
   type Address,
   type KeyPairSigner,
+  type Signature,
 } from '@solana/kit';
 import { getEnv } from '../env';
 
 let _rpc: ReturnType<typeof createSolanaRpc> | null = null;
-let _rpcSubscriptions: ReturnType<typeof createSolanaRpcSubscriptions> | null = null;
+let _rpcSubscriptions: ReturnType<typeof createSolanaRpcSubscriptions> | null =
+  null;
 
 export function getRpc() {
   if (!_rpc) {
@@ -40,7 +43,9 @@ export function getRpc() {
 export function getRpcSubscriptions() {
   if (!_rpcSubscriptions) {
     const { EXPO_PUBLIC_SOLANA_WSS_URL } = getEnv();
-    _rpcSubscriptions = createSolanaRpcSubscriptions(devnet(EXPO_PUBLIC_SOLANA_WSS_URL));
+    _rpcSubscriptions = createSolanaRpcSubscriptions(
+      devnet(EXPO_PUBLIC_SOLANA_WSS_URL),
+    );
   }
   return _rpcSubscriptions;
 }
@@ -55,14 +60,22 @@ export function lamportsToSol(lamps: bigint | number): number {
   return Number(lamps) / LAMPORTS_PER_SOL;
 }
 
-export async function createSignerFromBase58(privateKeyBase58: string): Promise<KeyPairSigner> {
+export async function createSignerFromBase58(
+  privateKeyBase58: string,
+): Promise<KeyPairSigner> {
   const keyBytes = bs58.decode(privateKeyBase58);
-  const privateKeyBytes = keyBytes.length === 64 ? keyBytes.slice(0, 32) : keyBytes;
+  const privateKeyBytes =
+    keyBytes.length === 64 ? keyBytes.slice(0, 32) : keyBytes;
   return createKeyPairSignerFromPrivateKeyBytes(privateKeyBytes);
 }
 
 export function toAddress(addr: string): Address {
   return address(addr);
+}
+
+/** Brand a signature string returned by an external signer (e.g. Turnkey). */
+export function toSignature(sig: string): Signature {
+  return signature(sig);
 }
 
 export {
@@ -85,4 +98,4 @@ export {
   airdropFactory,
   AccountRole,
 };
-export type { Address, KeyPairSigner };
+export type { Address, KeyPairSigner, Signature };
