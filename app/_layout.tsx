@@ -27,6 +27,7 @@ import { BalanceVisibilityProvider } from '@/src/features/wallet/BalanceVisibili
 import { SocketProvider } from '@/src/components/SocketProvider';
 import { DataBootstrap } from '@/src/components/DataBootstrap';
 import { AuthGuard } from '@/src/components/AuthGuard';
+import { SessionSync } from '@/src/components/SessionSync';
 import { TelemetrySmokeTest } from '@/src/components/TelemetrySmokeTest';
 import { PendingOpsProvider } from '@/src/components/pending-ops/PendingOpsContext';
 import { ToastProvider } from '@/src/components/toast/ToastContext';
@@ -96,6 +97,7 @@ function RootLayout() {
                   <BalanceVisibilityProvider>
                     <PendingOpsProvider>
                       <ToastProvider>
+                        <SessionSync />
                         <DataBootstrap />
                         <AuthGuard />
                         <TelemetrySmokeTest />

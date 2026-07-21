@@ -6,6 +6,7 @@ import {
 import * as Sentry from '@sentry/react-native';
 import { decodeOidcEmail, decodeOidcSub } from '@/src/features/onboarding/lib/oidc';
 import { emitOauthAuthSuccess } from './oauthAuthEvents';
+import { emitSessionExpired } from '@/src/services/auth/sessionEvents';
 
 export const BANK_WALLET_CONFIG = {
   walletName: 'Virtual Bank Account',
@@ -22,11 +23,6 @@ export const BANK_WALLET_CONFIG = {
 export const TURNKEY_CONFIG: TurnkeyProviderConfig = {
   organizationId: process.env.EXPO_PUBLIC_ORGANIZATION_ID!,
   authProxyConfigId: process.env.EXPO_PUBLIC_AUTH_PROXY_CONFIG_ID!,
-
-  // Tells the provider to refresh `user` + `wallets` automatically after
-  // every auth event. Without it the provider sets the session but
-  // leaves user/wallets empty, so our post-auth effect can't read the
-  // user's email and the backend rejects the signup.
   autoRefreshManagedState: true,
 
   auth: {
@@ -54,6 +50,7 @@ export const TURNKEY_CALLBACKS: TurnkeyCallbacks = {
   },
   onSessionExpired: () => {
     if (__DEV__) console.log('[Turnkey] Session expired');
+    emitSessionExpired('turnkey_expired');
   },
   onAuthenticationSuccess: ({ session, action, method, identifier }) => {
     if (method === AuthMethod.Oauth && session?.token) {
