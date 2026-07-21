@@ -9,6 +9,7 @@ import {
   getBase64EncodedWireTransaction,
   assertIsTransactionWithinSizeLimit,
   getRpc,
+  toSignature,
 } from '@/src/services/solana/kit';
 import { getEnv } from '@/src/services/env';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
@@ -24,6 +25,10 @@ import {
   isNativeSolMint,
 } from '../lib/buildTransfer';
 import { toRawAmount } from '../lib/amount';
+import {
+  confirmSignature,
+  type FetchSignatureStatus,
+} from '../lib/confirmSignature';
 
 export type WalletSource = 'bank' | 'stealth';
 
@@ -43,6 +48,15 @@ export class GuardError extends Error {
     super(message);
     this.name = 'GuardError';
   }
+}
+
+/** Reads a signature status off the RPC, for `confirmSignature` to poll. */
+function makeStatusFetcher(): FetchSignatureStatus {
+  const rpc = getRpc();
+  return async (sig) => {
+    const { value } = await rpc.getSignatureStatuses([toSignature(sig)]).send();
+    return value[0] ?? null;
+  };
 }
 
 export function useSendSimple() {
@@ -70,7 +84,8 @@ export function useSendSimple() {
           amountSOL: amount,
           balanceSOL: balance,
         });
-        if (!guard.valid) throw new GuardError(guard.error ?? 'Invalid transaction');
+        if (!guard.valid)
+          throw new GuardError(guard.error ?? 'Invalid transaction');
       } else {
         if (!Number.isFinite(amount) || amount <= 0) {
           throw new GuardError('Amount must be greater than 0');
@@ -103,16 +118,22 @@ export function useSendSimple() {
           (account) => account.address === fromAddress,
         );
         if (!walletAccount) {
-          throw new Error(`Wallet account not found for address: ${fromAddress}`);
+          throw new Error(
+            `Wallet account not found for address: ${fromAddress}`,
+          );
         }
         const wireBytes = getTransactionEncoder().encode(compiled);
         const hexString = Buffer.from(wireBytes).toString('hex');
-        return signAndSendTransaction({
+        const bankSignature = await signAndSendTransaction({
           walletAccount,
           unsignedTransaction: hexString,
           transactionType: 'TRANSACTION_TYPE_SOLANA',
           rpcUrl: EXPO_PUBLIC_SOLANA_RPC_URL,
         });
+        // Turnkey resolves once the transaction is broadcast, not once it is
+        // settled — so this path has to wait too.
+        await confirmSignature(bankSignature, makeStatusFetcher());
+        return bankSignature;
       }
 
       const privateKeyB58 = await walletKeyCache.getPrivateKey();
@@ -128,28 +149,21 @@ export function useSendSimple() {
       const encodedTx = getBase64EncodedWireTransaction(signed);
       await rpc.sendTransaction(encodedTx, { encoding: 'base64' }).send();
 
-      for (let i = 0; i < 30; i++) {
-        const { value } = await rpc.getSignatureStatuses([signature]).send();
-        const status = value[0];
-        if (
-          status?.confirmationStatus === 'confirmed' ||
-          status?.confirmationStatus === 'finalized'
-        ) {
-          break;
-        }
-        if (status?.err) {
-          throw new Error(`Transaction failed: ${JSON.stringify(status.err)}`);
-        }
-        await new Promise((r) => setTimeout(r, 1500));
-      }
+      // Previously this loop fell through to `return signature` on timeout, so
+      // a dropped transfer was reported as a completed one.
+      await confirmSignature(signature, makeStatusFetcher());
 
       walletKeyCache.touch();
       return signature;
     },
     onSuccess: (_txId, { fromAddress }) => {
       // Server-side history will catch up via socket; refetch as a safety net.
-      queryClient.invalidateQueries({ queryKey: balanceQueries.byAddress(fromAddress) });
-      queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(fromAddress) });
+      queryClient.invalidateQueries({
+        queryKey: balanceQueries.byAddress(fromAddress),
+      });
+      queryClient.invalidateQueries({
+        queryKey: historyQueries.byAddress(fromAddress),
+      });
     },
   });
 }
