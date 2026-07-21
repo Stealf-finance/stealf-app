@@ -12,12 +12,24 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 // eslint-disable-next-line import/first -- vi.mock above must hoist before this
-import { shouldPersistQuery } from '@/src/services/queryClient';
+import { shouldPersistQuery, shouldRetryQuery } from '@/src/services/queryClient';
+// eslint-disable-next-line import/first
+import { ApiError } from '@/src/services/api/errors';
 
-function queryWithKey(queryKey: readonly unknown[]): Query {
-  // Only `queryKey` is read by `shouldPersistQuery`; the rest of `Query`
-  // would be a huge mock surface. Cast through unknown to avoid that.
-  return { queryKey } as unknown as Query;
+type QueryStatus = 'success' | 'pending' | 'error';
+
+function queryWithKey(
+  queryKey: readonly unknown[],
+  status: QueryStatus = 'success',
+): Query {
+  // `shouldPersistQuery` reads `queryKey` plus the state fields
+  // `defaultShouldDehydrateQuery` inspects; the rest of `Query` would be a
+  // huge mock surface. Cast through unknown to avoid that.
+  return {
+    queryKey,
+    state: { status, fetchStatus: 'idle', data: status === 'success' ? {} : undefined },
+    meta: undefined,
+  } as unknown as Query;
 }
 
 describe('shouldPersistQuery', () => {
@@ -80,5 +92,40 @@ describe('shouldPersistQuery', () => {
     expect(
       shouldPersistQuery(queryWithKey(['some-future-feature', 'arg'])),
     ).toBe(false);
+  });
+
+  // Regression: the allowlist used to replace `defaultShouldDehydrateQuery`
+  // outright, so an in-flight prefetch was persisted in `pending` state and
+  // React Query warned "dehydrated as pending ended up rejecting" on rehydrate.
+  it('denies an allowlisted query that is still pending', () => {
+    expect(
+      shouldPersistQuery(queryWithKey(['wallet-history', 'addr'], 'pending')),
+    ).toBe(false);
+  });
+
+  it('denies an allowlisted query that errored', () => {
+    expect(
+      shouldPersistQuery(queryWithKey(['wallet-history', 'addr'], 'error')),
+    ).toBe(false);
+  });
+});
+
+describe('shouldRetryQuery', () => {
+  it('does not retry a 401 — the token is dead, not the network', () => {
+    expect(shouldRetryQuery(0, new ApiError('JWT expired', 401))).toBe(false);
+  });
+
+  it('does not retry a 403', () => {
+    expect(shouldRetryQuery(0, new ApiError('Forbidden', 403))).toBe(false);
+  });
+
+  it('retries a 500 once', () => {
+    expect(shouldRetryQuery(0, new ApiError('boom', 500))).toBe(true);
+    expect(shouldRetryQuery(1, new ApiError('boom', 500))).toBe(false);
+  });
+
+  it('retries a non-ApiError once', () => {
+    expect(shouldRetryQuery(0, new Error('network down'))).toBe(true);
+    expect(shouldRetryQuery(1, new Error('network down'))).toBe(false);
   });
 });

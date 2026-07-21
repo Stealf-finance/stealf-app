@@ -7,7 +7,7 @@ import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
 import { umbraClearSeed } from '@/src/services/umbra/seed';
 import { clearAllMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { useAuth } from '../context/AuthContext';
-import { purgeTurnkeyState } from '../lib/passkeyHelpers';
+import { performSessionTeardown } from '../lib/sessionTeardown';
 
 export function useLogout() {
   const { logout: turnkeyLogout } = useTurnkey();
