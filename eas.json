@@ -36,7 +36,8 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api-mainnet.stealf.xyz",
+        "EXPO_PUBLIC_API_URL": "https://backend-stealf-mainnet.up.railway.app",
+        "EXPO_PUBLIC_PORTOLA_HOST_URL": "https://backend-stealf-mainnet.up.railway.app/portola",
         "EXPO_PUBLIC_SOLANA_RPC_URL": "https://mainnet.helius-rpc.com/?api-key=e7b3a134-e88b-4a7d-a771-05df242ff787",
         "EXPO_PUBLIC_SOLANA_WSS_URL": "wss://mainnet.helius-rpc.com/?api-key=e7b3a134-e88b-4a7d-a771-05df242ff787",
         "EXPO_PUBLIC_ORGANIZATION_ID": "287a3940-612f-4472-b94f-faf8971748ee",
