@@ -1,6 +1,12 @@
 import { useCallback, useState } from 'react';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -83,7 +89,8 @@ export function BankWallet() {
     ? splitBalance(balance.totalUSD)
     : { dollars: '', cents: '' };
   const txRows =
-    history?.transactions.slice(0, HISTORY_DISPLAY_LIMIT).map(formatTxRow) ?? [];
+    history?.transactions.slice(0, HISTORY_DISPLAY_LIMIT).map(formatTxRow) ??
+    [];
   const { hidden: balanceHidden, toggle: toggleBalanceHidden } =
     useBalanceVisibility();
 
@@ -170,9 +177,7 @@ export function BankWallet() {
           <Pressable
             onPress={toggleBalanceHidden}
             accessibilityRole="button"
-            accessibilityLabel={
-              balanceHidden ? 'Show balance' : 'Hide balance'
-            }
+            accessibilityLabel={balanceHidden ? 'Show balance' : 'Hide balance'}
             hitSlop={10}
             style={({ pressed }) => ({
               padding: 4,
@@ -280,11 +285,6 @@ export function BankWallet() {
             iconKey="arrUp"
             label="Send"
             onPress={() => router.push('/send')}
-          />
-          <SquareActionTile
-            iconKey="bolt"
-            label="Borrow"
-            onPress={() => router.push('/borrow')}
           />
         </View>
 

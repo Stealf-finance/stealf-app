@@ -26,9 +26,6 @@ const config: ExpoConfig = {
     usesAppleSignIn: true,
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
-      // Portola's KYC (in the borrow WebView) captures a document + selfie.
-      NSCameraUsageDescription:
-        'Stealf uses the camera to verify your identity when you take out a loan.',
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: allowArbitraryHttp,
         NSAllowsLocalNetworking: allowArbitraryHttp,
@@ -37,8 +34,6 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'com.stealf.app',
-    // Camera for Portola KYC capture in the borrow WebView.
-    permissions: ['android.permission.CAMERA'],
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/images/icon.png',

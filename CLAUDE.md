@@ -1,7 +1,42 @@
-# CLAUDE.md — stealf-app
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 Context for AI agents working on this repo. Read this before any
 non-trivial change.
+
+## Commands
+
+```bash
+# Run — Expo dev server / native builds (native build is slow in dev; see caveat below)
+npm start                     # Metro dev server
+npm run ios                   # expo run:ios (build + launch on simulator/device)
+npm run android               # expo run:android
+npx expo run:ios --configuration Release   # the only honest perf check
+
+# Lint (eslint-config-expo, flat config)
+npm run lint
+
+# Tests (Vitest, node env — pure logic only; no RN native modules)
+npm test                      # vitest run (CI mode)
+npm run test:watch            # vitest watch
+npx vitest run src/features/bank/__tests__/schemas.test.ts   # single file
+npx vitest run -t "describes a claim line"                   # single test by name
+
+# iOS native regen (after native dep / config changes)
+npm run prebuild:ios          # expo prebuild + append SENTRY_AUTH_TOKEN
+npm run prebuild:ios:clean    # nuke ios/ and regenerate
+```
+
+Notes:
+
+- `postinstall` runs `patch-package` — the Umbra SDK scanner patch
+  (`patches/@umbra-privacy+sdk+*.patch`) is applied on every install. Don't
+  hand-edit `node_modules`; edit the patch.
+- Vitest only covers pure functions (`environment: 'node'`, `@` aliased to
+  repo root). Anything importing a React Native native module won't run under
+  Vitest — keep testable logic in `lib/` helpers, not in hooks/screens.
+- There is no typecheck script; run `npx tsc --noEmit` if you need one.
 
 ## What this app is
 
@@ -11,7 +46,7 @@ Stealf is a privacy-first neobank on Solana. Two wallets per user:
   bank account + Stealf card. Signing via Turnkey remote signing.
 - **Stealth wallet** — Local ED25519 wallet, private key in
   SecureStore (Keychain on iOS, Keystore on Android). Holds a public
-  ATA *and* an Umbra-encrypted balance. Signing happens locally.
+  ATA _and_ an Umbra-encrypted balance. Signing happens locally.
 
 Real money, real users (currently ~150 in a separate prod app called
 `front-stealf`; this repo is the UI/UX rebuild). Treat every change
@@ -100,7 +135,8 @@ The app is built in vertical slices. Current state:
 - ✅ Bank (balance, history, send simple, receive)
 - ✅ Stealth (Umbra wallet setup, shield, unshield, private send,
   claims, encrypted balance)
-- ✅ Move flow (bank ↔ stealth ↔ encrypted balance)
+- ✅ Move flow (bank ↔ stealth ↔ encrypted balance) — internal
+  feature folder is `src/features/moove/`
 - ✅ Profile (private key export, mnemonic export, logout, delete
   account)
 - ✅ Telemetry (Sentry crashes, PostHog events — session replay
@@ -148,7 +184,7 @@ zkey loading strategy ripple into `metro.config.js` and the splash gate.
 
 ## Umbra SDK v5 (stealth core)
 
-The stealth flow runs on `@umbra-privacy/sdk` `5.0.0-rc.3`
+The stealth flow runs on `@umbra-privacy/sdk` `5.0.0-rc.4`
 (`rn-zk-prover` 5.0.0). Key integration facts, all in
 `src/services/umbra/`:
 
@@ -166,7 +202,7 @@ The stealth flow runs on `@umbra-privacy/sdk` `5.0.0-rc.3`
   X25519 via `@umbra-privacy/rn-quick-x25519` `scalarMultAsync` (runs on a
   background thread, zero-copy ArrayBuffer). Without this a full
   merkle-tree scan blocks the JS thread for ~20s. The SDK scanner is
-  patched (`patches/@umbra-privacy+sdk+5.0.0-rc.3.patch`) to `await` the
+  patched (`patches/@umbra-privacy+sdk+5.0.0-rc.4.patch`) to `await` the
   async X25519; the same patch carries a base64-LE bigint parse fix.
 - Devnet test tokens dUSDC / dUSDT live in `src/constants/solana.ts`.
 
