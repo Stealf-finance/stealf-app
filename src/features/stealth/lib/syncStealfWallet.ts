@@ -12,9 +12,11 @@ import {
 import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
 
 export type SyncDecision =
-  | { action: 'skip'; reason: 'fresh-create' | 'cache-exists' | 'not-registered' }
+  | {
+      action: 'skip';
+      reason: 'fresh-create' | 'cache-exists' | 'not-registered';
+    }
   | { action: 'scan' };
-
 
 export async function decideSyncAction(
   walletAddress: string,
@@ -22,14 +24,13 @@ export async function decideSyncAction(
 ): Promise<SyncDecision> {
   if (isFresh) return { action: 'skip', reason: 'fresh-create' };
 
-  const storeWarm = hasMmkvStorageBackendData(walletAddress);
+  const storeWarm = await hasMmkvStorageBackendData(walletAddress);
   if (storeWarm) return { action: 'skip', reason: 'cache-exists' };
 
   try {
     const registered = await fetchUmbraRegistration(walletAddress);
     if (!registered) return { action: 'skip', reason: 'not-registered' };
   } catch (err) {
-
     Sentry.addBreadcrumb({
       category: 'stealth.sync',
       level: 'warning',

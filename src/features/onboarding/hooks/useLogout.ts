@@ -5,6 +5,7 @@ import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
 import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
 import { umbraClearSeed } from '@/src/services/umbra/seed';
+import { clearAllMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { useAuth } from '../context/AuthContext';
 import { purgeTurnkeyState } from '../lib/passkeyHelpers';
 
@@ -20,11 +21,13 @@ export function useLogout() {
       socketService.disconnect();
       clearStealthState();
       await umbraClearSeed();
+      // Drops the decrypted UTXO / nullifier store. Without it the previous
+      // user's private transaction graph survives logout on a shared device.
+      await clearAllMmkvStorageBackend();
       await walletKeyCache.clearAll();
       try {
         await turnkeyLogout();
-      } catch {
-      }
+      } catch {}
       await purgeTurnkeyState();
       queryClient.clear();
       reset();

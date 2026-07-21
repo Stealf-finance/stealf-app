@@ -22,7 +22,7 @@ export function useDeleteStealthWallet() {
       if (prevStealfWallet) {
         // Wipe the wallet's Umbra store — MMKV (current backend) plus the
         // legacy AsyncStorage namespace, so no decrypted UTXO data lingers.
-        clearMmkvStorageBackend(prevStealfWallet);
+        await clearMmkvStorageBackend(prevStealfWallet);
         await clearAsyncStorageBackend(prevStealfWallet).catch(() => undefined);
       }
 
