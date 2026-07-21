@@ -116,10 +116,32 @@ TEEs; the client never sees it).
   config, NOT secrets.
 - True secrets (Turnkey signing keys, server JWT keys) never live in
   this repo or its env.
-- SecureStore keys (`STEALF_PRIVATE_KEY`, `STEALF_MNEMONIC`,
-  `SESSION_TOKEN`) require `requireAuthentication: true` (Face ID).
+- ⚠️ **SecureStore is NOT biometric-gated today.**
+  `resolveOptions()` in `services/auth/secureStore.ts` ignores its `key`
+  argument and returns `BASE_OPTIONS` for everything, so
+  `requireAuthentication` is unset on every key — including
+  `STEALF_PRIVATE_KEY`, `STEALF_MNEMONIC` and `SESSION_TOKEN`.
+  `HIGH_SENSITIVITY_KEYS` is declared and never consulted. This was
+  deliberate (`43f7de7`, "disable Face ID gating for devnet") and there is
+  no biometry anywhere in the app: `expo-local-authentication` is not a
+  dependency and `app/lock.tsx` is a stub. Assume anything in SecureStore
+  is readable on an unlocked device, and do not write code that relies on
+  a Face ID prompt.
+  **Re-enabling it is a migration, not a flag flip.** expo-secure-store
+  appends `:auth` / `:no-auth` to `keychainService` only when
+  `requireAuthentication` is explicitly set. Today it is `undefined`, so
+  items live under `com.stealf.wallet`; setting it to `true` moves them to
+  `com.stealf.wallet:auth` — a different Keychain item. Every existing
+  user's private key and mnemonic become unreadable, recoverable only by
+  manual mnemonic re-import. Write the migration first.
 - `walletKeyCache` has a 15-minute TTL. Don't extend it; don't bypass
-  it; don't log its contents.
+  it; don't log its contents. Note the TTL currently gates nothing on its
+  own: expiry falls through to a silent Keychain read (see above), so it
+  triggers a transparent reload rather than a re-authentication.
+- Umbra's MMKV note store is encrypted at rest under a random key held in
+  the Keychain (`storage/mmkvStorageBackend.ts`). It holds _decrypted_
+  UTXOs — wipe it via `clearAllMmkvStorageBackend()` on any logout or
+  account-deletion path you add.
 
 ### 5. Branches
 
