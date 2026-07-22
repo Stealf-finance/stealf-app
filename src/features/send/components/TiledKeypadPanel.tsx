@@ -1,7 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { sansationBold } from '@/src/design-system/typography';
-import { T } from '@/src/design-system/tokens';
+import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 
 type Props = {
@@ -18,14 +17,6 @@ const ROWS: string[][] = [
   ['7', '8', '9'],
   ['.', '0', '⌫'],
 ];
-
-// Solid two-stop fill for the CTA pill, per tone. The design's "gold"
-// button maps to the active tone's accent (silver for shield, gold for
-// unshield), with a darker low stop for depth.
-const CTA_GRADIENT: Record<Tone, [string, string]> = {
-  gold: [T.gold, '#a37b2e'],
-  silver: ['#d6d6d9', '#9a9a9e'],
-};
 
 /**
  * Glass keypad panel — a rounded frosted card wrapping a 3×4 grid of
@@ -44,8 +35,8 @@ export function TiledKeypadPanel({
   return (
       <View
         style={{
-          marginHorizontal: 12,
-          padding: 16,
+          marginHorizontal: 24,
+          paddingTop: 16,
           paddingBottom: 18,
         }}
       >
@@ -75,7 +66,7 @@ export function TiledKeypadPanel({
                         style={[
                           sansationBold,
                           {
-                            fontSize: 22,
+                            fontSize: 28,
                             color: palette.ink,
                             includeFontPadding: false,
                           },
@@ -91,37 +82,16 @@ export function TiledKeypadPanel({
           ))}
         </View>
 
-        {/* Primary CTA — filled accent pill, integrated into the panel.
-            Rounding + clip on a static View (same Pressable-function caveat). */}
-        <Pressable
+        {/* Primary CTA — the shared design-system pill, so it matches the
+            primary button used elsewhere in the flow (e.g. the recipient
+            step's Continue). */}
+        <PillBtn
+          variant="primary"
+          tone={tone}
+          label={ctaLabel}
           onPress={onPressCta}
           disabled={ctaDisabled}
-          accessibilityRole="button"
-          accessibilityLabel={ctaLabel}
-          style={({ pressed }) => ({ opacity: ctaDisabled ? 0.4 : pressed ? 0.9 : 1 })}
-        >
-          <View style={{ borderRadius: 100, overflow: 'hidden' }}>
-            <LinearGradient
-              colors={CTA_GRADIENT[tone]}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={{
-                paddingVertical: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text
-                style={[
-                  sansationBold,
-                  { fontSize: 15, color: '#0a0a0a', includeFontPadding: false },
-                ]}
-              >
-                {ctaLabel}
-              </Text>
-            </LinearGradient>
-          </View>
-        </Pressable>
+        />
       </View>
   );
 }

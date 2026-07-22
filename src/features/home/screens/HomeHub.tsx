@@ -69,11 +69,11 @@ export function HomeHub() {
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <TonalHalo progress={haloProgress} />
+      <TonalHalo progress={haloProgress} intensity={1.6} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingTop: insets.top,
+          paddingTop: insets.top + 16,
           paddingBottom: insets.bottom + 90,
         }}
         showsVerticalScrollIndicator={false}

@@ -1,5 +1,5 @@
 export const T = {
-  bg: '#0a0a0a',
+  bg: '#000000',
   bgRaised: '#151513',
   bgRaised2: '#1e1d1a',
   bgCard: 'rgba(255,255,255,0.03)',

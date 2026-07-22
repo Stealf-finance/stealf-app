@@ -1,13 +1,11 @@
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { Icons } from '@/src/design-system/icons';
-import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 
-export type TabId = 'bank' | 'grow' | 'stealth' | 'profile';
+export type TabId = 'bank' | 'history' | 'profile';
 
 type Props = {
   active: TabId;
@@ -15,81 +13,28 @@ type Props = {
   tone?: Tone;
 };
 
-// `id` stays internal (route segment + tone logic); only label/icon are UI.
-const TABS: { id: TabId; label: string; iconKey: keyof typeof Icons }[] = [
-  { id: 'bank', label: 'Home', iconKey: 'tabHome' },
-  { id: 'grow', label: 'Grow', iconKey: 'invest' },
-  { id: 'stealth', label: 'Payment', iconKey: 'tabPayment' },
-  { id: 'profile', label: 'Profile', iconKey: 'tabProfile' },
+// `id` stays internal (route segment); only the icon is UI — this bar is
+// icon-only (labels dropped). Grow / Payment were removed from the bar.
+const TABS: { id: TabId; iconKey: keyof typeof Icons; label: string }[] = [
+  { id: 'bank', iconKey: 'tabHome', label: 'Home' },
+  { id: 'history', iconKey: 'clock', label: 'History' },
+  { id: 'profile', iconKey: 'tabProfile', label: 'Profile' },
 ];
 
+/**
+ * Floating pill nav (bottom-left): a glass capsule holding icon-only tabs.
+ * The active tab gets a rounded accent-tinted highlight; the paired "+" FAB
+ * (QuickActionMenu) sits separately bottom-right.
+ */
 export function TabBar({ active, onTab, tone = 'silver' }: Props) {
   const palette = txPalette(tone);
   const insets = useSafeAreaInsets();
 
   return (
-    <View
-      style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        paddingBottom: insets.bottom + 8,
-      }}
-    >
-      <BlurView
-        intensity={24}
-        tint="dark"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
-      />
-      <LinearGradient
-        colors={[
-          'rgba(10,10,10,0)',
-          'rgba(10,10,10,0.85)',
-          'rgba(10,10,10,0.96)',
-        ]}
-        locations={[0, 0.3, 1]}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
-      />
-
-      {/* Top hairline: transparent → accent → transparent across the bar */}
-      <LinearGradient
-        colors={['transparent', palette.accent, palette.accent, 'transparent']}
-        locations={[0, 0.2, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 1,
-          opacity: tone === 'silver' ? 0.5 : 0.65,
-        }}
-      />
-
-      {/* Tab row */}
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-around',
-          alignItems: 'center',
-          paddingTop: 16,
-          paddingBottom: 12,
-          paddingHorizontal: 16,
-        }}
+    <View style={{ position: 'absolute', left: 24, bottom: insets.bottom + 8 }}>
+      <BlurGlass
+        radius={36}
+        innerStyle={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8 }}
       >
         {TABS.map((t) => {
           const isActive = active === t.id;
@@ -102,45 +47,23 @@ export function TabBar({ active, onTab, tone = 'silver' }: Props) {
               accessibilityState={{ selected: isActive }}
               accessibilityLabel={t.label}
               style={{
+                width: 54,
+                height: 46,
+                borderRadius: 16,
                 alignItems: 'center',
-                gap: 6,
-                minWidth: 60,
+                justifyContent: 'center',
+                backgroundColor: isActive ? palette.accentSoft : 'transparent',
               }}
             >
-              <View
-                style={{
-                  height: 24,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: isActive ? palette.accentGlow : 'transparent',
-                  shadowOpacity: isActive ? 1 : 0,
-                  shadowRadius: 6,
-                  shadowOffset: { width: 0, height: 0 },
-                }}
-              >
-                <Icon
-                  size={22}
-                  strokeWidth={2}
-                  color={isActive ? palette.accent : T.inkMute}
-                />
-              </View>
-              <Text
-                style={[
-                  sansation,
-                  {
-                    fontSize: 10,
-                    letterSpacing: 2.6,
-                    fontWeight: isActive ? '700' : '500',
-                    color: isActive ? palette.accent : T.inkMute,
-                  },
-                ]}
-              >
-                {t.label}
-              </Text>
+              <Icon
+                size={26}
+                strokeWidth={2}
+                color={isActive ? palette.accent : T.inkMute}
+              />
             </Pressable>
           );
         })}
-      </View>
+      </BlurGlass>
     </View>
   );
 }

@@ -279,7 +279,7 @@ export function BankWallet() {
           <SquareActionTile
             iconKey="arrUp"
             label="Send"
-            onPress={() => router.push('/send')}
+            onPress={() => router.push('/send/flow?tone=silver&wallet=bank')}
           />
           <SquareActionTile
             iconKey="bolt"

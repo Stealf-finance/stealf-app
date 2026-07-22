@@ -8,6 +8,8 @@ type Base = {
   label: string;
   accent: HomeGridAccent;
   iconKey: HomeGridIconKey;
+  /** Detail-screen route; omitted while a card's screen isn't built yet. */
+  route?: string;
 };
 
 export type HomeGridCardVM =
@@ -20,9 +22,9 @@ export const EARN_APY_TEASER = '5.41%';
 /** View-models for the 4 home grid cards, in fixed display order. Pure. */
 export function buildHomeCards(b: HomeBalances): HomeGridCardVM[] {
   return [
-    { key: 'cash', label: 'Cash', accent: 'silver', iconKey: 'bank', valueUSD: b.bankUSD },
-    { key: 'earn', label: 'Earn', accent: 'silver', iconKey: 'invest', teaser: `Up to ${EARN_APY_TEASER} APY` },
-    { key: 'encrypted', label: 'Encrypted Balance', accent: 'gold', iconKey: 'shieldFull', valueUSD: b.encryptedUSD },
-    { key: 'wallet', label: 'Wallet', accent: 'silver', iconKey: 'bolt', valueUSD: b.stealfUSD },
+    { key: 'cash', label: 'Cash', accent: 'silver', iconKey: 'bank', valueUSD: b.bankUSD, route: '/cash' },
+    { key: 'earn', label: 'Earn', accent: 'silver', iconKey: 'invest', teaser: `${EARN_APY_TEASER} APY`, route: '/earn' },
+    { key: 'encrypted', label: 'Encrypted Balance', accent: 'gold', iconKey: 'shieldFull', valueUSD: b.encryptedUSD, route: '/encrypted' },
+    { key: 'wallet', label: 'Wallet', accent: 'silver', iconKey: 'bolt', valueUSD: b.stealfUSD, route: '/wallet' },
   ];
 }

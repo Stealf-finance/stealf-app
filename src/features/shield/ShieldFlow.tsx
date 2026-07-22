@@ -12,7 +12,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
+import { sansation } from '@/src/design-system/typography';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
@@ -58,6 +59,9 @@ export function ShieldFlow({ direction }: Props) {
 
   const isShield = direction === 'shield';
   const tone: Tone = isShield ? 'silver' : 'gold';
+  // On-screen visuals stay silver (like the Send flow); `tone` above still
+  // drives the pending-op card color.
+  const uiTone: Tone = 'silver';
 
   const title = isShield ? 'Shield' : 'Unshield';
 
@@ -266,8 +270,37 @@ export function ShieldFlow({ direction }: Props) {
   };
 
   return (
-    <CenterGlow tone={tone} flat>
-      <PageTitleHeader title={title} onBack={close} />
+    <CenterGlow tone={uiTone} flat>
+      {/* Header aligned with the Send flow: bare chevron back, centered 22pt
+          title, 24 inset. */}
+      <View
+        style={{
+          paddingTop: insets.top,
+          paddingBottom: 14,
+          paddingHorizontal: 24,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        <GlassBackButton onPress={close} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 22,
+                lineHeight: 28,
+                fontWeight: '600',
+                color: T.ink,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
+        <View style={{ width: 26 }} />
+      </View>
 
       {/* Centered glass amount card (asset row moved below) */}
       <View style={{ marginTop: 20 }}>
@@ -306,7 +339,7 @@ export function ShieldFlow({ direction }: Props) {
       <View style={{ paddingBottom: insets.bottom + 12 }}>
         <TiledKeypadPanel
           onKey={onKey}
-          tone={tone}
+          tone={uiTone}
           ctaLabel={insufficient ? 'Insufficient balance' : title}
           onPressCta={onSubmit}
           ctaDisabled={swipeDisabled}

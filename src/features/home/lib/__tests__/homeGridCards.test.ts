@@ -17,7 +17,7 @@ describe('buildHomeCards', () => {
   });
   it('gives Earn a hardcoded APY teaser instead of a value', () => {
     const earn = buildHomeCards(balances).find((c) => c.key === 'earn')!;
-    expect(earn).toMatchObject({ teaser: `Up to ${EARN_APY_TEASER} APY`, accent: 'silver', iconKey: 'invest' });
+    expect(earn).toMatchObject({ teaser: `${EARN_APY_TEASER} APY`, accent: 'silver', iconKey: 'invest' });
     expect('valueUSD' in earn).toBe(false);
   });
   it('uses the correct user-facing labels', () => {

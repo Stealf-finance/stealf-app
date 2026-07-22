@@ -29,15 +29,13 @@ export function AssetSelectRow({
   return (
     <View
       style={{
-        marginHorizontal: 18,
+        marginHorizontal: 24,
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 12,
         paddingLeft: 12,
         paddingRight: 12,
         borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
         backgroundColor: 'rgba(255,255,255,0.05)',
       }}
     >
@@ -69,7 +67,7 @@ export function AssetSelectRow({
                   style={[
                     sansation,
                     {
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: '600',
                       color: T.ink,
                       includeFontPadding: false,

@@ -14,7 +14,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { LoaderRefreshButton } from '@/src/design-system/primitives/LoaderRefreshButton';
 import { Icons } from '@/src/design-system/icons';
 import { sansation } from '@/src/design-system/typography';
@@ -275,7 +275,7 @@ export function ClaimsScreen() {
     >
       <View
         style={{
-          paddingTop: insets.top + 32,
+          paddingTop: insets.top + 16,
           paddingBottom: 12,
           paddingHorizontal: 20,
           flexDirection: 'row',
@@ -283,14 +283,14 @@ export function ClaimsScreen() {
           gap: 14,
         }}
       >
-        <BackBtn onPress={close} />
+        <GlassBackButton onPress={close} />
         <Text
           style={[
             sansation,
             {
               flex: 1,
               textAlign: 'center',
-              fontSize: 32,
+              fontSize: 22,
               fontWeight: '600',
               color: T.ink,
               includeFontPadding: false,
@@ -299,29 +299,9 @@ export function ClaimsScreen() {
         >
           Vault
         </Text>
-        {/* Spacer to keep the title centered now that the close button is gone. */}
-        <View style={{ width: 36 }} />
-      </View>
-
-      <View
-        style={{
-          paddingTop: 8,
-          paddingBottom: 22,
-          paddingHorizontal: 24,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 10,
-        }}
-      >
-        <Kicker color={T.inkDim} style={{ fontSize: 9 }}>
-          Incoming private transfers
-        </Kicker>
-        <LoaderRefreshButton
-          onPress={() => refetch()}
-          spinning={isFetching}
-          size={36}
-        />
+        {/* Refresh, aligned to the right of the title (keeps it centered
+            opposite the back button). */}
+        <LoaderRefreshButton onPress={() => refetch()} spinning={isFetching} size={36} />
       </View>
 
       <ScrollView
@@ -580,7 +560,7 @@ function EmptyState() {
           includeFontPadding: false,
         }}
       >
-        No private transfer on the way
+        No incoming private transfer
       </Kicker>
     </View>
   );

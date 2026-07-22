@@ -335,7 +335,7 @@ export function ProfileHub() {
   const points = user?.points ?? 0;
 
   return (
-    <TonalBackground tone="silver">
+    <TonalBackground tone="silver" intensity={1.6}>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top,
