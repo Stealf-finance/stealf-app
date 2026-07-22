@@ -36,7 +36,7 @@ export type StealthErrorCode =
   | 'RECEIVER_NOT_REGISTERED'
   | 'INSUFFICIENT_BALANCE'
   | 'INSUFFICIENT_FEE_SOL'
-  | 'RELAYER_OUT_OF_FUNDS'
+  | 'CLAIM_FEES_UNAVAILABLE'
   | 'ZK_PROOF_ERROR'
   | 'USER_CANCELLED'
   | 'TX_TIMEOUT'
@@ -91,8 +91,8 @@ const MSG: Record<StealthErrorCode, string> = {
     'Recipient is not a Stealf user yet. Ask them to set up their wallet first.',
   INSUFFICIENT_BALANCE: 'Insufficient balance to complete this transaction.',
   INSUFFICIENT_FEE_SOL: INSUFFICIENT_FEE_SOL_MESSAGE,
-  RELAYER_OUT_OF_FUNDS:
-    'Claiming is temporarily unavailable — the relayer that covers claim fees has run out. Nothing is wrong with your wallet; please try again shortly.',
+  CLAIM_FEES_UNAVAILABLE:
+    "Claiming isn't available right now. The network fees for this claim couldn't be covered — this is on the claim service, not your wallet or balance. Please try again shortly, and contact support if it keeps happening.",
   ZK_PROOF_ERROR: 'Failed to generate the privacy proof. Please try again.',
   USER_CANCELLED: 'Transaction cancelled.',
   TX_TIMEOUT:
@@ -121,9 +121,13 @@ function logsOf(err: unknown): string[] {
 }
 
 /**
- * Operations broadcast by Umbra's relayer, which pays their fees. A lamport
- * shortfall on these is the *relayer's* account, never the user's — telling
- * them to top up their wallet would be wrong and unactionable.
+ * Operations broadcast by Umbra's relayer rather than paid from the user's
+ * wallet. A lamport shortfall while claiming is never the user's account: it's
+ * either the relayer's fee payer or an under-funded protocol account created
+ * mid-claim (a new shared-balance or Arcium computation account). The client
+ * can't tell which — the failing address isn't in the error — and it doesn't
+ * matter for the user, since none of them are fixable by topping up their own
+ * wallet. So the message names the claim service, not a specific account.
  */
 const RELAYER_PAID_OPS: ReadonlySet<StealthOp> = new Set([
   'claimReceived',
@@ -132,7 +136,7 @@ const RELAYER_PAID_OPS: ReadonlySet<StealthOp> = new Set([
 
 function feeCodeFor(op: StealthOp): StealthErrorCode {
   return RELAYER_PAID_OPS.has(op)
-    ? 'RELAYER_OUT_OF_FUNDS'
+    ? 'CLAIM_FEES_UNAVAILABLE'
     : 'INSUFFICIENT_FEE_SOL';
 }
 

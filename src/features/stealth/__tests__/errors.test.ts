@@ -94,21 +94,62 @@ function rpcErrorWithEmbeddedLogs(): Error {
   );
 }
 
+/**
+ * Second observed failure: the shortfall hit an internal protocol account
+ * (before Arcium) while the relayer's own fee payer held ~5 SOL. Proof that a
+ * claim lamport shortfall can't be pinned on the relayer specifically.
+ */
+function rpcErrorInternalAccountShortfall(): Error {
+  return new Error(
+    'tx_pipeline: RPC error: sendTransaction error: ' +
+      JSON.stringify({
+        code: -32002,
+        data: {
+          err: { InstructionError: [2, { Custom: 1 }] },
+          logs: [
+            'Program log: Instruction: ClaimIntoNewSharedBalanceV18',
+            'Program 11111111111111111111111111111111 invoke [2]',
+            'Program 11111111111111111111111111111111 success',
+            'Program 11111111111111111111111111111111 invoke [2]',
+            'Transfer: insufficient lamports 2034996, need 3118080',
+            'Program 11111111111111111111111111111111 failed: custom program error: 0x1',
+          ],
+        },
+        message: 'Transaction simulation failed: ...custom program error: 0x1',
+      }),
+  );
+}
+
 describe('lamport shortfalls are attributed to the right payer', () => {
-  // Claims are broadcast by Umbra's relayer, which pays the fees — that is the
-  // point, a recipient needs no SOL to claim. Telling them to top up their own
-  // wallet is both wrong and unactionable.
+  // A claim is broadcast by Umbra's relayer, and the account short of lamports
+  // is either its fee payer or an under-funded protocol account created
+  // mid-claim — never the user's wallet. Observed both live: one failure
+  // matched the relayer balance exactly, another hit an internal account while
+  // the relayer held 5 SOL. The client can't tell which, so the message must
+  // not name a specific account, and must never tell the user to send SOL.
   it.each(['claimReceived', 'claimSelfToPublic'] as const)(
-    '%s reports RELAYER_OUT_OF_FUNDS, not a user balance problem',
+    '%s reports CLAIM_FEES_UNAVAILABLE, not a user balance problem',
     (op) => {
       const out = parseStealthError(rpcErrorWithEmbeddedLogs(), op);
 
-      expect(out.code).toBe('RELAYER_OUT_OF_FUNDS');
+      expect(out.code).toBe('CLAIM_FEES_UNAVAILABLE');
       expect(out.userMessage).not.toMatch(/insufficient balance/i);
       // Must not instruct the user to send SOL — it would not help.
       expect(out.userMessage).not.toMatch(/send .*sol|top ?up your wallet/i);
     },
   );
+
+  // The internal-account shortfall (relayer funded) must classify identically:
+  // still the claim service's problem, still not the user's balance.
+  it('reports CLAIM_FEES_UNAVAILABLE when an internal account is short, relayer funded', () => {
+    const out = parseStealthError(
+      rpcErrorInternalAccountShortfall(),
+      'claimReceived',
+    );
+
+    expect(out.code).toBe('CLAIM_FEES_UNAVAILABLE');
+    expect(out.userMessage).not.toMatch(/insufficient balance/i);
+  });
 
   // deposit / transfer / withdraw are paid by the user's own wallet.
   it.each(['deposit', 'withdraw'] as const)(
@@ -142,7 +183,7 @@ describe('lamport shortfalls are attributed to the right payer', () => {
 
     expect(parseStealthError(err, 'deposit').code).toBe('INSUFFICIENT_FEE_SOL');
     expect(parseStealthError(err, 'claimReceived').code).toBe(
-      'RELAYER_OUT_OF_FUNDS',
+      'CLAIM_FEES_UNAVAILABLE',
     );
   });
 
