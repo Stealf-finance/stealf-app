@@ -17,6 +17,9 @@ import { apiPost } from '@/src/services/api/client';
 export const SOL_DECIMALS = 9;
 export const JITOSOL_DECIMALS = 9;
 
+/** Mainnet JitoSOL mint — a normal SPL token held directly in the bank wallet. */
+export const JITOSOL_MINT = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
+
 // ---------- Schemas / DTOs ----------
 
 export const BuildStakeResponseSchema = z.object({

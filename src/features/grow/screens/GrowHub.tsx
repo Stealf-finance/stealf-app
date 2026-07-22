@@ -216,6 +216,83 @@ export function GrowHub() {
               </Kicker>
             </LinearGradient>
           </TouchableOpacity>
+
+          {/* JitoSOL liquid staking — entry point into the staking screen */}
+          <TouchableOpacity
+            onPress={() => router.push('/jito')}
+            activeOpacity={0.7}
+            style={{
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.06)',
+              overflow: 'hidden',
+              marginTop: 12,
+              shadowColor: '#000',
+              shadowOpacity: 0.6,
+              shadowRadius: 20,
+              shadowOffset: { width: 0, height: 20 },
+            }}
+          >
+            <LinearGradient
+              colors={['rgba(22,22,24,0.95)', 'rgba(10,10,12,0.98)']}
+              start={{ x: 0.2, y: 0 }}
+              end={{ x: 0.8, y: 1 }}
+              style={{
+                paddingVertical: 20,
+                paddingHorizontal: 22,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 16,
+              }}
+            >
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '45%',
+                }}
+              >
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.04)', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                  style={{ flex: 1 }}
+                />
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: S.ink,
+                    fontWeight: '500',
+                    letterSpacing: -0.16,
+                  }}
+                >
+                  Staking
+                </Text>
+                <Text
+                  style={[
+                    mono,
+                    {
+                      fontSize: 12,
+                      color: S.inkFaint,
+                      marginTop: 3,
+                      letterSpacing: 0.24,
+                    },
+                  ]}
+                >
+                  JitoSOL · Earn native SOL yield
+                </Text>
+              </View>
+              <Kicker color={T.gold} style={{ letterSpacing: 2.2 }}>
+                Stake
+              </Kicker>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </TonalBackground>

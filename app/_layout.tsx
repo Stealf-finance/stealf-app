@@ -154,6 +154,10 @@ function RootLayout() {
                             options={{ presentation: 'modal' }}
                           />
                           <Stack.Screen
+                            name="jito"
+                            options={{ animation: 'slide_from_right' }}
+                          />
+                          <Stack.Screen
                             name="claims"
                             options={{
                               presentation: 'transparentModal',
