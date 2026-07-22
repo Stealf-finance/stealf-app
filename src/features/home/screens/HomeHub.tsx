@@ -1,15 +1,9 @@
 import { useCallback, useState } from 'react';
-import { Dimensions, RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedValue } from 'react-native-reanimated';
 import { useQueryClient } from '@tanstack/react-query';
 import { T } from '@/src/design-system/tokens';
-import { SwipeSlider } from '@/src/design-system/primitives/SwipeSlider';
-import { SWIPE_PAGE_INSET } from '@/src/design-system/primitives/SwipePager';
-import { ProgressOverlay } from '@/src/design-system/primitives/ProgressOverlay';
-import { StealfWalletSetup } from '@/src/features/stealth/screens/StealfWalletSetup';
-import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
-import { useStealfWalletSetupFlow } from '@/src/features/stealth/hooks/useStealfWalletSetupFlow';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
@@ -17,53 +11,20 @@ import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShielded
 import { encryptedBalancesQueries } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { useHomeBalances } from '../hooks/useHomeBalances';
 import { HomeHeader } from '../components/HomeHeader';
-import { BalanceCarousel, HOME_CARDS } from '../components/BalanceCarousel';
-import { HomeActivity } from '../components/HomeActivity';
-import { AssetsList } from '../components/AssetsList';
-import { GetBankAccountCard } from '../components/GetBankAccountCard';
+import { HomeTotal } from '../components/HomeTotal';
+import { HomeGrid } from '../components/HomeGrid';
 import { TonalHalo } from '../components/TonalHalo';
-import type { HomeCardId } from '../lib/homeCardActions';
-
-// Matches the carousel's page width so the bottom slider moves in lockstep.
-const PAGE_WIDTH = Dimensions.get('window').width - SWIPE_PAGE_INSET * 2;
-
-function bottomFor(id: HomeCardId) {
-  switch (id) {
-    case 'bank':
-      return (
-        <>
-          <GetBankAccountCard />
-          <HomeActivity />
-        </>
-      );
-    case 'stealf':
-      return <AssetsList card="stealf" />;
-    case 'encrypted':
-      return <AssetsList card="encrypted" />;
-    default:
-      return null;
-  }
-}
 
 export function HomeHub() {
   const insets = useSafeAreaInsets();
   const balances = useHomeBalances();
   const [hidden, setHidden] = useState(false);
-  const [index, setIndex] = useState(0);
-  // Shared between the carousel (drives it) and the background halo (reads it).
-  const progress = useSharedValue(0);
+  // TonalHalo is driven by a swipe progress value elsewhere; with no carousel
+  // we pin it to 0 so the background stays a static silver wash.
+  const haloProgress = useSharedValue(0);
 
-  // Stealth-wallet setup flow (shared with the Payment-tab gate). When the
-  // user is on the Wallet / Encrypted card with no stealth wallet yet, the
-  // setup screen takes over the Home until they create or import one.
-  const setupFlow = useStealfWalletSetupFlow();
-  const currentCard: HomeCardId = HOME_CARDS[index]?.id ?? 'bank';
-  const needsStealthSetup =
-    !setupFlow.stealfWallet &&
-    (currentCard === 'stealf' || currentCard === 'encrypted');
-
-  // Pull-to-refresh: refetch balance + history for both wallets and the
-  // encrypted/shielded balances (covers all three cards at once).
+  // Pull-to-refresh: refetch balance + history for both wallets plus the
+  // encrypted/shielded balances (covers all cards at once).
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
@@ -106,26 +67,15 @@ export function HomeHub() {
     }
   }, [queryClient, user?.bankWallet, user?.stealfWallet]);
 
-  if (needsStealthSetup) {
-    return (
-      <View style={{ flex: 1, backgroundColor: T.bg }}>
-        <StealfWalletSetup
-          onComplete={setupFlow.handleSetupComplete}
-          onCancel={setupFlow.cancelSetup}
-          loading={setupFlow.loading}
-          generatedMnemonic={setupFlow.pendingMnemonic ?? undefined}
-          onExit={() => setIndex(0)}
-        />
-      </View>
-    );
-  }
-
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <TonalHalo progress={progress} />
+      <TonalHalo progress={haloProgress} />
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 90 }}
+        contentContainerStyle={{
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom + 90,
+        }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -137,42 +87,14 @@ export function HomeHub() {
           />
         }
       >
-        <HomeHeader card={HOME_CARDS[index]?.id ?? 'bank'} />
-        <BalanceCarousel
-          balances={balances}
+        <HomeHeader />
+        <HomeTotal
+          amountUSD={balances.totalUSD}
           hidden={hidden}
           onToggleHidden={() => setHidden((h) => !h)}
-          index={index}
-          onIndexChange={setIndex}
-          progress={progress}
         />
-        {/* Bottom section slides in lockstep with the carousel: Total → the
-            "Get your bank account" card, Bank → recent activity, Wallet /
-            Encrypted → their assets list. */}
-        <View style={{ alignItems: 'center', marginTop: 24 }}>
-          <SwipeSlider
-            progress={progress}
-            pageWidth={PAGE_WIDTH}
-            pages={HOME_CARDS.map((c) => bottomFor(c.id))}
-          />
-        </View>
+        <HomeGrid balances={balances} hidden={hidden} />
       </ScrollView>
-
-      {/* Encrypted-balance section: prompt Umbra registration when the user
-          lands on the Encrypted card (self-hides once registered). */}
-      {currentCard === 'encrypted' ? (
-        <StealthSetupOverlay onClose={() => setIndex(0)} />
-      ) : null}
-
-      {/* Post-setup claim scan (only fires right after a create/import here) */}
-      {setupFlow.syncProgress !== null ? (
-        <ProgressOverlay
-          tone="gold"
-          label="Syncing your wallet"
-          sub="Setup can take up to a minute. Sit tight — we're scanning Umbra Privacy for any encrypted balance tied to your wallet."
-          progress={setupFlow.syncProgress}
-        />
-      ) : null}
     </View>
   );
 }
