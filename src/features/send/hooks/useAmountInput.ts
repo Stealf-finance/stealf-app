@@ -28,11 +28,14 @@ export function useAmountInput({ rate, maxSol, decimals = 9 }: Params) {
 
   const onPressPercent = (pct: number) => {
     const sol = maxSol * pct;
+    // Floor (never round up): toFixed rounds to nearest, so "Max" on a balance
+    // like 1.23456 produced 1.2346 > balance and the guard blocked the send.
     if (inputMode === 'fiat') {
       if (rate <= 0) return;
-      setAmount((sol * rate).toFixed(2));
+      setAmount((Math.floor(sol * rate * 100) / 100).toFixed(2));
     } else {
-      setAmount(sol.toFixed(4).replace(/\.?0+$/, '') || '0');
+      const floored = Math.floor(sol * 1e4) / 1e4;
+      setAmount(floored.toFixed(4).replace(/\.?0+$/, '') || '0');
     }
   };
 

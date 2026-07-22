@@ -5,6 +5,7 @@ import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
 import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
 import { umbraClearSeed } from '@/src/services/umbra/seed';
+import { purgePersistedQueryCache } from '@/src/services/queryClient';
 import { useAuth } from '../context/AuthContext';
 import { purgeTurnkeyState } from '../lib/passkeyHelpers';
 
@@ -27,6 +28,9 @@ export function useLogout() {
       }
       await purgeTurnkeyState();
       queryClient.clear();
+      // Also drop the on-disk persisted snapshot (balance/history/profile incl.
+      // email) — clear() only touches memory.
+      await purgePersistedQueryCache();
       reset();
       posthog?.reset();
     },

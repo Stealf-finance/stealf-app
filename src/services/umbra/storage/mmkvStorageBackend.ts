@@ -29,6 +29,15 @@ export function clearMmkvStorageBackend(namespace: string): void {
   }
 }
 
+/**
+ * Wipe the ENTIRE Umbra MMKV store — every wallet namespace's UTXO/nullifier
+ * shards plus the migration flags. Used on account deletion so no persisted
+ * private-balance state survives on the device.
+ */
+export function clearAllUmbraMmkvStore(): void {
+  for (const k of storage.getAllKeys()) storage.remove(k);
+}
+
 /** True if this wallet's namespace already holds persisted store data. */
 export function hasMmkvStorageBackendData(namespace: string): boolean {
   const prefix = `${namespace}.`;

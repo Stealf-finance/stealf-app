@@ -6,6 +6,8 @@ import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
 import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
 import { umbraClearSeed } from '@/src/services/umbra/seed';
+import { purgePersistedQueryCache } from '@/src/services/queryClient';
+import { clearAllUmbraMmkvStore } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { useAuth } from '../context/AuthContext';
 import { purgeTurnkeyState } from '../lib/passkeyHelpers';
 import { deleteAccountOnBackend } from '../api/onboarding';
@@ -56,6 +58,11 @@ export function useDeleteAccount() {
       }
       await purgeTurnkeyState();
       queryClient.clear();
+      // Account is gone — remove every trace from disk: the persisted query
+      // snapshot (balance/history/profile incl. email) and the full Umbra MMKV
+      // store (all UTXO/nullifier shards). clear() alone only touches memory.
+      await purgePersistedQueryCache();
+      clearAllUmbraMmkvStore();
       reset();
       posthog?.reset();
     },

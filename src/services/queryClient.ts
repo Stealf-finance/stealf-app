@@ -46,3 +46,20 @@ export const PERSIST_OPTIONS = {
     shouldDehydrateQuery: shouldPersistQuery,
   },
 } as const;
+
+/**
+ * Remove the persisted React Query snapshot from disk (AsyncStorage).
+ *
+ * `queryClient.clear()` only drops the in-memory cache — the persisted copy
+ * (wallet balance/history, sol-price, and the user profile incl. email) would
+ * otherwise survive on disk after logout / account deletion and be visible to
+ * the next account on the device before a refetch. Call this alongside
+ * `queryClient.clear()` when tearing down a session.
+ */
+export async function purgePersistedQueryCache(): Promise<void> {
+  try {
+    await persister.removeClient();
+  } catch {
+    // Best-effort; a missing snapshot is fine.
+  }
+}
