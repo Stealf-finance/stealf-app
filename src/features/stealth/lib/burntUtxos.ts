@@ -41,11 +41,18 @@ export async function loadBurntUtxosForCurrentWallet(
   if (loadedForKey === privateKeyB58) return;
   burntUtxoIds.clear();
   const safe = privateKeyB58.replace(/[^A-Za-z0-9._-]/g, '_');
-  const key = `${BURNT_UTXOS_KEY_PREFIX}${safe}`;
   try {
     // Lazy import keeps `expo-secure-store` (and RN) out of the module graph
     // at load time, while still routing through the centralized service.
-    const { getSecure } = await import('@/src/services/auth/secureStore');
+    const [{ getSecure }, { NETWORK }] = await Promise.all([
+      import('@/src/services/auth/secureStore'),
+      import('@/src/services/umbra/client'),
+    ]);
+    // Network-scope the key. Burnt-UTXO IDs are positional (tree:leaf) merkle
+    // coordinates that reset per Umbra deployment, so a devnet blacklist must
+    // NOT be read on mainnet — it would silently hide legitimate mainnet notes
+    // landing at indices the wallet already burnt on devnet.
+    const key = `${BURNT_UTXOS_KEY_PREFIX}${NETWORK}_${safe}`;
     const stored = await getSecure(key);
     if (stored) {
       const ids: string[] = JSON.parse(stored);
@@ -60,9 +67,13 @@ export async function loadBurntUtxosForCurrentWallet(
 export async function persistBurntUtxos(): Promise<void> {
   if (!loadedForKey) return;
   const safe = loadedForKey.replace(/[^A-Za-z0-9._-]/g, '_');
-  const key = `${BURNT_UTXOS_KEY_PREFIX}${safe}`;
   try {
-    const { setSecure } = await import('@/src/services/auth/secureStore');
+    const [{ setSecure }, { NETWORK }] = await Promise.all([
+      import('@/src/services/auth/secureStore'),
+      import('@/src/services/umbra/client'),
+    ]);
+    // Must match the network-scoped key used by loadBurntUtxosForCurrentWallet.
+    const key = `${BURNT_UTXOS_KEY_PREFIX}${NETWORK}_${safe}`;
     await setSecure(key, JSON.stringify(Array.from(burntUtxoIds)));
   } catch {
     // Best-effort.

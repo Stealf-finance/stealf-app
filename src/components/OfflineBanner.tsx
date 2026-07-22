@@ -75,7 +75,7 @@ export function OfflineBanner() {
     >
       <View style={styles.pill}>
         <View style={styles.dot} />
-        <Text style={styles.text}>You're offline</Text>
+        <Text style={styles.text}>You&apos;re offline</Text>
       </View>
     </Animated.View>
   );

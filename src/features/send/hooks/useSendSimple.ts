@@ -46,7 +46,7 @@ export class GuardError extends Error {
 }
 
 export function useSendSimple() {
-  const { signAndSendTransaction, wallets } = useTurnkey();
+  const { signAndSendTransaction, wallets, refreshWallets } = useTurnkey();
   const queryClient = useQueryClient();
   const { EXPO_PUBLIC_SOLANA_RPC_URL } = getEnv();
 
@@ -98,10 +98,20 @@ export function useSendSimple() {
       const compiled = compileTransaction(message);
 
       if (walletSource === 'bank') {
-        const wallet = wallets?.[0];
-        const walletAccount = wallet?.accounts?.find(
+        let walletAccount = wallets?.[0]?.accounts?.find(
           (account) => account.address === fromAddress,
         );
+        if (!walletAccount) {
+          // The reactive `wallets` array is often still empty right after a
+          // cold start (the Turnkey session hydrates asynchronously). Mirror
+          // the sibling signing hooks (useXstocksTrade / useUsdcYield /
+          // useEvmAddress) and force a refresh before failing, so a valid bank
+          // account isn't rejected on the first send after relaunch.
+          const refreshed = await refreshWallets();
+          walletAccount = refreshed?.[0]?.accounts?.find(
+            (account) => account.address === fromAddress,
+          );
+        }
         if (!walletAccount) {
           throw new Error(`Wallet account not found for address: ${fromAddress}`);
         }
