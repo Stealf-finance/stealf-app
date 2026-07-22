@@ -61,10 +61,10 @@ export function AmountCardTiles({
   return (
       <View
         style={{
-          marginHorizontal: 18,
+          marginHorizontal: 24,
           paddingTop: compact ? 0 : 18,
           paddingBottom: compact ? 6 : 20,
-          paddingHorizontal: 18,
+          paddingHorizontal: 0,
           alignItems: 'center',
         }}
       >

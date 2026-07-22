@@ -117,19 +117,19 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="moove"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="shield"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="unshield"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="card"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="lock"
@@ -137,23 +137,47 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="send"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="receive"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
+                            name="send-choice"
+                            options={{
+                              presentation: 'transparentModal',
+                              animation: 'fade',
+                              contentStyle: { backgroundColor: 'transparent' },
+                            }}
+                          />
+                          <Stack.Screen
+                            name="receive-choice"
+                            options={{
+                              presentation: 'transparentModal',
+                              animation: 'fade',
+                              contentStyle: { backgroundColor: 'transparent' },
+                            }}
+                          />
+                          <Stack.Screen
+                            name="receive-qr"
+                            options={{
+                              presentation: 'transparentModal',
+                              animation: 'fade',
+                              contentStyle: { backgroundColor: 'transparent' },
+                            }}
                           />
                           <Stack.Screen
                             name="claim-pending"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="transactions"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="account-details"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="claims"
@@ -169,15 +193,15 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="tx/[id]"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="profile/private-key"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="asset-picker"
-                            options={{ presentation: 'modal' }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                         </Stack>
                         <ToastHost />

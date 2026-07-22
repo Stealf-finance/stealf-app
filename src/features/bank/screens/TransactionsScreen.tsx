@@ -2,9 +2,9 @@ import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { TxRow } from '@/src/design-system/primitives/TxRow';
-import { sansation, serif } from '@/src/design-system/typography';
+import { sansation } from '@/src/design-system/typography';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
@@ -16,10 +16,10 @@ type WalletKind = 'bank' | 'stealth';
 
 const CONFIG: Record<
   WalletKind,
-  { title: string; tone: Tone }
+  { title: string; subtitle: string; tone: Tone }
 > = {
-  bank: { title: 'Transactions', tone: 'silver' },
-  stealth: { title: 'Transactions', tone: 'gold' },
+  bank: { title: 'History', subtitle: 'History from Cash account', tone: 'silver' },
+  stealth: { title: 'History', subtitle: 'History from your wallet', tone: 'gold' },
 };
 
 function formatTxRow(tx: Transaction): {
@@ -38,7 +38,13 @@ function formatTxRow(tx: Transaction): {
   };
 }
 
-export function TransactionsScreen() {
+export function TransactionsScreen({
+  embedded = false,
+}: {
+  /** When rendered as a tab (History), hide the back button and pad the
+   *  bottom for the floating nav. */
+  embedded?: boolean;
+} = {}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -54,39 +60,48 @@ export function TransactionsScreen() {
   const txs = history?.transactions ?? [];
 
   return (
-    <CenterGlow tone={config.tone} flat>
+    <CenterGlow tone={config.tone} flat topGlow>
       <View
         style={{
-          paddingTop: insets.top,
+          paddingTop: embedded ? insets.top + 8 : 20,
           paddingBottom: 14,
-          paddingHorizontal: 16,
+          paddingHorizontal: 24,
           flexDirection: 'row',
           alignItems: 'center',
         }}
       >
-        <BackBtn onPress={() => router.back()} />
-        <Text
-          style={[
-            sansation,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 32,
-              fontWeight: '600',
-              color: T.ink,
-              includeFontPadding: false,
-              marginRight: 36,
-            },
-          ]}
-        >
-          {config.title}
-        </Text>
+        {embedded ? null : <GlassBackButton onPress={() => router.back()} />}
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 22,
+                lineHeight: 28,
+                fontWeight: '600',
+                color: T.ink,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {config.title}
+          </Text>
+          <Text
+            style={[
+              sansation,
+              { fontSize: 14, lineHeight: 20, color: T.inkDim, marginTop: 4 },
+            ]}
+          >
+            {config.subtitle}
+          </Text>
+        </View>
+        {embedded ? null : <View style={{ width: 26 }} />}
       </View>
 
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 24,
-          paddingBottom: insets.bottom + 32,
+          paddingBottom: insets.bottom + (embedded ? 96 : 32),
         }}
         showsVerticalScrollIndicator={false}
       >
@@ -154,10 +169,9 @@ function EmptyState({
     >
       <Text
         style={[
-          serif,
+          sansation,
           {
             fontSize: 15,
-            fontStyle: 'italic',
             color: faintColor,
             textAlign: 'center',
           },

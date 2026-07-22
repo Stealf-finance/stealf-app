@@ -64,7 +64,7 @@ export function PillBtn({
           start={{ x: 0, y: 0 }}
           end={{ x: 0.6, y: 1 }}
           style={{
-            paddingVertical: 16,
+            paddingVertical: 20,
             paddingHorizontal: 22,
             flexDirection: 'row',
             alignItems: 'center',
@@ -115,7 +115,7 @@ export function PillBtn({
       accessibilityLabel={accessibilityLabel ?? label}
       style={[
         {
-          paddingVertical: 16,
+          paddingVertical: 20,
           paddingHorizontal: 22,
           borderRadius: 100,
           backgroundColor: 'rgba(255,255,255,0.035)',

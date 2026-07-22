@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 
@@ -17,6 +18,11 @@ type Props = {
    * screens where the visual hierarchy comes entirely from glass surfaces.
    */
   flat?: boolean;
+  /**
+   * Render the pronounced silver top-to-black gradient. Opt-in — reserved for
+   * the main screens (e.g. History); secondary/flow screens stay pure black.
+   */
+  topGlow?: boolean;
 };
 
 const GLOW: Record<Tone, string> = {
@@ -39,6 +45,7 @@ export function CenterGlow({
   tone = 'silver',
   intensity = 1,
   flat = false,
+  topGlow = false,
   children,
 }: Props) {
   const { width, height } = useWindowDimensions();
@@ -47,6 +54,23 @@ export function CenterGlow({
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
+      {/* Silver top glow (opt-in via topGlow) — FAB silver (#e8e8ea → #9a9a9f)
+          fading to the pure-black bg. Only the main screens enable it. */}
+      {topGlow ? (
+        <LinearGradient
+          colors={[
+            'rgba(232,232,234,0.28)',
+            'rgba(232,232,234,0.20)',
+            'rgba(198,199,206,0.12)',
+            'rgba(168,169,176,0.06)',
+            'rgba(154,154,159,0.025)',
+            'rgba(0,0,0,0)',
+          ]}
+          locations={[0, 0.08, 0.18, 0.28, 0.4, 1]}
+          pointerEvents="none"
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+      ) : null}
       {flat ? null : (
         <Svg
           width={width}

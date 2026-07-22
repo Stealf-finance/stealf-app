@@ -5,7 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { sansation, serif } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
@@ -101,37 +101,40 @@ export function AssetPickerScreen() {
 
   return (
     <CenterGlow tone="silver" flat>
+      {/* Header aligned with the Send flow: bare chevron back button, centered
+          22pt title, 24 horizontal inset. */}
       <View
         style={{
           paddingTop: insets.top,
           paddingBottom: 14,
-          paddingHorizontal: 16,
+          paddingHorizontal: 24,
           flexDirection: 'row',
           alignItems: 'center',
         }}
       >
-        <BackBtn onPress={close} />
-        <Text
-          style={[
-            sansation,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 32,
-              fontWeight: '600',
-              color: T.ink,
-              includeFontPadding: false,
-              marginRight: 36,
-            },
-          ]}
-        >
-          Select asset
-        </Text>
+        <GlassBackButton onPress={close} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 22,
+                lineHeight: 28,
+                fontWeight: '600',
+                color: T.ink,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            Select asset
+          </Text>
+        </View>
+        <View style={{ width: 26 }} />
       </View>
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: 20,
+          paddingHorizontal: 24,
           paddingTop: 8,
           paddingBottom: insets.bottom + 32,
         }}
@@ -187,8 +190,6 @@ export function AssetPickerScreen() {
                 width: '100%',
                 marginBottom: 8,
                 borderRadius: 18,
-                borderWidth: 1,
-                borderColor: palette.hairline,
                 overflow: 'hidden',
               }}
             >
@@ -234,7 +235,7 @@ export function AssetPickerScreen() {
                       sansation,
                       {
                         marginTop: 3,
-                        fontSize: 12,
+                        fontSize: 13,
                         color: palette.inkFaint,
                         includeFontPadding: false,
                       },

@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Clipboard from 'expo-clipboard';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -15,14 +16,10 @@ import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { MoveConfirm } from '@/src/features/moove/components/MoveConfirm';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
-import { Icons } from '@/src/design-system/icons';
-import {
-  sansation,
-  serif,
-} from '@/src/design-system/typography';
+import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
-import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { Asset } from '@/src/features/send/components/AssetPill';
 import {
   useSelectedAsset,
@@ -121,12 +118,16 @@ type Props = { tone?: Tone; wallet?: WalletSource; mode?: SendMode };
 export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const S = txPalette(tone);
+  // The send flow renders in the silver theme regardless of the caller's tone
+  // (private sends previously themed gold — silver throughout now). The
+  // original `tone` prop is still used below only for the wallet-source logic.
+  const uiTone: Tone = 'silver';
+  const S = txPalette(uiTone);
   const { user, isAuthenticated } = useAuth();
   const walletSource: WalletSource =
     wallet ?? (tone === 'gold' ? 'stealth' : 'bank');
   const isPrivate = mode === 'private';
-  const title = isPrivate ? 'Private transfer' : 'Simple transfer';
+  const title = isPrivate ? 'Private send' : 'Send';
   // Which wallet's tokens the asset picker should show.
   const pickerWalletParam: 'stealth' | 'encrypted' = isPrivate
     ? 'encrypted'
@@ -429,8 +430,50 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   };
 
   return (
-    <CenterGlow tone={tone}>
-      <PageTitleHeader title={title} onBack={handleBack} />
+    <CenterGlow tone={uiTone} flat>
+      {/* Header: flat background, bare chevron back button, centered 22pt
+          title. paddingTop uses insets.top so the title sits near the
+          wallet-detail title height (see docs/screen-patterns.md). The title
+          is step-aware: recipient step vs amount step (with the recipient
+          echoed underneath). */}
+      <View
+        style={{
+          paddingTop: insets.top,
+          paddingBottom: 14,
+          paddingHorizontal: 24,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        <GlassBackButton onPress={handleBack} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 22,
+                lineHeight: 28,
+                fontWeight: '600',
+                color: T.ink,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {step === 1 ? title : 'Enter amount'}
+          </Text>
+          {step !== 1 && recipient ? (
+            <Text
+              style={[
+                sansation,
+                { fontSize: 14, lineHeight: 20, color: T.inkDim, marginTop: 4 },
+              ]}
+            >
+              to: {truncateAddress(recipient.name)}
+            </Text>
+          ) : null}
+        </View>
+        <View style={{ width: 26 }} />
+      </View>
 
       <Animated.View style={[{ flex: 1 }, contentStyle]}>
         {step === 1 && asset && (
@@ -461,27 +504,13 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                     bottom: 0,
                   }}
                 />
-                <Text
-                  style={[
-                    serif,
-                    {
-                      fontStyle: 'italic',
-                      fontSize: 20,
-                      color: S.accent,
-                      lineHeight: 22,
-                      includeFontPadding: false,
-                    },
-                  ]}
-                >
-                  @
-                </Text>
                 <TextInput
                   value={recipientQuery}
                   onChangeText={(v) => {
                     setRecipientQuery(v);
                     if (recipientError) setRecipientError(null);
                   }}
-                  placeholder="address or name.sol"
+                  placeholder="Enter Solana address"
                   placeholderTextColor={S.inkFaint}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -494,11 +523,17 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                 />
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Scan QR"
+                  accessibilityLabel="Paste from clipboard"
                   hitSlop={6}
+                  onPress={async () => {
+                    const clip = (await Clipboard.getStringAsync()).trim();
+                    if (!clip) return;
+                    setRecipientQuery(clip);
+                    if (recipientError) setRecipientError(null);
+                  }}
                   style={{
-                    width: 34,
                     height: 34,
+                    paddingHorizontal: 14,
                     borderRadius: 17,
                     backgroundColor: 'rgba(255,255,255,0.04)',
                     borderWidth: 1,
@@ -507,7 +542,14 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                     justifyContent: 'center',
                   }}
                 >
-                  <Icons.qr size={16} color={S.accent} />
+                  <Text
+                    style={[
+                      sansation,
+                      { fontSize: 13, fontWeight: '600', color: S.accent },
+                    ]}
+                  >
+                    Paste
+                  </Text>
                 </Pressable>
               </View>
               <View
@@ -544,7 +586,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                     <RecipientRow
                       key={r.name}
                       {...r}
-                      tone={tone}
+                      tone={uiTone}
                       onPress={() => {
                         setRecipient(r);
                         transitionTo(2, 'forward');
@@ -565,7 +607,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             >
               <PillBtn
                 variant="primary"
-                tone={tone}
+                tone={uiTone}
                 label={
                   fromAddress && recipientQuery.trim() === fromAddress
                     ? "Can't send to yourself"
@@ -617,7 +659,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             <View style={{ paddingBottom: insets.bottom + 12 }}>
               <TiledKeypadPanel
                 onKey={onKey}
-                tone={tone}
+                tone={uiTone}
                 ctaLabel={
                   exceedsBalance && amountNum > 0
                     ? 'Insufficient balance'
@@ -639,7 +681,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
           visible={step === 3}
           onClose={() => setStep(2)}
           onDone={finishToOrigin}
-          tone={tone}
+          tone={uiTone}
           title={title}
           slideLabel="Slide to send"
           fiat={Number(fiatValue)}

@@ -110,6 +110,12 @@ export const Icons = {
   bank: make(
     <Path d="M3 9l9-6 9 6M5 9v10h14V9M3 21h18M9 13v3M12 13v3M15 13v3" />,
   ),
+  dollar: make(
+    <>
+      <Path d="M12 2v20" />
+      <Path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+    </>,
+  ),
   bolt: make(<Path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />),
   swap: make(<Path d="M7 10l-4-4 4-4M3 6h14M17 14l4 4-4 4M21 18H7" />),
   swapV: make(<Path d="M10 7L7 4 4 7M7 4v14M14 17l3 3 3-3M17 20V6" />),
