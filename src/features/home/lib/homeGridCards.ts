@@ -23,8 +23,8 @@ export const EARN_APY_TEASER = '5.41%';
 export function buildHomeCards(b: HomeBalances): HomeGridCardVM[] {
   return [
     { key: 'cash', label: 'Cash', accent: 'silver', iconKey: 'bank', valueUSD: b.bankUSD, route: '/cash' },
-    { key: 'earn', label: 'Earn', accent: 'silver', iconKey: 'invest', teaser: `${EARN_APY_TEASER} APY`, route: '/earn' },
-    { key: 'encrypted', label: 'Encrypted Balance', accent: 'gold', iconKey: 'shieldFull', valueUSD: b.encryptedUSD, route: '/encrypted' },
     { key: 'wallet', label: 'Wallet', accent: 'silver', iconKey: 'bolt', valueUSD: b.stealfUSD, route: '/wallet' },
+    { key: 'encrypted', label: 'Encrypted Balance', accent: 'gold', iconKey: 'shieldFull', valueUSD: b.encryptedUSD, route: '/encrypted' },
+    { key: 'earn', label: 'Earn', accent: 'silver', iconKey: 'invest', teaser: `${EARN_APY_TEASER} APY`, route: '/earn' },
   ];
 }

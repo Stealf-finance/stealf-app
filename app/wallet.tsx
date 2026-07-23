@@ -8,9 +8,10 @@ import { SOL_ICON_URI } from '@/src/constants/solana';
 const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
 
 const ACTIONS: QuickAction[] = [
+  { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send/flow?tone=silver&wallet=stealth' },
+  { key: 'move', label: 'Move', iconKey: 'moove' , route: '/moove'}, // not built yet
   { key: 'swap', label: 'Swap', iconKey: 'swap' }, // not built yet
-  { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send/flow?tone=silver&wallet=bank' },
-  { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive' },
+  { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive-qr?wallet=stealth' },
 ];
 
 export default function WalletRoute() {

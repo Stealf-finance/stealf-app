@@ -71,7 +71,7 @@ function HomeGridCard({
             source={image}
             contentFit="contain"
             cachePolicy="memory-disk"
-            style={{ width: 32, height: 32 }}
+            style={{ width: 40, height: 40 }}
           />
         ) : (
           <View

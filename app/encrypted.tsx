@@ -7,9 +7,10 @@ const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
 
 const ACTIONS: QuickAction[] = [
   { key: 'shield', label: 'Shield', iconKey: 'shieldFull', route: '/shield' },
+  { key: 'move', label: 'Move', iconKey: 'moove', route: '/moove' },
   { key: 'unshield', label: 'Unshield', iconKey: 'shieldSplit', route: '/unshield' },
-  { key: 'swap', label: 'Swap', iconKey: 'swap' }, // not built yet
-  { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send/flow?mode=private&wallet=stealth' },
+  { key: 'swap', label: 'Private Swap', iconKey: 'swap' }, // not built yet
+  { key: 'send', label: 'Private Send', iconKey: 'arrUpRight', route: '/send/flow?mode=private&wallet=stealth' },
 ];
 
 export default function EncryptedScreen() {
