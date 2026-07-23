@@ -7,6 +7,7 @@ import { useLocalSearchParams } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import { Icons } from '@/src/design-system/icons';
+import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
@@ -52,10 +53,11 @@ export default function ReceiveQr() {
         />
       </Animated.View>
 
+      {/* Panel — opaque, Home-cards color (matches ChoiceSheet). */}
       <Animated.View
         entering={SlideInDown.duration(260)}
         style={{
-          backgroundColor: T.bgRaised2,
+          backgroundColor: '#0d0d0d',
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
           paddingTop: 24,
@@ -96,26 +98,20 @@ export default function ReceiveQr() {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 24 }}>
-          <Text style={[sansation, { fontSize: 16, fontWeight: '600', color: T.ink }]}>Cash</Text>
+          <Text style={[sansation, { fontSize: 16, fontWeight: '600', color: T.ink }]}>
+            {isStealth ? 'Wallet' : 'Cash'}
+          </Text>
           <Text style={[sansation, { fontSize: 15, color: T.inkDim }]}>· {short}</Text>
         </View>
 
         <View style={{ gap: 12 }}>
-          <Pressable
+          {/* Silver primary pill — same as the flows' Continue buttons */}
+          <PillBtn
+            variant="primary"
+            tone="silver"
+            label={copied ? 'Copied' : 'Copy Address'}
             onPress={copy}
-            accessibilityRole="button"
-            accessibilityLabel="Copy address"
-            style={{
-              paddingVertical: 16,
-              borderRadius: 100,
-              backgroundColor: T.gold,
-              alignItems: 'center',
-            }}
-          >
-            <Text style={[sansation, { fontSize: 16, fontWeight: '700', color: '#0a0a0a' }]}>
-              {copied ? 'Copied' : 'Copy Address'}
-            </Text>
-          </Pressable>
+          />
           <Pressable
             onPress={share}
             accessibilityRole="button"

@@ -1,19 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
-import {
-  Pressable,
-  ScrollView,
-  Text,
-  View,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-} from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  interpolateColor,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { Modal, Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import {
   maxSpendableSol,
@@ -24,19 +12,23 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
-import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
+import { Icons } from '@/src/design-system/icons';
+import { sansation, serif } from '@/src/design-system/typography';
+import { ChoiceSheet } from '@/src/features/wallet-detail/ChoiceSheet';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
-import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
-import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
-import { MoveFromToCards } from '@/src/features/moove/components/MoveFromToCards';
+import {
+  ACCOUNT_IMAGE,
+  MoveAccountCards,
+} from '@/src/features/moove/components/MoveAccountCards';
 import { MoveConfirm } from '@/src/features/moove/components/MoveConfirm';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
   setSelectedAsset,
   useSelectedAsset,
 } from '@/src/features/send/lib/selectedAssetStore';
-import { Tone, txPalette } from '@/src/design-system/palettes';
+import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
@@ -91,21 +83,21 @@ type DirectionConfig = {
 
 const CONFIG: Record<MoveDirection, DirectionConfig> = {
   'bank-to-shielded': {
-    title: 'Virtual bank account to encrypted balance',
-    fromLabel: 'Virtual bank account',
+    title: 'Cash account to encrypted balance',
+    fromLabel: 'Cash account',
     toLabel: 'Encrypted balance',
     cta: 'Slide to move',
   },
   'shielded-to-bank': {
-    title: 'Encrypted balance to virtual bank account',
+    title: 'Encrypted balance to Cash account',
     fromLabel: 'Encrypted balance',
-    toLabel: 'Virtual bank account',
+    toLabel: 'Cash account',
     cta: 'Slide to move',
   },
   'stealth-to-bank': {
-    title: 'Wallet to virtual bank account',
+    title: 'Wallet to Cash account',
     fromLabel: 'Wallet',
-    toLabel: 'Virtual bank account',
+    toLabel: 'Cash account',
     cta: 'Slide to move',
   },
 };
@@ -115,9 +107,6 @@ const DIRECTIONS: MoveDirection[] = [
   'shielded-to-bank',
   'stealth-to-bank',
 ];
-
-// Height of one page in the vertical From/To carousel.
-const DIR_ITEM_H = 92;
 
 // Flat Solana network fee (same value the send flow uses).
 const NETWORK_FEE_SOL = 0.000005;
@@ -135,28 +124,6 @@ function formatBalance(amount: number): string {
   return amount.toFixed(4).replace(/\.?0+$/, '');
 }
 
-/** A single pagination dot that smoothly elongates + tints toward the accent
- *  as the carousel scrolls onto its page (driven by a 0..n-1 progress). */
-function DirDot({
-  index,
-  progress,
-  accent,
-}: {
-  index: number;
-  progress: SharedValue<number>;
-  accent: string;
-}) {
-  const style = useAnimatedStyle(() => {
-    const t = Math.max(0, 1 - Math.abs(progress.value - index));
-    return {
-      height: 6 + t * 12,
-      opacity: 0.4 + t * 0.6,
-      backgroundColor: interpolateColor(t, [0, 1], ['#6a6a70', accent]),
-    };
-  });
-  return <Animated.View style={[{ width: 6, borderRadius: 3 }, style]} />;
-}
-
 export function MoveFlow() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -167,26 +134,12 @@ export function MoveFlow() {
   );
 
   const [directionIndex, setDirectionIndex] = useState(initialIndex);
-  const dirScrollRef = useRef<ScrollView>(null);
-  const dirProgress = useSharedValue(initialIndex);
   const direction = DIRECTIONS[directionIndex];
-
-  const onDirScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const i = Math.round(e.nativeEvent.contentOffset.y / DIR_ITEM_H);
-    if (i !== directionIndex && i >= 0 && i < DIRECTIONS.length) {
-      setDirectionIndex(i);
-    }
-  };
-
-  useEffect(() => {
-    dirScrollRef.current?.scrollTo({
-      y: directionIndex * DIR_ITEM_H,
-      animated: true,
-    });
-  }, [directionIndex]);
+  // Source-account picker sheet — the source uniquely determines the
+  // direction (each account is the `from` of exactly one direction).
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const tone: Tone = direction === 'shielded-to-bank' ? 'gold' : 'silver';
-  const palette = txPalette(tone);
 
   const supportsMultiToken = true;
 
@@ -292,6 +245,13 @@ export function MoveFlow() {
   const secondaryAmount = `~${secondaryBase}`;
 
   const fromBalanceLabel = `${formatBalance(sourceBalance)} ${assetSymbol}`;
+
+  // Hero amount split — mirrors AmountCardTiles (Shield/Send): detached $,
+  // digit-count-adaptive body size.
+  const heroHasDollar = primaryDisplay.startsWith('$');
+  const heroBody = heroHasDollar ? primaryDisplay.slice(1) : primaryDisplay;
+  const heroDigits = heroBody.replace(/[^0-9]/g, '').length;
+  const heroSize = heroDigits >= 10 ? 48 : heroDigits >= 8 ? 60 : 72;
 
   // Confirmation step (slide-to-confirm) after the amount entry.
   const [step, setStep] = useState<'amount' | 'confirm'>('amount');
@@ -533,124 +493,220 @@ export function MoveFlow() {
 
   return (
     <CenterGlow tone={tone} flat>
-      <PageTitleHeader title="Move" onBack={handleBack} />
-
-      {/* Upper content flexes so the keypad + CTA always keep their space at
-          the bottom; content stays grouped up near the title. */}
-      <View style={{ flex: 1 }}>
-        {/* Amount card (no asset row — the From/To cards carry the context) */}
-        <View style={{ marginTop: 4 }}>
-          <AmountCardTiles
-          iconSource={{ uri: iconUri }}
-          tokenLabel={assetSymbol}
-          primaryAmount={primaryDisplay}
-          secondaryAmount={secondaryAmount}
-          inputMode={inputMode}
-          onToggleMode={onToggleMode}
-          toggleDisabled={rate <= 0}
-          showAssetRow={false}
-          compact
-        />
-      </View>
-
-      {/* Vertical From → To carousel: swipe up/down to cycle the 3 valid
-          directions; vertical dots on the right mirror the selection. */}
+      {/* Header: bare chevron + centered 22pt title (SendFlow archetype,
+          shared pageSheet routes — see docs/screen-patterns.md). */}
       <View
         style={{
-          marginBottom: 8,
+          paddingTop: insets.top,
+          paddingBottom: 14,
+          paddingHorizontal: 24,
           flexDirection: 'row',
           alignItems: 'center',
         }}
       >
-        <ScrollView
-          ref={dirScrollRef}
-          style={{ flex: 1, height: DIR_ITEM_H }}
-          pagingEnabled
-          showsVerticalScrollIndicator={false}
-          contentOffset={{ x: 0, y: initialIndex * DIR_ITEM_H }}
-          scrollEventThrottle={16}
-          onScroll={(e) => {
-            dirProgress.value = e.nativeEvent.contentOffset.y / DIR_ITEM_H;
-          }}
-          onMomentumScrollEnd={onDirScrollEnd}
-        >
-          {DIRECTIONS.map((dir) => {
-            const acc = DIR_ACCOUNTS[dir];
-            return (
-              <View
-                key={dir}
-                style={{
-                  height: DIR_ITEM_H,
-                  justifyContent: 'center',
-                  paddingLeft: 18,
-                }}
-              >
-                <MoveFromToCards
-                  tone={dir === 'shielded-to-bank' ? 'gold' : 'silver'}
-                  fromLabel={CONFIG[dir].fromLabel}
-                  fromBalance={`$${(balForAccount(acc.from) * rate).toFixed(2)}`}
-                  toLabel={CONFIG[dir].toLabel}
-                  toBalance={`$${(balForAccount(acc.to) * rate).toFixed(2)}`}
-                />
-              </View>
-            );
-          })}
-        </ScrollView>
-
-        {/* Vertical pagination dots */}
-        <View
-          style={{
-            width: 24,
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 7,
-          }}
-        >
-          {DIRECTIONS.map((dir, i) => (
-            <Pressable
-              key={dir}
-              onPress={() => setDirectionIndex(i)}
-              accessibilityRole="button"
-              accessibilityLabel={`Direction ${i + 1}`}
-              hitSlop={8}
-            >
-              <DirDot index={i} progress={dirProgress} accent={palette.accent} />
-            </Pressable>
-          ))}
+        <GlassBackButton onPress={handleBack} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 22,
+                lineHeight: 28,
+                fontWeight: '600',
+                color: T.ink,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            Move
+          </Text>
         </View>
+        <View style={{ width: 26 }} />
       </View>
 
-      {/* Asset selector + Use Max */}
-      <View style={{ marginBottom: 8 }}>
-        <AssetSelectRow
-          iconSource={{ uri: iconUri }}
-          name={assetSymbol}
-          balanceLabel={fromBalanceLabel}
-          onPressSelect={
-            supportsMultiToken
-              ? () => router.push(`/asset-picker?wallet=${pickerWalletParam}`)
-              : undefined
-          }
-          onPressMax={() => onPressPercent(1)}
-        />
+      {/* Flat block structure — direct children of CenterGlow, exactly like
+          ShieldFlow (an intermediate flex:1 wrapper made the content paint
+          over the keypad). */}
+      {/* Hero amount — same anatomy, sizes AND vertical position as the
+          Shield amount card: fixed 38pt below the header (20 + the card's
+          internal 18). */}
+      <View style={{ marginTop: 38, alignItems: 'center', paddingHorizontal: 24 }}>
+          <View style={{ alignSelf: 'stretch' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'baseline',
+                justifyContent: 'center',
+              }}
+            >
+            {heroHasDollar ? (
+              <Text
+                style={[
+                  serif,
+                  {
+                    fontStyle: 'italic',
+                    fontSize: 38,
+                    lineHeight: 38,
+                    color: T.inkDim,
+                    includeFontPadding: false,
+                  },
+                ]}
+              >
+                $
+              </Text>
+            ) : null}
+            <Text
+              numberOfLines={1}
+              style={[
+                sansation,
+                {
+                  fontSize: heroSize,
+                  lineHeight: heroSize,
+                  color: T.ink,
+                  letterSpacing: heroSize * -0.04,
+                  includeFontPadding: false,
+                },
+              ]}
+            >
+              {heroBody}
+            </Text>
+            {!heroHasDollar ? (
+              <Text
+                style={[
+                  sansation,
+                  {
+                    fontSize: 16,
+                    color: T.inkFaint,
+                    marginLeft: 6,
+                    includeFontPadding: false,
+                  },
+                ]}
+              >
+                {assetSymbol}
+              </Text>
+            ) : null}
+            </View>
+            {/* Toggle arrows — absolute right, vertically centered against
+                the number (same as Shield). */}
+            <Pressable
+              onPress={onToggleMode}
+              disabled={rate <= 0}
+              accessibilityRole="button"
+              accessibilityLabel="Switch between fiat and token amount"
+              hitSlop={8}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                bottom: 0,
+                justifyContent: 'center',
+                opacity: rate <= 0 ? 0.4 : 1,
+              }}
+            >
+              <Icons.swapV size={26} color={T.inkDim} strokeWidth={2} />
+            </Pressable>
+          </View>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 13,
+                color: T.inkFaint,
+                marginTop: 10,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {secondaryAmount}
+          </Text>
       </View>
+
+      <View style={{ flex: 1 }} />
+
+      {/* From → To cards — just above the keypad */}
+      <View style={{ paddingHorizontal: 24 }}>
+        <MoveAccountCards
+            tone={tone}
+            fromAccount={dirAccounts.from}
+            toAccount={dirAccounts.to}
+            fromLabel={config.fromLabel}
+            toLabel={config.toLabel}
+            toBalance={`$${(balForAccount(dirAccounts.to) * rate).toFixed(2)}`}
+            onPressFrom={() => setPickerOpen(true)}
+            assetIconSource={{ uri: iconUri }}
+            assetBalanceLabel={fromBalanceLabel}
+            onPressSelectAsset={
+              supportsMultiToken
+                ? () => router.push(`/asset-picker?wallet=${pickerWalletParam}`)
+                : undefined
+            }
+            onPressMax={() => onPressPercent(1)}
+          />
       </View>
 
       {/* Tiled keypad + CTA — pinned to the bottom */}
       <View style={{ paddingBottom: insets.bottom }}>
         <TiledKeypadPanel
           onKey={onKey}
-          tone={tone}
+          // Always silver — the Continue CTA shouldn't go gold on the
+          // encrypted-balance direction (per Thomas).
+          tone="silver"
           ctaLabel={insufficient ? 'Insufficient balance' : 'Continue'}
           onPressCta={() => setStep('confirm')}
           ctaDisabled={swipeDisabled}
         />
       </View>
 
+      {/* Source-account picker — hubs DA; picking the source sets the
+          direction (each account is the source of exactly one). */}
+      <Modal
+        visible={pickerOpen}
+        transparent
+        statusBarTranslucent
+        animationType="none"
+        onRequestClose={() => setPickerOpen(false)}
+      >
+        <ChoiceSheet
+          accentIcon={<Icons.moove size={30} color={T.ink} strokeWidth={2.5} />}
+          title="Move from"
+          subtitle="Choose the account to move funds from"
+          onClose={() => setPickerOpen(false)}
+          options={DIRECTIONS.map((dir, i) => ({
+            key: dir,
+            icon: (
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Image
+                  source={ACCOUNT_IMAGE[DIR_ACCOUNTS[dir].from]}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  style={{ width: 24, height: 24 }}
+                />
+              </View>
+            ),
+            title: CONFIG[dir].fromLabel,
+            subtitle: `$${(balForAccount(DIR_ACCOUNTS[dir].from) * rate).toFixed(2)} available`,
+            onPress: () => {
+              setDirectionIndex(i);
+              setPickerOpen(false);
+            },
+          }))}
+        />
+      </Modal>
+
       <MoveConfirm
         visible={step === 'confirm'}
         onClose={() => setStep('amount')}
-        onDone={close}
+        onDone={() => router.replace('/(tabs)/bank')}
+        onNewTransfer={() => setStep('amount')}
         tone={tone}
         title={`Move to ${config.toLabel}`}
         slideLabel="Slide to move"

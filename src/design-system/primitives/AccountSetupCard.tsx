@@ -72,12 +72,13 @@ const COPY: Record<
   },
 };
 
+// CTA wears the FAB silver for both kinds — gold stays on text accents only.
 const ACCENTS: Record<Kind, { accent: string; faint: string; gradient: [string, string]; glow: string }> = {
   stealth: {
     accent: '#e6c079',
     faint: 'rgba(230,192,121,0.14)',
-    gradient: ['#e6c079', '#a37b2e'],
-    glow: 'rgba(230,192,121,0.35)',
+    gradient: ['#e8e8ea', '#9a9a9f'],
+    glow: 'rgba(220,220,225,0.2)',
   },
   bank: {
     accent: '#c9c9cc',
@@ -102,47 +103,18 @@ export function AccountSetupCard({
   const ctaText = insufficient ? copy.ctaInsufficient : copy.cta;
 
   return (
+    // Flat opaque card — Home-cards color, no gradient/sheen/shadow.
     <View
       style={{
         borderRadius: 24,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.06)',
         overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOpacity: 0.6,
-        shadowRadius: 20,
-        shadowOffset: { width: 0, height: 20 },
+        backgroundColor: '#0d0d0d',
       }}
     >
-      <LinearGradient
-        colors={['rgba(22,22,24,0.95)', 'rgba(10,10,12,0.98)']}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={{ padding: 24 }}
-      >
-        {/* top sheen */}
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '45%',
-          }}
-        >
-          <LinearGradient
-            colors={['rgba(255,255,255,0.04)', 'transparent']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={{ flex: 1 }}
-          />
-        </View>
-
-      <Kicker
-        color={tones.accent}
-        style={{ fontSize: 9, marginBottom: 12 }}
-      >
+      <View style={{ padding: 24 }}>
+      <Kicker color={tones.accent} style={{ marginBottom: 12 }}>
         {copy.kicker}
       </Kicker>
 
@@ -160,10 +132,11 @@ export function AccountSetupCard({
             sansation,
             {
               flex: 1,
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: '600',
               color: T.ink,
-              lineHeight: 30,
+              lineHeight: 28,
+              includeFontPadding: false,
             },
           ]}
         >
@@ -186,7 +159,7 @@ export function AccountSetupCard({
           {
             fontSize: 14,
             color: T.inkDim,
-            lineHeight: 22,
+            lineHeight: 20,
             marginBottom: 22,
           },
         ]}
@@ -270,8 +243,8 @@ export function AccountSetupCard({
             style={[
               sansation,
               {
-                fontSize: 12,
-                letterSpacing: 2.6,
+                fontSize: 11,
+                letterSpacing: 2.64,
                 textTransform: 'uppercase',
                 fontWeight: '700',
                 color: insufficient ? T.ink : '#0a0a0a',
@@ -293,7 +266,7 @@ export function AccountSetupCard({
             {
               marginTop: 10,
               textAlign: 'center',
-              fontSize: 10.5,
+              fontSize: 11,
               color: T.inkFaint,
               letterSpacing: 0.4,
               lineHeight: 16,
@@ -304,7 +277,7 @@ export function AccountSetupCard({
           <Text
             style={[
               sansation,
-              { color: T.inkDim, fontSize: 11, fontWeight: '600' },
+              { color: T.inkDim, fontWeight: '600' },
             ]}
           >
             {copy.cost}
@@ -312,7 +285,7 @@ export function AccountSetupCard({
           {kind === 'stealth' ? ' network fee' : ' to verify'}
         </Text>
       ) : null}
-      </LinearGradient>
+      </View>
     </View>
   );
 }

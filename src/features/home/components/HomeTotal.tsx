@@ -24,7 +24,7 @@ type Props = {
 export function HomeTotal({ amountUSD, hidden, onToggleHidden }: Props) {
   const { int, dec } = splitUsd(amountUSD);
   return (
-    <View style={{ alignItems: 'center', marginTop: 40, marginBottom: 48 }}>
+    <View style={{ alignItems: 'center', marginTop: 40, marginBottom: 16 }}>
       <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
         {hidden ? null : (
           <Text

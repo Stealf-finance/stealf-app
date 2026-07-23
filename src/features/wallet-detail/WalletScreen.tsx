@@ -2,8 +2,6 @@ import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedValue } from 'react-native-reanimated';
-import { TonalHalo } from '@/src/features/home/components/TonalHalo';
 import { AssetRow } from '@/src/design-system/primitives/AssetRow';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { txPalette, type Tone } from '@/src/design-system/palettes';
@@ -51,14 +49,10 @@ export function WalletScreen({
   const insets = useSafeAreaInsets();
   const router = useSafeRouter();
   const pal = txPalette(tone);
-  // Static silver halo at main-screen strength. Encrypted (gold tone) keeps a
-  // silver background too — only its content accents stay gold.
-  const halo = useSharedValue(0);
   const { int, dec } = splitUsd(balanceUSD);
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <TonalHalo progress={halo} intensity={1.6} />
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + 16,

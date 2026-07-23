@@ -4,9 +4,9 @@ import { buildHomeCards, EARN_APY_TEASER } from '../homeGridCards';
 const balances = { totalUSD: 125, bankUSD: 100, stealfUSD: 20, encryptedUSD: 5 };
 
 describe('buildHomeCards', () => {
-  it('returns the four cards in order: cash, earn, encrypted, wallet', () => {
+  it('returns the four cards in order: cash, wallet, encrypted, earn', () => {
     expect(buildHomeCards(balances).map((c) => c.key)).toEqual([
-      'cash', 'earn', 'encrypted', 'wallet',
+      'cash', 'wallet', 'encrypted', 'earn',
     ]);
   });
   it('maps balances to the value cards', () => {
@@ -22,7 +22,7 @@ describe('buildHomeCards', () => {
   });
   it('uses the correct user-facing labels', () => {
     expect(buildHomeCards(balances).map((c) => c.label)).toEqual([
-      'Cash', 'Earn', 'Encrypted Balance', 'Wallet',
+      'Cash', 'Wallet', 'Encrypted Balance', 'Earn',
     ]);
   });
 });

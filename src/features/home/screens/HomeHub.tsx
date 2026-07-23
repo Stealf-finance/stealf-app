@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSharedValue } from 'react-native-reanimated';
 import { useQueryClient } from '@tanstack/react-query';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -12,17 +11,13 @@ import { encryptedBalancesQueries } from '@/src/features/stealth/hooks/useEncryp
 import { useHomeBalances } from '../hooks/useHomeBalances';
 import { HomeHeader } from '../components/HomeHeader';
 import { HomeTotal } from '../components/HomeTotal';
+import { HomeSparkline } from '../components/HomeSparkline';
 import { HomeGrid } from '../components/HomeGrid';
-import { TonalHalo } from '../components/TonalHalo';
 
 export function HomeHub() {
   const insets = useSafeAreaInsets();
   const balances = useHomeBalances();
   const [hidden, setHidden] = useState(false);
-  // TonalHalo is driven by a swipe progress value elsewhere; with no carousel
-  // we pin it to 0 so the background stays a static silver wash.
-  const haloProgress = useSharedValue(0);
-
   // Pull-to-refresh: refetch balance + history for both wallets plus the
   // encrypted/shielded balances (covers all cards at once).
   const queryClient = useQueryClient();
@@ -69,7 +64,6 @@ export function HomeHub() {
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <TonalHalo progress={haloProgress} intensity={1.6} />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -93,6 +87,8 @@ export function HomeHub() {
           hidden={hidden}
           onToggleHidden={() => setHidden((h) => !h)}
         />
+        {/* Hardcoded curve (design placeholder) — pushes the grid down */}
+        <HomeSparkline />
         <HomeGrid balances={balances} hidden={hidden} />
       </ScrollView>
     </View>

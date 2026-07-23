@@ -140,10 +140,6 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
-                            name="receive"
-                            options={{ presentation: 'pageSheet' }}
-                          />
-                          <Stack.Screen
                             name="send-choice"
                             options={{
                               presentation: 'transparentModal',

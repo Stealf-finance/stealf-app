@@ -418,15 +418,21 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   };
 
 
-  // Navigate back to the originating tab when the user closes the confirm
-  // sheet's pending state.
-  const finishToOrigin = () => {
-    if (walletSource === 'bank') {
-      router.replace('/(tabs)/bank');
-      return;
-    }
-    setMode(isPrivate ? 'private' : 'public');
-    router.replace('/(tabs)/stealth');
+  // Close on the confirm sheet's success state → the Home page. (The Pay hub
+  // tab is gone; privacy mode resets so the nav tone stays silver on Home.)
+  const finishToHome = () => {
+    setMode('public');
+    router.replace('/(tabs)/bank');
+  };
+
+  // "Make new transfer" — reset the flow back to a fresh recipient step.
+  const startNewTransfer = () => {
+    setRecipient(null);
+    setRecipientQuery('');
+    setRecipientError(null);
+    setSendError(null);
+    setTxSig(null);
+    transitionTo(1, 'back');
   };
 
   return (
@@ -680,7 +686,8 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         <MoveConfirm
           visible={step === 3}
           onClose={() => setStep(2)}
-          onDone={finishToOrigin}
+          onDone={finishToHome}
+          onNewTransfer={startNewTransfer}
           tone={uiTone}
           title={title}
           slideLabel="Slide to send"

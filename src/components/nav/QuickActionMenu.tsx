@@ -29,8 +29,8 @@ export type QuickAction = {
 
 // Home default: top-to-bottom order; the list stacks upward from the FAB.
 const DEFAULT_ACTIONS: QuickAction[] = [
-  { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send/flow?tone=silver&wallet=bank' },
-  { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive' },
+  { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send-choice' },
+  { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive-choice' },
   { key: 'move', label: 'Move', iconKey: 'moove', route: '/moove' },
   { key: 'buy', label: 'Buy', iconKey: 'dollar' }, // not built yet
 ];
