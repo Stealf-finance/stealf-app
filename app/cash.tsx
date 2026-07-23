@@ -8,8 +8,10 @@ import { SOL_ICON_URI } from '@/src/constants/solana';
 const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
 
 const ACTIONS: QuickAction[] = [
-  { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send-choice' },
-  { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive-choice' },
+  // Scoped hubs: only this account's options (the full grouped hub lives
+  // behind the home FAB).
+  { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send-choice?scope=cash' },
+  { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive-choice?scope=cash' },
   { key: 'buy', label: 'Buy', iconKey: 'dollar' }, // not built yet
   { key: 'move', label: 'Move', iconKey: 'moove', route: '/moove' },
 ];

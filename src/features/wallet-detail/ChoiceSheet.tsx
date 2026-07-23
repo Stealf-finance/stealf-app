@@ -4,6 +4,7 @@ import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icons } from '@/src/design-system/icons';
+import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 
@@ -17,9 +18,16 @@ export type ChoiceOption = {
   disabled?: boolean;
 };
 
+export type ChoiceSection = {
+  /** Uppercase kicker above the group (e.g. "Cash account"). */
+  label: string;
+  options: ChoiceOption[];
+};
+
 /**
  * Bottom-sheet chooser: an accent icon, title + subtitle, and a list of
- * options (icon · title · subtitle · chevron). Presentational — render it in a
+ * options (icon · title · subtitle · chevron) — flat via `options`, or
+ * grouped under kicker labels via `sections`. Presentational — render it in a
  * transparent-modal route and pass `onClose` = router.back.
  */
 export function ChoiceSheet({
@@ -27,12 +35,14 @@ export function ChoiceSheet({
   title,
   subtitle,
   options,
+  sections,
   onClose,
 }: {
   accentIcon: ReactNode;
   title: string;
   subtitle: string;
-  options: ChoiceOption[];
+  options?: ChoiceOption[];
+  sections?: ChoiceSection[];
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -55,18 +65,24 @@ export function ChoiceSheet({
         />
       </Animated.View>
 
-      {/* Panel */}
+      {/* Panel — opaque, in the Home cards' color (their 5% white veil
+          composited on the black bg = #0d0d0d), top corners only. */}
       <Animated.View
         entering={SlideInDown.duration(260)}
         style={{
-          backgroundColor: T.bgRaised2,
           borderTopLeftRadius: 28,
           borderTopRightRadius: 28,
-          paddingTop: 24,
-          paddingBottom: insets.bottom + 24,
-          paddingHorizontal: 24,
+          overflow: 'hidden',
         }}
       >
+        <View
+          style={{
+            backgroundColor: '#0d0d0d',
+            paddingTop: 24,
+            paddingBottom: insets.bottom + 24,
+            paddingHorizontal: 24,
+          }}
+        >
         <Pressable
           onPress={onClose}
           hitSlop={12}
@@ -103,36 +119,51 @@ export function ChoiceSheet({
           {subtitle}
         </Text>
 
-        {options.map((o, i) => (
-          <Pressable
-            key={o.key}
-            onPress={o.disabled ? undefined : o.onPress}
-            disabled={o.disabled}
-            accessibilityRole="button"
-            accessibilityLabel={o.title}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 16,
-              paddingVertical: 16,
-              borderTopWidth: i === 0 ? 0 : 1,
-              borderTopColor: T.hairline,
-              opacity: o.disabled ? 0.4 : 1,
-            }}
-          >
-            {o.icon}
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[sansation, { fontSize: 17, fontWeight: '600', color: T.ink }]}>
-                {o.title}
-              </Text>
-              <Text style={[sansation, { fontSize: 14, color: T.inkDim, marginTop: 2 }]}>
-                {o.subtitle}
-              </Text>
-            </View>
-            <Icons.chevR size={18} color={T.inkFaint} />
-          </Pressable>
+        {options?.map((o, i) => <OptionRow key={o.key} option={o} first={i === 0} />)}
+
+        {sections?.map((s, si) => (
+          <View key={s.label} style={{ marginTop: si === 0 ? 0 : 18 }}>
+            <Kicker color={T.inkFaint} style={{ marginBottom: 4 }}>
+              {s.label}
+            </Kicker>
+            {s.options.map((o, i) => (
+              <OptionRow key={o.key} option={o} first={i === 0} />
+            ))}
+          </View>
         ))}
+        </View>
       </Animated.View>
     </View>
+  );
+}
+
+function OptionRow({ option: o, first }: { option: ChoiceOption; first: boolean }) {
+  return (
+    <Pressable
+      onPress={o.disabled ? undefined : o.onPress}
+      disabled={o.disabled}
+      accessibilityRole="button"
+      accessibilityLabel={o.title}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 16,
+        paddingVertical: 16,
+        borderTopWidth: first ? 0 : 1,
+        borderTopColor: T.hairline,
+        opacity: o.disabled ? 0.4 : 1,
+      }}
+    >
+      {o.icon}
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[sansation, { fontSize: 17, fontWeight: '600', color: T.ink }]}>
+          {o.title}
+        </Text>
+        <Text style={[sansation, { fontSize: 14, color: T.inkDim, marginTop: 2 }]}>
+          {o.subtitle}
+        </Text>
+      </View>
+      <Icons.chevR size={18} color={T.inkFaint} />
+    </Pressable>
   );
 }
