@@ -10,6 +10,9 @@ import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
+import { useCombinedHistory } from '@/src/features/bank/hooks/useCombinedHistory';
+import { useHomeBalances } from '@/src/features/home/hooks/useHomeBalances';
+import { BalanceDonut } from '@/src/features/bank/components/BalanceDonut';
 import type { Transaction } from '@/src/features/bank/types';
 
 type WalletKind = 'bank' | 'stealth';
@@ -50,17 +53,31 @@ export function TransactionsScreen({
   const { user } = useAuth();
   const params = useLocalSearchParams<{ wallet?: WalletKind }>();
   const walletKind: WalletKind = params.wallet === 'stealth' ? 'stealth' : 'bank';
-  const config = CONFIG[walletKind];
+  // The Home tab (embedded) shows the merged history of both wallets; the
+  // modal keeps the per-wallet view driven by the `wallet` param.
+  const config = embedded
+    ? { title: 'History', subtitle: 'History from all accounts', tone: 'silver' as Tone }
+    : CONFIG[walletKind];
   const palette = txPalette(config.tone);
 
   const address =
     walletKind === 'stealth' ? user?.stealfWallet : user?.bankWallet;
-  const { data: history, isLoading } = useHistory(address);
+  const combined = useCombinedHistory(
+    embedded ? user?.bankWallet : null,
+    embedded ? user?.stealfWallet : null,
+  );
+  const single = useHistory(embedded ? null : address);
 
-  const txs = history?.transactions ?? [];
+  const txs = embedded
+    ? combined.transactions
+    : (single.data?.transactions ?? []);
+  const isLoading = embedded ? combined.isLoading : single.isLoading;
+
+  // Balance-split donut on the Home tab only (same aggregation as the grid).
+  const balances = useHomeBalances();
 
   return (
-    <CenterGlow tone={config.tone} flat topGlow>
+    <CenterGlow tone={config.tone} flat>
       <View
         style={{
           paddingTop: embedded ? insets.top + 8 : 20,
@@ -105,6 +122,11 @@ export function TransactionsScreen({
         }}
         showsVerticalScrollIndicator={false}
       >
+        {embedded ? (
+          <View style={{ paddingTop: 8, paddingBottom: 28 }}>
+            <BalanceDonut balances={balances} />
+          </View>
+        ) : null}
         {txs.length === 0 ? (
           <EmptyState loading={isLoading} faintColor={palette.inkFaint} />
         ) : (
@@ -126,7 +148,9 @@ export function TransactionsScreen({
               const row = formatTxRow(tx);
               return (
                 <Pressable
-                  key={tx.signature}
+                  // A move between the user's own wallets shares one signature
+                  // across both rows — scope the key by wallet.
+                  key={`${tx.signature}:${tx.walletAddress}`}
                   onPress={() =>
                     void Linking.openURL(
                       tx.signatureURL || `https://solscan.io/tx/${tx.signature}`,
