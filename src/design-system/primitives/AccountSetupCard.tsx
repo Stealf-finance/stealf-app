@@ -139,10 +139,7 @@ export function AccountSetupCard({
           />
         </View>
 
-      <Kicker
-        color={tones.accent}
-        style={{ fontSize: 9, marginBottom: 12 }}
-      >
+      <Kicker color={tones.accent} style={{ marginBottom: 12 }}>
         {copy.kicker}
       </Kicker>
 
@@ -160,10 +157,11 @@ export function AccountSetupCard({
             sansation,
             {
               flex: 1,
-              fontSize: 24,
+              fontSize: 22,
               fontWeight: '600',
               color: T.ink,
-              lineHeight: 30,
+              lineHeight: 28,
+              includeFontPadding: false,
             },
           ]}
         >
@@ -186,7 +184,7 @@ export function AccountSetupCard({
           {
             fontSize: 14,
             color: T.inkDim,
-            lineHeight: 22,
+            lineHeight: 20,
             marginBottom: 22,
           },
         ]}
@@ -270,8 +268,8 @@ export function AccountSetupCard({
             style={[
               sansation,
               {
-                fontSize: 12,
-                letterSpacing: 2.6,
+                fontSize: 11,
+                letterSpacing: 2.64,
                 textTransform: 'uppercase',
                 fontWeight: '700',
                 color: insufficient ? T.ink : '#0a0a0a',
@@ -293,7 +291,7 @@ export function AccountSetupCard({
             {
               marginTop: 10,
               textAlign: 'center',
-              fontSize: 10.5,
+              fontSize: 11,
               color: T.inkFaint,
               letterSpacing: 0.4,
               lineHeight: 16,
@@ -304,7 +302,7 @@ export function AccountSetupCard({
           <Text
             style={[
               sansation,
-              { color: T.inkDim, fontSize: 11, fontWeight: '600' },
+              { color: T.inkDim, fontWeight: '600' },
             ]}
           >
             {copy.cost}

@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { LoaderOverlay } from '@/src/design-system/primitives/LoaderOverlay';
 import { Icons } from '@/src/design-system/icons';
 import { mono, sansation } from '@/src/design-system/typography';
@@ -23,16 +23,30 @@ import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { validateMnemonic } from '@/src/services/solana/transactionsGuard';
 
-const G = txPalette('silver');
+const TONE = 'silver' as const;
+const S = txPalette(TONE);
 
 const WORD_COUNT = 12;
-const TONE = 'silver' as const;
 
 export type SetupChoice =
   | { mode: 'create' }
   | { mode: 'import'; mnemonic: string };
 
 type Step = 'choose' | 'showMnemonic' | 'importWallet';
+
+/** Step-aware header copy (SendFlow-style): the header owns the step title so
+ *  the body doesn't repeat a second 22pt heading. */
+const HEADER: Record<Step, { title: string; subtitle?: string }> = {
+  choose: {
+    title: 'Set up your wallet',
+    subtitle: 'Create a new wallet locally or import an existing one.',
+  },
+  showMnemonic: { title: 'Save these 12 words' },
+  importWallet: {
+    title: 'Enter your recovery phrase',
+    subtitle: 'Type or paste your 12 words below.',
+  },
+};
 
 type Props = {
   onComplete: (choice: SetupChoice) => void;
@@ -60,7 +74,7 @@ export function StealfWalletSetup({
   );
   const [importError, setImportError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const wordRefs = useRef<Array<TextInput | null>>([]);
+  const wordRefs = useRef<(TextInput | null)[]>([]);
   const clipboardTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -135,58 +149,73 @@ export function StealfWalletSetup({
     onComplete({ mode: 'import', mnemonic });
   };
 
+  const handleBack = () => {
+    if (step === 'choose') {
+      onExit?.();
+      return;
+    }
+    if (step === 'importWallet') {
+      setWords(Array(WORD_COUNT).fill(''));
+      setImportError(null);
+    }
+    setStep('choose');
+    onCancel?.();
+  };
+
   const importComplete = words.every((w) => w.trim() !== '');
+  const showBack = step !== 'choose' || Boolean(onExit);
+  const header = HEADER[step];
 
   return (
-    <CenterGlow tone={TONE}>
-      {/* Standardized page header — BackBtn · sansation 32 · spacer */}
+    <CenterGlow tone={TONE} flat>
+      {/* Header: flat background, bare chevron back button, centered 22pt
+          step-aware title. paddingTop uses insets.top — hero/wallet-aligned
+          archetype, matching SendFlow which shares these pageSheet routes
+          (see docs/screen-patterns.md). */}
       <View
         style={{
-          paddingTop: insets.top + 32,
-          paddingBottom: 12,
-          paddingHorizontal: 20,
+          paddingTop: insets.top,
+          paddingBottom: 14,
+          paddingHorizontal: 24,
           flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
+          alignItems: 'flex-start',
         }}
       >
-        {step === 'choose' ? (
-          onExit ? (
-            <BackBtn onPress={onExit} />
-          ) : (
-            <View style={{ width: 36 }} />
-          )
-        ) : (
-          <BackBtn
-            onPress={() => {
-              if (step === 'importWallet') {
-                setWords(Array(WORD_COUNT).fill(''));
-                setImportError(null);
-              }
-              setStep('choose');
-              onCancel?.();
-            }}
-          />
-        )}
-        <Text
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.7}
-          style={[
-            sansation,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 32,
-              fontWeight: '600',
-              color: T.ink,
-              includeFontPadding: false,
-            },
-          ]}
-        >
-          Setup Your Wallet
-        </Text>
-        <View style={{ width: 36 }} />
+        {/* Chevron centered on the title line (lineHeight 28), not on the
+            title+subtitle block — keeps it level with the title when a
+            subtitle is present. */}
+        {showBack ? (
+          <View style={{ height: 28, justifyContent: 'center' }}>
+            <GlassBackButton onPress={handleBack} />
+          </View>
+        ) : null}
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 22,
+                lineHeight: 28,
+                fontWeight: '600',
+                color: T.ink,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {header.title}
+          </Text>
+          {header.subtitle ? (
+            <Text
+              style={[
+                sansation,
+                { fontSize: 14, lineHeight: 20, color: T.inkDim, marginTop: 4 },
+              ]}
+            >
+              {header.subtitle}
+            </Text>
+          ) : null}
+        </View>
+        {showBack ? <View style={{ width: 26 }} /> : null}
       </View>
 
       <ScrollView
@@ -261,22 +290,7 @@ type ChooseProps = {
 
 function ChooseStep({ loading, onComplete, setStep }: ChooseProps) {
   return (
-    <View style={{ paddingTop: 24 }}>
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 15,
-            color: T.inkDim,
-            textAlign: 'center',
-            lineHeight: 22,
-            marginBottom: 36,
-          },
-        ]}
-      >
-        Create a new wallet locally or import an existing one.
-      </Text>
-
+    <View style={{ paddingTop: 16 }}>
       <SetupOption
         image={require('@/assets/images/Create-wallet.png')}
         label="Create new wallet"
@@ -386,28 +400,13 @@ function ShowMnemonicStep({
     ? wordsArr
     : Array(WORD_COUNT).fill('******');
   return (
-    <View style={{ paddingTop: 8 }}>
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 22,
-            fontWeight: '600',
-            color: T.ink,
-            textAlign: 'center',
-            marginBottom: 10,
-          },
-        ]}
-      >
-        Save these 12 words
-      </Text>
-
+    <View style={{ paddingTop: 16 }}>
       <View
         style={{
           borderRadius: 18,
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: G.hairline,
+          borderColor: S.hairline,
           marginBottom: 16,
         }}
       >
@@ -506,7 +505,7 @@ function ShowMnemonicStep({
         }}
       >
         {copied ? (
-          <Icons.check size={14} color={G.accent} />
+          <Icons.check size={14} color={S.accent} />
         ) : (
           <Icons.copy size={14} color={T.inkDim} />
         )}
@@ -518,7 +517,7 @@ function ShowMnemonicStep({
               letterSpacing: 2.42,
               textTransform: 'uppercase',
               fontWeight: '700',
-              color: copied ? G.accent : T.inkDim,
+              color: copied ? S.accent : T.inkDim,
             },
           ]}
         >
@@ -539,7 +538,7 @@ function ShowMnemonicStep({
 
 type ImportStepProps = {
   words: string[];
-  wordRefs: React.MutableRefObject<Array<TextInput | null>>;
+  wordRefs: React.MutableRefObject<(TextInput | null)[]>;
   onWordChange: (i: number, value: string) => void;
   onSubmit: () => void;
   error: string | null;
@@ -557,36 +556,7 @@ function ImportStep({
   disabled,
 }: ImportStepProps) {
   return (
-    <View style={{ paddingTop: 8 }}>
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 22,
-            fontWeight: '600',
-            color: T.ink,
-            textAlign: 'center',
-            marginBottom: 10,
-          },
-        ]}
-      >
-        Enter your recovery phrase
-      </Text>
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 14,
-            color: T.inkDim,
-            textAlign: 'center',
-            lineHeight: 21,
-            marginBottom: 28,
-          },
-        ]}
-      >
-        Type or paste your 12 words below.
-      </Text>
-
+    <View style={{ paddingTop: 16 }}>
       <View
         style={{
           flexDirection: 'row',
@@ -607,7 +577,7 @@ function ImportStep({
                 paddingVertical: 12,
                 borderRadius: 12,
                 borderWidth: 1,
-                borderColor: error ? T.error : G.hairline,
+                borderColor: error ? T.error : S.hairline,
                 backgroundColor: 'rgba(255,255,255,0.03)',
               }}
             >

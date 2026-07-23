@@ -13,7 +13,7 @@ import Animated, {
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette, type Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
@@ -415,7 +415,7 @@ export function MoveConfirm({
               <View
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
               >
-                <BackBtn onPress={onClose} />
+                <GlassBackButton onPress={onClose} />
                 <Text
                   style={[
                     sansation,
@@ -431,7 +431,7 @@ export function MoveConfirm({
                 >
                   {title}
                 </Text>
-                <View style={{ width: 38 }} />
+                <View style={{ width: 26 }} />
               </View>
 
               {/* Hero amount */}

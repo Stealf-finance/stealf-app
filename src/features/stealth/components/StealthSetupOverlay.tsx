@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { InteractionManager, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AccountSetupCard } from '@/src/design-system/primitives/AccountSetupCard';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { LoaderOverlay } from '@/src/design-system/primitives/LoaderOverlay';
 import { useToast } from '@/src/components/toast/ToastContext';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -203,10 +203,10 @@ export function StealthSetupOverlay({ onClose }: Props) {
             style={{
               position: 'absolute',
               top: insets.top + 8,
-              left: 16,
+              left: 24,
             }}
           >
-            <BackBtn onPress={onClose} accessibilityLabel="Back to public" />
+            <GlassBackButton onPress={onClose} />
           </View>
         ) : null}
         <View style={{ width: '100%', maxWidth: 380 }}>
