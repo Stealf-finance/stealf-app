@@ -650,7 +650,8 @@ export function MoveFlow() {
       <MoveConfirm
         visible={step === 'confirm'}
         onClose={() => setStep('amount')}
-        onDone={close}
+        onDone={() => router.replace('/(tabs)/bank')}
+        onNewTransfer={() => setStep('amount')}
         tone={tone}
         title={`Move to ${config.toLabel}`}
         slideLabel="Slide to move"

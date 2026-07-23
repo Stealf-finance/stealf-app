@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Linking, Modal, Pressable, Text, View } from 'react-native';
+import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BlurView } from 'expo-blur';
 import Animated, {
   Easing,
   FadeIn,
@@ -99,6 +100,9 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onDone: () => void;
+  /** Resets the flow for another transfer — renders a "Make new transfer"
+   *  button next to Close on the success state. */
+  onNewTransfer?: () => void;
   tone: Tone;
   title: string;
   fiat: number;
@@ -117,6 +121,44 @@ type Props = {
   error?: string;
   submitting?: boolean;
 };
+
+/** Success-footer glass button — equal-width in a row (flex on a static
+ *  style: Pressable style-fns don't stretch). */
+function FooterButton({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{ flexGrow: 1, flexBasis: 0, minWidth: 0 }}
+    >
+      <View
+        style={{
+          height: 56,
+          borderRadius: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(255,255,255,0.06)',
+        }}
+      >
+        <Text
+          numberOfLines={1}
+          style={[
+            sansation,
+            {
+              fontSize: 14,
+              fontWeight: '600',
+              color: T.ink,
+              includeFontPadding: false,
+            },
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
 
 /** One detail line: label on the left, a primary value (+ optional sub) on the
  *  right. Used for the From / Receiving address / Token rows. */
@@ -190,6 +232,7 @@ export function MoveConfirm({
   visible,
   onClose,
   onDone,
+  onNewTransfer,
   tone,
   title,
   fiat,
@@ -252,7 +295,18 @@ export function MoveConfirm({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }}>
+      {/* Backdrop + panel aligned on the receive-qr / ChoiceSheet recipe:
+          blurred dim behind, opaque Home-cards color panel. */}
+      <View style={{ flex: 1 }}>
+        <BlurView
+          intensity={40}
+          tint="dark"
+          experimentalBlurMethod="dimezisBlurView"
+          style={StyleSheet.absoluteFill}
+        />
+        <View
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(8,8,10,0.5)' }]}
+        />
         {/* Tap the dimmed area to dismiss (disabled once submitted) */}
         <Pressable
           style={{ flex: 1 }}
@@ -262,7 +316,7 @@ export function MoveConfirm({
 
         <View
           style={{
-            backgroundColor: T.bgRaised,
+            backgroundColor: '#0d0d0d',
             borderTopLeftRadius: 28,
             borderTopRightRadius: 28,
             paddingTop: 12,
@@ -374,37 +428,16 @@ export function MoveConfirm({
                 </View>
               ) : null}
 
-              {/* Close — same slot as the slide-to-move CTA */}
-              <Pressable
-                onPress={onDone}
-                accessibilityRole="button"
-                accessibilityLabel="Close"
-                style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-              >
-                <View
-                  style={{
-                    height: 56,
-                    borderRadius: 18,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'rgba(255,255,255,0.06)',
-                  }}
-                >
-                  <Text
-                    style={[
-                      sansation,
-                      {
-                        fontSize: 15,
-                        fontWeight: '600',
-                        color: T.ink,
-                        includeFontPadding: false,
-                      },
-                    ]}
-                  >
-                    Close
-                  </Text>
-                </View>
-              </Pressable>
+              {/* Footer — Make new transfer (resets the flow) beside Close
+                  (routes home), sharing the slide-to-move CTA slot. Layout
+                  flex lives on static styles — flex in a Pressable style-fn
+                  doesn't stretch. */}
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                {onNewTransfer ? (
+                  <FooterButton label="Make new transfer" onPress={onNewTransfer} />
+                ) : null}
+                <FooterButton label="Close" onPress={onDone} />
+              </View>
             </Animated.View>
           ) : (
             <Animated.View
