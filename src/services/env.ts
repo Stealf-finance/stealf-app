@@ -6,6 +6,10 @@ const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
   EXPO_PUBLIC_SOLANA_RPC_URL: z.string().url(),
   EXPO_PUBLIC_SOLANA_WSS_URL: z.string().url(),
+  /** Optional mainnet RPC for the JitoSOL staking service — the Jito pool
+   *  only exists on mainnet while the rest of the app runs devnet. Falls
+   *  back to EXPO_PUBLIC_SOLANA_RPC_URL when unset. */
+  EXPO_PUBLIC_JITO_RPC_URL: z.string().url().optional(),
   EXPO_PUBLIC_SENTRY_DSN: z.string().url().optional(),
   EXPO_PUBLIC_POSTHOG_API_KEY: z.string().min(1).optional(),
   EXPO_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
@@ -30,6 +34,7 @@ export function validateEnv(): Env {
     EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
     EXPO_PUBLIC_SOLANA_RPC_URL: process.env.EXPO_PUBLIC_SOLANA_RPC_URL,
     EXPO_PUBLIC_SOLANA_WSS_URL: process.env.EXPO_PUBLIC_SOLANA_WSS_URL,
+    EXPO_PUBLIC_JITO_RPC_URL: process.env.EXPO_PUBLIC_JITO_RPC_URL,
     EXPO_PUBLIC_SENTRY_DSN: process.env.EXPO_PUBLIC_SENTRY_DSN,
     EXPO_PUBLIC_POSTHOG_API_KEY: process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
     EXPO_PUBLIC_POSTHOG_HOST: process.env.EXPO_PUBLIC_POSTHOG_HOST,
