@@ -20,11 +20,6 @@ interface CreateUtxoArgs {
   amount: bigint;
 }
 
-/**
- * The SDK creator functions brand `amount` with their own integer type; our
- * `bigint` is wire-compatible. Localize that unavoidable cast to one place
- * instead of repeating `amount as any` at every call site.
- */
 function toCreatorArgs({ destinationAddress, mint, amount }: CreateUtxoArgs) {
   return { destinationAddress, mint, amount: amount as never };
 }
