@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Icons } from '@/src/design-system/icons';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { sansation } from '@/src/design-system/typography';
@@ -7,7 +8,8 @@ import { txPalette } from '@/src/design-system/palettes';
 const S = txPalette('silver');
 
 export type ProfileRowGroupItem = {
-  iconKey: keyof typeof Icons;
+  /** Bare 3D PNG (Home style). */
+  image: number;
   label: string;
   onPress: () => void;
   /** 'link' for external URLs, 'button' otherwise. */
@@ -15,12 +17,11 @@ export type ProfileRowGroupItem = {
 };
 
 /** Several rows grouped in one glass card with hairline separators — same
- *  row anatomy as ProfileRow (44pt disc + label + chevron). */
+ *  row anatomy as ProfileRow (bare 26pt image + label + chevron). */
 export function ProfileRowGroup({ items }: { items: ProfileRowGroupItem[] }) {
   return (
     <BlurGlass radius={22}>
       {items.map((item, i) => {
-        const Icon = Icons[item.iconKey];
         return (
           <Pressable
             key={item.label}
@@ -42,15 +43,18 @@ export function ProfileRowGroup({ items }: { items: ProfileRowGroupItem[] }) {
             >
               <View
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  backgroundColor: S.accentSoft,
+                  width: 28,
+                  height: 28,
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Icon size={20} color={S.accent} />
+                <Image
+                  source={item.image}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  style={{ width: 26, height: 26 }}
+                />
               </View>
               <Text
                 style={[

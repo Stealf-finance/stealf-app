@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Icons } from '@/src/design-system/icons';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { sansation } from '@/src/design-system/typography';
@@ -7,7 +8,10 @@ import { txPalette } from '@/src/design-system/palettes';
 const S = txPalette('silver');
 
 type Props = {
-  iconKey: keyof typeof Icons;
+  /** Bare 3D PNG (Home style). Takes precedence over `iconKey`. */
+  image?: number;
+  /** Fallback vector icon (bare, no disc) — for rows with no matching PNG. */
+  iconKey?: keyof typeof Icons;
   label: string;
   onPress?: () => void;
   disabled?: boolean;
@@ -17,9 +21,10 @@ type Props = {
   role?: 'button' | 'link';
 };
 
-/** Full-width glass row — icon disc + label + chevron, one card per row
- *  (reference layout), same BlurGlass recipe as the Home cards. */
+/** Full-width glass row — bare image (Home language) + label + chevron, one
+ *  card per row, same BlurGlass recipe as the Home cards. */
 export function ProfileRow({
+  image,
   iconKey,
   label,
   onPress,
@@ -27,7 +32,7 @@ export function ProfileRow({
   labelColor = S.ink,
   role = 'button',
 }: Props) {
-  const Icon = Icons[iconKey];
+  const Icon = iconKey ? Icons[iconKey] : null;
   return (
     <Pressable
       onPress={onPress}
@@ -48,15 +53,22 @@ export function ProfileRow({
       >
         <View
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 14,
-            backgroundColor: S.accentSoft,
+            width: 28,
+            height: 28,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Icon size={20} color={S.accent} />
+          {image !== undefined ? (
+            <Image
+              source={image}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+              style={{ width: 26, height: 26 }}
+            />
+          ) : Icon ? (
+            <Icon size={20} color={S.inkDim} />
+          ) : null}
         </View>
         <Text
           style={[

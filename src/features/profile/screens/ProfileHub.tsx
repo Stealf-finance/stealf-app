@@ -72,15 +72,15 @@ export function ProfileHub() {
       >
         <ProfileIdentity user={user} email={email} />
 
-        {/* Square tiles — Points stat + About us, full width */}
+        {/* Square tiles — Points stat + About us, full width (Home imagery) */}
         <View style={{ flexDirection: 'row', gap: GAP, marginTop: 28 }}>
           <ProfileTile
-            iconKey="sparkle"
+            image={require('@/assets/images/earn.png')}
             label="Points"
             value={(user?.points ?? 0).toLocaleString('en-US')}
           />
           <ProfileTile
-            iconKey="info"
+            image={require('@/assets/images/logo-transparent.png')}
             label="About us"
             onPress={() => void Linking.openURL('https://www.stealf.xyz')}
           />
@@ -89,7 +89,7 @@ export function ProfileHub() {
         {/* Solana Private Key — standalone row */}
         <View style={{ marginTop: GAP }}>
           <ProfileRow
-            iconKey="key"
+            image={require('@/assets/images/Key.png')}
             label="Solana Private Key"
             onPress={() => router.push('/profile/private-key')}
           />
@@ -100,19 +100,19 @@ export function ProfileHub() {
           <ProfileRowGroup
             items={[
               {
-                iconKey: 'mail',
+                image: require('@/assets/images/Lock.png'),
                 label: 'Contact Support',
                 role: 'link',
                 onPress: () => void Linking.openURL('https://t.me/stealf_bot'),
               },
               {
-                iconKey: 'shield',
+                image: require('@/assets/images/Euro.png'),
                 label: 'Privacy Policy',
                 role: 'link',
                 onPress: () => void Linking.openURL('https://stealf.xyz/privacy'),
               },
               {
-                iconKey: 'folder',
+                image: require('@/assets/images/Euro.png'),
                 label: 'Terms of Service',
                 role: 'link',
                 onPress: () => void Linking.openURL('https://stealf.xyz/terms'),

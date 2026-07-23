@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from 'react-native';
-import { Icons } from '@/src/design-system/icons';
+import { Image } from 'expo-image';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
@@ -7,7 +7,8 @@ import { txPalette } from '@/src/design-system/palettes';
 const S = txPalette('silver');
 
 type Props = {
-  iconKey: keyof typeof Icons;
+  /** Bare 3D PNG, Home-grid style (e.g. require('@/assets/images/earn.png')). */
+  image: number;
   label: string;
   /** Optional stat under the label (e.g. the Points count) — rendered like a
    *  Home grid card value (22/28 ink over a 14/20 inkDim label). */
@@ -15,10 +16,9 @@ type Props = {
   onPress?: () => void;
 };
 
-/** Square glass tile — same chrome as the Home grid cards (BlurGlass 22 /
- *  padding 20 / 44pt icon disc), used in side-by-side pairs. */
-export function ProfileTile({ iconKey, label, value, onPress }: Props) {
-  const Icon = Icons[iconKey];
+/** Square glass tile — same chrome AND content anatomy as the Home grid
+ *  cards (BlurGlass 22 / padding 20 / bare 40pt image), side-by-side pairs. */
+export function ProfileTile({ image, label, value, onPress }: Props) {
   return (
     // Layout lives on the static wrapper (HomeGrid recipe) — flex props in a
     // Pressable style-fn didn't stretch the tiles to fill the row.
@@ -30,18 +30,12 @@ export function ProfileTile({ iconKey, label, value, onPress }: Props) {
       style={{ flexGrow: 1, flexBasis: 0, minWidth: 0 }}
     >
       <BlurGlass radius={22} innerStyle={{ padding: 20 }}>
-        <View
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 14,
-            backgroundColor: S.accentSoft,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon size={22} color={S.accent} />
-        </View>
+        <Image
+          source={image}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          style={{ width: 40, height: 40 }}
+        />
         {/* Fixed-height bottom block (20 + 8 + 28) so label-only tiles match
             stat tiles exactly — heights stay equal without an aspectRatio. */}
         <View
