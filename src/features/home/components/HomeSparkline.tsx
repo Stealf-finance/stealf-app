@@ -25,7 +25,7 @@ const TAIL = 'M 92 8 L 100 8';
 export function HomeSparkline() {
   const { width } = useWindowDimensions();
   return (
-    <View style={{ height: HEIGHT, marginTop: 18, marginBottom: 24 }}>
+    <View style={{ height: HEIGHT, marginTop: 0, marginBottom: 16 }}>
       <Svg
         width={width}
         height={HEIGHT}
