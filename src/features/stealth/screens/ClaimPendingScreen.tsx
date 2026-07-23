@@ -140,7 +140,7 @@ export function ClaimPendingScreen() {
   };
 
   return (
-    <CenterGlow tone="gold">
+    <CenterGlow tone="gold" flat>
       <View
         style={{
           paddingTop: insets.top,

@@ -1,10 +1,8 @@
 // src/features/stealth/screens/PayHub.tsx
 import { useCallback } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import { TonalHalo } from '@/src/features/home/components/TonalHalo';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
 import { GreetingSlot } from '@/src/components/GreetingSlot';
 import { useToast } from '@/src/components/toast/ToastContext';
@@ -38,9 +36,6 @@ export function PayHub() {
   const insets = useSafeAreaInsets();
   const { show } = useToast();
   const { setMode } = usePrivacyMode();
-  // Static silver halo (matches the home background). Held at 1 so it never
-  // cross-fades to the gold variant.
-  const haloProgress = useSharedValue(1);
   const soon = (label: string) =>
     show({ kind: 'info', title: 'Coming soon', message: `${label} are coming soon.` });
   // The Pay hub has no private/public mode; a prior private-send flow may have
@@ -53,7 +48,6 @@ export function PayHub() {
   );
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <TonalHalo progress={haloProgress} />
       <View
         style={{
           paddingTop: insets.top,

@@ -6,7 +6,7 @@ import { T } from '@/src/design-system/tokens';
 export default function AuthLayout() {
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <CenterGlow tone="silver">
+      <CenterGlow tone="silver" flat>
         <Stack
           screenOptions={{
             headerShown: false,

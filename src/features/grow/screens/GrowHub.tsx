@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TonalBackground } from '@/src/design-system/primitives/TonalBackground';
 import { CircleIconBtn } from '@/src/design-system/primitives/CircleIconBtn';
 import { LineChart } from '@/src/design-system/primitives/LineChart';
 import { RangePills } from '@/src/design-system/primitives/RangePills';
 import {
   mono,
-  sansation,
   sansationLight,
   serif,
 } from '@/src/design-system/typography';
@@ -39,7 +37,7 @@ export function GrowHub() {
 
   if (!growEnabled) {
     return (
-      <TonalBackground tone="silver">
+      <View style={{ flex: 1, backgroundColor: T.bg }}>
         <View
           style={{
             flex: 1,
@@ -68,12 +66,12 @@ export function GrowHub() {
             Coming soon
           </Text>
         </View>
-      </TonalBackground>
+      </View>
     );
   }
 
   return (
-    <TonalBackground tone="silver">
+    <View style={{ flex: 1, backgroundColor: T.bg }}>
       {/* Greeting row */}
       <View
         style={{
@@ -309,6 +307,6 @@ export function GrowHub() {
           <UsdcPlusCard />
         </View>
       </ScrollView>
-    </TonalBackground>
+    </View>
   );
 }
