@@ -128,6 +128,14 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
+                            name="stake-deposit"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
+                            name="stake-withdraw"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
                             name="card"
                             options={{ presentation: 'pageSheet' }}
                           />

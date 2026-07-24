@@ -160,15 +160,15 @@ export function JitoProductScreen() {
         </View>
 
         {/* Pool info */}
+        <Text
+          style={[
+            sansation,
+            { fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -0.2, color: S.ink, marginBottom: 12 },
+          ]}
+        >
+          Pool info
+        </Text>
         <BlurGlass radius={22} innerStyle={{ padding: 22 }}>
-          <Text
-            style={[
-              sansation,
-              { fontSize: 17, lineHeight: 22, fontWeight: '600', color: S.ink, marginBottom: 4 },
-            ]}
-          >
-            Pool info
-          </Text>
           <InfoRow
             iconKey="key"
             label="Contract address"
@@ -212,6 +212,7 @@ export function JitoProductScreen() {
             label="Deposit"
             variant="primary"
             tone="silver"
+            onPress={() => router.push('/stake-deposit')}
             rightIcon={<Icons.arrDownRight size={16} color="#0a0a0a" />}
           />
         </View>
@@ -221,6 +222,7 @@ export function JitoProductScreen() {
             variant="secondary"
             tone="silver"
             disabled={!canWithdraw}
+            onPress={() => router.push('/stake-withdraw')}
             rightIcon={<Icons.arrUpRight size={16} color={T.ink} />}
           />
         </View>
