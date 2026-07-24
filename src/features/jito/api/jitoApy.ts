@@ -6,7 +6,7 @@ export const JitoApySchema = z.object({
 });
 
 export const jitoApyQueries = {
-  all: ['grow', 'jito-apy'] as const,
+  all: ['jito', 'jito-apy'] as const,
 };
 
 export async function fetchJitoApy(token: string): Promise<number> {

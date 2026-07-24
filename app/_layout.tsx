@@ -136,6 +136,10 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
+                            name="xstock-trade/[symbol]"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
                             name="card"
                             options={{ presentation: 'pageSheet' }}
                           />
@@ -165,6 +169,14 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="jito-about"
+                            options={{
+                              presentation: 'transparentModal',
+                              animation: 'fade',
+                              contentStyle: { backgroundColor: 'transparent' },
+                            }}
+                          />
+                          <Stack.Screen
+                            name="xstock-about"
                             options={{
                               presentation: 'transparentModal',
                               animation: 'fade',
