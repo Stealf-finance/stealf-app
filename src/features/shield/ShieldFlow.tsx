@@ -28,7 +28,7 @@ import { T } from '@/src/design-system/tokens';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
-import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import {
   shieldedBalanceQueries,
   useShieldedSolBalance,

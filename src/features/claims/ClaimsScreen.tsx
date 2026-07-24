@@ -33,13 +33,11 @@ import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShielded
 import { encryptedBalancesQueries } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import { reconstructAddressFromU128Parts } from '@umbra-privacy/sdk/solana';
-import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import {
   SOL_MINT,
   SOL_ICON_URI,
   USDC_MINT,
-  DUSDC_MINT,
-  DUSDT_MINT,
 } from '@/src/constants/solana';
 import {
   describeClaimParts,
@@ -66,10 +64,6 @@ const USDT_LOGO_URI =
 
 function tokenForMint(mint: string | null, solUsd: number | null): ClaimToken | null {
   switch (mint) {
-    case DUSDC_MINT:
-      return { symbol: 'dUSDC', decimals: 6, usdPerUnit: 1, iconUri: USDC_LOGO_URI };
-    case DUSDT_MINT:
-      return { symbol: 'dUSDT', decimals: 6, usdPerUnit: 1, iconUri: USDT_LOGO_URI };
     case USDC_MINT:
       return { symbol: 'USDC', decimals: 6, usdPerUnit: 1, iconUri: USDC_LOGO_URI };
     case SOL_MINT:

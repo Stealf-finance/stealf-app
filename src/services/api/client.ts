@@ -19,9 +19,7 @@ async function request<T = unknown>(
   const response = await fetch(`${EXPO_PUBLIC_API_URL}${endpoint}`, init);
 
   if (!response.ok) {
-    // Safety net for any token desync the reactive sync misses. Only when we
-    // actually presented a token — a 401 on an unauthenticated call means the
-    // endpoint needs auth, not that the session died.
+
     if (response.status === 401 && token) {
       emitSessionExpired('api_unauthorized');
     }

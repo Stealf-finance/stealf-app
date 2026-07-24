@@ -36,7 +36,7 @@ import {
 } from '@/src/features/send/components/RecipientRow';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
-import { useSolPrice } from './hooks/useSolPrice';
+import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import { useSendSimple } from './hooks/useSendSimple';
 import { mapTokensToAssets } from './lib/mapTokenToAsset';
 import { useQueryClient } from '@tanstack/react-query';
