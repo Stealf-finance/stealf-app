@@ -1,10 +1,8 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, Text, View } from 'react-native';
 import { Icons } from '@/src/design-system/icons';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
+import { SheetShell } from '@/src/design-system/primitives/SheetShell';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 
@@ -27,8 +25,9 @@ export type ChoiceSection = {
 /**
  * Bottom-sheet chooser: an accent icon, title + subtitle, and a list of
  * options (icon · title · subtitle · chevron) — flat via `options`, or
- * grouped under kicker labels via `sections`. Presentational — render it in a
- * transparent-modal route and pass `onClose` = router.back.
+ * grouped under kicker labels via `sections`. Built on the shared
+ * {@link SheetShell}. Render it in a transparent-modal route and pass
+ * `onClose` = router.back.
  */
 export function ChoiceSheet({
   accentIcon,
@@ -45,95 +44,47 @@ export function ChoiceSheet({
   sections?: ChoiceSection[];
   onClose: () => void;
 }) {
-  const insets = useSafeAreaInsets();
-
   return (
-    <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-      {/* Blurred / dimmed backdrop — tap to close */}
-      <Animated.View entering={FadeIn.duration(180)} style={StyleSheet.absoluteFill}>
-        <BlurView
-          intensity={40}
-          tint="dark"
-          experimentalBlurMethod="dimezisBlurView"
-          style={StyleSheet.absoluteFill}
-        />
-        <Pressable
-          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(8,8,10,0.5)' }]}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        />
-      </Animated.View>
+    <SheetShell onClose={onClose}>
+      <View style={{ alignItems: 'center', marginBottom: 12 }}>{accentIcon}</View>
 
-      {/* Panel — opaque, in the Home cards' color (their 5% white veil
-          composited on the black bg = #0d0d0d), top corners only. */}
-      <Animated.View
-        entering={SlideInDown.duration(260)}
-        style={{
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          overflow: 'hidden',
-        }}
+      <Text
+        style={[
+          sansation,
+          { fontSize: 22, fontWeight: '600', color: T.ink, textAlign: 'center' },
+        ]}
       >
-        <View
-          style={{
-            backgroundColor: '#0d0d0d',
-            paddingTop: 24,
-            paddingBottom: insets.bottom + 24,
-            paddingHorizontal: 24,
-          }}
-        >
-        <Pressable
-          onPress={onClose}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          style={{ position: 'absolute', top: 16, right: 16, padding: 4 }}
-        >
-          <Icons.close size={22} color={T.inkFaint} />
-        </Pressable>
+        {title}
+      </Text>
+      <Text
+        style={[
+          sansation,
+          {
+            fontSize: 15,
+            lineHeight: 22,
+            color: T.inkDim,
+            textAlign: 'center',
+            marginTop: 6,
+            marginBottom: 20,
+          },
+        ]}
+      >
+        {subtitle}
+      </Text>
 
-        <View style={{ alignItems: 'center', marginBottom: 12 }}>{accentIcon}</View>
+      {options?.map((o, i) => <OptionRow key={o.key} option={o} first={i === 0} />)}
 
-        <Text
-          style={[
-            sansation,
-            { fontSize: 22, fontWeight: '600', color: T.ink, textAlign: 'center' },
-          ]}
-        >
-          {title}
-        </Text>
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 15,
-              lineHeight: 22,
-              color: T.inkDim,
-              textAlign: 'center',
-              marginTop: 6,
-              marginBottom: 20,
-            },
-          ]}
-        >
-          {subtitle}
-        </Text>
-
-        {options?.map((o, i) => <OptionRow key={o.key} option={o} first={i === 0} />)}
-
-        {sections?.map((s, si) => (
-          <View key={s.label} style={{ marginTop: si === 0 ? 0 : 18 }}>
-            <Kicker color={T.inkFaint} style={{ marginBottom: 4 }}>
-              {s.label}
-            </Kicker>
-            {s.options.map((o, i) => (
-              <OptionRow key={o.key} option={o} first={i === 0} />
-            ))}
-          </View>
-        ))}
+      {sections?.map((s, si) => (
+        <View key={s.label} style={{ marginTop: si === 0 ? 0 : 18 }}>
+          <Kicker color={T.inkFaint} style={{ marginBottom: 4 }}>
+            {s.label}
+          </Kicker>
+          {s.options.map((o, i) => (
+            <OptionRow key={o.key} option={o} first={i === 0} />
+          ))}
         </View>
-      </Animated.View>
-    </View>
+      ))}
+    </SheetShell>
   );
 }
 

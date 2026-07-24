@@ -26,6 +26,10 @@ type Props = {
   assets: WalletAsset[];
   /** Optional slot rendered right under the balance (e.g. a Claim button). */
   belowBalance?: ReactNode;
+  /** Optional slot rendered after the assets list (e.g. an "Available
+   *  products" section). When provided, the empty-assets placeholder is
+   *  suppressed — the footer is the screen's content instead. */
+  footer?: ReactNode;
   /** Optional bottom bar (left pill + FAB); omit for no bottom nav. */
   bottomBar?: ReactNode;
   tone?: Tone;
@@ -43,6 +47,7 @@ export function WalletScreen({
   balanceUSD,
   assets,
   belowBalance,
+  footer,
   bottomBar,
   tone = 'silver',
 }: Props) {
@@ -131,9 +136,11 @@ export function WalletScreen({
 
         {/* Assets */}
         {assets.length === 0 ? (
-          <Text style={{ fontSize: 14, color: pal.inkFaint, paddingVertical: 16 }}>
-            No assets yet.
-          </Text>
+          footer ? null : (
+            <Text style={{ fontSize: 14, color: pal.inkFaint, paddingVertical: 16 }}>
+              No assets yet.
+            </Text>
+          )
         ) : (
           assets.map((a, i) => (
             <AssetRow
@@ -149,6 +156,8 @@ export function WalletScreen({
             />
           ))
         )}
+
+        {footer ? <View style={{ marginTop: 8 }}>{footer}</View> : null}
       </ScrollView>
 
       {bottomBar}

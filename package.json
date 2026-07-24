@@ -14,8 +14,10 @@
     "prebuild:ios:clean": "rm -rf ios && npm run prebuild:ios"
   },
   "dependencies": {
+    "@coral-xyz/borsh": "^0.30.1",
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
+    "@jito-foundation/stake-deposit-interceptor-sdk": "^1.7.1",
     "@noble/hashes": "^2.2.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/netinfo": "11.4.1",
@@ -23,6 +25,8 @@
     "@sentry/react-native": "^8.11.1",
     "@solana-program/token": "^0.13.0",
     "@solana/kit": "^6.8.0",
+    "@solana/spl-stake-pool": "^1.1.8",
+    "@solana/web3.js": "^1.98.4",
     "@tanstack/query-async-storage-persister": "^5.100.10",
     "@tanstack/react-query": "^5.100.10",
     "@tanstack/react-query-persist-client": "^5.100.10",
@@ -92,7 +96,8 @@
     "vitest": "^4.1.5"
   },
   "overrides": {
-    "@umbra-privacy/umbra-codama": "3.0.0-rc.4"
+    "@umbra-privacy/umbra-codama": "3.0.0-rc.4",
+    "react-dom": "19.1.0"
   },
   "private": true
 }
