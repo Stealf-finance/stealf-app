@@ -14,7 +14,6 @@ import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { Icons } from '@/src/design-system/icons';
@@ -171,7 +170,7 @@ export function JitoProductScreen() {
         >
           Pool info
         </Text>
-        <BlurGlass radius={22} innerStyle={{ padding: 22 }}>
+        <View>
           <InfoRow
             iconKey="key"
             label="Contract address"
@@ -197,7 +196,7 @@ export function JitoProductScreen() {
           <InfoRow iconKey="bank" label="Total value locked" value={tvl} />
           <InfoRow iconKey="invest" label="JitoSOL supply" value={supply} />
           <InfoRow iconKey="user" label="Provider" value="Jito" />
-        </BlurGlass>
+        </View>
       </ScrollView>
 
       {/* Pinned actions */}
@@ -212,7 +211,7 @@ export function JitoProductScreen() {
       >
         <View style={{ flex: 1 }}>
           <PillBtn
-            label="Deposit"
+            label="Stake"
             variant="primary"
             tone="silver"
             onPress={() => router.push('/stake-deposit')}
@@ -221,7 +220,7 @@ export function JitoProductScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <PillBtn
-            label="Withdraw"
+            label="Unstake"
             variant="secondary"
             tone="silver"
             disabled={!canWithdraw}

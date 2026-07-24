@@ -1,18 +1,3 @@
-/**
- * StakeFlow — Deposit (stake SOL → jitoSOL) / Withdraw (unstake jitoSOL → SOL).
- *
- * Reuses the Shield/Send flow's UI primitives (CenterGlow, AmountCardTiles,
- * AssetSelectRow, TiledKeypadPanel, useAmountInput) for a visually identical
- * amount-entry screen — but the submit path is JitoSOL staking, NOT Umbra. The
- * asset is fixed (SOL on deposit, jitoSOL on withdraw), so there's no asset
- * picker.
- *
- * Signing goes through the JitoSOL service (`stakeSOL` / `unstakeJitoSOL`),
- * which uses the stealth wallet's local ED25519 key (hard rule #3). The Jito
- * pool is mainnet-only, so on a devnet build the tx fails — surfaced as an error
- * toast. The withdraw source balance is a placeholder (0) until a real JitoSOL
- * balance hook exists, so Withdraw stays at "Insufficient balance" for now.
- */
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Text, View } from 'react-native';
@@ -56,7 +41,7 @@ export function StakeFlow({ direction }: { direction: Direction }) {
   const { show } = useToast();
 
   const isDeposit = direction === 'deposit';
-  const title = isDeposit ? 'Deposit' : 'Withdraw';
+  const title = isDeposit ? 'Stake' : 'Unstake';
   const assetSymbol = isDeposit ? 'SOL' : 'JitoSOL';
   const iconSource = isDeposit ? { uri: SOL_ICON_URI } : JITOSOL_ICON;
 
@@ -119,13 +104,13 @@ export function StakeFlow({ direction }: { direction: Direction }) {
         void queryClient.invalidateQueries({ queryKey: ['jito-sol-balance'] });
         show({
           kind: 'success',
-          title: isDeposit ? 'Deposit sent' : 'Withdrawal sent',
+          title: isDeposit ? 'Stake sent' : 'Unstake sent',
           message: `Tx ${sig.slice(0, 8)}…`,
         });
       } catch (err) {
         show({
           kind: 'error',
-          title: isDeposit ? 'Deposit failed' : 'Withdrawal failed',
+          title: isDeposit ? 'Stake failed' : 'Unstake failed',
           message: err instanceof Error ? err.message : 'Operation failed',
         });
       }

@@ -26,12 +26,10 @@ export const XstockDetailSchema = SolanaXstockSchema.extend({
   referencePrice: z.number().nullable(),
   /** 24h price change in percent (1.29 = +1.29%), or null. Detail only. */
   priceChange24h: z.number().nullable().optional(),
-  multiplier: z.number(),
-  status: z.object({
-    symbol: z.string(),
-    isMarketTradingHalted: z.boolean(),
-    isAtomicTradingHalted: z.boolean(),
-  }),
+  // Not used in the UI yet — kept loose so a backend shape change can't fail
+  // the parse and discard the price/change we DO display.
+  multiplier: z.unknown().optional(),
+  status: z.unknown().optional(),
 });
 export type XstockDetail = z.infer<typeof XstockDetailSchema>;
 
