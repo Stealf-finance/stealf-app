@@ -27,19 +27,29 @@ describe('SolanaXstockSchema', () => {
 });
 
 describe('XstockDetailSchema', () => {
-  it('parses detail with a nullable reference price + status', () => {
-    const detail = {
-      ...asset,
-      referencePrice: null,
-      multiplier: 1,
-      status: {
-        symbol: 'AAPLx',
-        isMarketTradingHalted: false,
-        isAtomicTradingHalted: false,
-      },
-    };
-    expect(XstockDetailSchema.parse(detail).referencePrice).toBeNull();
-    expect(XstockDetailSchema.parse({ ...detail, referencePrice: 227.3 }).referencePrice).toBe(227.3);
+  const detail = {
+    ...asset,
+    referencePrice: 231.4,
+    priceChange24h: 1.29,
+    multiplier: 1,
+    status: {
+      symbol: 'AAPLx',
+      isMarketTradingHalted: false,
+      isAtomicTradingHalted: false,
+    },
+  };
+
+  it('parses detail with price, 24h change + status', () => {
+    const parsed = XstockDetailSchema.parse(detail);
+    expect(parsed.referencePrice).toBe(231.4);
+    expect(parsed.priceChange24h).toBe(1.29);
+  });
+
+  it('tolerates a null / omitted 24h change', () => {
+    expect(XstockDetailSchema.parse({ ...detail, priceChange24h: null }).priceChange24h).toBeNull();
+    const { priceChange24h, ...noChange } = detail;
+    void priceChange24h;
+    expect(XstockDetailSchema.parse(noChange).priceChange24h).toBeUndefined();
   });
 });
 

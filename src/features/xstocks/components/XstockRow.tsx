@@ -1,10 +1,6 @@
-/**
- * One xStock row inside the "Tokenized Stocks" group card: logo + name on the
- * left, live reference price on the right ("Halted" underneath when trading is
- * paused). Price comes from the per-asset detail endpoint.
- */
 import { Image } from 'expo-image';
 import { Text, View } from 'react-native';
+import { Skeleton } from '@/src/design-system/primitives/Skeleton';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
@@ -20,6 +16,7 @@ function formatUsd(n: number): string {
 export function XstockRow({ asset }: { asset: SolanaXstock }) {
   const { data: detail } = useXstockAsset(asset.symbol);
   const price = detail?.referencePrice;
+  const change = detail?.priceChange24h;
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 }}>
@@ -34,16 +31,27 @@ export function XstockRow({ asset }: { asset: SolanaXstock }) {
           {asset.name}
         </Text>
       </View>
-      <View style={{ alignItems: 'flex-end' }}>
-        <Text style={[sansation, { fontSize: 16, fontWeight: '600', color: S.ink }]}>
-          {price != null ? formatUsd(price) : '—'}
-        </Text>
-        {asset.isTradingHalted ? (
-          <Text
-            style={[sansation, { fontSize: 11, fontWeight: '600', color: T.error, marginTop: 2 }]}
-          >
-            Halted
+      <View style={{ alignItems: 'flex-end', gap: 3 }}>
+        {price != null ? (
+          <Text style={[sansation, { fontSize: 16, fontWeight: '600', color: S.ink }]}>
+            {formatUsd(price)}
           </Text>
+        ) : (
+          // Shimmer while the price loads instead of a dead dash.
+          <Skeleton width={64} height={15} radius={5} />
+        )}
+        {change != null ? (
+          <Text
+            style={[
+              sansation,
+              { fontSize: 12, fontWeight: '600', color: change >= 0 ? T.green : T.error },
+            ]}
+          >
+            {change >= 0 ? '+' : '−'}
+            {Math.abs(change).toFixed(2)}%
+          </Text>
+        ) : price == null ? (
+          <Skeleton width={40} height={11} radius={4} />
         ) : null}
       </View>
     </View>

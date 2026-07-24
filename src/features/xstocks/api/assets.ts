@@ -24,6 +24,8 @@ export type SolanaXstock = z.infer<typeof SolanaXstockSchema>;
 
 export const XstockDetailSchema = SolanaXstockSchema.extend({
   referencePrice: z.number().nullable(),
+  /** 24h price change in percent (1.29 = +1.29%), or null. Detail only. */
+  priceChange24h: z.number().nullable().optional(),
   multiplier: z.number(),
   status: z.object({
     symbol: z.string(),
