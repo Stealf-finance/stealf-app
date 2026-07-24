@@ -5,6 +5,7 @@ import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
+import { AvailableStocks } from '@/src/features/xstocks/components/AvailableStocks';
 import { useJitoApy } from '../hooks/useJitoApy';
 import { useJitoSolPosition } from '../hooks/useJitoSolBalance';
 
@@ -33,7 +34,10 @@ export function AvailableProducts() {
         Available products
       </Text>
 
-      <JitoProductCard />
+      <View style={{ gap: 12 }}>
+        <JitoProductCard />
+        <AvailableStocks />
+      </View>
     </View>
   );
 }
