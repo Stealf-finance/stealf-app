@@ -1,36 +1,32 @@
 /**
  * One xStock row inside the "Tokenized Stocks" group card: logo + name on the
- * left, live reference price + 24h change on the right. The skeleton shows only
- * while the detail query is loading; once resolved it's the price (or "—") — not
- * an endless shimmer.
+ * left, live reference price + 24h change on the right. Taps into the xStock
+ * detail screen. The skeleton shows only while the detail query is loading.
  */
 import { Image } from 'expo-image';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Skeleton } from '@/src/design-system/primitives/Skeleton';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import type { SolanaXstock } from '../api/assets';
 import { useXstockAsset } from '../hooks/useXstockAsset';
+import { displayName, formatUsd } from '../lib/format';
 
 const S = txPalette('silver');
 
-function formatUsd(n: number): string {
-  return `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-/** Drop the "xStock" brand suffix from the display name (Apple xStock → Apple). */
-function displayName(name: string): string {
-  return name.replace(/\s*x-?stock\s*$/i, '').trim();
-}
-
 export function XstockRow({ asset }: { asset: SolanaXstock }) {
+  const router = useSafeRouter();
   const { data: detail, isPending } = useXstockAsset(asset.symbol);
   const price = detail?.referencePrice;
   const change = detail?.priceChange24h;
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16 }}>
+    <Pressable
+      onPress={() => router.push(`/xstock/${asset.symbol}`)}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 16 }}
+    >
       <Image
         source={{ uri: asset.logo }}
         style={{ width: 38, height: 38, borderRadius: 19 }}
@@ -68,6 +64,6 @@ export function XstockRow({ asset }: { asset: SolanaXstock }) {
           </>
         )}
       </View>
-    </View>
+    </Pressable>
   );
 }

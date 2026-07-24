@@ -172,6 +172,14 @@ function RootLayout() {
                             }}
                           />
                           <Stack.Screen
+                            name="xstock-about"
+                            options={{
+                              presentation: 'transparentModal',
+                              animation: 'fade',
+                              contentStyle: { backgroundColor: 'transparent' },
+                            }}
+                          />
+                          <Stack.Screen
                             name="receive-qr"
                             options={{
                               presentation: 'transparentModal',
