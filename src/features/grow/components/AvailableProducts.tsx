@@ -1,23 +1,17 @@
-/**
- * "Available products" section for the Earn screen — a catalog of yield
- * products the user can put money into. For now a single static JitoSOL
- * (liquid staking) card; the actual stake flow (`services/jitoSOL`) is wired
- * in a follow-up. APY is hardcoded to match the old GrowHub figure (7.84%).
- *
- * Card chrome is `BlurGlass` (radius 22, dark tint, 5% white veil) — the same
- * primitive the Home grid cards use. Typography is `sansation` throughout (one
- * family, varied by size/weight/color) like the wallet screens and Home cards.
- * APY sits in a neutral pill on the right, aligned with the product title.
- */
 import { Image } from 'expo-image';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
+import { T } from '@/src/design-system/tokens';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
+import { usePoolInfo } from '../hooks/usePoolInfo';
 
 const S = txPalette('silver');
 
-const JITO_APY = '7.84%';
+/** Shown while the live pool APY is loading or unavailable (e.g. a devnet RPC,
+ *  where the mainnet-only Jito pool account doesn't exist). */
+const FALLBACK_APY_PCT = 0.00;
 
 export function AvailableProducts() {
   return (
@@ -44,8 +38,17 @@ export function AvailableProducts() {
 }
 
 function JitoProductCard() {
+  const router = useSafeRouter();
+  const { data } = usePoolInfo();
+  const apyPct =
+    data?.apy != null && Number.isFinite(data.apy)
+      ? data.apy * 100
+      : FALLBACK_APY_PCT;
+  const apyLabel = `${apyPct.toFixed(2)}% APY`;
+
   return (
-    <BlurGlass radius={22} innerStyle={{ padding: 20 }}>
+    <Pressable onPress={() => router.push('/jitosol')}>
+      <BlurGlass radius={22} innerStyle={{ padding: 20 }}>
       {/* Header: logo + (title row with APY pill → kicker) */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
         <Image
@@ -90,10 +93,10 @@ function JitoProductCard() {
               <Text
                 style={[
                   sansation,
-                  { fontSize: 12, lineHeight: 16, fontWeight: '600', color: S.inkDim },
+                  { fontSize: 12, lineHeight: 16, fontWeight: '600', color: T.green },
                 ]}
               >
-                {JITO_APY} APY
+                {apyLabel}
               </Text>
             </View>
           </View>
@@ -105,16 +108,28 @@ function JitoProductCard() {
         </View>
       </View>
 
-      {/* Description */}
-      <Text
-        style={[
-          sansation,
-          { fontSize: 14, lineHeight: 20, color: S.inkDim, marginTop: 16 },
-        ]}
-      >
-        Stake SOL with Jito to earn staking rewards — your SOL keeps working
-        while it stays liquid.
+      {/* Position stats (placeholder until the real balance is wired) */}
+      <View style={{ flexDirection: 'row', marginTop: 18 }}>
+        <CardStat label="Balance" value="$0" />
+        <CardStat label="Earning" value="$0" />
+        <CardStat label="Type" value="Staking" />
+      </View>
+      </BlurGlass>
+    </Pressable>
+  );
+}
+
+function CardStat({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <Text style={[sansation, { fontSize: 12, lineHeight: 16, color: S.inkFaint }]}>
+        {label}
       </Text>
-    </BlurGlass>
+      <Text
+        style={[sansation, { fontSize: 15, lineHeight: 20, fontWeight: '500', color: S.ink, marginTop: 4 }]}
+      >
+        {value}
+      </Text>
+    </View>
   );
 }

@@ -221,6 +221,13 @@ export const Icons = {
       <Path d="M12 16v-4M12 8h.01" />
     </>,
   ),
+  globe: make(
+    <>
+      <Circle cx="12" cy="12" r="9" />
+      <Path d="M3 12h18" />
+      <Path d="M12 3c2.5 2.4 3.8 5.6 3.8 9s-1.3 6.6-3.8 9c-2.5-2.4-3.8-5.6-3.8-9s1.3-6.6 3.8-9Z" />
+    </>,
+  ),
   shieldOff: make(
     <>
       <Path d="M12 2L3 6v6c0 5 4 9.5 9 10 5-.5 9-5 9-10V6l-9-4z" />

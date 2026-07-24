@@ -156,6 +156,14 @@ function RootLayout() {
                             }}
                           />
                           <Stack.Screen
+                            name="jito-about"
+                            options={{
+                              presentation: 'transparentModal',
+                              animation: 'fade',
+                              contentStyle: { backgroundColor: 'transparent' },
+                            }}
+                          />
+                          <Stack.Screen
                             name="receive-qr"
                             options={{
                               presentation: 'transparentModal',
