@@ -1,0 +1,238 @@
+/**
+ * Swap screen — pay one token, receive another via Jupiter. Opened from the
+ * Wallet FAB. Amount entry drives a live (debounced) quote; Review confirms and
+ * runs build → sign (stealth ED25519) → execute. App dark DA (the reference
+ * mock is light — this follows the rest of the app).
+ *
+ * Tokens come from a stub list for now (SWAP_TOKENS); balances/MAX read the
+ * stealth wallet by symbol. Swaps are mainnet (Jupiter) — fail with a toast on
+ * a devnet build.
+ */
+import { useEffect, useState } from 'react';
+import { Image } from 'expo-image';
+import { Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
+import { Icons } from '@/src/design-system/icons';
+import { sansation } from '@/src/design-system/typography';
+import { txPalette } from '@/src/design-system/palettes';
+import { T } from '@/src/design-system/tokens';
+import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
+import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { useToast } from '@/src/components/toast/ToastContext';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
+import { SWAP_TOKENS, type SwapToken } from '../lib/tokens';
+import { useSwapQuote } from '../hooks/useSwapQuote';
+import { useSwapExecute } from '../hooks/useSwapExecute';
+import { TokenPickerSheet } from '../components/TokenPickerSheet';
+import { SwapReviewSheet } from '../components/SwapReviewSheet';
+
+const S = txPalette('silver');
+
+const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
+const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 6 });
+
+function TokenPill({ token, onPress }: { token: SwapToken; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingLeft: 6,
+        paddingRight: 12,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+      }}
+    >
+      <Image
+        source={{ uri: token.logoUri }}
+        style={{ width: 28, height: 28, borderRadius: 14 }}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+      />
+      <Text style={[sansation, { fontSize: 16, fontWeight: '600', color: T.ink }]}>
+        {token.symbol}
+      </Text>
+      <Icons.chevR size={16} color={S.inkDim} />
+    </Pressable>
+  );
+}
+
+export function SwapScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useSafeRouter();
+  const { show } = useToast();
+  const { user } = useAuth();
+
+  const [payToken, setPayToken] = useState<SwapToken>(SWAP_TOKENS[0]);
+  const [receiveToken, setReceiveToken] = useState<SwapToken>(SWAP_TOKENS[1]);
+  const [pickerSide, setPickerSide] = useState<'pay' | 'receive' | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+
+  const { data: wallet } = useBalance(user?.stealfWallet ?? null);
+  const payBalance =
+    wallet?.tokens?.find((t) => t.tokenSymbol === payToken.symbol)?.balance ?? 0;
+
+  const { setAmount, solAmount, primaryDisplay, onKey, onPressPercent } = useAmountInput({
+    rate: 0,
+    maxSol: payBalance,
+    decimals: payToken.decimals,
+  });
+
+  useEffect(() => {
+    setAmount('0');
+  }, [payToken.mint, setAmount]);
+
+  const { receiveAmount, order, loading: quoting } = useSwapQuote(payToken, receiveToken, solAmount);
+  const { swap, loading: swapping } = useSwapExecute();
+
+  const insufficient = solAmount > payBalance;
+  const reviewDisabled = solAmount <= 0 || insufficient;
+
+  const pickToken = (tk: SwapToken) => {
+    const other = pickerSide === 'pay' ? receiveToken : payToken;
+    if (tk.mint === other.mint) {
+      // Picking the same token as the other side → swap them.
+      if (pickerSide === 'pay') setReceiveToken(payToken);
+      else setPayToken(receiveToken);
+    }
+    if (pickerSide === 'pay') setPayToken(tk);
+    else setReceiveToken(tk);
+    setAmount('0');
+  };
+
+  const flip = () => {
+    setPayToken(receiveToken);
+    setReceiveToken(payToken);
+    setAmount('0');
+  };
+
+  const onConfirm = () => {
+    void (async () => {
+      try {
+        const res = await swap(payToken, receiveToken, solAmount);
+        setReviewOpen(false);
+        router.back();
+        show({ kind: 'success', title: 'Swap sent', message: `Tx ${res.signature.slice(0, 8)}…` });
+      } catch (err) {
+        show({
+          kind: 'error',
+          title: 'Swap failed',
+          message: err instanceof Error ? err.message : 'Trade failed',
+        });
+      }
+    })();
+  };
+
+  return (
+    <CenterGlow tone="silver" flat>
+      {/* Header */}
+      <View
+        style={{
+          paddingTop: insets.top,
+          paddingBottom: 14,
+          paddingHorizontal: 24,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        <GlassBackButton onPress={() => router.back()} />
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text
+            style={[
+              sansation,
+              { fontSize: 22, lineHeight: 28, fontWeight: '600', color: T.ink, includeFontPadding: false },
+            ]}
+          >
+            Swap
+          </Text>
+        </View>
+        <View style={{ width: 26 }} />
+      </View>
+
+      <View style={{ flex: 1, justifyContent: 'center' }}>
+        {/* You pay */}
+        <View style={{ paddingHorizontal: 24 }}>
+          <Text style={[sansation, { fontSize: 14, color: S.inkDim, marginBottom: 8 }]}>You pay</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <Text
+              style={[
+                sansation,
+                { fontSize: 44, letterSpacing: -1, color: solAmount > 0 ? S.ink : T.inkMute, includeFontPadding: false, flexShrink: 1 },
+              ]}
+              numberOfLines={1}
+            >
+              {primaryDisplay}
+            </Text>
+            <TokenPill token={payToken} onPress={() => setPickerSide('pay')} />
+          </View>
+          <Pressable onPress={() => onPressPercent(1)} hitSlop={8} style={{ alignSelf: 'flex-end', marginTop: 8 }}>
+            <Text style={[sansation, { fontSize: 14, color: S.inkDim }]}>
+              <Text style={{ color: S.ink, fontWeight: '600' }}>MAX</Text> {trim(payBalance)}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Flip */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginVertical: 20, paddingHorizontal: 24 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: S.hairline }} />
+          <Pressable onPress={flip} hitSlop={10} style={{ padding: 4 }}>
+            <Icons.swapV size={22} color={T.ink} />
+          </Pressable>
+          <View style={{ flex: 1, height: 1, backgroundColor: S.hairline }} />
+        </View>
+
+        {/* You receive */}
+        <View style={{ paddingHorizontal: 24 }}>
+          <Text style={[sansation, { fontSize: 14, color: S.inkDim, marginBottom: 8 }]}>You receive</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <Text
+              style={[
+                sansation,
+                { fontSize: 44, letterSpacing: -1, color: receiveAmount > 0 ? S.ink : T.inkMute, includeFontPadding: false, flexShrink: 1 },
+              ]}
+              numberOfLines={1}
+            >
+              {receiveAmount > 0 ? fmt(receiveAmount) : quoting ? '…' : '0'}
+            </Text>
+            <TokenPill token={receiveToken} onPress={() => setPickerSide('receive')} />
+          </View>
+        </View>
+      </View>
+
+      {/* Keypad + Review */}
+      <View style={{ paddingBottom: insets.bottom + 12 }}>
+        <TiledKeypadPanel
+          onKey={onKey}
+          tone="silver"
+          ctaLabel={insufficient ? 'Insufficient balance' : 'Review'}
+          onPressCta={() => setReviewOpen(true)}
+          ctaDisabled={reviewDisabled}
+        />
+      </View>
+
+      <TokenPickerSheet
+        open={pickerSide !== null}
+        onClose={() => setPickerSide(null)}
+        onSelect={pickToken}
+      />
+      <SwapReviewSheet
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        payToken={payToken}
+        receiveToken={receiveToken}
+        payAmount={solAmount}
+        receiveAmount={receiveAmount}
+        priceImpact={order?.priceImpact}
+        loading={swapping}
+        onConfirm={onConfirm}
+      />
+    </CenterGlow>
+  );
+}

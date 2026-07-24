@@ -140,6 +140,10 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
+                            name="swap"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
                             name="card"
                             options={{ presentation: 'pageSheet' }}
                           />
