@@ -25,7 +25,7 @@ import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles'
 import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
-import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import {
   maxSpendableSol,
   SOL_DECIMALS,

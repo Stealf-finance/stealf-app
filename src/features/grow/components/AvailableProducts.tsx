@@ -5,7 +5,7 @@ import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { usePoolInfo } from '../hooks/usePoolInfo';
+import { useJitoApy } from '../hooks/useJitoApy';
 import { useJitoSolPosition } from '../hooks/useJitoSolBalance';
 
 const S = txPalette('silver');
@@ -40,11 +40,8 @@ export function AvailableProducts() {
 
 function JitoProductCard() {
   const router = useSafeRouter();
-  const { data } = usePoolInfo();
-  const apyPct =
-    data?.apy != null && Number.isFinite(data.apy)
-      ? data.apy * 100
-      : FALLBACK_APY_PCT;
+  const { data: apy } = useJitoApy();
+  const apyPct = typeof apy === 'number' ? apy : FALLBACK_APY_PCT;
   const apyLabel = `${apyPct.toFixed(2)}% APY`;
   const { usdValue } = useJitoSolPosition();
   const balanceLabel = usdValue > 0 ? `$${usdValue.toFixed(2)}` : '$0';

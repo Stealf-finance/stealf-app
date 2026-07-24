@@ -34,7 +34,7 @@ import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
-import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import {
   useShieldedSolBalance,
   shieldedBalanceQueries,

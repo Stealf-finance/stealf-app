@@ -24,6 +24,7 @@ import { T } from '@/src/design-system/tokens';
 import { splitUsd } from '@/src/features/home/lib/formatUsd';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { usePoolInfo } from '../hooks/usePoolInfo';
+import { useJitoApy } from '../hooks/useJitoApy';
 import { useJitoSolPosition } from '../hooks/useJitoSolBalance';
 import { formatCompact } from '../lib/formatCompact';
 
@@ -51,10 +52,8 @@ export function JitoProductScreen() {
   const { jitoSol, usdValue } = useJitoSolPosition();
   const [copied, setCopied] = useState(false);
 
-  const apyPct =
-    data?.apy != null && Number.isFinite(data.apy)
-      ? data.apy * 100
-      : FALLBACK_APY_PCT;
+  const { data: apy } = useJitoApy();
+  const apyPct = typeof apy === 'number' ? apy : FALLBACK_APY_PCT;
 
   const mint = data?.poolMint ?? JITOSOL_MINT;
   const exchangeRate = data

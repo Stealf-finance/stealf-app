@@ -11,7 +11,7 @@ import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
-import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { setSelectedAsset } from '@/src/features/send/lib/selectedAssetStore';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';

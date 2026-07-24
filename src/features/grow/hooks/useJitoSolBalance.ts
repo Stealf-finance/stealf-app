@@ -8,7 +8,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
-import { useSolPrice } from '@/src/features/send/hooks/useSolPrice';
+import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import { getJitoSolBalance, type JitoSolBalance } from '@/src/services/jitoSOL/balance';
 import { usePoolInfo } from './usePoolInfo';
 
