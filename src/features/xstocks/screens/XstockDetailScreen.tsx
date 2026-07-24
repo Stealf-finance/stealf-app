@@ -5,8 +5,8 @@
  * the About sheet (`/xstock-about`).
  *
  * Price + 24h change come live from `useXstockAsset`; the holding from
- * `useXstockBalance` (stealth wallet). The Buy/Sell trade flow is wired in a
- * later slice — the buttons are present but inert for now.
+ * `useXstockBalance` (stealth wallet). Buy/Sell open the TradeFlow; Sell is
+ * disabled until the wallet holds the stock.
  */
 import { ReactNode, useState } from 'react';
 import { Image } from 'expo-image';
@@ -210,7 +210,7 @@ export function XstockDetailScreen({ symbol }: { symbol: string }) {
         </View>
       </ScrollView>
 
-      {/* Pinned actions — trade flow wired in a later slice (inert for now) */}
+      {/* Pinned actions → TradeFlow (build → sign → execute). Sell needs a holding. */}
       <View
         style={{
           paddingHorizontal: 24,
@@ -225,6 +225,7 @@ export function XstockDetailScreen({ symbol }: { symbol: string }) {
             label="Buy"
             variant="primary"
             tone="silver"
+            onPress={() => router.push(`/xstock-trade/${symbol}?mode=buy`)}
             rightIcon={<Icons.arrDownRight size={16} color="#0a0a0a" />}
           />
         </View>
@@ -234,6 +235,7 @@ export function XstockDetailScreen({ symbol }: { symbol: string }) {
             variant="secondary"
             tone="silver"
             disabled={!canSell}
+            onPress={() => router.push(`/xstock-trade/${symbol}?mode=sell`)}
             rightIcon={<Icons.arrUpRight size={16} color={T.ink} />}
           />
         </View>

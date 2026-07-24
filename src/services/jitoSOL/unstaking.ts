@@ -2,7 +2,7 @@ import { Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
 import { withdrawSol, withdrawStake } from '@solana/spl-stake-pool';
 import { JITO_STAKE_POOL_ADDRESS } from './constants';
 import { getJitoConnection } from './connection';
-import { getStealthKeypair } from './signer';
+import { getStealthKeypair } from '@/src/services/wallet/stealthKeypair';
 
 export async function unstakeJitoSOL(
   amountJitoSol: number,

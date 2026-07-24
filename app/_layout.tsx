@@ -136,6 +136,10 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
+                            name="xstock-trade/[symbol]"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
                             name="card"
                             options={{ presentation: 'pageSheet' }}
                           />

@@ -2,7 +2,7 @@ import { Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
 import { depositSol } from '@solana/spl-stake-pool';
 import { JITO_STAKE_POOL_ADDRESS } from './constants';
 import { getJitoConnection } from './connection';
-import { getStealthKeypair } from './signer';
+import { getStealthKeypair } from '@/src/services/wallet/stealthKeypair';
 import { solToLamports } from './poolMath';
 
 export async function stakeSOL(amountSol: number): Promise<string> {
