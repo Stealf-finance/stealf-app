@@ -6,6 +6,7 @@ import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { usePoolInfo } from '../hooks/usePoolInfo';
+import { useJitoSolPosition } from '../hooks/useJitoSolBalance';
 
 const S = txPalette('silver');
 
@@ -45,6 +46,8 @@ function JitoProductCard() {
       ? data.apy * 100
       : FALLBACK_APY_PCT;
   const apyLabel = `${apyPct.toFixed(2)}% APY`;
+  const { usdValue } = useJitoSolPosition();
+  const balanceLabel = usdValue > 0 ? `$${usdValue.toFixed(2)}` : '$0';
 
   return (
     <Pressable onPress={() => router.push('/jitosol')}>
@@ -108,9 +111,10 @@ function JitoProductCard() {
         </View>
       </View>
 
-      {/* Position stats (placeholder until the real balance is wired) */}
+      {/* Position stats. Balance is live; Earning needs a cost basis we don't
+          track yet, so it stays a placeholder for now. */}
       <View style={{ flexDirection: 'row', marginTop: 18 }}>
-        <CardStat label="Balance" value="$0" />
+        <CardStat label="Balance" value={balanceLabel} />
         <CardStat label="Earning" value="$0" />
         <CardStat label="Type" value="Staking" />
       </View>

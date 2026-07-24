@@ -24,15 +24,13 @@ import { T } from '@/src/design-system/tokens';
 import { splitUsd } from '@/src/features/home/lib/formatUsd';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { usePoolInfo } from '../hooks/usePoolInfo';
+import { useJitoSolPosition } from '../hooks/useJitoSolBalance';
 import { formatCompact } from '../lib/formatCompact';
 
 const S = txPalette('silver');
 
 /** Placeholder until the APY source is wired (kept honest — 0 when unknown). */
 const FALLBACK_APY_PCT = 0;
-/** Placeholder — swap for the real JitoSOL balance (amount + USD value). */
-const JITOSOL_BALANCE = 0;
-const JITOSOL_BALANCE_USD = 0;
 /** JitoSOL mint (fallback when the live pool account isn't available). */
 const JITOSOL_MINT = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
 
@@ -40,11 +38,17 @@ function shortAddr(a: string): string {
   return a.length > 10 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a;
 }
 
+function fmtJitoSol(n: number): string {
+  if (n === 0) return '0';
+  return n.toFixed(4).replace(/\.?0+$/, '');
+}
+
 export function JitoProductScreen() {
   const insets = useSafeAreaInsets();
   const router = useSafeRouter();
   const { data } = usePoolInfo();
 
+  const { jitoSol, usdValue } = useJitoSolPosition();
   const [copied, setCopied] = useState(false);
 
   const apyPct =
@@ -63,8 +67,8 @@ export function JitoProductScreen() {
     ? `${formatCompact(Number(data.totalPoolTokens) / 1e9)} JitoSOL`
     : '—';
 
-  const { int, dec } = splitUsd(JITOSOL_BALANCE_USD);
-  const canWithdraw = JITOSOL_BALANCE > 0;
+  const { int, dec } = splitUsd(usdValue);
+  const canWithdraw = jitoSol > 0;
 
   const copyMint = () => {
     void Clipboard.setStringAsync(mint);
@@ -155,7 +159,7 @@ export function JitoProductScreen() {
             </Text>
           </View>
           <Text style={[sansation, { fontSize: 13, color: S.inkFaint, marginTop: 8 }]}>
-            {JITOSOL_BALANCE} JitoSOL
+            {fmtJitoSol(jitoSol)} JitoSOL
           </Text>
         </View>
 

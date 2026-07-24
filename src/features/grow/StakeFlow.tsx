@@ -14,6 +14,7 @@
  * balance hook exists, so Withdraw stays at "Insufficient balance" for now.
  */
 import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
@@ -38,12 +39,11 @@ import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { stakeSOL } from '@/src/services/jitoSOL/staking';
 import { unstakeJitoSOL } from '@/src/services/jitoSOL/unstaking';
 import { usePoolInfo } from './hooks/usePoolInfo';
+import { useJitoSolBalance } from './hooks/useJitoSolBalance';
 
 type Direction = 'deposit' | 'withdraw';
 
 const JITOSOL_ICON = require('@/assets/images/jito.png');
-/** Placeholder — swap for the real JitoSOL balance hook to enable Withdraw. */
-const JITOSOL_BALANCE = 0;
 
 function formatBalance(amount: number): string {
   if (amount === 0) return '0';
@@ -61,15 +61,16 @@ export function StakeFlow({ direction }: { direction: Direction }) {
   const iconSource = isDeposit ? { uri: SOL_ICON_URI } : JITOSOL_ICON;
 
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: bal } = useBalance(isDeposit ? user?.stealfWallet ?? null : null);
   const { data: solPrice } = useSolPrice();
   const { data: pool } = usePoolInfo();
+  const { data: jitoBal } = useJitoSolBalance();
 
-  // Deposit: source = stealth wallet public SOL. Withdraw: JitoSOL held
-  // (placeholder 0 until a balance hook exists).
+  // Deposit: source = stealth wallet public SOL. Withdraw: JitoSOL held.
   const sourceBalance = isDeposit
     ? bal?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0
-    : JITOSOL_BALANCE;
+    : jitoBal?.uiAmount ?? 0;
 
   // USD rate: SOL price on deposit; jitoSOL ≈ (SOL per jitoSOL) · SOL price.
   const price = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
@@ -115,6 +116,7 @@ export function StakeFlow({ direction }: { direction: Direction }) {
         const sig = isDeposit
           ? await stakeSOL(amt)
           : await unstakeJitoSOL(amt, { instant: true });
+        void queryClient.invalidateQueries({ queryKey: ['jito-sol-balance'] });
         show({
           kind: 'success',
           title: isDeposit ? 'Deposit sent' : 'Withdrawal sent',
