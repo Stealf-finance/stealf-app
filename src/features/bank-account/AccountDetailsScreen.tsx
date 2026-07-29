@@ -35,9 +35,11 @@ export function AccountDetailsScreen() {
     await Clipboard.setStringAsync(address);
     // Feedback is the icon animation only — no toast.
     setCopied(true);
-    pop.value = withSequence(
-      withTiming(0.6, { duration: 90 }),
-      withSpring(1, { damping: 7, stiffness: 320 }),
+    pop.set(
+      withSequence(
+        withTiming(0.6, { duration: 90 }),
+        withSpring(1, { damping: 7, stiffness: 320 }),
+      ),
     );
     setTimeout(() => setCopied(false), 1200);
   };

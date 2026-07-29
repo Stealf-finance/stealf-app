@@ -27,32 +27,35 @@ export function RefreshBtn({ onPress, spinning }: Props) {
   const [localSpinning, setLocalSpinning] = useState(false);
 
   useEffect(() => {
-    glow.value = withTiming(spinning ? 1 : 0, {
-      duration: spinning ? 220 : 260,
-    });
+    glow.set(
+      withTiming(spinning ? 1 : 0, {
+        duration: spinning ? 220 : 260,
+      }),
+    );
   }, [spinning, glow]);
 
   const handlePress = () => {
-    pressScale.value = withTiming(0.88, { duration: 90 }, () => {
-      pressScale.value = withTiming(1, { duration: 180 });
-    });
+    pressScale.set(
+      withTiming(0.88, { duration: 90 }, () => {
+        pressScale.value = withTiming(1, { duration: 180 });
+      }),
+    );
     setLocalSpinning(true);
-    angle.value = 0;
-    angle.value = withTiming(
-      360 * SPIN_ROTATIONS,
-      { duration: SPIN_DURATION_MS, easing: Easing.out(Easing.cubic) },
-      () => {
-        runOnJS(setLocalSpinning)(false);
-      },
+    angle.set(0);
+    angle.set(
+      withTiming(
+        360 * SPIN_ROTATIONS,
+        { duration: SPIN_DURATION_MS, easing: Easing.out(Easing.cubic) },
+        () => {
+          runOnJS(setLocalSpinning)(false);
+        },
+      ),
     );
     onPress();
   };
 
   const rotateStyle = useAnimatedStyle(() => ({
-    transform: [
-      { scale: pressScale.value },
-      { rotate: `${angle.value}deg` },
-    ],
+    transform: [{ scale: pressScale.value }, { rotate: `${angle.value}deg` }],
   }));
 
   const haloStyle = useAnimatedStyle(() => ({

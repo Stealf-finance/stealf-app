@@ -13,7 +13,7 @@ import {
   type BuildResult,
   type ExecuteResult,
 } from '../api/trade';
-import { signSwapTransaction } from '../lib/signSwap';
+import { signSwapTransaction } from '@/src/services/wallet/signStealthTransaction';
 
 export function useXstockTrade() {
   const { user, session } = useAuth();

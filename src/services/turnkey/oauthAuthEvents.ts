@@ -1,6 +1,3 @@
-// Bridge from Turnkey's `onAuthenticationSuccess` callback to useAuthFlow.
-// Callback-as-trigger (not React-state-gated) avoids racing the SDK's
-// post-auth state commits.
 type OauthAuthSuccess = {
   email: string | undefined;
   oauthSub: string | undefined;

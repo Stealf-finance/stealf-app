@@ -42,10 +42,12 @@ export function PendingOpsPill() {
   const enter = useSharedValue(0);
 
   useEffect(() => {
-    enter.value = withTiming(op ? 1 : 0, {
-      duration: 260,
-      easing: Easing.out(Easing.cubic),
-    });
+    enter.set(
+      withTiming(op ? 1 : 0, {
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+      }),
+    );
   }, [op, enter]);
 
   const containerStyle = useAnimatedStyle(() => ({
@@ -109,9 +111,8 @@ const SPINNER_CIRC = 2 * Math.PI * SPINNER_RADIUS;
 export function Spinner({ color }: { color: string }) {
   const rot = useSharedValue(0);
   useEffect(() => {
-    rot.value = withRepeat(
-      withTiming(360, { duration: 950, easing: Easing.linear }),
-      -1,
+    rot.set(
+      withRepeat(withTiming(360, { duration: 950, easing: Easing.linear }), -1),
     );
     return () => cancelAnimation(rot);
   }, [rot]);
@@ -122,10 +123,7 @@ export function Spinner({ color }: { color: string }) {
 
   return (
     <Animated.View
-      style={[
-        { width: SPINNER_SIZE, height: SPINNER_SIZE },
-        style,
-      ]}
+      style={[{ width: SPINNER_SIZE, height: SPINNER_SIZE }, style]}
     >
       <Svg
         width={SPINNER_SIZE}

@@ -47,9 +47,11 @@ export function ProgressOverlay({
   const animatedProgress = useSharedValue(0);
 
   useEffect(() => {
-    animatedProgress.value = withTiming(
-      Math.min(1, Math.max(0, progress)),
-      { duration: 360, easing: Easing.out(Easing.cubic) },
+    animatedProgress.set(
+      withTiming(Math.min(1, Math.max(0, progress)), {
+        duration: 360,
+        easing: Easing.out(Easing.cubic),
+      }),
     );
   }, [progress, animatedProgress]);
 

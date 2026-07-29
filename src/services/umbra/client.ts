@@ -27,10 +27,13 @@ import {
   createMmkvStorageBackend,
   migrateUmbraStoreIfNeeded,
 } from './storage/mmkvStorageBackend';
-
-export const NETWORK = 'devnet' as const;
-export const RELAYER_API = 'https://relayer.api-devnet.umbraprivacy.com';
-export const INDEXER_API = 'https://utxo-indexer.api-devnet.umbraprivacy.com';
+import {
+  NETWORK,
+  RELAYER_API,
+  INDEXER_API,
+  INDEXER_API_DEVNET,
+  RELAYER_API_DEVNET,
+} from './constant'
 
 const LEGACY_MASTER_SEED_SCHEMES = [masterSeedSchemeV4] as const;
 
@@ -104,7 +107,7 @@ async function assembleClient(
     network: NETWORK,
     rpcUrl: env.EXPO_PUBLIC_SOLANA_RPC_URL,
     rpcSubscriptionsUrl: env.EXPO_PUBLIC_SOLANA_WSS_URL,
-    indexerApiEndpoint: INDEXER_API,
+    indexerApiEndpoint: INDEXER_API_DEVNET,
     legacyMasterSeedSchemes: LEGACY_MASTER_SEED_SCHEMES,
   };
   const computationMonitor = getPollingComputationMonitor({
@@ -193,5 +196,5 @@ export function clearBankClient(walletAddress?: string): void {
 }
 
 export function getRelayer() {
-  return getUmbraRelayer({ apiEndpoint: RELAYER_API } as never);
+  return getUmbraRelayer({ apiEndpoint: RELAYER_API_DEVNET } as never);
 }

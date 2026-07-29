@@ -46,7 +46,7 @@ export function SwipeToSend({
   const loadingProgress = useSharedValue(0);
 
   useEffect(() => {
-    loadingProgress.value = withTiming(loading ? 1 : 0, { duration: 180 });
+    loadingProgress.set(withTiming(loading ? 1 : 0, { duration: 180 }));
   }, [loading, loadingProgress]);
 
   // Transparent glass thumb (matches the percentage chips), not a metallic fill.
@@ -56,7 +56,7 @@ export function SwipeToSend({
   ];
 
   const onLayout = (e: LayoutChangeEvent) => {
-    trackW.value = e.nativeEvent.layout.width;
+    trackW.set(e.nativeEvent.layout.width);
   };
 
   const fireOnSend = () => {
@@ -128,7 +128,6 @@ export function SwipeToSend({
       { scale: 1 + successProgress.value * 0.06 },
     ],
   }));
-
 
   const fillStyle = useAnimatedStyle(() => {
     const max = Math.max(trackW.value - THUMB - TRACK_PAD * 2, 1);

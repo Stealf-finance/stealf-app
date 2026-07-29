@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
 import { Modal, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -17,6 +17,7 @@ import { Icons } from '@/src/design-system/icons';
 import { sansation, serif } from '@/src/design-system/typography';
 import { ChoiceSheet } from '@/src/features/wallet-detail/ChoiceSheet';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
+import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import {
   ACCOUNT_IMAGE,
@@ -130,7 +131,9 @@ export function MoveFlow() {
   const params = useLocalSearchParams<{ direction?: string }>();
   const initialIndex = Math.max(
     0,
-    DIRECTIONS.indexOf((params.direction as MoveDirection) ?? 'bank-to-shielded'),
+    DIRECTIONS.indexOf(
+      (params.direction as MoveDirection) ?? 'bank-to-shielded',
+    ),
   );
 
   const [directionIndex, setDirectionIndex] = useState(initialIndex);
@@ -154,17 +157,10 @@ export function MoveFlow() {
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
   const { data: solPrice } = useSolPrice();
-  const posthog = usePostHog();
-  const posthogRef = useRef(posthog);
-  posthogRef.current = posthog;
+  const posthog = usePostHog(); // stable client; async capture() closes over it directly
 
-  const {
-    wrap,
-    getStealthClient,
-    getBankClient,
-    ensureRegistered,
-  } = useUmbra();
-
+  const { wrap, getStealthClient, getBankClient, ensureRegistered } =
+    useUmbra();
 
   const { data: bankBalanceData } = useBalance(user?.bankWallet ?? null);
 
@@ -173,6 +169,7 @@ export function MoveFlow() {
   const { data: encrypted } = useEncryptedBalances();
 
   const selected = useSelectedAsset();
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const isSolSelected =
     !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
   const selectionActive = !isSolSelected && !!selected;
@@ -185,14 +182,15 @@ export function MoveFlow() {
   const balForAccount = (acct: Account): number => {
     if (acct === 'encrypted') {
       return selectionActive
-        ? encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ?? 0
-        : shielded?.sol ?? 0;
+        ? (encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ??
+            0)
+        : (shielded?.sol ?? 0);
     }
     const tokens =
       (acct === 'bank' ? bankBalanceData : stealthBalanceData)?.tokens ?? [];
     return selectionActive
-      ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
-      : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+      ? (tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0)
+      : (tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0);
   };
 
   const sourceBalance = balForAccount(DIR_ACCOUNTS[direction].from);
@@ -268,7 +266,9 @@ export function MoveFlow() {
   // Resolve the on-chain address backing an account (encrypted balance + stealth
   // both live on the stealf wallet); shortened for the confirmation rows.
   const addressForAccount = (a: Account): string | undefined =>
-    a === 'bank' ? user?.bankWallet ?? undefined : user?.stealfWallet ?? undefined;
+    a === 'bank'
+      ? (user?.bankWallet ?? undefined)
+      : (user?.stealfWallet ?? undefined);
   const shortAddr = (s?: string): string | undefined =>
     s ? `${s.slice(0, 4)}…${s.slice(-4)}` : undefined;
   const dirAccounts = DIR_ACCOUNTS[direction];
@@ -285,7 +285,9 @@ export function MoveFlow() {
   const invalidateAll = async () => {
     const keys: Promise<unknown>[] = [
       queryClient.invalidateQueries({
-        queryKey: shieldedBalanceQueries.byStealfWallet(user?.stealfWallet ?? ''),
+        queryKey: shieldedBalanceQueries.byStealfWallet(
+          user?.stealfWallet ?? '',
+        ),
       }),
       queryClient.invalidateQueries({
         queryKey: encryptedBalancesQueries.byStealfWalletPrefix(
@@ -295,14 +297,22 @@ export function MoveFlow() {
     ];
     if (user?.bankWallet) {
       keys.push(
-        queryClient.invalidateQueries({ queryKey: balanceQueries.byAddress(user.bankWallet) }),
-        queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(user.bankWallet) }),
+        queryClient.invalidateQueries({
+          queryKey: balanceQueries.byAddress(user.bankWallet),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: historyQueries.byAddress(user.bankWallet),
+        }),
       );
     }
     if (user?.stealfWallet) {
       keys.push(
-        queryClient.invalidateQueries({ queryKey: balanceQueries.byAddress(user.stealfWallet) }),
-        queryClient.invalidateQueries({ queryKey: historyQueries.byAddress(user.stealfWallet) }),
+        queryClient.invalidateQueries({
+          queryKey: balanceQueries.byAddress(user.stealfWallet),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: historyQueries.byAddress(user.stealfWallet),
+        }),
         queryClient.invalidateQueries({
           queryKey: claimScanQueries.byStealfWallet(user.stealfWallet),
         }),
@@ -333,9 +343,14 @@ export function MoveFlow() {
       );
     }
     if (direction === 'shielded-to-bank' && !user.bankWallet) {
-      return failPre('Virtual bank account missing. Sign out and back in to restore it.');
+      return failPre(
+        'Virtual bank account missing. Sign out and back in to restore it.',
+      );
     }
-    if (direction === 'stealth-to-bank' && (!user.bankWallet || !user.stealfWallet)) {
+    if (
+      direction === 'stealth-to-bank' &&
+      (!user.bankWallet || !user.stealfWallet)
+    ) {
       return failPre(
         !user.stealfWallet
           ? 'Set up your wallet first.'
@@ -394,9 +409,11 @@ export function MoveFlow() {
             });
           }
           const bankClient = await getBankClient();
-          const create = getPublicBalanceToReceiverClaimableUtxoCreatorFunction({
-            client: bankClient,
-          });
+          const create = getPublicBalanceToReceiverClaimableUtxoCreatorFunction(
+            {
+              client: bankClient,
+            },
+          );
           res = await wrap(
             'getPublicBalanceToReceiverClaimableUtxoCreatorFunction',
             () =>
@@ -407,7 +424,6 @@ export function MoveFlow() {
               }),
           );
         } else if (direction === 'shielded-to-bank') {
-
           const stealthClient = await getStealthClient();
           const create = getEncryptedBalanceToSelfClaimableUtxoCreatorFunction({
             client: stealthClient,
@@ -422,7 +438,6 @@ export function MoveFlow() {
               }),
           );
         } else {
-
           const stealthClient = await getStealthClient();
           const create = getPublicBalanceToSelfClaimableUtxoCreatorFunction({
             client: stealthClient,
@@ -448,7 +463,7 @@ export function MoveFlow() {
 
         if (__DEV__) console.log('[MoveFlow] success →', direction, sig);
         await invalidateAll();
-        posthogRef.current?.capture('move_completed', {
+        posthog?.capture('move_completed', {
           direction,
           asset_symbol: assetSymbol,
           amount_band: amountBand(
@@ -481,7 +496,7 @@ export function MoveFlow() {
             },
           });
         }
-        posthogRef.current?.capture('move_failed', {
+        posthog?.capture('move_failed', {
           direction,
           asset_symbol: assetSymbol,
           error: scrubString(msg),
@@ -530,15 +545,17 @@ export function MoveFlow() {
       {/* Hero amount — same anatomy, sizes AND vertical position as the
           Shield amount card: fixed 38pt below the header (20 + the card's
           internal 18). */}
-      <View style={{ marginTop: 38, alignItems: 'center', paddingHorizontal: 24 }}>
-          <View style={{ alignSelf: 'stretch' }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'baseline',
-                justifyContent: 'center',
-              }}
-            >
+      <View
+        style={{ marginTop: 38, alignItems: 'center', paddingHorizontal: 24 }}
+      >
+        <View style={{ alignSelf: 'stretch' }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'baseline',
+              justifyContent: 'center',
+            }}
+          >
             {heroHasDollar ? (
               <Text
                 style={[
@@ -585,40 +602,40 @@ export function MoveFlow() {
                 {assetSymbol}
               </Text>
             ) : null}
-            </View>
-            {/* Toggle arrows — absolute right, vertically centered against
-                the number (same as Shield). */}
-            <Pressable
-              onPress={onToggleMode}
-              disabled={rate <= 0}
-              accessibilityRole="button"
-              accessibilityLabel="Switch between fiat and token amount"
-              hitSlop={8}
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                justifyContent: 'center',
-                opacity: rate <= 0 ? 0.4 : 1,
-              }}
-            >
-              <Icons.swapV size={26} color={T.inkDim} strokeWidth={2} />
-            </Pressable>
           </View>
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 13,
-                color: T.inkFaint,
-                marginTop: 10,
-                includeFontPadding: false,
-              },
-            ]}
+          {/* Toggle arrows — absolute right, vertically centered against
+                the number (same as Shield). */}
+          <Pressable
+            onPress={onToggleMode}
+            disabled={rate <= 0}
+            accessibilityRole="button"
+            accessibilityLabel="Switch between fiat and token amount"
+            hitSlop={8}
+            style={{
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              bottom: 0,
+              justifyContent: 'center',
+              opacity: rate <= 0 ? 0.4 : 1,
+            }}
           >
-            {secondaryAmount}
-          </Text>
+            <Icons.swapV size={26} color={T.inkDim} strokeWidth={2} />
+          </Pressable>
+        </View>
+        <Text
+          style={[
+            sansation,
+            {
+              fontSize: 13,
+              color: T.inkFaint,
+              marginTop: 10,
+              includeFontPadding: false,
+            },
+          ]}
+        >
+          {secondaryAmount}
+        </Text>
       </View>
 
       <View style={{ flex: 1 }} />
@@ -626,22 +643,20 @@ export function MoveFlow() {
       {/* From → To cards — just above the keypad */}
       <View style={{ paddingHorizontal: 24 }}>
         <MoveAccountCards
-            tone={tone}
-            fromAccount={dirAccounts.from}
-            toAccount={dirAccounts.to}
-            fromLabel={config.fromLabel}
-            toLabel={config.toLabel}
-            toBalance={`$${(balForAccount(dirAccounts.to) * rate).toFixed(2)}`}
-            onPressFrom={() => setPickerOpen(true)}
-            assetIconSource={{ uri: iconUri }}
-            assetBalanceLabel={fromBalanceLabel}
-            onPressSelectAsset={
-              supportsMultiToken
-                ? () => router.push(`/asset-picker?wallet=${pickerWalletParam}`)
-                : undefined
-            }
-            onPressMax={() => onPressPercent(1)}
-          />
+          tone={tone}
+          fromAccount={dirAccounts.from}
+          toAccount={dirAccounts.to}
+          fromLabel={config.fromLabel}
+          toLabel={config.toLabel}
+          toBalance={`$${(balForAccount(dirAccounts.to) * rate).toFixed(2)}`}
+          onPressFrom={() => setPickerOpen(true)}
+          assetIconSource={{ uri: iconUri }}
+          assetBalanceLabel={fromBalanceLabel}
+          onPressSelectAsset={
+            supportsMultiToken ? () => setAssetPickerOpen(true) : undefined
+          }
+          onPressMax={() => onPressPercent(1)}
+        />
       </View>
 
       {/* Tiled keypad + CTA — pinned to the bottom */}
@@ -723,7 +738,12 @@ export function MoveFlow() {
       />
 
       <StealthSetupOverlay onClose={close} />
+
+      <AssetSelectSheet
+        open={assetPickerOpen}
+        onClose={() => setAssetPickerOpen(false)}
+        source={pickerWalletParam}
+      />
     </CenterGlow>
   );
 }
-

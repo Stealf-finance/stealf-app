@@ -1,7 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { T } from '@/src/design-system/tokens';
 
 const ENTER_DURATION_MS = 220;
@@ -10,9 +15,8 @@ const EXIT_DURATION_MS = 180;
 export function OfflineBanner() {
   const insets = useSafeAreaInsets();
   const [offline, setOffline] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const translateY = useRef(new Animated.Value(-60)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useSharedValue(-60);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -23,59 +27,31 @@ export function OfflineBanner() {
         state.isConnected !== false && state.isInternetReachable !== false;
       setOffline(!isOnline);
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (offline) {
-      setMounted(true);
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: ENTER_DURATION_MS,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: ENTER_DURATION_MS,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else if (mounted) {
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: -60,
-          duration: EXIT_DURATION_MS,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: EXIT_DURATION_MS,
-          useNativeDriver: true,
-        }),
-      ]).start(({ finished }) => {
-        if (finished) setMounted(false);
-      });
-    }
-  }, [offline, mounted, opacity, translateY]);
+    const duration = offline ? ENTER_DURATION_MS : EXIT_DURATION_MS;
+    translateY.set(withTiming(offline ? 0 : -60, { duration }));
+    opacity.set(withTiming(offline ? 1 : 0, { duration }));
+  }, [offline, opacity, translateY]);
 
-  if (!mounted) return null;
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.get() }],
+    opacity: opacity.get(),
+  }));
 
+  // Always mounted (like ToastHost / PendingOpsPill): the banner sits offscreen
+  // and transparent until `offline` flips, so the exit animation plays out
+  // without a mount/unmount state flag driving an extra render.
   return (
     <Animated.View
       pointerEvents="none"
-      style={[
-        styles.container,
-        {
-          paddingTop: insets.top + 6,
-          transform: [{ translateY }],
-          opacity,
-        },
-      ]}
+      style={[styles.container, { paddingTop: insets.top + 6 }, animatedStyle]}
     >
       <View style={styles.pill}>
         <View style={styles.dot} />
-        <Text style={styles.text}>You're offline</Text>
+        <Text style={styles.text}>You&apos;re offline</Text>
       </View>
     </Animated.View>
   );

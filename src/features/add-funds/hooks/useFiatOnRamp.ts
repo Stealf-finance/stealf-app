@@ -61,50 +61,6 @@ export function useFiatOnRamp() {
     }
   }, []);
 
-  const addFunds = useCallback(
-    async (opts: AddFundsOptions) => {
-      if (!httpClient) throw new Error('Turnkey client not ready');
-      if (!opts.walletAddress) throw new Error('Wallet address required');
-
-      setError(null);
-      setStatus('initiating');
-      stopPolling();
-
-      try {
-        const res = await httpClient.initFiatOnRamp({
-          organizationId: session?.organizationId,
-          onrampProvider: opts.provider ?? FiatOnRampProvider.MOONPAY,
-          walletAddress: opts.walletAddress,
-          network: FiatOnRampBlockchainNetwork.SOLANA,
-          cryptoCurrencyCode: opts.crypto ?? FiatOnRampCryptoCurrency.USDC,
-          // Omitted unless explicitly set → the provider widget lets the user
-          // pick from every fiat currency it supports in their region.
-          fiatCurrencyCode: opts.fiatCurrency,
-          fiatCurrencyAmount: opts.fiatAmount,
-          paymentMethod:
-            opts.paymentMethod ?? FiatOnRampPaymentMethod.CREDIT_DEBIT_CARD,
-          sandboxMode: __DEV__,
-        });
-
-        if (!res.onRampUrl) throw new Error('No on-ramp URL returned');
-        const canOpen = await Linking.canOpenURL(res.onRampUrl);
-        if (!canOpen) throw new Error('Unable to open the on-ramp widget');
-        await Linking.openURL(res.onRampUrl);
-
-        setStatus('awaiting');
-        pollStatus(res.onRampTransactionId, opts.walletAddress, Date.now());
-        return res;
-      } catch (err) {
-        setStatus('failed');
-        setError(err instanceof Error ? err.message : 'On-ramp failed');
-        throw err;
-      }
-    },
-    // pollStatus is stable via the same deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [httpClient, session, stopPolling],
-  );
-
   const pollStatus = useCallback(
     (transactionId: string, walletAddress: string, startedAt: number) => {
       const tick = async () => {
@@ -145,6 +101,48 @@ export function useFiatOnRamp() {
       pollRef.current = setTimeout(tick, POLL_INTERVAL_MS);
     },
     [httpClient, queryClient, stopPolling],
+  );
+
+  const addFunds = useCallback(
+    async (opts: AddFundsOptions) => {
+      if (!httpClient) throw new Error('Turnkey client not ready');
+      if (!opts.walletAddress) throw new Error('Wallet address required');
+
+      setError(null);
+      setStatus('initiating');
+      stopPolling();
+
+      try {
+        const res = await httpClient.initFiatOnRamp({
+          organizationId: session?.organizationId,
+          onrampProvider: opts.provider ?? FiatOnRampProvider.MOONPAY,
+          walletAddress: opts.walletAddress,
+          network: FiatOnRampBlockchainNetwork.SOLANA,
+          cryptoCurrencyCode: opts.crypto ?? FiatOnRampCryptoCurrency.USDC,
+          // Omitted unless explicitly set → the provider widget lets the user
+          // pick from every fiat currency it supports in their region.
+          fiatCurrencyCode: opts.fiatCurrency,
+          fiatCurrencyAmount: opts.fiatAmount,
+          paymentMethod:
+            opts.paymentMethod ?? FiatOnRampPaymentMethod.CREDIT_DEBIT_CARD,
+          sandboxMode: __DEV__,
+        });
+
+        if (!res.onRampUrl) throw new Error('No on-ramp URL returned');
+        const canOpen = await Linking.canOpenURL(res.onRampUrl);
+        if (!canOpen) throw new Error('Unable to open the on-ramp widget');
+        await Linking.openURL(res.onRampUrl);
+
+        setStatus('awaiting');
+        pollStatus(res.onRampTransactionId, opts.walletAddress, Date.now());
+        return res;
+      } catch (err) {
+        setStatus('failed');
+        setError(err instanceof Error ? err.message : 'On-ramp failed');
+        throw err;
+      }
+    },
+    [httpClient, session, stopPolling, pollStatus],
   );
 
   return { addFunds, status, error, stopPolling };

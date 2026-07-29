@@ -11,7 +11,6 @@ import {
   getStealthClient,
   getCachedSignerKey,
   getRelayer,
-  INDEXER_API,
 } from '../client';
 import {
   loadBurntUtxosForCurrentWallet,
@@ -19,6 +18,11 @@ import {
   recoverFromAlreadyBurnt,
   handleClaimResult,
 } from '@/src/features/stealth/lib/burntUtxos';
+
+import {
+  INDEXER_API_DEVNET,
+
+} from '../constant'
 
 async function ensureBlacklist() {
   const key = getCachedSignerKey();
@@ -35,7 +39,7 @@ function getBurnRelayer() {
 }
 
 const fetchBatchMerkleProof = getBatchMerkleProofFetcher({
-  apiEndpoint: INDEXER_API,
+  apiEndpoint: INDEXER_API_DEVNET,
 });
 
 async function burnEach(

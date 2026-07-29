@@ -140,6 +140,10 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
+                            name="swap"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
                             name="card"
                             options={{ presentation: 'pageSheet' }}
                           />
@@ -221,10 +225,6 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="profile/private-key"
-                            options={{ presentation: 'pageSheet' }}
-                          />
-                          <Stack.Screen
-                            name="asset-picker"
                             options={{ presentation: 'pageSheet' }}
                           />
                         </Stack>
