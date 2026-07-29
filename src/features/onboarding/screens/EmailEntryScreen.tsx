@@ -1,24 +1,24 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
-import { StepBar } from '@/src/design-system/primitives/StepBar';
-import { UnderlineField } from '@/src/design-system/primitives/UnderlineField';
-import { Kicker } from '@/src/design-system/primitives/Kicker';
+import { LinearGradient } from 'expo-linear-gradient';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { Icons } from '@/src/design-system/icons';
-import {
-  sansation,
-  sansationLight,
-  serif,
-} from '@/src/design-system/typography';
+import { sansation, sansationLight } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useToast } from '@/src/components/toast/ToastContext';
 import { useAuthFlow } from '../hooks/useAuthFlow';
 
 const S = txPalette('silver');
-const SOLANA_GREEN = '#14F195';
 
 const isValidEmail = (v: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
@@ -53,102 +53,118 @@ export function EmailEntryScreen({ onBack, onSent }: Props) {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <View
-        style={{
-          paddingTop: insets.top,
-          paddingHorizontal: 24,
-          paddingBottom: 16,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        }}
+    <CenterGlow tone="silver" flat>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <BackBtn onPress={onBack} />
-        <StepBar current={0} total={2} tone="silver" />
-        <View style={{ width: 36 }} />
-      </View>
-
-      <View
-        style={{
-          flex: 1,
-          paddingHorizontal: 28,
-          paddingTop: 36,
-        }}
-      >
+        {/* Header: bare chevron back (full-screen route → insets.top). */}
         <View
           style={{
+            paddingTop: insets.top,
+            paddingBottom: 14,
+            paddingHorizontal: 24,
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            marginBottom: 18,
           }}
         >
-          <View style={{ width: 18, height: 1, backgroundColor: S.accentDim }} />
-          <Kicker color={S.accent} style={{ letterSpacing: 3.2 }}>
-            Verify your email
-          </Kicker>
-          <View style={{ width: 18, height: 1, backgroundColor: S.accentDim }} />
+          <GlassBackButton onPress={onBack} />
         </View>
 
-        <Text
-          style={[
-            sansationLight,
-            {
-              fontSize: 32,
-              lineHeight: 36,
-              letterSpacing: -0.96,
-              color: T.ink,
-              textAlign: 'center',
-              marginBottom: 10,
-            },
-          ]}
-        >
-          Your email
-        </Text>
-        <Text
-          style={[
-            serif,
-            {
-              fontSize: 16,
-              lineHeight: 22,
-              color: S.accent,
-              textAlign: 'center',
-              marginBottom: 32,
-            },
-          ]}
-        >
-          We&apos;ll send you a 6-digit code to sign in.
-        </Text>
+        {/* Title + subtitle + input */}
+        <View style={{ flex: 1, paddingHorizontal: 28 }}>
+          <Text
+            style={[
+              sansationLight,
+              {
+                fontSize: 30,
+                lineHeight: 36,
+                letterSpacing: -0.9,
+                color: T.ink,
+                textAlign: 'center',
+                marginTop: 28,
+              },
+            ]}
+          >
+            What&apos;s your email?
+          </Text>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 15,
+                lineHeight: 21,
+                color: T.inkDim,
+                textAlign: 'center',
+                marginTop: 10,
+              },
+            ]}
+          >
+            We&apos;ll send a code to this email{'\n'}to verify your sign in
+          </Text>
 
-        <UnderlineField
-          value={email}
-          onChangeText={(v) => setEmail(v.trim())}
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          tone="silver"
-          rightSlot={
-            valid ? <Icons.check size={18} color={SOLANA_GREEN} /> : null
-          }
-        />
-      </View>
+          {/* Same field as the Send flow's recipient input, for consistency. */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              marginTop: 32,
+              paddingVertical: 14,
+              paddingHorizontal: 18,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: S.hairline,
+              overflow: 'hidden',
+            }}
+          >
+            <LinearGradient
+              colors={['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.01)']}
+              start={{ x: 0.2, y: 0 }}
+              end={{ x: 0.8, y: 1 }}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            />
+            <TextInput
+              value={email}
+              onChangeText={(v) => setEmail(v.trim())}
+              onSubmitEditing={onSubmit}
+              placeholder="satoshi@mail.com"
+              placeholderTextColor={S.inkFaint}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              autoFocus
+              returnKeyType="go"
+              style={[sansation, { flex: 1, padding: 0, color: S.ink, fontSize: 15 }]}
+            />
+            {valid ? <Icons.check size={18} color={S.accent} /> : null}
+          </View>
+        </View>
 
-      <View
-        style={{
-          paddingHorizontal: 28,
-          paddingBottom: insets.bottom + 32,
-        }}
-      >
-        <PillBtn
-          variant="primary"
-          tone="silver"
-          label={isLoading ? 'Sending…' : 'Send code'}
-          disabled={!valid || isLoading}
-          onPress={onSubmit}
-        />
-      </View>
-    </View>
+        {/* Continue — rides above the keyboard via KeyboardAvoidingView. */}
+        <View
+          style={{
+            paddingHorizontal: 28,
+            paddingTop: 12,
+            paddingBottom: insets.bottom + 16,
+          }}
+        >
+          <PillBtn
+            variant="primary"
+            tone="silver"
+            label={isLoading ? 'Sending…' : 'Continue'}
+            disabled={!valid || isLoading}
+            onPress={onSubmit}
+          />
+        </View>
+      </KeyboardAvoidingView>
+    </CenterGlow>
   );
 }

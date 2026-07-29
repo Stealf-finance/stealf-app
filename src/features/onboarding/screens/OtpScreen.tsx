@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
-import { StepBar } from '@/src/design-system/primitives/StepBar';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { FormError } from '@/src/design-system/primitives/FormError';
-import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { CodeInput } from '../components/CodeInput';
-import {
-  sansation,
-  sansationLight,
-  serif,
-} from '@/src/design-system/typography';
+import { sansation, sansationLight } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useToast } from '@/src/components/toast/ToastContext';
@@ -79,130 +74,110 @@ export function OtpScreen({ email, otpId: initialOtpId, onBack }: Props) {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <View
-        style={{
-          paddingTop: insets.top,
-          paddingHorizontal: 24,
-          paddingBottom: 16,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 14,
-        }}
+    <CenterGlow tone="silver" flat>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <BackBtn onPress={onBack} />
-        <StepBar current={1} total={2} tone="silver" />
-        <View style={{ width: 36 }} />
-      </View>
-
-      <View
-        style={{
-          flex: 1,
-          paddingHorizontal: 28,
-          paddingTop: 36,
-        }}
-      >
+        {/* Header: bare chevron back (full-screen route → insets.top). */}
         <View
           style={{
+            paddingTop: insets.top,
+            paddingBottom: 14,
+            paddingHorizontal: 24,
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 10,
-            marginBottom: 18,
           }}
         >
-          <View style={{ width: 18, height: 1, backgroundColor: S.accentDim }} />
-          <Kicker color={S.accent} style={{ letterSpacing: 3.2 }}>
-            Almost there
-          </Kicker>
-          <View style={{ width: 18, height: 1, backgroundColor: S.accentDim }} />
+          <GlassBackButton onPress={onBack} />
         </View>
 
-        <Text
-          style={[
-            sansationLight,
-            {
-              fontSize: 32,
-              lineHeight: 36,
-              letterSpacing: -0.96,
-              color: T.ink,
-              textAlign: 'center',
-              marginBottom: 10,
-            },
-          ]}
-        >
-          Enter your code
-        </Text>
-        <Text
-          style={[
-            serif,
-            {
-              fontSize: 16,
-              lineHeight: 22,
-              color: S.accent,
-              textAlign: 'center',
-              marginBottom: 32,
-            },
-          ]}
-        >
-          We just sent a 6-digit code to {email}
-        </Text>
+        {/* Title + subtitle + code cells */}
+        <View style={{ flex: 1, paddingHorizontal: 28 }}>
+          <Text
+            style={[
+              sansationLight,
+              {
+                fontSize: 30,
+                lineHeight: 36,
+                letterSpacing: -0.9,
+                color: T.ink,
+                textAlign: 'center',
+                marginTop: 28,
+              },
+            ]}
+          >
+            Confirm your email
+          </Text>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 15,
+                lineHeight: 21,
+                color: T.inkDim,
+                textAlign: 'center',
+                marginTop: 10,
+              },
+            ]}
+          >
+            Please enter the code we sent to{'\n'}
+            {email}
+          </Text>
 
-        <View style={{ alignItems: 'center', paddingTop: 8 }}>
-          <CodeInput
-            value={code}
-            onChange={setCode}
-            onSubmit={onSubmit}
-            disabled={isLoading}
-            errored={verifyError != null}
+          <View style={{ alignItems: 'center', marginTop: 32 }}>
+            <CodeInput
+              value={code}
+              onChange={setCode}
+              onSubmit={onSubmit}
+              disabled={isLoading}
+              errored={verifyError != null}
+            />
+          </View>
+
+          <Text
+            style={[
+              sansation,
+              {
+                marginTop: 24,
+                fontSize: 13,
+                lineHeight: 19,
+                textAlign: 'center',
+              },
+            ]}
+          >
+            {cooldown > 0 ? (
+              <Text style={{ color: T.inkDim }}>Resend in {cooldown}s</Text>
+            ) : (
+              <Text
+                onPress={onResend}
+                style={{ color: S.accent, textDecorationLine: 'underline' }}
+              >
+                Resend code
+              </Text>
+            )}
+          </Text>
+
+          <FormError message={verifyError} />
+        </View>
+
+        {/* Continue — rides above the keyboard via KeyboardAvoidingView. */}
+        <View
+          style={{
+            paddingHorizontal: 28,
+            paddingTop: 12,
+            paddingBottom: insets.bottom + 16,
+          }}
+        >
+          <PillBtn
+            variant="primary"
+            tone="silver"
+            label={isLoading ? 'Verifying…' : 'Continue'}
+            disabled={code.length !== 6 || isLoading}
+            onPress={onSubmit}
           />
         </View>
-
-        <Text
-          style={[
-            sansation,
-            {
-              marginTop: 28,
-              fontSize: 12,
-              lineHeight: 19,
-              color: T.inkFaint,
-              textAlign: 'center',
-            },
-          ]}
-        >
-          Didn&apos;t get it?{' '}
-          {cooldown > 0 ? (
-            <Text style={{ color: T.inkDim }}>
-              Resend in {cooldown}s
-            </Text>
-          ) : (
-            <Text
-              onPress={onResend}
-              style={{ color: S.accent, textDecorationLine: 'underline' }}
-            >
-              Resend
-            </Text>
-          )}
-        </Text>
-
-        <FormError message={verifyError} />
-      </View>
-
-      <View
-        style={{
-          paddingHorizontal: 28,
-          paddingBottom: insets.bottom + 32,
-        }}
-      >
-        <PillBtn
-          variant="primary"
-          tone="silver"
-          label={isLoading ? 'Verifying…' : 'Verify'}
-          disabled={code.length !== 6 || isLoading}
-          onPress={onSubmit}
-        />
-      </View>
-
-    </View>
+      </KeyboardAvoidingView>
+    </CenterGlow>
   );
 }
