@@ -11,7 +11,7 @@ import { Icons } from '@/src/design-system/icons';
 
 const SPIN_DURATION_MS = 1100;
 const SPIN_ROTATIONS = 2;
-const GOLD = '#e6c079';
+const GOLD = '#c9c9cc';
 
 type Props = {
   onPress: () => void;
@@ -86,7 +86,7 @@ export function RefreshBtn({ onPress, spinning }: Props) {
             width: 40,
             height: 40,
             borderRadius: 20,
-            backgroundColor: 'rgba(230,192,121,0.10)',
+            backgroundColor: 'rgba(201,201,204,0.10)',
             shadowColor: GOLD,
             shadowOpacity: 1,
             shadowRadius: 12,
@@ -101,8 +101,8 @@ export function RefreshBtn({ onPress, spinning }: Props) {
           height: 36,
           borderRadius: 18,
           borderWidth: 1,
-          borderColor: 'rgba(230,192,121,0.28)',
-          backgroundColor: 'rgba(230,192,121,0.06)',
+          borderColor: 'rgba(201,201,204,0.28)',
+          backgroundColor: 'rgba(201,201,204,0.06)',
           alignItems: 'center',
           justifyContent: 'center',
         }}

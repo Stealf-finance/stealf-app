@@ -75,8 +75,8 @@ const COPY: Record<
 // CTA wears the FAB silver for both kinds — gold stays on text accents only.
 const ACCENTS: Record<Kind, { accent: string; faint: string; gradient: [string, string]; glow: string }> = {
   stealth: {
-    accent: '#e6c079',
-    faint: 'rgba(230,192,121,0.14)',
+    accent: '#c9c9cc',
+    faint: 'rgba(201,201,204,0.14)',
     gradient: ['#e8e8ea', '#9a9a9f'],
     glow: 'rgba(220,220,225,0.2)',
   },

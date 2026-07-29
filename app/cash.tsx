@@ -1,5 +1,6 @@
 import { WalletScreen } from '@/src/features/wallet-detail/WalletScreen';
 import { WalletBottomBar } from '@/src/features/wallet-detail/WalletBottomBar';
+import { BankProducts } from '@/src/features/bank/components/BankProducts';
 import { type QuickAction } from '@/src/components/nav/QuickActionMenu';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
@@ -38,6 +39,7 @@ export default function CashScreen() {
       iconImage={require('@/assets/images/coin.png')}
       balanceUSD={bal.data?.totalUSD ?? 0}
       assets={assets}
+      belowBalance={<BankProducts />}
       bottomBar={
         <WalletBottomBar fabActions={ACTIONS} historyRoute="/transactions" claimTarget="bank" />
       }

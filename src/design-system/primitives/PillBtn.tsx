@@ -20,12 +20,12 @@ type Props = {
 
 const PRIMARY_GRADIENT: Record<Tone, [string, string]> = {
   silver: ['#e8e8ea', '#9a9a9f'],
-  gold: ['#e6c079', '#a37b2e'],
+  gold: ['#e8e8ea', '#9a9a9f'],
 };
 
 const PRIMARY_GLOW: Record<Tone, string> = {
   silver: 'rgba(220,220,225,0.35)',
-  gold: 'rgba(212,165,83,0.45)',
+  gold: 'rgba(220,220,225,0.35)',
 };
 
 export function PillBtn({

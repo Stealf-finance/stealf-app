@@ -28,7 +28,7 @@ import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShielded
 import { encryptedBalancesQueries } from '@/src/features/stealth/hooks/useEncryptedBalances';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 
-const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
+const GOLD_GRADIENT: [string, string] = ['#e8e8ea', '#9a9a9f'];
 const ANIM_HOLD_MS = 480;
 
 type Item = { ago: string; utxo: unknown };
@@ -179,7 +179,7 @@ export function ClaimPendingScreen() {
           gap: 10,
         }}
       >
-        <Kicker color="rgba(230,192,121,0.85)" style={{ fontSize: 9 }}>
+        <Kicker color="rgba(201,201,204,0.85)" style={{ fontSize: 9 }}>
           {isFetching && items.length === 0
             ? 'Scanning encrypted notes…'
             : `${items.length} pending · into encrypted balance`}
@@ -236,12 +236,12 @@ function ClaimItem({
         borderRadius: 18,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(212,165,83,0.18)',
+        borderColor: 'rgba(201,201,204,0.18)',
         opacity: disabled ? 0.45 : 1,
       }}
     >
       <LinearGradient
-        colors={['rgba(212,165,83,0.10)', 'rgba(163,123,46,0.03)']}
+        colors={['rgba(201,201,204,0.10)', 'rgba(201,201,204,0.03)']}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
         style={{ paddingVertical: 14, paddingHorizontal: 16 }}

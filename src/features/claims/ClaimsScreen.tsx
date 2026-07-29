@@ -38,9 +38,9 @@ import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import { SOL_MINT, SOL_ICON_URI, USDC_MINT } from '@/src/constants/solana';
 import { describeClaimParts, type ClaimToken } from './lib/describeClaimLine';
 
-const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
+const GOLD_GRADIENT: [string, string] = ['#e8e8ea', '#9a9a9f'];
 // Kept for the Claim button's glow — everything else on this screen is neutral.
-const GOLD_GLOW = 'rgba(230,192,121,0.45)';
+const GOLD_GLOW = 'rgba(220,220,225,0.35)';
 const ANIM_HOLD_MS = 480;
 
 type Item = { ago: string; utxo: unknown };
