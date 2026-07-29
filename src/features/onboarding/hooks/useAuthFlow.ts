@@ -33,13 +33,19 @@ type FinalizeArgs = {
 export function useAuthFlow() {
   const turnkey = useTurnkey();
   const turnkeyRef = useRef(turnkey);
-  turnkeyRef.current = turnkey;
 
   const { setSession, setUser } = useAuth();
   const queryClient = useQueryClient();
   const posthog = usePostHog();
   const posthogRef = useRef(posthog);
-  posthogRef.current = posthog;
+
+  // Keep the latest Turnkey client / PostHog handle in refs for the async
+  // OAuth + OTP flows below, which read them long after this render commits.
+  // Refreshing them in an effect (not during render) keeps render pure.
+  useEffect(() => {
+    turnkeyRef.current = turnkey;
+    posthogRef.current = posthog;
+  });
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,14 +72,14 @@ export function useAuthFlow() {
         : await tk.refreshWallets();
       const cashWallet = wallets[0]?.accounts?.[0]?.address;
       if (!cashWallet) {
-            if (__DEV__) {
-            console.log('[Auth] BANK WALLET MISSING DIAG:', {
-              subOrgId: tk.session?.organizationId,
-              walletsBefore: tk.wallets.length,
-              walletsAfterRefresh: wallets.length,
-        walletsDump: JSON.stringify(wallets, null, 2),
-      });
-    }
+        if (__DEV__) {
+          console.log('[Auth] BANK WALLET MISSING DIAG:', {
+            subOrgId: tk.session?.organizationId,
+            walletsBefore: tk.wallets.length,
+            walletsAfterRefresh: wallets.length,
+            walletsDump: JSON.stringify(wallets, null, 2),
+          });
+        }
         throw new Error('Virtual bank account not provisioned');
       }
 
@@ -179,81 +185,86 @@ export function useAuthFlow() {
           oauthProvider: method,
           oidcToken: identifier,
         })
-        .catch((err) => {
-          if (__DEV__) {
-            const data = (err as { data?: unknown })?.data;
-            const bodyKeys =
-              typeof data === 'object' && data !== null
-                ? Object.keys(data)
-                : '(non-object)';
-            console.error('[useAuthFlow] finalize failed:', err, 'bodyKeys:', bodyKeys);
-          }
-          Sentry.captureException(err, {
-            tags: { 'auth.method': method, 'auth.flow': 'finalize-post-auth' },
-            extra: {
-              hasEmail: !!email,
-              hasSessionToken: !!sessionToken,
-              errorStatus: (err as { status?: number })?.status,
-            },
+          .catch((err) => {
+            if (__DEV__) {
+              const data = (err as { data?: unknown })?.data;
+              const bodyKeys =
+                typeof data === 'object' && data !== null
+                  ? Object.keys(data)
+                  : '(non-object)';
+              console.error(
+                '[useAuthFlow] finalize failed:',
+                err,
+                'bodyKeys:',
+                bodyKeys,
+              );
+            }
+            Sentry.captureException(err, {
+              tags: {
+                'auth.method': method,
+                'auth.flow': 'finalize-post-auth',
+              },
+              extra: {
+                hasEmail: !!email,
+                hasSessionToken: !!sessionToken,
+                errorStatus: (err as { status?: number })?.status,
+              },
+            });
+            setError(toMessage(err));
+          })
+          .finally(() => {
+            finalizingRef.current = false;
+            setIsLoading(false);
+            setPendingOauth(null);
           });
-          setError(toMessage(err));
-        })
-        .finally(() => {
-          finalizingRef.current = false;
-          setIsLoading(false);
-          setPendingOauth(null);
-        });
       },
     );
     return unsubscribe;
   }, [pendingOauth, finalizePostAuth]);
 
-  const runOAuth = useCallback(
-    async (provider: 'google' | 'apple') => {
-      const tk = turnkeyRef.current;
-      setError(null);
-      setPendingOauth(provider);
-      try {
-        if (provider === 'apple' && Platform.OS === 'ios') {
-          // Native Sign in with Apple: the web flow hardcodes an empty Apple
-          // `scope`, so it never returns the user's email; the native sheet
-          // requests EMAIL and yields a token carrying the email claim. The
-          // embedded key's SHA-256 hash is the OIDC nonce — Turnkey verifies
-          // `sha256(publicKey) === token.nonce` (same scheme as the wallet-kit
-          // OAuth handlers). Google keeps the web flow (its scope has `email`).
-          const publicKey = await tk.createApiKeyPair();
-          if (!publicKey) throw new Error('Failed to create embedded key');
-          const nonce = bytesToHex(sha256(utf8ToBytes(publicKey)));
+  const runOAuth = useCallback(async (provider: 'google' | 'apple') => {
+    const tk = turnkeyRef.current;
+    setError(null);
+    setPendingOauth(provider);
+    try {
+      if (provider === 'apple' && Platform.OS === 'ios') {
+        // Native Sign in with Apple: the web flow hardcodes an empty Apple
+        // `scope`, so it never returns the user's email; the native sheet
+        // requests EMAIL and yields a token carrying the email claim. The
+        // embedded key's SHA-256 hash is the OIDC nonce — Turnkey verifies
+        // `sha256(publicKey) === token.nonce` (same scheme as the wallet-kit
+        // OAuth handlers). Google keeps the web flow (its scope has `email`).
+        const publicKey = await tk.createApiKeyPair();
+        if (!publicKey) throw new Error('Failed to create embedded key');
+        const nonce = bytesToHex(sha256(utf8ToBytes(publicKey)));
 
-          const credential = await AppleAuthentication.signInAsync({
-            requestedScopes: [
-              AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-              AppleAuthentication.AppleAuthenticationScope.EMAIL,
-            ],
-            nonce,
-          });
-          if (!credential.identityToken) {
-            throw new Error('Apple did not return an identity token');
-          }
-
-          await tk.completeOauth({
-            oidcToken: credential.identityToken,
-            publicKey,
-            providerName: 'apple',
-          });
-        } else {
-          const handler =
-            provider === 'google' ? tk.handleGoogleOauth : tk.handleAppleOauth;
-          await handler({});
+        const credential = await AppleAuthentication.signInAsync({
+          requestedScopes: [
+            AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+            AppleAuthentication.AppleAuthenticationScope.EMAIL,
+          ],
+          nonce,
+        });
+        if (!credential.identityToken) {
+          throw new Error('Apple did not return an identity token');
         }
-      } catch (err) {
-        setPendingOauth(null);
-        if (isCancellationError(err)) return;
-        setError(toMessage(err));
+
+        await tk.completeOauth({
+          oidcToken: credential.identityToken,
+          publicKey,
+          providerName: 'apple',
+        });
+      } else {
+        const handler =
+          provider === 'google' ? tk.handleGoogleOauth : tk.handleAppleOauth;
+        await handler({});
       }
-    },
-    [],
-  );
+    } catch (err) {
+      setPendingOauth(null);
+      if (isCancellationError(err)) return;
+      setError(toMessage(err));
+    }
+  }, []);
 
   const signInWithGoogle = useCallback(() => runOAuth('google'), [runOAuth]);
   const signInWithApple = useCallback(() => runOAuth('apple'), [runOAuth]);
@@ -357,7 +368,6 @@ function isCancellationError(err: unknown): boolean {
     msg.includes('interrupt') ||
     msg.includes('user closed');
   if (matches) {
-
     Sentry.addBreadcrumb({
       category: 'auth.cancel',
       level: 'info',

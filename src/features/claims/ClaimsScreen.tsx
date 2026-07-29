@@ -34,15 +34,8 @@ import { encryptedBalancesQueries } from '@/src/features/stealth/hooks/useEncryp
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import { reconstructAddressFromU128Parts } from '@umbra-privacy/sdk/solana';
 import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
-import {
-  SOL_MINT,
-  SOL_ICON_URI,
-  USDC_MINT,
-} from '@/src/constants/solana';
-import {
-  describeClaimParts,
-  type ClaimToken,
-} from './lib/describeClaimLine';
+import { SOL_MINT, SOL_ICON_URI, USDC_MINT } from '@/src/constants/solana';
+import { describeClaimParts, type ClaimToken } from './lib/describeClaimLine';
 
 const GOLD_GRADIENT: [string, string] = ['#e6c079', '#a37b2e'];
 // Kept for the Claim button's glow — everything else on this screen is neutral.
@@ -62,12 +55,25 @@ const USDC_LOGO_URI =
 const USDT_LOGO_URI =
   'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png';
 
-function tokenForMint(mint: string | null, solUsd: number | null): ClaimToken | null {
+function tokenForMint(
+  mint: string | null,
+  solUsd: number | null,
+): ClaimToken | null {
   switch (mint) {
     case USDC_MINT:
-      return { symbol: 'USDC', decimals: 6, usdPerUnit: 1, iconUri: USDC_LOGO_URI };
+      return {
+        symbol: 'USDC',
+        decimals: 6,
+        usdPerUnit: 1,
+        iconUri: USDC_LOGO_URI,
+      };
     case SOL_MINT:
-      return { symbol: 'SOL', decimals: 9, usdPerUnit: solUsd, iconUri: SOL_ICON_URI };
+      return {
+        symbol: 'SOL',
+        decimals: 9,
+        usdPerUnit: solUsd,
+        iconUri: SOL_ICON_URI,
+      };
     default:
       return null;
   }
@@ -251,7 +257,10 @@ export function ClaimsScreen() {
         // wrap() already captures StealthError — skip to avoid dup.
         if (err?.name !== 'StealthError') {
           Sentry.captureException(err, {
-            tags: { 'op.kind': isEncrypted ? 'claim-encrypted' : 'claim-bank', 'wallet.source': 'stealf' },
+            tags: {
+              'op.kind': isEncrypted ? 'claim-encrypted' : 'claim-bank',
+              'wallet.source': 'stealf',
+            },
             extra: { userMessage: msg },
           });
         }
@@ -295,7 +304,11 @@ export function ClaimsScreen() {
         </Text>
         {/* Refresh, aligned to the right of the title (keeps it centered
             opposite the back button). */}
-        <LoaderRefreshButton onPress={() => refetch()} spinning={isFetching} size={36} />
+        <LoaderRefreshButton
+          onPress={() => refetch()}
+          spinning={isFetching}
+          size={36}
+        />
       </View>
 
       <ScrollView
@@ -574,7 +587,7 @@ function ClaimButton({
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withTiming(claiming ? 1 : 0, { duration: 280 });
+    progress.set(withTiming(claiming ? 1 : 0, { duration: 280 }));
   }, [claiming, progress]);
 
   const idleStyle = useAnimatedStyle(() => ({

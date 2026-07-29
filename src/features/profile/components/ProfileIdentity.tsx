@@ -45,9 +45,11 @@ export function ProfileIdentity({ user, email }: Props) {
     if (!email) return;
     await Clipboard.setStringAsync(email);
     setEmailCopied(true);
-    emailPop.value = withSequence(
-      withTiming(0.6, { duration: 90 }),
-      withSpring(1, { damping: 7, stiffness: 320 }),
+    emailPop.set(
+      withSequence(
+        withTiming(0.6, { duration: 90 }),
+        withSpring(1, { damping: 7, stiffness: 320 }),
+      ),
     );
     setTimeout(() => setEmailCopied(false), 1200);
   };

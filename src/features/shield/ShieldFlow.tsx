@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
 import { Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
@@ -15,6 +15,7 @@ import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { sansation } from '@/src/design-system/typography';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
+import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
 import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
@@ -70,17 +71,16 @@ export function ShieldFlow({ direction }: Props) {
   const { data: solPrice } = useSolPrice();
   const queryClient = useQueryClient();
   const pendingOps = usePendingOps();
-  const posthog = usePostHog();
-  const posthogRef = useRef(posthog);
-  posthogRef.current = posthog;
+  const posthog = usePostHog(); // stable client; async capture() closes over it directly
 
   const { data: stealthBalance } = useBalance(
-    isShield ? user?.stealfWallet ?? null : null,
+    isShield ? (user?.stealfWallet ?? null) : null,
   );
   const { data: shielded } = useShieldedSolBalance();
   const { data: encrypted } = useEncryptedBalances();
 
   const selected = useSelectedAsset();
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const isSolSelected =
     !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
   const selectionActive = !isSolSelected && !!selected;
@@ -93,13 +93,12 @@ export function ShieldFlow({ direction }: Props) {
   if (isShield) {
     const tokens = stealthBalance?.tokens ?? [];
     sourceBalance = selectionActive
-      ? tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0
-      : tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+      ? (tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0)
+      : (tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0);
   } else {
-
     sourceBalance = selectionActive
-      ? encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ?? 0
-      : shielded?.sol ?? 0;
+      ? (encrypted?.tokens.find((t) => t.mint === selected!.mint)?.amount ?? 0)
+      : (shielded?.sol ?? 0);
   }
 
   const rate = selectionActive
@@ -127,7 +126,6 @@ export function ShieldFlow({ direction }: Props) {
     onPressPercent,
     onToggleMode,
   } = useAmountInput({ rate, maxSol, decimals });
-
 
   useEffect(() => {
     setAmount('0');
@@ -178,7 +176,8 @@ export function ShieldFlow({ direction }: Props) {
     }
 
     const stealthPublicSol =
-      stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+      stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ??
+      0;
     if (isShield && stealthPublicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
       return failPre(INSUFFICIENT_FEE_SOL_MESSAGE);
     }
@@ -198,7 +197,6 @@ export function ShieldFlow({ direction }: Props) {
     close();
 
     void (async () => {
-
       const provingTimer = setTimeout(() => {
         pendingOps.setPhase(opId, 'proving');
       }, 700);
@@ -212,7 +210,8 @@ export function ShieldFlow({ direction }: Props) {
         clearTimeout(provingTimer);
         pendingOps.setPhase(opId, 'confirming');
 
-        if (__DEV__) console.log('[ShieldFlow] success → invalidating balances');
+        if (__DEV__)
+          console.log('[ShieldFlow] success → invalidating balances');
         await Promise.all([
           queryClient.invalidateQueries({
             queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet ?? ''),
@@ -236,7 +235,7 @@ export function ShieldFlow({ direction }: Props) {
             : Promise.resolve(),
         ]);
 
-        posthogRef.current?.capture('shield_completed', {
+        posthog?.capture('shield_completed', {
           direction,
           asset_symbol: assetSymbol,
           amount_band: amountBand(
@@ -251,7 +250,10 @@ export function ShieldFlow({ direction }: Props) {
         // wrap() already captures StealthError — skip to avoid dup.
         if (err?.name !== 'StealthError') {
           Sentry.captureException(err, {
-            tags: { 'op.kind': `shield-${direction}`, 'wallet.source': 'stealf' },
+            tags: {
+              'op.kind': `shield-${direction}`,
+              'wallet.source': 'stealf',
+            },
             extra: {
               userMessage: msg,
               amountBand: amountBand(num),
@@ -259,7 +261,7 @@ export function ShieldFlow({ direction }: Props) {
             },
           });
         }
-        posthogRef.current?.capture('shield_failed', {
+        posthog?.capture('shield_failed', {
           direction,
           asset_symbol: assetSymbol,
           error: scrubString(msg),
@@ -324,13 +326,7 @@ export function ShieldFlow({ direction }: Props) {
           iconSource={{ uri: iconUri ?? SOL_ICON_URI }}
           name={assetSymbol}
           balanceLabel={balanceLabel}
-          onPressSelect={() =>
-            router.push(
-              isShield
-                ? '/asset-picker?wallet=stealth'
-                : '/asset-picker?wallet=encrypted',
-            )
-          }
+          onPressSelect={() => setAssetPickerOpen(true)}
           onPressMax={() => onPressPercent(1)}
         />
       </View>
@@ -349,6 +345,12 @@ export function ShieldFlow({ direction }: Props) {
       {/* Registration overlay only on Shield (public → encrypted). Unshield
           already implies a registered encrypted balance, so it's not gated. */}
       {isShield ? <StealthSetupOverlay onClose={close} /> : null}
+
+      <AssetSelectSheet
+        open={assetPickerOpen}
+        onClose={() => setAssetPickerOpen(false)}
+        source={isShield ? 'stealth' : 'encrypted'}
+      />
     </CenterGlow>
   );
 }

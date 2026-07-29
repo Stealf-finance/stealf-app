@@ -53,15 +53,20 @@ function BouncingDot({
   const y = useSharedValue(0);
 
   useEffect(() => {
-    y.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(bounce, { duration: 500, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+    y.set(
+      withDelay(
+        delay,
+        withRepeat(
+          withSequence(
+            withTiming(bounce, {
+              duration: 500,
+              easing: Easing.inOut(Easing.ease),
+            }),
+            withTiming(0, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+          ),
+          -1,
+          false,
         ),
-        -1,
-        false,
       ),
     );
   }, [delay, bounce, y]);

@@ -18,10 +18,7 @@ import * as Clipboard from 'expo-clipboard';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { BackBtn } from '@/src/design-system/primitives/BackBtn';
 import { Icons } from '@/src/design-system/icons';
-import {
-  mono,
-  sansation,
-} from '@/src/design-system/typography';
+import { mono, sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -80,10 +77,12 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   const copiedProgress = useSharedValue(0);
 
   useEffect(() => {
-    copiedProgress.value = withTiming(copied ? 1 : 0, {
-      duration: 180,
-      easing: Easing.out(Easing.cubic),
-    });
+    copiedProgress.set(
+      withTiming(copied ? 1 : 0, {
+        duration: 180,
+        easing: Easing.out(Easing.cubic),
+      }),
+    );
   }, [copied, copiedProgress]);
 
   const rowAnimatedStyle = useAnimatedStyle(() => ({
@@ -107,9 +106,11 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
 
   const handleCopy = async () => {
     if (!fullAddress) return;
-    rowScale.value = withSequence(
-      withTiming(0.96, { duration: 90, easing: Easing.out(Easing.quad) }),
-      withSpring(1, { damping: 14, stiffness: 320, mass: 0.6 }),
+    rowScale.set(
+      withSequence(
+        withTiming(0.96, { duration: 90, easing: Easing.out(Easing.quad) }),
+        withSpring(1, { damping: 14, stiffness: 320, mass: 0.6 }),
+      ),
     );
     await Clipboard.setStringAsync(fullAddress);
     setCopied(true);
@@ -122,9 +123,10 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   // AddFunds screen is presented as an iOS modal (`presentation: 'modal'`),
   // and the `ToastHost` mounted in `_layout.tsx` sits below that UIKit
   // modal layer — toasts would render hidden behind the screen.
-  const [claimResult, setClaimResult] = useState<
-    { kind: 'success' | 'error'; label: string } | null
-  >(null);
+  const [claimResult, setClaimResult] = useState<{
+    kind: 'success' | 'error';
+    label: string;
+  } | null>(null);
   useEffect(() => {
     if (!claimResult) return;
     const ms = claimResult.kind === 'success' ? 3000 : 4500;
@@ -158,9 +160,9 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
       // knows whether to wait or whether something's broken.
       if (err instanceof ApiError) {
         if (err.status === 429) {
-          const nextAvailable =
-            (err.data as { nextAvailableAt?: string } | undefined)
-              ?.nextAvailableAt;
+          const nextAvailable = (
+            err.data as { nextAvailableAt?: string } | undefined
+          )?.nextAvailableAt;
           const when = nextAvailable
             ? new Date(nextAvailable).toLocaleTimeString([], {
                 hour: '2-digit',
@@ -190,7 +192,6 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
       // user cancel — no-op
     }
   };
-
 
   return (
     <CenterGlow tone={tone} flat>
@@ -223,7 +224,13 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
         <View style={{ width: 36 }} />
       </View>
 
-      <View style={{ paddingHorizontal: 24, paddingBottom: 14, alignItems: 'center' }}>
+      <View
+        style={{
+          paddingHorizontal: 24,
+          paddingBottom: 14,
+          alignItems: 'center',
+        }}
+      >
         <Text
           style={[
             sansation,
@@ -235,11 +242,16 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
               fontWeight: '700',
             },
           ]}
-        >
-        </Text>
+        ></Text>
       </View>
 
-      <View style={{ paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingBottom: 24,
+          alignItems: 'center',
+        }}
+      >
         <View
           style={{
             flexDirection: 'row',
@@ -263,7 +275,10 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             style={{ width: 24, height: 24, borderRadius: 12 }}
           />
           <Text
-            style={[sansation, { fontSize: 14, color: T.ink, fontWeight: '500' }]}
+            style={[
+              sansation,
+              { fontSize: 14, color: T.ink, fontWeight: '500' },
+            ]}
           >
             {network}
           </Text>
@@ -396,7 +411,9 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
       </Pressable>
 
       {isDevnet && fullAddress ? (
-        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}>
+        <View
+          style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 }}
+        >
           <Pressable
             onPress={() => {
               if (airdrop.isPending) return;
@@ -471,7 +488,13 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
 
       <View style={{ flex: 1 }} />
 
-      <View style={{ paddingHorizontal: 28, paddingBottom: 16, alignItems: 'center' }}>
+      <View
+        style={{
+          paddingHorizontal: 28,
+          paddingBottom: 16,
+          alignItems: 'center',
+        }}
+      >
         <Text
           style={[
             sansation,
@@ -579,4 +602,3 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
     </CenterGlow>
   );
 }
-

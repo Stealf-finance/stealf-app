@@ -30,24 +30,28 @@ export function AnimatedSplash() {
     if (isLoading || hasRunRef.current) return;
     hasRunRef.current = true;
 
-    scale.value = withDelay(
-      120,
-      withTiming(2.2, {
-        duration: 720,
-        easing: Easing.out(Easing.cubic),
-      }),
+    scale.set(
+      withDelay(
+        120,
+        withTiming(2.2, {
+          duration: 720,
+          easing: Easing.out(Easing.cubic),
+        }),
+      ),
     );
-    opacity.value = withDelay(
-      220,
-      withTiming(
-        0,
-        {
-          duration: 580,
-          easing: Easing.out(Easing.ease),
-        },
-        (finished) => {
-          if (finished) runOnJS(setDone)(true);
-        },
+    opacity.set(
+      withDelay(
+        220,
+        withTiming(
+          0,
+          {
+            duration: 580,
+            easing: Easing.out(Easing.ease),
+          },
+          (finished) => {
+            if (finished) runOnJS(setDone)(true);
+          },
+        ),
       ),
     );
   }, [isLoading, scale, opacity]);
@@ -71,7 +75,9 @@ export function AnimatedSplash() {
         containerStyle,
       ]}
     >
-      <Animated.View style={[logoStyle, { alignItems: 'center', justifyContent: 'center' }]}>
+      <Animated.View
+        style={[logoStyle, { alignItems: 'center', justifyContent: 'center' }]}
+      >
         <Image
           source={require('../../assets/images/splash-icon.png')}
           style={{ width: 360, height: 360 }}

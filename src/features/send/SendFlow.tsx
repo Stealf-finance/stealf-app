@@ -16,6 +16,7 @@ import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { MoveConfirm } from '@/src/features/moove/components/MoveConfirm';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
+import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
@@ -133,6 +134,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     ? 'encrypted'
     : 'stealth';
   const selected = useSelectedAsset();
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const fromAddress =
     (walletSource === 'stealth' ? user?.stealfWallet : user?.bankWallet) ?? '';
   const fromLabel = isPrivate
@@ -149,7 +151,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   const { setMode } = usePrivacyMode();
   const posthog = usePostHog();
   const [privateSending, setPrivateSending] = useState(false);
-
 
   const privateAssets: Asset[] = useMemo(() => {
     const tokens = (encrypted?.tokens ?? []).filter((t) => t.amount > 0);
@@ -240,14 +241,16 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
 
   const transitionTo = (next: number, dir: 'forward' | 'back') => {
     const sign = dir === 'forward' ? -1 : 1;
-    opacity.value = withTiming(0, { duration: FADE_OUT });
-    translate.value = withTiming(8 * sign, { duration: FADE_OUT }, (done) => {
-      if (!done) return;
-      runOnJS(setStep)(next);
-      translate.value = -8 * sign;
-      opacity.value = withTiming(1, { duration: FADE_IN });
-      translate.value = withTiming(0, { duration: FADE_IN });
-    });
+    opacity.set(withTiming(0, { duration: FADE_OUT }));
+    translate.set(
+      withTiming(8 * sign, { duration: FADE_OUT }, (done) => {
+        if (!done) return;
+        runOnJS(setStep)(next);
+        translate.value = -8 * sign;
+        opacity.value = withTiming(1, { duration: FADE_IN });
+        translate.value = withTiming(0, { duration: FADE_IN });
+      }),
+    );
   };
 
   const close = () => router.back();
@@ -255,7 +258,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     if (step <= 1) close();
     else transitionTo(step - 1, 'back');
   };
-
 
   const rate = asset
     ? asset.symbol === 'SOL' && typeof solPrice === 'number' && solPrice > 0
@@ -328,7 +330,15 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       return;
     }
     setSendError(null);
-    if (__DEV__) console.log('[SendFlow] sending', typedAssetAmount, asset.symbol, '→', recipient.name, isPrivate ? '(private)' : '');
+    if (__DEV__)
+      console.log(
+        '[SendFlow] sending',
+        typedAssetAmount,
+        asset.symbol,
+        '→',
+        recipient.name,
+        isPrivate ? '(private)' : '',
+      );
     try {
       if (isPrivate) {
         const publicSol =
@@ -349,7 +359,8 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             queryKey: shieldedBalanceQueries.byStealfWallet(fromAddress),
           }),
           queryClient.invalidateQueries({
-            queryKey: encryptedBalancesQueries.byStealfWalletPrefix(fromAddress),
+            queryKey:
+              encryptedBalancesQueries.byStealfWalletPrefix(fromAddress),
           }),
           queryClient.invalidateQueries({
             queryKey: historyQueries.byAddress(fromAddress),
@@ -417,7 +428,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
     }
   };
 
-
   // Close on the confirm sheet's success state → the Home page. (The Pay hub
   // tab is gone; privacy mode resets so the nav tone stays silver on Home.)
   const finishToHome = () => {
@@ -484,7 +494,9 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       <Animated.View style={[{ flex: 1 }, contentStyle]}>
         {step === 1 && asset && (
           <>
-            <View style={{ paddingHorizontal: 24, marginTop: 24, marginBottom: 10 }}>
+            <View
+              style={{ paddingHorizontal: 24, marginTop: 24, marginBottom: 10 }}
+            >
               <View
                 style={{
                   flexDirection: 'row',
@@ -655,9 +667,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
                 iconSource={asset.iconSource ?? { uri: SOL_ICON_URI }}
                 name={asset.symbol}
                 balanceLabel={balanceLabel}
-                onPressSelect={() =>
-                  router.push(`/asset-picker?wallet=${pickerWalletParam}`)
-                }
+                onPressSelect={() => setAssetPickerOpen(true)}
                 onPressMax={() => onPressPercent(1)}
               />
             </View>
@@ -677,7 +687,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
             </View>
           </>
         )}
-
       </Animated.View>
 
       {/* Confirmation — same bottom sheet as the Move flow, including the
@@ -713,6 +722,12 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       {/* Private transfers spend the encrypted balance — gate on Umbra
           registration. Simple/public sends don't need it. */}
       {isPrivate ? <StealthSetupOverlay onClose={close} /> : null}
+
+      <AssetSelectSheet
+        open={assetPickerOpen}
+        onClose={() => setAssetPickerOpen(false)}
+        source={pickerWalletParam}
+      />
     </CenterGlow>
   );
 }

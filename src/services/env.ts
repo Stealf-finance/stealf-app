@@ -6,15 +6,12 @@ const EnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
   EXPO_PUBLIC_SOLANA_RPC_URL: z.string().url(),
   EXPO_PUBLIC_SOLANA_WSS_URL: z.string().url(),
-  /** Optional mainnet RPC for the JitoSOL staking service — the Jito pool
-   *  only exists on mainnet while the rest of the app runs devnet. Falls
-   *  back to EXPO_PUBLIC_SOLANA_RPC_URL when unset. */
   EXPO_PUBLIC_JITO_RPC_URL: z.string().url().optional(),
   EXPO_PUBLIC_SENTRY_DSN: z.string().url().optional(),
   EXPO_PUBLIC_POSTHOG_API_KEY: z.string().min(1).optional(),
   EXPO_PUBLIC_POSTHOG_HOST: z.string().url().optional(),
-  // Dev-only: bypass auth redirects so we can browse (auth) and (tabs) freely
-  // while building UI. Never set to "true" in a production build.
+
+  // dev only
   EXPO_PUBLIC_DEV_BYPASS_AUTH: z
     .union([z.literal('true'), z.literal('false'), z.literal('')])
     .optional()

@@ -23,11 +23,13 @@ export function AuthFlow() {
   const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
   const switchMode = (next: Mode) => {
-    opacity.value = withTiming(0, { duration: FADE_OUT }, (done) => {
-      if (!done) return;
-      runOnJS(setMode)(next);
-      opacity.value = withTiming(1, { duration: FADE_IN });
-    });
+    opacity.set(
+      withTiming(0, { duration: FADE_OUT }, (done) => {
+        if (!done) return;
+        runOnJS(setMode)(next);
+        opacity.value = withTiming(1, { duration: FADE_IN });
+      }),
+    );
   };
 
   return (

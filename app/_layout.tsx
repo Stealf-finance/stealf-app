@@ -227,10 +227,6 @@ function RootLayout() {
                             name="profile/private-key"
                             options={{ presentation: 'pageSheet' }}
                           />
-                          <Stack.Screen
-                            name="asset-picker"
-                            options={{ presentation: 'pageSheet' }}
-                          />
                         </Stack>
                         <ToastHost />
                         <OfflineBanner />

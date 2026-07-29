@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { BlurView } from 'expo-blur';
 import Animated, {
   Easing,
@@ -33,14 +40,21 @@ function SuccessCheck({ tone }: { tone: Tone }) {
   const checkProgress = useSharedValue(CHECK_LEN);
 
   useEffect(() => {
-    haloOpacity.value = withTiming(1, {
-      duration: 240,
-      easing: Easing.out(Easing.quad),
-    });
-    haloScale.value = withSpring(1, { damping: 14, mass: 0.8, stiffness: 140 });
-    checkProgress.value = withDelay(
-      220,
-      withTiming(0, { duration: 360, easing: Easing.bezier(0.22, 1, 0.36, 1) }),
+    haloOpacity.set(
+      withTiming(1, {
+        duration: 240,
+        easing: Easing.out(Easing.quad),
+      }),
+    );
+    haloScale.set(withSpring(1, { damping: 14, mass: 0.8, stiffness: 140 }));
+    checkProgress.set(
+      withDelay(
+        220,
+        withTiming(0, {
+          duration: 360,
+          easing: Easing.bezier(0.22, 1, 0.36, 1),
+        }),
+      ),
     );
   }, [checkProgress, haloOpacity, haloScale]);
 
@@ -124,7 +138,13 @@ type Props = {
 
 /** Success-footer glass button — equal-width in a row (flex on a static
  *  style: Pressable style-fns don't stretch). */
-function FooterButton({ label, onPress }: { label: string; onPress: () => void }) {
+function FooterButton({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -305,7 +325,10 @@ export function MoveConfirm({
           style={StyleSheet.absoluteFill}
         />
         <View
-          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(8,8,10,0.5)' }]}
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: 'rgba(8,8,10,0.5)' },
+          ]}
         />
         {/* Tap the dimmed area to dismiss (disabled once submitted) */}
         <Pressable
@@ -434,7 +457,10 @@ export function MoveConfirm({
                   doesn't stretch. */}
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {onNewTransfer ? (
-                  <FooterButton label="Make new transfer" onPress={onNewTransfer} />
+                  <FooterButton
+                    label="Make new transfer"
+                    onPress={onNewTransfer}
+                  />
                 ) : null}
                 <FooterButton label="Close" onPress={onDone} />
               </View>
@@ -476,9 +502,7 @@ export function MoveConfirm({
                   marginTop: 4,
                 }}
               >
-                <View
-                  style={{ flexDirection: 'row', alignItems: 'baseline' }}
-                >
+                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                   <Text
                     style={[
                       sansation,
@@ -531,11 +555,7 @@ export function MoveConfirm({
                   paddingVertical: 2,
                 }}
               >
-                <DetailRow
-                  label="From"
-                  value={fromLabel}
-                  sub={fromAddress}
-                />
+                <DetailRow label="From" value={fromLabel} sub={fromAddress} />
                 <DetailRow
                   label="Receiving address"
                   value={toLabel}

@@ -46,10 +46,6 @@ const PERSIST_ALLOWED_PREFIXES: ReadonlySet<string> = new Set([
 const PERSIST_DENIED_PREFIXES: ReadonlySet<string> = new Set(['stealth']);
 
 export function shouldPersistQuery(query: Query): boolean {
-  // Compose with the library default rather than replacing it. The default
-  // rejects any query not in a `success` state; dropping that check persisted
-  // in-flight prefetches as `pending`, which React Query then warns about on
-  // rehydrate ("dehydrated as pending ended up rejecting").
   if (!defaultShouldDehydrateQuery(query)) return false;
   const root = query.queryKey[0];
   if (typeof root !== 'string') return false;

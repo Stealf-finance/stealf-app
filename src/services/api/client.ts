@@ -31,8 +31,7 @@ async function request<T = unknown>(
 }
 
 export function apiGet<T = unknown>(endpoint: string, token: string | null): Promise<T> {
-  // `no-store` skips the HTTP conditional cache so the server never replies 304
-  // (which `response.ok` treats as an error). React Query is our cache layer.
+
   return request<T>(
     endpoint,
     { method: 'GET', headers: buildHeaders(token), cache: 'no-store' },

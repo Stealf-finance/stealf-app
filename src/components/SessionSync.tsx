@@ -39,15 +39,23 @@ export function SessionSync() {
   }, [currentToken, turnkeyToken, setSession]);
 
   // Deps change identity across renders; hold them in a ref so the
-  // subscription itself stays mounted for the life of the component.
+  // subscription itself stays mounted for the life of the component. The ref
+  // is refreshed in an effect (not during render) to keep render pure — the
+  // subscription only reads `.current` later, when a session actually expires.
   const teardownDeps = useRef({ turnkeyLogout, reset, queryClient, posthog });
-  teardownDeps.current = { turnkeyLogout, reset, queryClient, posthog };
+  useEffect(() => {
+    teardownDeps.current = { turnkeyLogout, reset, queryClient, posthog };
+  });
 
   useEffect(
     () =>
       subscribeSessionExpired((reason) => {
-        const { turnkeyLogout: tkLogout, reset: rst, queryClient: qc, posthog: ph } =
-          teardownDeps.current;
+        const {
+          turnkeyLogout: tkLogout,
+          reset: rst,
+          queryClient: qc,
+          posthog: ph,
+        } = teardownDeps.current;
         if (__DEV__) console.log('[SessionSync] session expired:', reason);
         void performSessionTeardown('session_expired', {
           turnkeyLogout: tkLogout,

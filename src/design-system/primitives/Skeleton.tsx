@@ -22,10 +22,12 @@ export function Skeleton({ width, height, radius = 6 }: Props) {
   const opacity = useSharedValue(0.4);
 
   useEffect(() => {
-    opacity.value = withRepeat(
-      withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
+    opacity.set(
+      withRepeat(
+        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true,
+      ),
     );
   }, [opacity]);
 
@@ -34,7 +36,12 @@ export function Skeleton({ width, height, radius = 6 }: Props) {
   return (
     <Animated.View
       style={[
-        { width, height, borderRadius: radius, backgroundColor: 'rgba(255,255,255,0.09)' },
+        {
+          width,
+          height,
+          borderRadius: radius,
+          backgroundColor: 'rgba(255,255,255,0.09)',
+        },
         animatedStyle,
       ]}
     />

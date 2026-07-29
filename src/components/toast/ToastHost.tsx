@@ -33,10 +33,12 @@ export function ToastHost() {
   const enter = useSharedValue(0);
 
   useEffect(() => {
-    enter.value = withTiming(top ? 1 : 0, {
-      duration: 240,
-      easing: Easing.out(Easing.cubic),
-    });
+    enter.set(
+      withTiming(top ? 1 : 0, {
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+      }),
+    );
   }, [top, enter]);
 
   const containerStyle = useAnimatedStyle(() => ({

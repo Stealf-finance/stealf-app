@@ -1,13 +1,3 @@
-/**
- * Swap screen — pay one token, receive another via Jupiter. Opened from the
- * Wallet FAB. Amount entry drives a live (debounced) quote; Review confirms and
- * runs build → sign (stealth ED25519) → execute. App dark DA (the reference
- * mock is light — this follows the rest of the app).
- *
- * Tokens come from a stub list for now (SWAP_TOKENS); balances/MAX read the
- * stealth wallet by symbol. Swaps are mainnet (Jupiter) — fail with a toast on
- * a devnet build.
- */
 import { useEffect, useState } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
@@ -27,7 +17,7 @@ import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { SWAP_TOKENS, type SwapToken } from '../lib/tokens';
 import { useSwapQuote } from '../hooks/useSwapQuote';
 import { useSwapExecute } from '../hooks/useSwapExecute';
-import { TokenPickerSheet } from '../components/TokenPickerSheet';
+import { TokenSelectSheet } from '@/src/design-system/primitives/TokenSelectSheet';
 import { SwapReviewSheet } from '../components/SwapReviewSheet';
 
 const S = txPalette('silver');
@@ -59,7 +49,7 @@ function TokenPill({ token, onPress }: { token: SwapToken; onPress: () => void }
       <Text style={[sansation, { fontSize: 16, fontWeight: '600', color: T.ink }]}>
         {token.symbol}
       </Text>
-      <Icons.chevR size={16} color={S.inkDim} />
+      <Icons.chevD size={16} color={S.inkDim} />
     </Pressable>
   );
 }
@@ -159,7 +149,7 @@ export function SwapScreen() {
       <View style={{ flex: 1, justifyContent: 'center' }}>
         {/* You pay */}
         <View style={{ paddingHorizontal: 24 }}>
-          <Text style={[sansation, { fontSize: 14, color: S.inkDim, marginBottom: 8 }]}>You pay</Text>
+          <Text style={[sansation, { fontSize: 14, color: S.inkDim, marginBottom: 8 }]}>Swap from</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <Text
               style={[
@@ -190,7 +180,7 @@ export function SwapScreen() {
 
         {/* You receive */}
         <View style={{ paddingHorizontal: 24 }}>
-          <Text style={[sansation, { fontSize: 14, color: S.inkDim, marginBottom: 8 }]}>You receive</Text>
+          <Text style={[sansation, { fontSize: 14, color: S.inkDim, marginBottom: 8 }]}>Swap to</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <Text
               style={[
@@ -217,9 +207,12 @@ export function SwapScreen() {
         />
       </View>
 
-      <TokenPickerSheet
+      <TokenSelectSheet
         open={pickerSide !== null}
         onClose={() => setPickerSide(null)}
+        items={SWAP_TOKENS}
+        keyOf={(t) => t.mint}
+        toRow={(t) => ({ symbol: t.symbol, name: t.name, iconUri: t.logoUri })}
         onSelect={pickToken}
       />
       <SwapReviewSheet

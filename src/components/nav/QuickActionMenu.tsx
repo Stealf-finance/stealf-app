@@ -30,7 +30,12 @@ export type QuickAction = {
 // Home default: top-to-bottom order; the list stacks upward from the FAB.
 const DEFAULT_ACTIONS: QuickAction[] = [
   { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send-choice' },
-  { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive-choice' },
+  {
+    key: 'receive',
+    label: 'Receive',
+    iconKey: 'arrDownLeft',
+    route: '/receive-choice',
+  },
   { key: 'move', label: 'Move', iconKey: 'moove', route: '/moove' },
   { key: 'buy', label: 'Buy', iconKey: 'dollar' }, // not built yet
 ];
@@ -52,7 +57,7 @@ export function QuickActionMenu({
   const p = useSharedValue(0);
 
   useEffect(() => {
-    p.value = withTiming(open ? 1 : 0, { duration: 220 });
+    p.set(withTiming(open ? 1 : 0, { duration: 220 }));
   }, [open, p]);
 
   const fabBottom = insets.bottom + 8;
@@ -67,7 +72,12 @@ export function QuickActionMenu({
   const onAction = (a: QuickAction) => {
     setOpen(false);
     if (a.route) router.push(a.route as never);
-    else show({ kind: 'info', title: 'Coming soon', message: `${a.label} is coming soon.` });
+    else
+      show({
+        kind: 'info',
+        title: 'Coming soon',
+        message: `${a.label} is coming soon.`,
+      });
   };
 
   return (
@@ -79,9 +89,16 @@ export function QuickActionMenu({
           pointerEvents="auto"
           style={[StyleSheet.absoluteFill, backdropStyle, { zIndex: 25 }]}
         >
-          <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView
+            intensity={28}
+            tint="dark"
+            style={StyleSheet.absoluteFill}
+          />
           <View
-            style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,10,10,0.35)' }]}
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: 'rgba(10,10,10,0.35)' },
+            ]}
           />
           <Pressable
             style={StyleSheet.absoluteFill}
@@ -100,7 +117,13 @@ export function QuickActionMenu({
             }}
           >
             {actions.map((a, i) => (
-              <ActionRow key={a.key} action={a} index={i} p={p} onPress={() => onAction(a)} />
+              <ActionRow
+                key={a.key}
+                action={a}
+                index={i}
+                p={p}
+                onPress={() => onAction(a)}
+              />
             ))}
           </View>
         </Animated.View>
@@ -176,7 +199,10 @@ function ActionRow({
       [0, 1],
       Extrapolation.CLAMP,
     );
-    return { opacity: t, transform: [{ translateY: interpolate(t, [0, 1], [16, 0]) }] };
+    return {
+      opacity: t,
+      transform: [{ translateY: interpolate(t, [0, 1], [16, 0]) }],
+    };
   });
 
   return (
@@ -192,7 +218,9 @@ function ActionRow({
           gap: 12,
         }}
       >
-        <Text style={[sansation, { fontSize: 18, color: T.ink }]}>{action.label}</Text>
+        <Text style={[sansation, { fontSize: 18, color: T.ink }]}>
+          {action.label}
+        </Text>
         <Icon size={24} strokeWidth={2} color={T.ink} />
       </Pressable>
     </Animated.View>

@@ -92,7 +92,6 @@ export function ClaimPendingScreen() {
       amountSol: 0,
     });
 
-
     setTimeout(() => {
       removeFromCache();
       if (router.canGoBack()) {
@@ -385,7 +384,7 @@ function ClaimButton({
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withTiming(claiming ? 1 : 0, { duration: 280 });
+    progress.set(withTiming(claiming ? 1 : 0, { duration: 280 }));
   }, [claiming, progress]);
 
   const idleStyle = useAnimatedStyle(() => ({

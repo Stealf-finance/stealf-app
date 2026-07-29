@@ -62,11 +62,6 @@ function toArrayBuffer(u8: Uint8Array): ArrayBuffer {
 
 /**
  * X25519 DH on a **background thread** with zero-copy `ArrayBuffer` I/O.
- *
- * `scalarMultAsync` offloads the curve mult off the JS thread and skips the
- * `number[]` ↔ C++ marshaling that makes the sync path ~3.4 ms/call. The SDK
- * scanner is patched to `await` this, so a full merkle-tree scan no longer
- * blocks the UI.
  */
 export async function nativeX25519GetSharedSecretAsync(
   privateKey: Uint8Array,
