@@ -9,12 +9,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import { Icons } from '@/src/design-system/icons';
-import {
-  AppleGlyph,
-  GoogleGlyph,
-  MailGlyph,
-} from '@/src/design-system/icons/auth';
-import { serif } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import type { User } from '@/src/features/onboarding/types';
@@ -29,12 +23,10 @@ type Props = {
   email: string;
 };
 
-/** Identity block: provider avatar → editable @username → email + copy →
- *  "Personal Account" chip. Mirrors the reference layout; balances live on
- *  the Home screen, not here. */
+/** Identity block: editable @username → email + copy. Left-aligned, no avatar
+ *  / provider logo. */
 export function ProfileIdentity({ user, email }: Props) {
   const username = user?.username ?? '';
-  const avatarLetter = (username[0] ?? '·').toUpperCase();
 
   const [emailCopied, setEmailCopied] = useState(false);
   const emailPop = useSharedValue(1);
@@ -55,48 +47,7 @@ export function ProfileIdentity({ user, email }: Props) {
   };
 
   return (
-    <View style={{ alignItems: 'center' }}>
-      {/* Avatar */}
-      {/* Flat fill — no gradient/shadow, per the black-shell direction */}
-      <View
-        style={{
-          marginTop: 24,
-          marginBottom: 16,
-          width: 96,
-          height: 96,
-          borderRadius: 48,
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.08)',
-          overflow: 'hidden',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(255,255,255,0.05)',
-        }}
-      >
-        {user?.authMethod === 'apple' ? (
-          <AppleGlyph size={42} color={S.ink} />
-        ) : user?.authMethod === 'google' ? (
-          <GoogleGlyph size={40} />
-        ) : user?.authMethod === 'email' ? (
-          <MailGlyph size={40} color={S.accent} />
-        ) : (
-          <Text
-            style={[
-              serif,
-              {
-                fontStyle: 'italic',
-                fontSize: 44,
-                lineHeight: 48,
-                color: S.accent,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            {avatarLetter}
-          </Text>
-        )}
-      </View>
-
+    <View style={{ alignItems: 'center', marginTop: 12 }}>
       <PseudoRow username={username} />
 
       {email ? (
@@ -115,7 +66,7 @@ export function ProfileIdentity({ user, email }: Props) {
               ellipsizeMode="tail"
               style={{
                 flexShrink: 1,
-                fontSize: 12,
+                fontSize: 13,
                 color: S.inkDim,
                 letterSpacing: 0.2,
                 includeFontPadding: false,

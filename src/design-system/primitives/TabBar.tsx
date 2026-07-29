@@ -2,7 +2,7 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { Icons } from '@/src/design-system/icons';
-import { Tone, txPalette } from '@/src/design-system/palettes';
+import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 
 export type TabId = 'bank' | 'history' | 'profile';
@@ -26,8 +26,7 @@ const TABS: { id: TabId; iconKey: keyof typeof Icons; label: string }[] = [
  * The active tab gets a rounded accent-tinted highlight; the paired "+" FAB
  * (QuickActionMenu) sits separately bottom-right.
  */
-export function TabBar({ active, onTab, tone = 'silver' }: Props) {
-  const palette = txPalette(tone);
+export function TabBar({ active, onTab }: Props) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -52,13 +51,13 @@ export function TabBar({ active, onTab, tone = 'silver' }: Props) {
                 borderRadius: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: isActive ? palette.accentSoft : 'transparent',
               }}
             >
+              {/* Active tab is indicated by the silver icon color — no box. */}
               <Icon
                 size={26}
                 strokeWidth={2}
-                color={isActive ? palette.accent : T.inkMute}
+                color={isActive ? '#e8e8ea' : T.inkMute}
               />
             </Pressable>
           );
