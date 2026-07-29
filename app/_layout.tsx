@@ -31,7 +31,7 @@ import { SessionSync } from '@/src/components/SessionSync';
 import { TelemetrySmokeTest } from '@/src/components/TelemetrySmokeTest';
 import { PendingOpsProvider } from '@/src/components/pending-ops/PendingOpsContext';
 import { ToastProvider } from '@/src/components/toast/ToastContext';
-import { ToastHost } from '@/src/components/toast/ToastHost';
+import { AppToaster } from '@/src/components/toast/AppToaster';
 import { AnimatedSplash } from '@/src/components/AnimatedSplash';
 import { OfflineBanner } from '@/src/components/OfflineBanner';
 
@@ -220,7 +220,7 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                         </Stack>
-                        <ToastHost />
+                        <AppToaster />
                         <OfflineBanner />
                         <AnimatedSplash />
                         <StatusBar style="light" />
