@@ -2,6 +2,8 @@ import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Icons } from '@/src/design-system/icons';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
+import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { useUmbraRegistration } from '@/src/features/stealth/hooks/useUmbraRegistration';
 import { txPalette } from '@/src/design-system/palettes';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { sansation } from '@/src/design-system/typography';
@@ -47,10 +49,14 @@ function HomeGridCard({
   vm,
   hidden,
   onPress,
+  locked = false,
 }: {
   vm: HomeGridCardVM;
   hidden: boolean;
   onPress?: () => void;
+  /** When the stealth wallet isn't imported yet, draw a dotted outline around
+   *  the card to flag it as not-yet-set-up. */
+  locked?: boolean;
 }) {
   const pal = txPalette(vm.accent);
   const Icon = Icons[vm.iconKey];
@@ -99,25 +105,72 @@ function HomeGridCard({
           <CardValue vm={vm} hidden={hidden} />
         </View>
       </BlurGlass>
+
+      {/* Dotted outline sits just outside the card edge (overlay so the grid
+          layout stays identical whether or not it's shown). */}
+      {locked ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: -3,
+            left: -3,
+            right: -3,
+            bottom: -3,
+            borderRadius: 25,
+            borderWidth: 1.5,
+            borderColor: 'rgba(255,255,255,0.28)',
+            borderStyle: 'dotted',
+          }}
+        />
+      ) : null}
     </Pressable>
   );
 }
 
+// Cards that depend on the stealth wallet — flagged with a dotted outline
+// until it's imported. Cash (bank wallet) is always available.
+const STEALTH_GATED_KEYS = new Set<HomeGridCardVM['key']>([
+  'wallet',
+  'encrypted',
+  'earn',
+]);
+
 /** 2×2 grid of the four home cards: Cash, Earn, Encrypted Balance, Wallet. */
 export function HomeGrid({ balances, hidden }: { balances: HomeBalances; hidden: boolean }) {
   const router = useSafeRouter();
+  const { user } = useAuth();
+  const stealthReady = !!user?.stealfWallet;
+
+  // Encrypted balance also needs the wallet registered on Umbra. Mirror the
+  // StealthSetupOverlay logic: persisted flag first, chain probe as fallback
+  // (only when the wallet exists and we haven't recorded a result yet).
+  const persistedReg = user?.stealthRegistered;
+  const needsProbe = stealthReady && persistedReg === undefined;
+  const { data: probedReg } = useUmbraRegistration(
+    needsProbe ? user?.stealfWallet : null,
+  );
+  const stealthRegistered = persistedReg ?? probedReg;
+
   const cards = buildHomeCards(balances);
   const press = (c: HomeGridCardVM) =>
     c.route ? () => router.push(c.route as never) : undefined;
+  const locked = (c: HomeGridCardVM) => {
+    if (!STEALTH_GATED_KEYS.has(c.key)) return false;
+    if (!stealthReady) return true;
+    // Encrypted balance additionally requires Umbra registration.
+    if (c.key === 'encrypted') return stealthRegistered === false;
+    return false;
+  };
   return (
     <View style={{ paddingHorizontal: H_PAD, gap: GAP }}>
       <View style={{ flexDirection: 'row', gap: GAP }}>
-        <HomeGridCard vm={cards[0]} hidden={hidden} onPress={press(cards[0])} />
-        <HomeGridCard vm={cards[1]} hidden={hidden} onPress={press(cards[1])} />
+        <HomeGridCard vm={cards[0]} hidden={hidden} onPress={press(cards[0])} locked={locked(cards[0])} />
+        <HomeGridCard vm={cards[1]} hidden={hidden} onPress={press(cards[1])} locked={locked(cards[1])} />
       </View>
       <View style={{ flexDirection: 'row', gap: GAP }}>
-        <HomeGridCard vm={cards[2]} hidden={hidden} onPress={press(cards[2])} />
-        <HomeGridCard vm={cards[3]} hidden={hidden} onPress={press(cards[3])} />
+        <HomeGridCard vm={cards[2]} hidden={hidden} onPress={press(cards[2])} locked={locked(cards[2])} />
+        <HomeGridCard vm={cards[3]} hidden={hidden} onPress={press(cards[3])} locked={locked(cards[3])} />
       </View>
     </View>
   );
