@@ -31,7 +31,7 @@ import { SessionSync } from '@/src/components/SessionSync';
 import { TelemetrySmokeTest } from '@/src/components/TelemetrySmokeTest';
 import { PendingOpsProvider } from '@/src/components/pending-ops/PendingOpsContext';
 import { ToastProvider } from '@/src/components/toast/ToastContext';
-import { ToastHost } from '@/src/components/toast/ToastHost';
+import { AppToaster } from '@/src/components/toast/AppToaster';
 import { AnimatedSplash } from '@/src/components/AnimatedSplash';
 import { OfflineBanner } from '@/src/components/OfflineBanner';
 
@@ -209,15 +209,7 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="claims"
-                            options={{
-                              presentation: 'transparentModal',
-                              animation: 'fade',
-                              // Override the root opaque contentStyle so the
-                              // screen behind shows through and the BlurView
-                              // actually frosts it (same look as the Umbra
-                              // setup overlay).
-                              contentStyle: { backgroundColor: 'transparent' },
-                            }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="tx/[id]"
@@ -228,7 +220,7 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                         </Stack>
-                        <ToastHost />
+                        <AppToaster />
                         <OfflineBanner />
                         <AnimatedSplash />
                         <StatusBar style="light" />

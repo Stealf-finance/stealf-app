@@ -41,9 +41,9 @@ export function OfflineBanner() {
     opacity: opacity.get(),
   }));
 
-  // Always mounted (like ToastHost / PendingOpsPill): the banner sits offscreen
-  // and transparent until `offline` flips, so the exit animation plays out
-  // without a mount/unmount state flag driving an extra render.
+  // Always mounted: the banner sits offscreen and transparent until `offline`
+  // flips, so the exit animation plays out without a mount/unmount state flag
+  // driving an extra render.
   return (
     <Animated.View
       pointerEvents="none"

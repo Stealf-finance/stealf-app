@@ -59,17 +59,17 @@ export function AuthBtn({
         style={{
           // Lock height so swapping icon+label for the spinner doesn't
           // make the button shrink.
-          minHeight: 52,
+          minHeight: 54,
           borderRadius: 100,
-          paddingVertical: 16,
-          paddingHorizontal: 20,
+          paddingVertical: 17,
+          paddingHorizontal: 22,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 12,
-          backgroundColor: isPrimary ? T.ink : T.bgCardStrong,
+          // Glass = black slab with an off-white ("blanc cassé") outline.
+          backgroundColor: isPrimary ? T.ink : T.bg,
           borderWidth: isPrimary ? 0 : 1,
-          borderColor: T.hairlineStrong,
+          borderColor: isPrimary ? T.hairlineStrong : 'rgba(241,236,225,0.6)',
           shadowColor: T.shadow,
           shadowOpacity: isPrimary ? 0.4 : 0,
           shadowRadius: 24,
@@ -80,20 +80,41 @@ export function AuthBtn({
           <LoaderDots color={inkColor} size={6} gap={5} bounce={5} />
         ) : (
           <>
-            <View>{icon}</View>
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 14,
-                  fontWeight: '500',
-                  letterSpacing: -0.14,
-                  color: inkColor,
-                },
-              ]}
+            {/* Icon pinned to the far left; label optically centered. */}
+            <View
+              style={{
+                position: 'absolute',
+                left: 22,
+                top: 0,
+                bottom: 0,
+                justifyContent: 'center',
+              }}
             >
-              {label}
-            </Text>
+              {icon}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text
+                style={[
+                  sansation,
+                  {
+                    fontSize: 15,
+                    fontWeight: '500',
+                    letterSpacing: -0.14,
+                    color: inkColor,
+                  },
+                ]}
+              >
+                {label}
+              </Text>
+              <Text
+                style={[
+                  sansation,
+                  { fontSize: 15, color: inkColor, includeFontPadding: false },
+                ]}
+              >
+                →
+              </Text>
+            </View>
           </>
         )}
       </View>

@@ -10,14 +10,13 @@ const SIZE = 180;
 const STROKE = 14; // thin ring — épuré
 const RADIUS = (SIZE - STROKE) / 2;
 
-/** Ring + legend order. Colors validated (dataviz six-checks, dark surface):
- *  CVD ΔE 15.6 / normal 17.2 on the worst adjacent pair, all ≥3:1 contrast.
- *  Monochrome-plus-gold is a deliberate brand deviation from the chroma
- *  floor, backed by secondary encoding (segment gaps + dot/label legend). */
+/** Ring + legend order. Uniform silver theme — slices are a monochrome
+ *  light→dark ramp, differentiated by secondary encoding (segment gaps +
+ *  dot/label legend). */
 const SECTIONS = [
   { key: 'cash', label: 'Cash', color: '#e8e8ea' },
   { key: 'wallet', label: 'Wallet', color: '#82828c' },
-  { key: 'encrypted', label: 'Encrypted Balance', color: T.gold },
+  { key: 'encrypted', label: 'Encrypted Balance', color: '#c9c9cc' },
   { key: 'earn', label: 'Earn', color: '#666670' },
 ] as const;
 

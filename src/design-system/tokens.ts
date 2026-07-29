@@ -15,10 +15,12 @@ export const T = {
   hairlineStrong: 'rgba(241,236,225,0.18)',
   trace: 'rgba(241,236,225,0.04)',
 
-  gold: '#c9a86a',
-  goldDim: 'rgba(201,168,106,0.5)',
-  goldFaint: 'rgba(201,168,106,0.15)',
-  goldGlow: 'rgba(201,168,106,0.28)',
+  // Theme is uniformly silver — the gold accent maps to silver so every
+  // `T.gold*` reference and `tone="gold"` surface renders silver.
+  gold: '#c9c9cc',
+  goldDim: 'rgba(201,201,204,0.5)',
+  goldFaint: 'rgba(201,201,204,0.15)',
+  goldGlow: 'rgba(220,220,225,0.28)',
 
   green: '#7ea688',
   error: '#d1604a',

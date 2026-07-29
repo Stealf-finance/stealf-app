@@ -62,7 +62,7 @@ export function PseudoRow({ username }: { username: string }) {
         <Text
           style={[
             serif,
-            { fontStyle: 'italic', fontSize: 30, lineHeight: 33, color: S.ink },
+            { fontStyle: 'italic', fontSize: 24, lineHeight: 28, color: S.ink },
           ]}
         >
           {username ? `@${username}` : '—'}
@@ -95,7 +95,7 @@ export function PseudoRow({ username }: { username: string }) {
           <Text
             style={[
               serif,
-              { fontStyle: 'italic', fontSize: 26, color: S.inkDim },
+              { fontStyle: 'italic', fontSize: 22, color: S.inkDim },
             ]}
           >
             @
@@ -118,7 +118,7 @@ export function PseudoRow({ username }: { username: string }) {
               serif,
               {
                 fontStyle: 'italic',
-                fontSize: 26,
+                fontSize: 22,
                 color: S.ink,
                 minWidth: 110,
                 padding: 0,

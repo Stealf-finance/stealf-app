@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { sansation, sansationLight } from '@/src/design-system/typography';
+import { sansationLight } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 
@@ -108,20 +108,6 @@ export function CodeInput({
           height: 1,
         }}
       />
-
-      <Text
-        style={[
-          sansation,
-          {
-            marginTop: 18,
-            fontSize: 11,
-            color: S.inkFaint,
-            letterSpacing: 0.6,
-          },
-        ]}
-      >
-        Tap any cell to edit
-      </Text>
     </View>
   );
 }

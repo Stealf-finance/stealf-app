@@ -3,6 +3,8 @@ import { WalletBottomBar } from '@/src/features/wallet-detail/WalletBottomBar';
 import { type QuickAction } from '@/src/components/nav/QuickActionMenu';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { StealthWalletGate } from '@/src/features/stealth/screens/StealthWalletGate';
+import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { SOL_ICON_URI } from '@/src/constants/solana';
 
 const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
@@ -15,6 +17,7 @@ const ACTIONS: QuickAction[] = [
 ];
 
 export default function WalletRoute() {
+  const router = useSafeRouter();
   const { user } = useAuth();
   const bal = useBalance(user?.stealfWallet ?? null);
 
@@ -30,20 +33,24 @@ export default function WalletRoute() {
     priceLabel: `$${t.balanceUSD.toFixed(2)}`,
   }));
 
+  // Gate on the stealth wallet — no wallet yet renders the create/import setup
+  // screen, with a back button that dismisses this route.
   return (
-    <WalletScreen
-      title="Wallet"
-      iconImage={require('@/assets/images/wallet.png')}
-      balanceUSD={bal.data?.totalUSD ?? 0}
-      assets={assets}
-      bottomBar={
-        <WalletBottomBar
-          fabActions={ACTIONS}
-          historyRoute="/transactions?wallet=stealth"
-          claimTarget="encrypted"
-        />
-      }
-      tone="silver"
-    />
+    <StealthWalletGate onExit={() => router.back()}>
+      <WalletScreen
+        title="Wallet"
+        iconImage={require('@/assets/images/wallet.png')}
+        balanceUSD={bal.data?.totalUSD ?? 0}
+        assets={assets}
+        bottomBar={
+          <WalletBottomBar
+            fabActions={ACTIONS}
+            historyRoute="/transactions?wallet=stealth"
+            claimTarget="encrypted"
+          />
+        }
+        tone="silver"
+      />
+    </StealthWalletGate>
   );
 }

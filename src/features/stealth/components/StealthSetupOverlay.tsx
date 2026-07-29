@@ -180,6 +180,9 @@ export function StealthSetupOverlay({ onClose }: Props) {
         left: 0,
         right: 0,
         bottom: 0,
+        // Sit above the wallet screen's FAB (zIndex 30) + bottom bar (20).
+        zIndex: 50,
+        elevation: 50,
       }}
     >
       <BlurView

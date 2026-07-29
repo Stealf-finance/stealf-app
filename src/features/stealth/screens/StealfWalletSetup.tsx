@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
+import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { LoaderOverlay } from '@/src/design-system/primitives/LoaderOverlay';
@@ -320,34 +321,29 @@ type SetupOptionProps = {
 
 function SetupOption({ image, label, sub, onPress, disabled }: SetupOptionProps) {
   return (
+    // Same BlurGlass chrome as the Home cards / ProfileRow (no gradient).
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={{
-        borderRadius: 18,
-        overflow: 'hidden',
-        opacity: disabled ? 0.5 : 1,
-      }}
+      style={({ pressed }) => ({ opacity: disabled ? 0.5 : pressed ? 0.7 : 1 })}
     >
-      <LinearGradient
-        colors={['rgba(255,255,255,0.06)', 'rgba(255,255,255,0.015)']}
-        start={{ x: 0.2, y: 0 }}
-        end={{ x: 0.8, y: 1 }}
-        style={{
+      <BlurGlass
+        radius={22}
+        innerStyle={{
           flexDirection: 'row',
           alignItems: 'center',
           gap: 14,
-          paddingVertical: 18,
-          paddingHorizontal: 18,
+          paddingVertical: 16,
+          paddingHorizontal: 20,
         }}
       >
         <Image
           source={image}
           contentFit="contain"
           cachePolicy="memory-disk"
-          style={{ width: 46, height: 46 }}
+          style={{ width: 40, height: 40 }}
         />
         <View style={{ flex: 1 }}>
           <Text
@@ -373,7 +369,7 @@ function SetupOption({ image, label, sub, onPress, disabled }: SetupOptionProps)
           </Text>
         </View>
         <Icons.chevR size={14} color={T.inkFaint} />
-      </LinearGradient>
+      </BlurGlass>
     </Pressable>
   );
 }

@@ -27,17 +27,18 @@ type Props = {
 
 const GLOW: Record<Tone, string> = {
   silver: '#dcdce1',
-  gold: '#d4af63',
+  // Uniform silver theme — gold haze maps to the silver glow.
+  gold: '#dcdce1',
 };
 
 // Radial fall-off in alpha space. Stops are normalised to [0,1] of the
 // gradient radius. Peak at the centre, soft non-linear decay to fully
 // transparent at the edge so the glow reaches the corners cleanly.
 const STOPS: { offset: string; silver: number; gold: number }[] = [
-  { offset: '0%', silver: 0.13, gold: 0.16 },
-  { offset: '25%', silver: 0.085, gold: 0.105 },
-  { offset: '50%', silver: 0.035, gold: 0.05 },
-  { offset: '75%', silver: 0.01, gold: 0.015 },
+  { offset: '0%', silver: 0.13, gold: 0.13 },
+  { offset: '25%', silver: 0.085, gold: 0.085 },
+  { offset: '50%', silver: 0.035, gold: 0.035 },
+  { offset: '75%', silver: 0.01, gold: 0.01 },
   { offset: '100%', silver: 0, gold: 0 },
 ];
 

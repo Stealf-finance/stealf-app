@@ -38,12 +38,12 @@ type Props = {
 const QR_SIZE = 244;
 
 const ACCENT_GRADIENTS: Record<Tone, [string, string]> = {
-  gold: ['#e6c079', '#a37b2e'],
+  gold: ['#e8e8ea', '#9a9a9f'],
   silver: ['#e8e8ea', '#9a9a9f'],
 };
 
 const ACCENT_DIM: Record<Tone, string> = {
-  gold: 'rgba(230,192,121,0.22)',
+  gold: 'rgba(232,232,234,0.2)',
   silver: 'rgba(232,232,234,0.2)',
 };
 
@@ -56,7 +56,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   const accent = palette.accent;
   const chipGradient = ACCENT_GRADIENTS[tone];
   const accentDim = ACCENT_DIM[tone];
-  const kickerColor = isGold ? 'rgba(230,192,121,0.85)' : T.inkFaint;
+  const kickerColor = isGold ? 'rgba(201,201,204,0.85)' : T.inkFaint;
 
   const resolvedWallet: WalletSource = wallet ?? (isGold ? 'stealth' : 'bank');
   const isStealth = resolvedWallet === 'stealth';
@@ -292,7 +292,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
             padding: 18,
             borderRadius: 28,
             backgroundColor: '#f6f2e8',
-            shadowColor: isGold ? '#e6c079' : '#ffffff',
+            shadowColor: isGold ? '#e8e8ea' : '#ffffff',
             shadowOpacity: isGold ? 0.25 : 0.08,
             shadowRadius: 40,
             shadowOffset: { width: 0, height: 8 },
