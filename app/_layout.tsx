@@ -209,15 +209,7 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="claims"
-                            options={{
-                              presentation: 'transparentModal',
-                              animation: 'fade',
-                              // Override the root opaque contentStyle so the
-                              // screen behind shows through and the BlurView
-                              // actually frosts it (same look as the Umbra
-                              // setup overlay).
-                              contentStyle: { backgroundColor: 'transparent' },
-                            }}
+                            options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
                             name="tx/[id]"

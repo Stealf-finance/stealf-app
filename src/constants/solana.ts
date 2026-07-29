@@ -13,7 +13,7 @@ export type KnownTokenMeta = {
 };
 export const SOL_ICON_URI = `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${SOL_MINT}/logo.png`;
 
-const USDC_LOGO_URI =
+export const USDC_LOGO_URI =
   'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png';
 const USDT_LOGO_URI =
   'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png';

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   useAnimatedStyle,
@@ -14,11 +13,13 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
+import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { LoaderRefreshButton } from '@/src/design-system/primitives/LoaderRefreshButton';
 import { Icons } from '@/src/design-system/icons';
 import { sansation } from '@/src/design-system/typography';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
+import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
@@ -150,6 +151,14 @@ export function ClaimsScreen() {
   const items: Item[] = (pendingUtxos ?? []).map(utxoToItem);
   const [claimingIndex, setClaimingIndex] = useState<number | null>(null);
 
+  // Page chrome mirrors the History screen: silver for cash, gold for the
+  // encrypted balance (same tone split as the History tab).
+  const tone: Tone = isEncrypted ? 'gold' : 'silver';
+  const palette = txPalette(tone);
+  const subtitle = isEncrypted
+    ? 'Incoming to your wallet'
+    : 'Incoming to Cash account';
+
   const close = () => router.back();
 
   const onClaim = (item: Item, index: number) => {
@@ -270,40 +279,44 @@ export function ClaimsScreen() {
   };
 
   return (
-    <BlurView
-      intensity={40}
-      tint="dark"
-      experimentalBlurMethod="dimezisBlurView"
-      style={{ flex: 1, backgroundColor: 'rgba(8,8,10,0.5)' }}
-    >
+    <CenterGlow tone={tone} flat>
+      {/* Header aligned with the History screen: chevron back, centered
+          title + subtitle. Refresh sits on the right (opposite the back
+          button) since claims are scanned on demand. */}
       <View
         style={{
-          paddingTop: insets.top + 16,
-          paddingBottom: 12,
-          paddingHorizontal: 20,
+          paddingTop: 20,
+          paddingBottom: 14,
+          paddingHorizontal: 24,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 14,
         }}
       >
         <GlassBackButton onPress={close} />
-        <Text
-          style={[
-            sansation,
-            {
-              flex: 1,
-              textAlign: 'center',
-              fontSize: 22,
-              fontWeight: '600',
-              color: T.ink,
-              includeFontPadding: false,
-            },
-          ]}
-        >
-          Vault
-        </Text>
-        {/* Refresh, aligned to the right of the title (keeps it centered
-            opposite the back button). */}
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text
+            style={[
+              sansation,
+              {
+                fontSize: 22,
+                lineHeight: 28,
+                fontWeight: '600',
+                color: T.ink,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            Vault
+          </Text>
+          <Text
+            style={[
+              sansation,
+              { fontSize: 14, lineHeight: 20, color: T.inkDim, marginTop: 4 },
+            ]}
+          >
+            {subtitle}
+          </Text>
+        </View>
         <LoaderRefreshButton
           onPress={() => refetch()}
           spinning={isFetching}
@@ -314,38 +327,52 @@ export function ClaimsScreen() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 24,
+          paddingHorizontal: 24,
+          paddingBottom: insets.bottom + 32,
           gap: 10,
         }}
         showsVerticalScrollIndicator={false}
       >
         {items.length === 0 ? (
-          <EmptyState />
+          <EmptyState loading={isFetching} faintColor={palette.inkFaint} />
         ) : (
-          items.map((tx, i) => {
-            const parts = claimPartsForNote(tx.utxo, solUsd);
-            return (
-              <ClaimItem
-                key={`claim-${i}`}
-                sender={parts.sender}
-                symbol={parts.symbol}
-                iconUri={parts.iconUri}
-                tokenAmount={parts.tokenAmount}
-                usdValue={parts.usdValue}
-                claiming={claimingIndex === i}
-                disabled={claimingIndex !== null && claimingIndex !== i}
-                onClaim={() => onClaim(tx, i)}
-              />
-            );
-          })
+          <>
+            <View
+              style={{
+                paddingTop: 4,
+                paddingBottom: 6,
+                flexDirection: 'row',
+                alignItems: 'baseline',
+              }}
+            >
+              <Kicker color={palette.inkFaint} style={{ fontSize: 9 }}>
+                {items.length} incoming
+              </Kicker>
+            </View>
+            {items.map((tx, i) => {
+              const parts = claimPartsForNote(tx.utxo, solUsd);
+              return (
+                <ClaimItem
+                  key={`claim-${i}`}
+                  sender={parts.sender}
+                  symbol={parts.symbol}
+                  iconUri={parts.iconUri}
+                  tokenAmount={parts.tokenAmount}
+                  usdValue={parts.usdValue}
+                  claiming={claimingIndex === i}
+                  disabled={claimingIndex !== null && claimingIndex !== i}
+                  onClaim={() => onClaim(tx, i)}
+                />
+              );
+            })}
+          </>
         )}
       </ScrollView>
 
       {/* Claiming (to encrypted or to cash) requires the wallet to be
           registered on Umbra. Self-hides once registered. */}
       <StealthSetupOverlay onClose={close} />
-    </BlurView>
+    </CenterGlow>
   );
 }
 
@@ -556,19 +583,27 @@ function ClaimItem({
   );
 }
 
-function EmptyState() {
+function EmptyState({
+  loading,
+  faintColor,
+}: {
+  loading: boolean;
+  faintColor: string;
+}) {
   return (
-    <View style={{ paddingTop: 60, alignItems: 'center' }}>
-      <Kicker
-        color={T.inkDim}
-        style={{
-          fontSize: 9,
-          textAlign: 'center',
-          includeFontPadding: false,
-        }}
+    <View style={{ paddingTop: 80, alignItems: 'center' }}>
+      <Text
+        style={[
+          sansation,
+          {
+            fontSize: 15,
+            color: faintColor,
+            textAlign: 'center',
+          },
+        ]}
       >
-        No incoming private transfer
-      </Kicker>
+        {loading ? 'Loading…' : 'No incoming private transfer'}
+      </Text>
     </View>
   );
 }
