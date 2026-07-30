@@ -16,7 +16,7 @@ import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton'
 import { Icons } from '@/src/design-system/icons';
 import { sansation, serif } from '@/src/design-system/typography';
 import { ChoiceSheet } from '@/src/features/wallet-detail/ChoiceSheet';
-import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
+import { StealthSetupOverlay } from '@/src/features/umbra/components/StealthSetupOverlay';
 import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import {
@@ -39,19 +39,19 @@ import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import {
   useShieldedSolBalance,
   shieldedBalanceQueries,
-} from '@/src/features/stealth/hooks/useShieldedSolBalance';
+} from '@/src/features/umbra/hooks/useShieldedSolBalance';
 import {
   useEncryptedBalances,
   encryptedBalancesQueries,
-} from '@/src/features/stealth/hooks/useEncryptedBalances';
+} from '@/src/features/umbra/hooks/useEncryptedBalances';
 import {
   useUmbra,
   getEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
   getPublicBalanceToReceiverClaimableUtxoCreatorFunction,
   getPublicBalanceToSelfClaimableUtxoCreatorFunction,
-} from '@/src/features/stealth/hooks/useUmbra';
-import { claimScanQueries } from '@/src/features/stealth/hooks/useClaimScan';
-import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
+} from '@/src/features/umbra/hooks/useUmbra';
+import { claimScanQueries } from '@/src/features/umbra/hooks/useClaimScan';
+import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/umbra/lib/errors';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';

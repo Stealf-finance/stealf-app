@@ -22,7 +22,7 @@ import {
   TURNKEY_CALLBACKS,
 } from '@/src/services/turnkey/config';
 import { AuthProvider } from '@/src/features/onboarding/context/AuthContext';
-import { PrivacyModeProvider } from '@/src/features/stealth/PrivacyModeContext';
+import { PrivacyModeProvider } from '@/src/features/umbra/PrivacyModeContext';
 import { BalanceVisibilityProvider } from '@/src/features/wallet/BalanceVisibilityContext';
 import { SocketProvider } from '@/src/components/SocketProvider';
 import { DataBootstrap } from '@/src/components/DataBootstrap';

@@ -9,7 +9,7 @@ import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
-import { useDeleteStealthWallet } from '@/src/features/stealth/hooks/useDeleteStealthWallet';
+import { useDeleteStealthWallet } from '@/src/features/umbra/hooks/useDeleteStealthWallet';
 import { useToast } from '@/src/components/toast/ToastContext';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { KeyCard, type RevealState } from '../components/KeyCard';

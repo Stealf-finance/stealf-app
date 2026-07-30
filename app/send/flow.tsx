@@ -1,7 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { SendFlow } from '@/src/features/send/SendFlow';
-import { StealthWalletGate } from '@/src/features/stealth/screens/StealthWalletGate';
+import { StealthWalletGate } from '@/src/features/umbra/screens/StealthWalletGate';
 import { Tone } from '@/src/design-system/palettes';
 
 export default function SendFlowRoute() {

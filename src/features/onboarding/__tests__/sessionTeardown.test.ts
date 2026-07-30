@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const clearAllMmkvStorageBackend = vi.fn(async () => {});
-const umbraClearSeed = vi.fn(async () => {});
+const clearMasterSeed = vi.fn(async (_w: string) => {});
 const walletKeyCacheClearAll = vi.fn(async () => {});
 const clearStealthState = vi.fn();
 const socketDisconnect = vi.fn();
@@ -12,13 +12,13 @@ const removeClient = vi.fn(async () => {});
 vi.mock('@/src/services/umbra/storage/mmkvStorageBackend', () => ({
   clearAllMmkvStorageBackend: () => clearAllMmkvStorageBackend(),
 }));
-vi.mock('@/src/services/umbra/seed', () => ({
-  umbraClearSeed: () => umbraClearSeed(),
+vi.mock('@/src/services/umbra/storage/masterSeed', () => ({
+  clearMasterSeed: (w: string) => clearMasterSeed(w),
 }));
 vi.mock('@/src/services/cache/walletKeyCache', () => ({
   walletKeyCache: { clearAll: () => walletKeyCacheClearAll() },
 }));
-vi.mock('@/src/features/stealth/hooks/useUmbra', () => ({
+vi.mock('@/src/features/umbra/hooks/useUmbra', () => ({
   clearStealthState: () => clearStealthState(),
 }));
 vi.mock('@/src/services/real-time/socket', () => ({
@@ -40,6 +40,8 @@ function makeDeps(overrides: Record<string, unknown> = {}) {
     queryClient: { clear: vi.fn() } as never,
     capture: vi.fn(),
     resetAnalytics: vi.fn(),
+    stealthWallet: 'StealthAddr',
+    bankWallet: 'BankAddr',
     ...overrides,
   };
 }
@@ -73,7 +75,7 @@ describe('performSessionTeardown', () => {
   it('clears every store that holds wallet material', async () => {
     await performSessionTeardown('user_signed_out', makeDeps());
 
-    expect(umbraClearSeed).toHaveBeenCalled();
+    expect(clearMasterSeed).toHaveBeenCalled();
     expect(clearAllMmkvStorageBackend).toHaveBeenCalled();
     expect(walletKeyCacheClearAll).toHaveBeenCalled();
     expect(purgeTurnkeyState).toHaveBeenCalled();

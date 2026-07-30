@@ -1,9 +1,9 @@
 import { WalletScreen } from '@/src/features/wallet-detail/WalletScreen';
 import { WalletBottomBar } from '@/src/features/wallet-detail/WalletBottomBar';
 import { type QuickAction } from '@/src/components/nav/QuickActionMenu';
-import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
-import { StealthWalletGate } from '@/src/features/stealth/screens/StealthWalletGate';
-import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
+import { useEncryptedBalances } from '@/src/features/umbra/hooks/useEncryptedBalances';
+import { StealthWalletGate } from '@/src/features/umbra/screens/StealthWalletGate';
+import { StealthSetupOverlay } from '@/src/features/umbra/components/StealthSetupOverlay';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 
 const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');

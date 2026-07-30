@@ -4,8 +4,8 @@ import { usePostHog } from 'posthog-react-native';
 import * as Sentry from '@sentry/react-native';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
-import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
-import { umbraClearSeed } from '@/src/services/umbra/seed';
+import { clearStealthState } from '@/src/features/umbra/hooks/useUmbra';
+import { clearMasterSeed } from '@/src/services/umbra/storage/masterSeed';
 import { clearAllMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { useAuth } from '../context/AuthContext';
 import { purgeTurnkeyState } from '../lib/passkeyHelpers';
@@ -13,7 +13,7 @@ import { deleteAccountOnBackend } from '../api/onboarding';
 
 export function useDeleteAccount() {
   const { deleteSubOrganization, logout: turnkeyLogout } = useTurnkey();
-  const { session, reset } = useAuth();
+  const { session, reset, user } = useAuth();
   const queryClient = useQueryClient();
   const posthog = usePostHog();
 
@@ -48,7 +48,8 @@ export function useDeleteAccount() {
 
       socketService.disconnect();
       clearStealthState();
-      await umbraClearSeed();
+      if (user?.stealfWallet) await clearMasterSeed(user.stealfWallet);
+      if (user?.bankWallet) await clearMasterSeed(user.bankWallet);
       // Deleting the account must not leave the decrypted UTXO / nullifier
       // store behind on the device.
       await clearAllMmkvStorageBackend();

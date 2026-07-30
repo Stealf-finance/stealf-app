@@ -6,27 +6,19 @@ import { getBatchMerkleProofFetcher } from '@umbra-privacy/sdk';
 import {
   createClaimReceiverZkProver,
   createClaimEphemeralZkProver,
-} from '@/src/features/stealth/zk';
-import {
-  getStealthClient,
-  getCachedSignerKey,
-  getRelayer,
-} from '../client';
+} from '@/src/services/umbra/zk';
+import { getStealthClient, getRelayer } from '../client';
 import {
   loadBurntUtxosForCurrentWallet,
   isAlreadyBurntError,
   recoverFromAlreadyBurnt,
   handleClaimResult,
-} from '@/src/features/stealth/lib/burntUtxos';
+} from '@/src/services/umbra/burntUtxos';
 
-import {
-  INDEXER_API_DEVNET,
+import { UMBRA_CONFIG } from '../constant';
 
-} from '../constant'
-
-async function ensureBlacklist() {
-  const key = getCachedSignerKey();
-  if (key) await loadBurntUtxosForCurrentWallet(key);
+async function ensureBlacklist(walletAddress: string) {
+  await loadBurntUtxosForCurrentWallet(walletAddress);
 }
 
 function getBurnRelayer() {
@@ -39,16 +31,17 @@ function getBurnRelayer() {
 }
 
 const fetchBatchMerkleProof = getBatchMerkleProofFetcher({
-  apiEndpoint: INDEXER_API_DEVNET,
+  apiEndpoint: UMBRA_CONFIG.indexerApi,
 });
 
 async function burnEach(
+  walletAddress: string,
   utxos: any[],
   makeBurner: (
     masterSeedSchemeId: string | undefined,
   ) => (notes: readonly any[]) => Promise<any>,
 ) {
-  await ensureBlacklist();
+  await ensureBlacklist(walletAddress);
   let lastResult: unknown;
   for (const utxo of utxos) {
     const claimFn = makeBurner(utxo?.masterSeedSchemeId);
@@ -69,7 +62,7 @@ async function burnEach(
 /** Claim received UTXOs into stealth's encrypted balance. */
 export async function claimReceived(utxos: any[]) {
   const client = await getStealthClient();
-  return burnEach(utxos, (masterSeedSchemeId) =>
+  return burnEach(client.signer.address.toString(), utxos, (masterSeedSchemeId) =>
     getReceiverBurnableStealthPoolNoteIntoETABurnerFunction(
       { client, masterSeedSchemeId } as never,
       {
@@ -85,7 +78,7 @@ export async function claimReceived(utxos: any[]) {
 /** Claim self-burnable UTXOs to their destination's public ATA (via relayer). */
 export async function claimSelfToPublic(utxos: any[]) {
   const client = await getStealthClient();
-  return burnEach(utxos, (masterSeedSchemeId) =>
+  return burnEach(client.signer.address.toString(), utxos, (masterSeedSchemeId) =>
     getSelfBurnableStealthPoolNoteIntoATABurnerFunction(
       { client, masterSeedSchemeId } as never,
       {

@@ -12,8 +12,7 @@ export type Palette = {
   hairline: string;
 };
 
-// Theme is uniformly silver: both tones resolve to the same silver palette.
-// The `Tone` param stays for API compatibility with existing call sites.
+
 const SILVER: Palette = {
   bg: '#0c0c0e',
   accent: '#c9c9cc',

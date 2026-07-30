@@ -1,5 +1,5 @@
 import { getBurnableStealthPoolNoteScannerFunction } from '@umbra-privacy/sdk/burn';
-import { getStealthClient, getCachedSignerKey } from '../client';
+import { getStealthClient } from '../client';
 import {
   nativeAesDecryptor,
   nativeX25519GetSharedSecretAsync,
@@ -8,11 +8,10 @@ import {
 import {
   isBurnt,
   loadBurntUtxosForCurrentWallet,
-} from '@/src/features/stealth/lib/burntUtxos';
+} from '@/src/services/umbra/burntUtxos';
 
-async function ensureBlacklistLoaded(): Promise<void> {
-  const key = getCachedSignerKey();
-  if (key) await loadBurntUtxosForCurrentWallet(key);
+async function ensureBlacklistLoaded(wallet: string): Promise<void> {
+  await loadBurntUtxosForCurrentWallet(wallet);
 }
 
 export type ClaimScanResult = {
@@ -70,7 +69,7 @@ export async function fetchClaimScan(
   options: FetchClaimScanOptions = {},
 ): Promise<ClaimScanResult> {
   const client = await getStealthClient();
-  await ensureBlacklistLoaded();
+  await ensureBlacklistLoaded(wallet);
   const scan = getOrCreateScanner(wallet, client);
 
   if (options.onProgress) options.onProgress(0);

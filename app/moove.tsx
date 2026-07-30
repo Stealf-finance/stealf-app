@@ -1,6 +1,6 @@
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { MoveFlow } from '@/src/features/moove/MoveFlow';
-import { StealthWalletGate } from '@/src/features/stealth/screens/StealthWalletGate';
+import { StealthWalletGate } from '@/src/features/umbra/screens/StealthWalletGate';
 
 export default function MooveModal() {
   const router = useSafeRouter();

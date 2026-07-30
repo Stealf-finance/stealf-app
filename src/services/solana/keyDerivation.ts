@@ -12,8 +12,6 @@ import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 
 const HARDENED_OFFSET = 0x80000000;
 
-// SLIP-0010 master key derivation uses the literal ASCII "ed25519 seed" as
-// HMAC key. @noble/hashes v2 requires Uint8Array; v1 accepted strings.
 const ED25519_SEED_KEY = new TextEncoder().encode('ed25519 seed');
 
 export const SOLANA_BIP44_PATH = "m/44'/501'/0'/0'";

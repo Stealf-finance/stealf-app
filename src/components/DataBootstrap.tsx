@@ -11,7 +11,7 @@ import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { getStealthClient } from '@/src/services/umbra/client';
-import { prefetchEncryptedBalancesFor } from '@/src/features/stealth/hooks/useEncryptedBalances';
+import { prefetchEncryptedBalancesFor } from '@/src/features/umbra/hooks/useEncryptedBalances';
 
 /**
  * Orchestrates per-feature subscriptions (sockets, prefetches) once the user
