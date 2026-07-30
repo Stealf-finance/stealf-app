@@ -91,8 +91,10 @@ export async function fetchClaimScan(
   const store = (client as unknown as { utxoDataStore?: { query: (f: object) => Promise<any[]> } })
     .utxoDataStore;
   if (!store) {
-    if (__DEV__) console.warn('[claims] no utxoDataStore wired — returning empty');
-    return emptyResult();
+    // The store is wired by assembleClient; a missing one means an SDK shape
+    // change. Fail loudly rather than silently returning "no claims" — that
+    // would hide real claimable funds.
+    throw new Error('utxoDataStore unavailable — claim scan cannot read results');
   }
 
   const allEntries = await store.query({
