@@ -1,5 +1,5 @@
 import { useClaimScan, type UseClaimScanOptions } from './useClaimScan';
-import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
+import type { ClaimScanResult } from '@/src/services/umbra/queries/scanNotes';
 
 const selectInbound = (r: ClaimScanResult) => [
   ...r.received,

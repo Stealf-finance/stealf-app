@@ -3,7 +3,7 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import {
   fetchClaimScan,
   type ClaimScanResult,
-} from '@/src/services/umbra/queries/claims';
+} from '@/src/services/umbra/queries/scanNotes';
 
 export const claimScanQueries = {
   byStealfWallet: (wallet: string) =>

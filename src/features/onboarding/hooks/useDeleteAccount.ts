@@ -3,6 +3,7 @@ import { useTurnkey } from '@turnkey/react-native-wallet-kit';
 import { usePostHog } from 'posthog-react-native';
 import * as Sentry from '@sentry/react-native';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
+import { persister } from '@/src/services/queryClient';
 import { socketService } from '@/src/services/real-time/socket';
 import { clearStealthState } from '@/src/features/umbra/hooks/useUmbra';
 import { clearMasterSeed } from '@/src/services/umbra/storage/masterSeed';
@@ -59,6 +60,9 @@ export function useDeleteAccount() {
       } catch {}
       await purgeTurnkeyState();
       queryClient.clear();
+      // In-memory clear() leaves the persisted snapshot (balance/history/profile)
+      // in AsyncStorage; remove it so a deleted account can't rehydrate on next launch.
+      await persister.removeClient();
       reset();
       posthog?.reset();
     },

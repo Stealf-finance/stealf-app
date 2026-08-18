@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { registerStealfWallet } from '@/src/features/umbra/api/registerStealfWallet';
+import { registerPrivacyWallet } from '@/src/features/umbra/api/registerStealfWallet';
 
 export type RegisterStealfWalletArgs = {
   sessionToken: string;
@@ -13,6 +13,6 @@ export type RegisterStealfWalletArgs = {
 export function useRegisterStealfWallet() {
   return useMutation({
     mutationFn: ({ sessionToken, walletAddress }: RegisterStealfWalletArgs) =>
-      registerStealfWallet(sessionToken, walletAddress),
+      registerPrivacyWallet(sessionToken, walletAddress),
   });
 }
