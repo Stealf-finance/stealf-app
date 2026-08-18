@@ -17,6 +17,7 @@ import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { SWAP_TOKENS, type SwapToken } from '../lib/tokens';
 import { useSwapQuote } from '../hooks/useSwapQuote';
 import { useSwapExecute } from '../hooks/useSwapExecute';
+import { usePrivateSwap } from '../hooks/usePrivateSwap';
 import { TokenSelectSheet } from '@/src/design-system/primitives/TokenSelectSheet';
 import { SwapReviewSheet } from '../components/SwapReviewSheet';
 
@@ -81,6 +82,12 @@ export function SwapScreen() {
 
   const { receiveAmount, order, loading: quoting } = useSwapQuote(payToken, receiveToken, solAmount);
   const { swap, loading: swapping } = useSwapExecute();
+  const {
+    swap: runPrivate,
+    loading: privateLoading,
+    enabled: privateEnabled,
+  } = usePrivateSwap();
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const insufficient = solAmount > payBalance;
   const reviewDisabled = solAmount <= 0 || insufficient;
@@ -106,10 +113,16 @@ export function SwapScreen() {
   const onConfirm = () => {
     void (async () => {
       try {
-        const res = await swap(payToken, receiveToken, solAmount);
+        const sig = isPrivate
+          ? (await runPrivate(payToken, receiveToken, solAmount)).execute.signature
+          : (await swap(payToken, receiveToken, solAmount)).signature;
         setReviewOpen(false);
         router.back();
-        show({ kind: 'success', title: 'Swap sent', message: `Tx ${res.signature.slice(0, 8)}…` });
+        show({
+          kind: 'success',
+          title: isPrivate ? 'Private swap sent' : 'Swap sent',
+          message: `Tx ${sig.slice(0, 8)}…`,
+        });
       } catch (err) {
         show({
           kind: 'error',
@@ -145,6 +158,48 @@ export function SwapScreen() {
         </View>
         <View style={{ width: 26 }} />
       </View>
+
+      {/* Public / Private toggle — only shown once the private-swap flow is
+          validated + enabled (PRIVATE_SWAP_ENABLED). Hidden today, so no
+          "coming soon" surface ships. */}
+      {privateEnabled ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignSelf: 'center',
+            gap: 4,
+            padding: 4,
+            marginBottom: 8,
+            borderRadius: 999,
+            backgroundColor: 'rgba(255,255,255,0.05)',
+          }}
+        >
+          {(['Public', 'Private'] as const).map((label, i) => {
+            const active = (i === 1) === isPrivate;
+            return (
+              <Pressable
+                key={label}
+                onPress={() => setIsPrivate(i === 1)}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  backgroundColor: active ? 'rgba(255,255,255,0.10)' : 'transparent',
+                }}
+              >
+                <Text
+                  style={[
+                    sansation,
+                    { fontSize: 13, fontWeight: '600', color: active ? T.ink : S.inkDim },
+                  ]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
 
       <View style={{ flex: 1, justifyContent: 'center' }}>
         {/* You pay */}
@@ -223,7 +278,7 @@ export function SwapScreen() {
         payAmount={solAmount}
         receiveAmount={receiveAmount}
         priceImpact={order?.priceImpact}
-        loading={swapping}
+        loading={isPrivate ? privateLoading : swapping}
         onConfirm={onConfirm}
       />
     </CenterGlow>
