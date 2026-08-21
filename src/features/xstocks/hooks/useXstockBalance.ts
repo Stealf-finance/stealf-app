@@ -5,11 +5,12 @@ import { xstockQueries } from '../api/assets';
 
 /**
  * xStock holding for the given symbol. xStocks are traded from — and held on —
- * the stealth wallet, so the balance is read against `user.stealfWallet`.
+ * the bank wallet (the backend only authorizes bank-signed trades), so the
+ * balance is read against `user.bankWallet`.
  */
 export function useXstockBalance(symbol: string | null) {
   const { user } = useAuth();
-  const wallet = user?.stealfWallet ?? null;
+  const wallet = user?.bankWallet ?? null;
 
   return useQuery<XstockBalance>({
     queryKey: xstockQueries.balance(wallet ?? '', symbol ?? ''),
