@@ -12,12 +12,6 @@ import { runPrivateSwap, PRIVATE_SWAP_ENABLED } from '../lib/privateSwap';
 import { toBaseUnits } from '../lib/swapMath';
 import type { SwapToken } from '../lib/tokens';
 
-/**
- * SOL (lamports) unshielded alongside the swap amount to cover the ephemeral
- * wallet's Jupiter tx fee — the "2nd UTXO". Tune against real mainnet fees.
- */
-const GAS_LAMPORTS = 10_000_000n; // ~0.01 SOL
-
 export function usePrivateSwap() {
   const { user, session } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -37,7 +31,6 @@ export function usePrivateSwap() {
           inputMint: payToken.mint,
           outputMint: receiveToken.mint,
           amountBaseUnits: BigInt(toBaseUnits(payAmount, payToken.decimals)),
-          gasLamports: GAS_LAMPORTS,
         });
       } finally {
         setLoading(false);

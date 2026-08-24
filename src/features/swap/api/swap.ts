@@ -67,3 +67,21 @@ export async function executeSwap(
   }
   return res;
 }
+
+export const FundGasResponseSchema = z
+  .object({ signature: z.string(), rpcUrl: z.string() })
+  .passthrough();
+export type FundGasResponse = z.infer<typeof FundGasResponseSchema>;
+
+/**
+ * Private swap only: ask the backend to grant native SOL to the ephemeral wallet
+ * (sponsored gas). Returns the funding tx signature + the mainnet rpcUrl to read
+ * the realized swap output on.
+ */
+export async function fundEphemeralGas(
+  token: string,
+  ephemeral: string,
+): Promise<FundGasResponse> {
+  const raw = await apiPost('/api/swap/private/fund-gas', token, { ephemeral });
+  return FundGasResponseSchema.parse(raw);
+}
