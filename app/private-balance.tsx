@@ -5,6 +5,7 @@ import {
   type QuickAction,
 } from '@/src/components/nav/QuickActionMenu';
 import { VaultGlyph } from '@/src/design-system/icons/VaultGlyph';
+import { ShieldPromptRow } from '@/src/features/shield/components/ShieldPromptRow';
 import { useEncryptedBalances } from '@/src/features/umbra/hooks/useEncryptedBalances';
 import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
@@ -49,6 +50,7 @@ export default function EncryptedScreen() {
         iconImage={require('@/assets/images/shield.png')}
         balanceUSD={encrypted.data?.totalUSD ?? 0}
         assets={assets}
+        belowBalance={<ShieldPromptRow />}
         headerRight={
           <Pressable
             onPress={() => router.push('/claims?target=encrypted')}
