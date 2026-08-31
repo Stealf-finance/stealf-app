@@ -264,6 +264,17 @@ export const Icons = {
       <Path d="M21 12a9 9 0 11-3.05-6.74M21 4v5h-5" />
     </>,
   ),
+  // Two chasing arcs — the shape loader.png drew, as a stroke glyph. Rotated
+  // by LoaderRefreshButton, so it has to read the same at every angle: both
+  // arcs span 135° and sit 180° apart.
+  loader: make(
+    <>
+      <Path d="M4 12a8 8 0 0113.66-5.66" />
+      <Path d="M18 3v3.5h-3.5" />
+      <Path d="M20 12a8 8 0 01-13.66 5.66" />
+      <Path d="M6 21v-3.5h3.5" />
+    </>,
+  ),
   trash: make(
     <>
       <Path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6" />

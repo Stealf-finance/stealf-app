@@ -167,9 +167,7 @@ export function ClaimsScreen() {
 
     const bankWallet = user?.bankWallet ?? null;
     const wallet = user?.bankWallet ?? null;
-    const claimKey = wallet
-      ? claimScanQueries.byWallet(wallet)
-      : null;
+    const claimKey = wallet ? claimScanQueries.byWallet(wallet) : null;
 
     const snapshot = claimKey
       ? queryClient.getQueryData<ClaimScanResult>(claimKey)
@@ -237,8 +235,7 @@ export function ClaimsScreen() {
               queryKey: shieldedBalanceQueries.byWallet(wallet),
             });
             queryClient.invalidateQueries({
-              queryKey:
-                encryptedBalancesQueries.byWalletPrefix(wallet),
+              queryKey: encryptedBalancesQueries.byWalletPrefix(wallet),
             });
           } else {
             if (!bankWallet) return;
@@ -317,7 +314,7 @@ export function ClaimsScreen() {
         <LoaderRefreshButton
           onPress={() => refetch()}
           spinning={isFetching}
-          size={36}
+          size={26}
         />
       </View>
 
