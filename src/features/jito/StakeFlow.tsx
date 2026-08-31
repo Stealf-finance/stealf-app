@@ -19,6 +19,7 @@ import {
 import { SOL_ICON_URI } from '@/src/constants/solana';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { useTurnkeySigning } from '@/src/features/bank/hooks/useTurnkeySigning';
 import { useToast } from '@/src/components/toast/ToastContext';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { stakeSOL } from '@/src/services/jitoSOL/staking';
@@ -47,12 +48,13 @@ export function StakeFlow({ direction }: { direction: Direction }) {
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: bal } = useBalance(isDeposit ? user?.stealfWallet ?? null : null);
+  const { signHex } = useTurnkeySigning();
+  const { data: bal } = useBalance(isDeposit ? user?.bankWallet ?? null : null);
   const { data: solPrice } = useSolPrice();
   const { data: pool } = usePoolInfo();
   const { data: jitoBal } = useJitoSolBalance();
 
-  // Deposit: source = stealth wallet public SOL. Withdraw: JitoSOL held.
+  // Deposit: source = the wallet's public SOL. Withdraw: JitoSOL held.
   const sourceBalance = isDeposit
     ? bal?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0
     : jitoBal?.uiAmount ?? 0;
@@ -94,13 +96,15 @@ export function StakeFlow({ direction }: { direction: Direction }) {
   const onSubmit = () => {
     const amt = solAmount;
     if (amt <= 0 || insufficient) return;
+    const owner = user?.bankWallet;
+    if (!owner) return;
     close();
 
     void (async () => {
       try {
         const sig = isDeposit
-          ? await stakeSOL(amt)
-          : await unstakeJitoSOL(amt, { instant: true });
+          ? await stakeSOL(amt, owner, signHex)
+          : await unstakeJitoSOL(amt, owner, signHex, { instant: true });
         void queryClient.invalidateQueries({ queryKey: ['jito-sol-balance'] });
         show({
           kind: 'success',

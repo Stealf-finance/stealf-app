@@ -1,5 +1,5 @@
 /**
- * JitoSOL holdings for the stealth wallet.
+ * JitoSOL holdings for the wallet.
  *
  * `useJitoSolBalance` is the raw React Query read (ATA balance). `useJitoSolPosition`
  * composes it with the pool exchange rate + SOL price to derive a USD value —
@@ -18,7 +18,7 @@ export const jitoSolBalanceQueries = {
 
 export function useJitoSolBalance() {
   const { user } = useAuth();
-  const wallet = user?.stealfWallet ?? null;
+  const wallet = user?.bankWallet ?? null;
 
   return useQuery<JitoSolBalance>({
     queryKey: jitoSolBalanceQueries.byWallet(wallet ?? ''),

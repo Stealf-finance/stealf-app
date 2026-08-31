@@ -1,46 +1,42 @@
-import { Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { withdrawSol, withdrawStake } from '@solana/spl-stake-pool';
 import { JITO_STAKE_POOL_ADDRESS } from './constants';
 import { getJitoConnection } from './connection';
-import { getStealthKeypair } from '@/src/services/wallet/stealthKeypair';
+import { signAndSendWithTurnkey } from '@/src/services/turnkey/solanaTx';
 
 export async function unstakeJitoSOL(
   amountJitoSol: number,
+  owner: string,
+  signHex: (unsignedHex: string) => Promise<string>,
   { instant = false }: { instant?: boolean } = {},
 ): Promise<string> {
   if (!Number.isFinite(amountJitoSol) || amountJitoSol <= 0) {
     throw new Error(`Invalid JitoSOL amount: ${amountJitoSol}`);
   }
   const connection = getJitoConnection();
-  const keypair = await getStealthKeypair();
+  const feePayer = new PublicKey(owner);
 
+  // `withdrawStake` creates an ephemeral stake account keypair in `signers`.
   const { instructions, signers } = instant
     ? await withdrawSol(
         connection,
         JITO_STAKE_POOL_ADDRESS,
-        keypair.publicKey,
-        keypair.publicKey,
+        feePayer,
+        feePayer,
         amountJitoSol,
       )
     : await withdrawStake(
         connection,
         JITO_STAKE_POOL_ADDRESS,
-        keypair.publicKey,
+        feePayer,
         amountJitoSol,
       );
 
-  const transaction = new Transaction().add(...instructions);
-  const { blockhash, lastValidBlockHeight } =
-    await connection.getLatestBlockhash('finalized');
-  transaction.recentBlockhash = blockhash;
-  transaction.lastValidBlockHeight = lastValidBlockHeight;
-  transaction.feePayer = keypair.publicKey;
-
-  // withdrawStake creates an ephemeral stake account keypair in `signers`.
-  return sendAndConfirmTransaction(
+  return signAndSendWithTurnkey({
     connection,
-    transaction,
-    [keypair, ...signers],
-    { commitment: 'confirmed' },
-  );
+    instructions,
+    feePayer,
+    ephemeralSigners: signers,
+    signHex,
+  });
 }

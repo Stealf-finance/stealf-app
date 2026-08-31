@@ -1,7 +1,7 @@
 /**
  * Jupiter swap — backend `/api/swap/{order,execute}` (auth). Same build → sign →
  * execute shape as xStocks, but arbitrary input/output mints. `taker` is the
- * stealth wallet; output goes to the taker (no `receiver`) for a self-swap.
+ * bank wallet; output goes to the taker (no `receiver`) for a self-swap.
  *
  * `/order` returns the quote + unsigned tx (`transaction`, base64, nullable on a
  * routing error). `/execute` returns 200 even on failure — `code === 0` /
