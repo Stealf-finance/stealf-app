@@ -21,6 +21,7 @@ const CARD_IMAGE: Partial<Record<HomeGridCardVM['key'], number>> = {
   'public-balance': require('@/assets/images/coin.png'),
   earn: require('@/assets/images/earn.png'),
   'private-balance': require('@/assets/images/shield.png'),
+  store: require('@/assets/images/store.png'),
 };
 
 function CardValue({ vm, hidden }: { vm: HomeGridCardVM; hidden: boolean }) {
