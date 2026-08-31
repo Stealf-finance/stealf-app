@@ -5,7 +5,7 @@ import { Icons } from '@/src/design-system/icons';
 import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 
-export type TabId = 'bank' | 'history' | 'profile';
+export type TabId = 'home' | 'history' | 'profile';
 
 type Props = {
   active: TabId;
@@ -16,7 +16,7 @@ type Props = {
 // `id` stays internal (route segment); only the icon is UI — this bar is
 // icon-only (labels dropped). Grow / Payment were removed from the bar.
 const TABS: { id: TabId; iconKey: keyof typeof Icons; label: string }[] = [
-  { id: 'bank', iconKey: 'tabHome', label: 'Home' },
+  { id: 'home', iconKey: 'tabHome', label: 'Home' },
   { id: 'history', iconKey: 'clock', label: 'History' },
   { id: 'profile', iconKey: 'tabProfile', label: 'Profile' },
 ];
@@ -33,7 +33,12 @@ export function TabBar({ active, onTab }: Props) {
     <View style={{ position: 'absolute', left: 24, bottom: insets.bottom + 8 }}>
       <BlurGlass
         radius={36}
-        innerStyle={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8 }}
+        innerStyle={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          padding: 8,
+        }}
       >
         {TABS.map((t) => {
           const isActive = active === t.id;

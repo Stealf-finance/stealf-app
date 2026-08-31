@@ -12,7 +12,6 @@ const ACTIONS: QuickAction[] = [
   { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send-choice' },
   { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive-choice' },
   { key: 'swap', label: 'Swap', iconKey: 'swap', route: '/swap' },
-  { key: 'move', label: 'Move', iconKey: 'moove', route: '/moove' },
 ];
 
 export default function CashScreen() {
@@ -33,7 +32,7 @@ export default function CashScreen() {
 
   return (
     <WalletScreen
-      title="Cash"
+      title="Public Balance"
       iconImage={require('@/assets/images/coin.png')}
       balanceUSD={bal.data?.totalUSD ?? 0}
       assets={assets}

@@ -95,7 +95,7 @@ export function ClaimPendingScreen() {
     setTimeout(() => {
       removeFromCache();
       if (router.canGoBack()) {
-        router.replace('/(tabs)/bank');
+        router.replace('/(tabs)/home');
       }
     }, ANIM_HOLD_MS);
 
