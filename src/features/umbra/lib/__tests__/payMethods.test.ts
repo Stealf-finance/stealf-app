@@ -15,14 +15,14 @@ describe('PAY_METHODS', () => {
     const m = PAY_METHODS.find((m) => m.key === 'private');
     expect(m?.label).toBe('Private transfer');
     expect(m?.discKey).toBe('umbra');
-    expect(m?.route).toBe('/send/flow?tone=gold&wallet=stealth&mode=private');
+    expect(m?.route).toBe('/send/flow?mode=private');
     expect(m?.disabled).toBeFalsy();
   });
   it('routes Simple to the public stealth send flow', () => {
     const m = PAY_METHODS.find((m) => m.key === 'simple');
     expect(m?.label).toBe('Simple transfer');
     expect(m?.discKey).toBe('solana');
-    expect(m?.route).toBe('/send/flow?tone=silver&wallet=stealth');
+    expect(m?.route).toBe('/send/flow');
     expect(m?.disabled).toBeFalsy();
   });
   it('routes Move to the move flow', () => {

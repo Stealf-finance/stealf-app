@@ -94,13 +94,13 @@ export async function fetchEncryptedBalancesRaw(
 
 export async function prefetchEncryptedBalancesFor(
   queryClient: QueryClient,
-  stealfWallet: string,
+  wallet: string,
   publicBalance: BalanceResponse | undefined,
 ): Promise<void> {
   const mints = buildEncryptedMintList(publicBalance);
   if (mints.length === 0) return;
   await queryClient.prefetchQuery({
-    queryKey: encryptedBalancesQueries.byWallet(stealfWallet, mints),
+    queryKey: encryptedBalancesQueries.byWallet(wallet, mints),
     queryFn: () => fetchEncryptedBalancesRaw(mints),
     staleTime: 30_000,
   });
@@ -108,8 +108,8 @@ export async function prefetchEncryptedBalancesFor(
 
 export function useEncryptedBalances() {
   const { user } = useAuth();
-  const wallet = user?.stealfWallet ?? '';
-  const { data: publicBalance } = useBalance(user?.stealfWallet ?? null);
+  const wallet = user?.bankWallet ?? '';
+  const { data: publicBalance } = useBalance(user?.bankWallet ?? null);
   const { data: solPrice } = useSolPrice();
 
   const mintsSignature = useMemo(() => {

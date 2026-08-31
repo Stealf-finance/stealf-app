@@ -8,8 +8,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import * as Sentry from '@sentry/react-native';
 import { usePostHog } from 'posthog-react-native';
-import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
-import { useAuth, readPersistedStealfWallet } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import {
   finalizeOAuthAuth,
   type AuthMethod,
@@ -100,10 +99,8 @@ export function useAuthFlow() {
         oidcToken,
       });
 
-      const persistedStealf = await readPersistedStealfWallet();
       const enriched = {
         ...profile,
-        ...(persistedStealf ? { stealfWallet: persistedStealf } : null),
         // Carry the OIDC email on the client-side user record so the profile
         // can show it (OAuth users have no `userEmail` on the Turnkey record).
         ...(email ? { email } : null),
@@ -135,8 +132,6 @@ export function useAuthFlow() {
         userProfileQueries.byBankWallet(cashWallet),
         enriched,
       );
-      await walletKeyCache.warmup();
-
       setSession({ sessionToken });
       setUser(enriched);
       void maybeRequestNotifPermission();

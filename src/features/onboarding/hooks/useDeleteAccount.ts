@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTurnkey } from '@turnkey/react-native-wallet-kit';
 import { usePostHog } from 'posthog-react-native';
 import * as Sentry from '@sentry/react-native';
-import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
+import { clearLegacyStealthKeys } from '@/src/services/auth/legacyStealthKeys';
 import { persister } from '@/src/services/queryClient';
 import { socketService } from '@/src/services/real-time/socket';
 import { clearUmbraState } from '@/src/features/umbra/hooks/useUmbra';
@@ -49,12 +49,13 @@ export function useDeleteAccount() {
 
       socketService.disconnect();
       clearUmbraState();
-      if (user?.stealfWallet) await clearMasterSeed(user.stealfWallet);
       if (user?.bankWallet) await clearMasterSeed(user.bankWallet);
       // Deleting the account must not leave the decrypted UTXO / nullifier
       // store behind on the device.
       await clearAllMmkvStorageBackend();
-      await walletKeyCache.clearAll();
+      // The user is leaving — take the removed stealth wallet's Keychain
+      // items with them. Sign-out deliberately leaves them in place.
+      await clearLegacyStealthKeys();
       try {
         await turnkeyLogout();
       } catch {}

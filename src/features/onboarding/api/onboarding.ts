@@ -127,7 +127,7 @@ export async function finalizeOAuthAuth(input: {
         subOrgId: input.subOrgId,
         email: input.email,
         pseudo: input.pseudo,
-        bank_wallet: input.cashWallet,
+        wallet: input.cashWallet,
         authMethod: input.authMethod,
         oauthSub: input.oauthSub,
         oauthProvider: input.oauthProvider,

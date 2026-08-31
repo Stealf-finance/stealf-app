@@ -61,7 +61,7 @@ describe('shouldPersistQuery', () => {
         queryWithKey([
           'stealth',
           'encrypted-balances',
-          'stealfWalletAddr',
+          'walletAddr',
           'SOL_MINT',
         ]),
       ),
@@ -71,7 +71,7 @@ describe('shouldPersistQuery', () => {
   it('denies claim-scan (uses its own Merkle cursor cache)', () => {
     expect(
       shouldPersistQuery(
-        queryWithKey(['stealth', 'claim-scan', 'stealfWalletAddr']),
+        queryWithKey(['stealth', 'claim-scan', 'walletAddr']),
       ),
     ).toBe(false);
   });

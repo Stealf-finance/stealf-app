@@ -28,11 +28,9 @@ import { claimFaucet } from '@/src/features/add-funds/api/faucet';
 import { BuyWithCard } from '@/src/features/add-funds/components/BuyWithCard';
 import { ApiError } from '@/src/services/api/errors';
 
-type WalletSource = 'bank' | 'stealth';
 
 type Props = {
   tone?: Tone;
-  wallet?: WalletSource;
 };
 
 const QR_SIZE = 244;
@@ -47,7 +45,7 @@ const ACCENT_DIM: Record<Tone, string> = {
   silver: 'rgba(232,232,234,0.2)',
 };
 
-export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
+export function AddFundsScreen({ tone = 'gold' }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, session } = useAuth();
@@ -58,11 +56,8 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
   const accentDim = ACCENT_DIM[tone];
   const kickerColor = isGold ? 'rgba(201,201,204,0.85)' : T.inkFaint;
 
-  const resolvedWallet: WalletSource = wallet ?? (isGold ? 'stealth' : 'bank');
-  const isStealth = resolvedWallet === 'stealth';
-
   const [network] = useState('Solana');
-  const fullAddress = (isStealth ? user?.stealfWallet : user?.bankWallet) ?? '';
+  const fullAddress = user?.bankWallet ?? '';
   const displayAddress = fullAddress
     ? `${fullAddress.slice(0, 14)}...${fullAddress.slice(-6)}`
     : '—';
@@ -145,7 +140,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
       const token = session?.sessionToken;
       if (!token) throw new Error('Not authenticated');
       if (!fullAddress) throw new Error('Wallet unavailable');
-      return claimFaucet(token, fullAddress, isStealth ? 'stealf' : 'cash');
+      return claimFaucet(token, fullAddress);
     },
     onSuccess: (data) => {
       const sol = (data.amountLamports / 1_000_000_000).toFixed(2);
@@ -482,7 +477,7 @@ export function AddFundsScreen({ tone = 'gold', wallet }: Props) {
         </View>
       ) : null}
 
-      {resolvedWallet === 'bank' && user?.bankWallet ? (
+      {user?.bankWallet ? (
         <BuyWithCard walletAddress={user.bankWallet} />
       ) : null}
 

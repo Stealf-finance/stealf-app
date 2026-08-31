@@ -9,17 +9,11 @@ import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
-import { useDeleteStealthWallet } from '@/src/features/umbra/hooks/useDeleteStealthWallet';
-import { useToast } from '@/src/components/toast/ToastContext';
-import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { KeyCard, type RevealState } from '../components/KeyCard';
 import { WarningBanner } from '../components/WarningBanner';
 import { DangerConfirmSheet } from '../components/DangerConfirmSheet';
 
 const S = txPalette('silver');
-const G = txPalette('gold');
-
-type WalletKind = 'bank' | 'stealth';
 
 export function PrivateKeyScreen() {
   const router = useSafeRouter();
@@ -28,47 +22,16 @@ export function PrivateKeyScreen() {
   const { exportWallet, wallets } = useTurnkey();
 
   const bankAddress = user?.bankWallet ?? null;
-  const stealthAddress = user?.stealfWallet ?? null;
   const bankWalletId = wallets?.[0]?.walletId ?? null;
 
   const [bank, setBank] = useState<RevealState>({ phase: 'idle' });
-  const [stealth, setStealth] = useState<RevealState>({ phase: 'idle' });
-  const [confirmingFor, setConfirmingFor] = useState<WalletKind | null>(null);
-  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
-  const deleteStealthWallet = useDeleteStealthWallet();
-  const { show: showToast } = useToast();
-
-  const askDeleteStealth = () => setConfirmingDelete(true);
-  const cancelDelete = () => setConfirmingDelete(false);
-  const onConfirmDelete = async () => {
-    setConfirmingDelete(false);
-    try {
-      await deleteStealthWallet.mutateAsync();
-      setStealth({ phase: 'idle' });
-      showToast({
-        kind: 'success',
-        title: 'Wallet deleted',
-        message: 'Re-create or import one from the Payment tab.',
-      });
-      router.back();
-    } catch (err: any) {
-      showToast({
-        kind: 'error',
-        title: "Couldn't delete",
-        message: err?.message || 'Try again in a moment.',
-      });
-    }
-  };
-
-  const askBank = () => setConfirmingFor('bank');
-  const askStealth = () => setConfirmingFor('stealth');
-  const cancelConfirm = () => setConfirmingFor(null);
+  const askBank = () => setConfirming(true);
+  const cancelConfirm = () => setConfirming(false);
   const onConfirmExport = () => {
-    const target = confirmingFor;
-    setConfirmingFor(null);
-    if (target === 'bank') void revealBank();
-    else if (target === 'stealth') void revealStealth();
+    setConfirming(false);
+    void revealBank();
   };
 
   const revealBank = async () => {
@@ -97,25 +60,6 @@ export function PrivateKeyScreen() {
     }
   };
 
-  const revealStealth = async () => {
-    setStealth({ phase: 'loading' });
-    try {
-      const mnemonic = await walletKeyCache.getMnemonicPersisted();
-      if (!mnemonic) {
-        setStealth({
-          phase: 'error',
-          message: 'Recovery phrase unavailable. Set up the wallet first.',
-        });
-        return;
-      }
-      setStealth({ phase: 'ready', value: mnemonic });
-    } catch (err: any) {
-      setStealth({
-        phase: 'error',
-        message: err?.message || 'Could not load recovery phrase.',
-      });
-    }
-  };
 
   return (
     <CenterGlow tone="silver" flat>
@@ -167,20 +111,10 @@ export function PrivateKeyScreen() {
           onAsk={askBank}
           onRetry={revealBank}
         />
-
-        <KeyCard
-          title="Wallet"
-          accent={G.accent}
-          address={stealthAddress}
-          state={stealth}
-          onAsk={askStealth}
-          onRetry={revealStealth}
-          onDelete={stealthAddress ? askDeleteStealth : undefined}
-        />
       </ScrollView>
 
       <DangerConfirmSheet
-        visible={confirmingFor !== null}
+        visible={confirming}
         iconKey="shieldOff"
         title="Keep your private key secret"
         bullets={[
@@ -203,32 +137,6 @@ export function PrivateKeyScreen() {
         onCancel={cancelConfirm}
       />
 
-      <DangerConfirmSheet
-        visible={confirmingDelete}
-        iconKey="trash"
-        title="Delete wallet?"
-        destructive
-        busy={deleteStealthWallet.isPending}
-        busyLabel="Deleting…"
-        bullets={[
-          {
-            iconKey: 'shieldOff',
-            text: 'This wipes the local key and recovery phrase from this device.',
-          },
-          {
-            iconKey: 'hideEye',
-            text: 'Your encrypted balance stays on-chain but becomes unreachable without your recovery phrase.',
-          },
-          {
-            iconKey: 'info',
-            text: 'Your virtual bank account stays untouched.',
-          },
-        ]}
-        checkboxLabel="I have saved my recovery phrase and understand my encrypted balance will be unreachable without it."
-        ctaLabel="Delete wallet"
-        onConfirm={onConfirmDelete}
-        onCancel={cancelDelete}
-      />
     </CenterGlow>
   );
 }

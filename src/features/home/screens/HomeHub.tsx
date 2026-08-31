@@ -18,49 +18,34 @@ export function HomeHub() {
   const insets = useSafeAreaInsets();
   const balances = useHomeBalances();
   const [hidden, setHidden] = useState(false);
-  // Pull-to-refresh: refetch balance + history for both wallets plus the
+  // Pull-to-refresh: refetch the wallet's balance + history plus the
   // encrypted/shielded balances (covers all cards at once).
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
-    const bankWallet = user?.bankWallet;
-    const stealfWallet = user?.stealfWallet;
+    const wallet = user?.bankWallet;
+    if (!wallet) return;
     setRefreshing(true);
     try {
-      await Promise.all(
-        [
-          bankWallet &&
-            queryClient.invalidateQueries({
-              queryKey: balanceQueries.byAddress(bankWallet),
-            }),
-          bankWallet &&
-            queryClient.invalidateQueries({
-              queryKey: historyQueries.byAddress(bankWallet),
-            }),
-          stealfWallet &&
-            queryClient.invalidateQueries({
-              queryKey: balanceQueries.byAddress(stealfWallet),
-            }),
-          stealfWallet &&
-            queryClient.invalidateQueries({
-              queryKey: historyQueries.byAddress(stealfWallet),
-            }),
-          stealfWallet &&
-            queryClient.invalidateQueries({
-              queryKey: shieldedBalanceQueries.byWallet(stealfWallet),
-            }),
-          stealfWallet &&
-            queryClient.invalidateQueries({
-              queryKey:
-                encryptedBalancesQueries.byWalletPrefix(stealfWallet),
-            }),
-        ].filter(Boolean),
-      );
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: balanceQueries.byAddress(wallet),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: historyQueries.byAddress(wallet),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: shieldedBalanceQueries.byWallet(wallet),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: encryptedBalancesQueries.byWalletPrefix(wallet),
+        }),
+      ]);
     } finally {
       setRefreshing(false);
     }
-  }, [queryClient, user?.bankWallet, user?.stealfWallet]);
+  }, [queryClient, user?.bankWallet]);
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>

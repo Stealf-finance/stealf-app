@@ -1,5 +1,4 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
 import { clearUmbraState } from '@/src/features/umbra/hooks/useUmbra';
 import { clearMasterSeed } from '@/src/services/umbra/storage/masterSeed';
@@ -15,8 +14,7 @@ export interface SessionTeardownDeps {
   queryClient: QueryClient;
   capture?: (event: string) => void;
   resetAnalytics?: () => void;
-  /** Wallet addresses whose master seed should be wiped from the Keychain. */
-  stealthWallet?: string | null;
+  /** Wallet address whose master seed should be wiped from the Keychain. */
   bankWallet?: string | null;
 }
 
@@ -36,15 +34,13 @@ async function run(
   );
   socketService.disconnect();
   clearUmbraState();
-  // The master seed is keyed per wallet address; wipe both wallets' seeds so a
-  // previous user's viewing keys don't linger on a shared device.
-  if (deps.stealthWallet) await clearMasterSeed(deps.stealthWallet);
+  // The master seed is keyed per wallet address; wipe it so a previous user's
+  // viewing key doesn't linger on a shared device.
   if (deps.bankWallet) await clearMasterSeed(deps.bankWallet);
   // Drops the decrypted UTXO / nullifier store. It belongs here rather than in
   // useLogout so the session_expired path wipes it too — that's the case where
   // the user did *not* choose to sign out, on a possibly shared device.
   await clearAllMmkvStorageBackend();
-  await walletKeyCache.clearAll();
   try {
     await turnkeyLogout();
   } catch {

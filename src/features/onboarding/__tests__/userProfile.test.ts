@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchUserProfile } from '../api/userProfile';
 import { validateEnv } from '@/src/services/env';
 
-const SAMPLE_BANK_WALLET = '8R9XzcLLp7XK1xKKZxfKYAKpCTGhxq4yfPHo7nNh1NZh';
+const SAMPLE_wallet = '8R9XzcLLp7XK1xKKZxfKYAKpCTGhxq4yfPHo7nNh1NZh';
 const ENV_BACKUP = { ...process.env };
 
 function mockFetchOk(payload: unknown) {
@@ -47,19 +47,17 @@ describe('fetchUserProfile', () => {
       data: {
         user: {
           username: 'thomas',
-          bank_wallet: SAMPLE_BANK_WALLET,
-          stealf_wallet: null,
+          wallet: SAMPLE_wallet,
           subOrgId: 'sub-123',
           points: 42,
         },
       },
     });
 
-    const user = await fetchUserProfile('session-token', SAMPLE_BANK_WALLET);
+    const user = await fetchUserProfile('session-token', SAMPLE_wallet);
 
     expect(user.username).toBe('thomas');
-    expect(user.bankWallet).toBe(SAMPLE_BANK_WALLET);
-    expect(user.stealfWallet).toBeNull();
+    expect(user.bankWallet).toBe(SAMPLE_wallet);
     expect(user.subOrgId).toBe('sub-123');
     expect(user.points).toBe(42);
   });
@@ -69,13 +67,13 @@ describe('fetchUserProfile', () => {
       data: {
         user: {
           pseudo: 'thomas-pseudo',
-          bank_wallet: SAMPLE_BANK_WALLET,
+          wallet: SAMPLE_wallet,
           subOrgId: 'sub-123',
         },
       },
     });
 
-    const user = await fetchUserProfile('session-token', SAMPLE_BANK_WALLET);
+    const user = await fetchUserProfile('session-token', SAMPLE_wallet);
     expect(user.username).toBe('thomas-pseudo');
     expect(user.points).toBe(0);
   });
@@ -83,7 +81,7 @@ describe('fetchUserProfile', () => {
   it('throws ApiError on non-2xx', async () => {
     mockFetchErr(401, { error: 'unauthorized' });
     await expect(
-      fetchUserProfile('bad-token', SAMPLE_BANK_WALLET),
+      fetchUserProfile('bad-token', SAMPLE_wallet),
     ).rejects.toThrow(/unauthorized/i);
   });
 
@@ -92,14 +90,14 @@ describe('fetchUserProfile', () => {
       data: {
         user: {
           username: 'thomas',
-          bank_wallet: 'not-a-real-address',
+          wallet: 'not-a-real-address',
           subOrgId: 'sub-123',
         },
       },
     });
 
     await expect(
-      fetchUserProfile('session-token', SAMPLE_BANK_WALLET),
+      fetchUserProfile('session-token', SAMPLE_wallet),
     ).rejects.toThrow();
   });
 });

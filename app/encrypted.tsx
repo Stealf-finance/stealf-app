@@ -2,7 +2,6 @@ import { WalletScreen } from '@/src/features/wallet-detail/WalletScreen';
 import { WalletBottomBar } from '@/src/features/wallet-detail/WalletBottomBar';
 import { type QuickAction } from '@/src/components/nav/QuickActionMenu';
 import { useEncryptedBalances } from '@/src/features/umbra/hooks/useEncryptedBalances';
-import { StealthWalletGate } from '@/src/features/umbra/screens/StealthWalletGate';
 import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 
@@ -13,7 +12,7 @@ const ACTIONS: QuickAction[] = [
   { key: 'move', label: 'Move', iconKey: 'moove', route: '/moove' },
   { key: 'unshield', label: 'Unshield', iconKey: 'shieldSplit', route: '/unshield' },
   { key: 'swap', label: 'Private Swap', iconKey: 'swap' }, // not built yet
-  { key: 'send', label: 'Private Send', iconKey: 'arrUpRight', route: '/send/flow?mode=private&wallet=stealth' },
+  { key: 'send', label: 'Private Send', iconKey: 'arrUpRight', route: '/send/flow?mode=private' },
 ];
 
 export default function EncryptedScreen() {
@@ -28,11 +27,10 @@ export default function EncryptedScreen() {
     priceLabel: `$${t.amountUSD.toFixed(2)}`,
   }));
 
-  // Gate on the stealth wallet — no wallet yet renders the create/import setup
-  // screen. Once a wallet exists, StealthSetupOverlay adds the Umbra
-  // registration step (self-hides once registered). Both dismiss this route.
+  // UmbraSetupOverlay carries the one-time Umbra registration and self-hides
+  // once the wallet is registered.
   return (
-    <StealthWalletGate onExit={() => router.back()}>
+    <>
       <WalletScreen
         title="Encrypted Balance"
         iconImage={require('@/assets/images/shield.png')}
@@ -41,13 +39,13 @@ export default function EncryptedScreen() {
         bottomBar={
           <WalletBottomBar
             fabActions={ACTIONS}
-            historyRoute="/transactions?wallet=stealth"
+            historyRoute="/transactions"
             claimTarget="encrypted"
           />
         }
         tone="gold"
       />
       <UmbraSetupOverlay onClose={() => router.back()} />
-    </StealthWalletGate>
+    </>
   );
 }

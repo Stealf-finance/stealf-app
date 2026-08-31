@@ -15,20 +15,18 @@ const RADIUS = (SIZE - STROKE) / 2;
  *  dot/label legend). */
 const SECTIONS = [
   { key: 'cash', label: 'Cash', color: '#e8e8ea' },
-  { key: 'wallet', label: 'Wallet', color: '#82828c' },
   { key: 'encrypted', label: 'Encrypted Balance', color: '#c9c9cc' },
   { key: 'earn', label: 'Earn', color: '#666670' },
 ] as const;
 
 const EMPTY_STROKE = 'rgba(255,255,255,0.08)';
 
-/** Minimal balance-split donut: thin ring, USD total in the center, 4-row
- *  legend. Zero accounts are omitted from the ring (equal greyed quarters
- *  when everything is zero) but always listed in the legend. */
+/** Minimal balance-split donut: thin ring, USD total in the center, 3-row
+ *  legend. Zero accounts are omitted from the ring (equal greyed slices when
+ *  everything is zero) but always listed in the legend. */
 export function BalanceDonut({ balances }: { balances: HomeBalances }) {
   const values: Record<(typeof SECTIONS)[number]['key'], number> = {
     cash: balances.bankUSD,
-    wallet: balances.stealfUSD,
     encrypted: balances.encryptedUSD,
     earn: 0, // Grow isn't wired yet
   };

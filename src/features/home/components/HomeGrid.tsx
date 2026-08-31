@@ -20,7 +20,6 @@ const CARD_IMAGE: Partial<Record<HomeGridCardVM['key'], number>> = {
   cash: require('@/assets/images/coin.png'),
   earn: require('@/assets/images/earn.png'),
   encrypted: require('@/assets/images/shield.png'),
-  wallet: require('@/assets/images/wallet.png'),
 };
 
 function CardValue({ vm, hidden }: { vm: HomeGridCardVM; hidden: boolean }) {
@@ -54,7 +53,7 @@ function HomeGridCard({
   vm: HomeGridCardVM;
   hidden: boolean;
   onPress?: () => void;
-  /** When the stealth wallet isn't imported yet, draw a dotted outline around
+  /** Until the wallet is registered with Umbra, draw a dotted outline around
    *  the card to flag it as not-yet-set-up. */
   locked?: boolean;
 }) {
@@ -128,40 +127,26 @@ function HomeGridCard({
   );
 }
 
-// Cards that depend on the stealth wallet — flagged with a dotted outline
-// until it's imported. Cash (bank wallet) is always available.
-const STEALTH_GATED_KEYS = new Set<HomeGridCardVM['key']>([
-  'wallet',
-  'encrypted',
-  'earn',
-]);
-
-/** 2×2 grid of the four home cards: Cash, Earn, Encrypted Balance, Wallet. */
+/** Grid of the three home cards: Cash and Encrypted Balance side by side,
+ *  Earn spanning the row below. */
 export function HomeGrid({ balances, hidden }: { balances: HomeBalances; hidden: boolean }) {
   const router = useSafeRouter();
   const { user } = useAuth();
-  const stealthReady = !!user?.stealfWallet;
 
-  // Encrypted balance also needs the wallet registered on Umbra. Mirror the
-  // StealthSetupOverlay logic: persisted flag first, chain probe as fallback
-  // (only when the wallet exists and we haven't recorded a result yet).
-  const persistedReg = user?.stealthRegistered;
-  const needsProbe = stealthReady && persistedReg === undefined;
+  // The encrypted balance needs the wallet registered on Umbra. Mirrors the
+  // UmbraSetupOverlay logic: persisted flag first, chain probe as fallback for
+  // users onboarded before the flag existed.
+  const persistedReg = user?.bankRegistered;
   const { data: probedReg } = useUmbraRegistration(
-    needsProbe ? user?.stealfWallet : null,
+    persistedReg === undefined ? user?.bankWallet : null,
   );
-  const stealthRegistered = persistedReg ?? probedReg;
+  const registered = persistedReg ?? probedReg;
 
   const cards = buildHomeCards(balances);
   const press = (c: HomeGridCardVM) =>
     c.route ? () => router.push(c.route as never) : undefined;
-  const locked = (c: HomeGridCardVM) => {
-    if (!STEALTH_GATED_KEYS.has(c.key)) return false;
-    if (!stealthReady) return true;
-    // Encrypted balance additionally requires Umbra registration.
-    if (c.key === 'encrypted') return stealthRegistered === false;
-    return false;
-  };
+  const locked = (c: HomeGridCardVM) =>
+    c.key === 'encrypted' && registered === false;
   return (
     <View style={{ paddingHorizontal: H_PAD, gap: GAP }}>
       <View style={{ flexDirection: 'row', gap: GAP }}>
@@ -170,7 +155,6 @@ export function HomeGrid({ balances, hidden }: { balances: HomeBalances; hidden:
       </View>
       <View style={{ flexDirection: 'row', gap: GAP }}>
         <HomeGridCard vm={cards[2]} hidden={hidden} onPress={press(cards[2])} locked={locked(cards[2])} />
-        <HomeGridCard vm={cards[3]} hidden={hidden} onPress={press(cards[3])} locked={locked(cards[3])} />
       </View>
     </View>
   );

@@ -1,6 +1,8 @@
 import * as SecureStore from 'expo-secure-store';
 
 export const SECURE_STORE_KEYS = {
+  // Legacy — the stealth wallet these belong to is gone. Kept so account
+  // deletion can still wipe them; see `legacyStealthKeys.ts`.
   STEALF_PRIVATE_KEY: 'stealf_private_key',
   STEALF_MNEMONIC: 'stealf_mnemonic',
   STEALF_WALLET_ADDRESS: 'stealf_wallet_address',

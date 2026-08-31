@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
 import { ChoiceSheet } from '@/src/features/wallet-detail/ChoiceSheet';
 import { Icons } from '@/src/design-system/icons';
 import { T } from '@/src/design-system/tokens';
@@ -24,81 +23,54 @@ function Disc({ children }: { children: ReactNode }) {
   );
 }
 
-/** Send hub. Full grouped version (Cash + Wallet) from the home FAB;
- *  `?scope=cash` (the Cash screen) shows only that account's options. */
+/** Send hub. One account, so a flat list rather than grouped sections. */
 export default function SendChoice() {
   const router = useSafeRouter();
   const { show } = useToast();
-  const { scope } = useLocalSearchParams<{ scope?: string }>();
   const close = () => router.back();
 
-  const sections = [
-        {
-          label: 'Cash account',
-          options: [
-            {
-              key: 'fiat',
-              icon: (
-                <Disc>
-                  <Icons.bank size={22} color={T.ink} />
-                </Disc>
-              ),
-              title: 'Fiat',
-              subtitle: 'Send assets to a bank account',
-              onPress: () => {
-                close();
-                show({
-                  kind: 'info',
-                  title: 'Coming soon',
-                  message: 'Fiat transfers are coming soon.',
-                });
-              },
-            },
-            {
-              key: 'stablecoins',
-              icon: (
-                <Disc>
-                  <Icons.dollar size={22} color={T.ink} />
-                </Disc>
-              ),
-              title: 'Stablecoins',
-              subtitle: 'Send assets to a solana wallet address',
-              onPress: () => router.replace('/send/flow?tone=silver&wallet=bank'),
-            },
-          ],
-        },
-        {
-          label: 'Wallet account',
-          options: [
-            {
-              key: 'simple',
-              icon: (
-                <Disc>
-                  <Icons.arrUpRight size={22} color={T.ink} />
-                </Disc>
-              ),
-              title: 'Simple send',
-              subtitle: 'Send from your wallet on-chain balance',
-              onPress: () =>
-                router.replace('/send/flow?tone=silver&wallet=stealth'),
-            },
-            {
-              key: 'private',
-              icon: (
-                <Disc>
-                  <Icons.shieldFull size={22} color={T.ink} />
-                </Disc>
-              ),
-              title: 'Private send',
-              subtitle: 'Send privately from your encrypted balance',
-              onPress: () =>
-                router.replace('/send/flow?mode=private&wallet=stealth'),
-            },
-          ],
-        },
-      ];
-
-  const cashOnly = scope === 'cash';
+  const options = [
+    {
+      key: 'fiat',
+      icon: (
+        <Disc>
+          <Icons.bank size={22} color={T.ink} />
+        </Disc>
+      ),
+      title: 'Fiat',
+      subtitle: 'Send assets to a bank account',
+      onPress: () => {
+        close();
+        show({
+          kind: 'info',
+          title: 'Coming soon',
+          message: 'Fiat transfers are coming soon.',
+        });
+      },
+    },
+    {
+      key: 'simple',
+      icon: (
+        <Disc>
+          <Icons.arrUpRight size={22} color={T.ink} />
+        </Disc>
+      ),
+      title: 'Simple send',
+      subtitle: 'Send from your on-chain balance',
+      onPress: () => router.replace('/send/flow'),
+    },
+    {
+      key: 'private',
+      icon: (
+        <Disc>
+          <Icons.shieldFull size={22} color={T.ink} />
+        </Disc>
+      ),
+      title: 'Private send',
+      subtitle: 'Send privately from your encrypted balance',
+      onPress: () => router.replace('/send/flow?mode=private'),
+    },
+  ];
 
   return (
     <ChoiceSheet
@@ -106,9 +78,7 @@ export default function SendChoice() {
       title="Send"
       subtitle="Choose one of the options below to transfer"
       onClose={close}
-      // Scoped to one account → flat list; home FAB → full grouped hub.
-      options={cashOnly ? sections[0].options : undefined}
-      sections={cashOnly ? undefined : sections}
+      options={options}
     />
   );
 }

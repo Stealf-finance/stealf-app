@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const clearAllMmkvStorageBackend = vi.fn(async () => {});
 const clearMasterSeed = vi.fn(async (_w: string) => {});
-const walletKeyCacheClearAll = vi.fn(async () => {});
+const clearLegacyStealthKeys = vi.fn(async () => {});
 const clearUmbraState = vi.fn();
 const socketDisconnect = vi.fn();
 const purgeTurnkeyState = vi.fn(async () => {});
@@ -15,8 +15,8 @@ vi.mock('@/src/services/umbra/storage/mmkvStorageBackend', () => ({
 vi.mock('@/src/services/umbra/storage/masterSeed', () => ({
   clearMasterSeed: (w: string) => clearMasterSeed(w),
 }));
-vi.mock('@/src/services/cache/walletKeyCache', () => ({
-  walletKeyCache: { clearAll: () => walletKeyCacheClearAll() },
+vi.mock('@/src/services/auth/legacyStealthKeys', () => ({
+  clearLegacyStealthKeys: () => clearLegacyStealthKeys(),
 }));
 vi.mock('@/src/features/umbra/hooks/useUmbra', () => ({
   clearUmbraState: () => clearUmbraState(),
@@ -40,7 +40,6 @@ function makeDeps(overrides: Record<string, unknown> = {}) {
     queryClient: { clear: vi.fn() } as never,
     capture: vi.fn(),
     resetAnalytics: vi.fn(),
-    stealthWallet: 'StealthAddr',
     bankWallet: 'BankAddr',
     ...overrides,
   };
@@ -77,10 +76,22 @@ describe('performSessionTeardown', () => {
 
     expect(clearMasterSeed).toHaveBeenCalled();
     expect(clearAllMmkvStorageBackend).toHaveBeenCalled();
-    expect(walletKeyCacheClearAll).toHaveBeenCalled();
     expect(purgeTurnkeyState).toHaveBeenCalled();
     expect(clearUmbraState).toHaveBeenCalled();
   });
+
+  // Deliberate: the retired stealth wallet's private key and recovery phrase
+  // stay in the Keychain on sign-out. Any funds left on that address are
+  // reachable only through them and the app no longer offers a re-import path,
+  // so wiping here would strand them. Account deletion clears them instead.
+  it.each(['user_signed_out', 'session_expired'] as const)(
+    'leaves the legacy stealth keys in place on the %s path',
+    async (reason) => {
+      await performSessionTeardown(reason, makeDeps());
+
+      expect(clearLegacyStealthKeys).not.toHaveBeenCalled();
+    },
+  );
 
   it('reports the reason to analytics', async () => {
     const deps = makeDeps();

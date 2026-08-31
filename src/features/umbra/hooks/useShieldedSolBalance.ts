@@ -20,7 +20,7 @@ export const shieldedBalanceQueries = {
 
 export function useShieldedSolBalance() {
   const { user } = useAuth();
-  const wallet = user?.stealfWallet ?? '';
+  const wallet = user?.bankWallet ?? '';
 
   return useQuery<ShieldedSolBalance>({
     queryKey: shieldedBalanceQueries.byWallet(wallet),

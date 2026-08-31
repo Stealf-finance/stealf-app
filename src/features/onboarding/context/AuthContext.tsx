@@ -29,26 +29,6 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export async function readPersistedStealfWallet(): Promise<string | null> {
-  try {
-    return await getSecure(SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS);
-  } catch {
-    return null;
-  }
-}
-
-async function persistStealfWallet(address: string | null | undefined): Promise<void> {
-  try {
-    if (address) {
-      await setSecure(SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS, address);
-    } else {
-      await deleteSecure(SECURE_STORE_KEYS.STEALF_WALLET_ADDRESS);
-    }
-  } catch {
-    // SecureStore failures shouldn't break the auth flow
-  }
-}
-
 async function persistUser(user: User | null): Promise<void> {
   try {
     if (user) await setSecureJson(SECURE_STORE_KEYS.USER_DATA, user);
@@ -109,7 +89,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const setUser = useCallback((next: User | null) => {
     setUserState(next);
     void persistUser(next);
-    void persistStealfWallet(next?.stealfWallet ?? null);
   }, []);
 
   const setSession = useCallback((next: Session | null) => {

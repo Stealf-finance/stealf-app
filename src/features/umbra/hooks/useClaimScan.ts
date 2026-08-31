@@ -19,7 +19,7 @@ export function useClaimScan<TSelect = ClaimScanResult>(
   options: UseClaimScanOptions = {},
 ) {
   const { user } = useAuth();
-  const wallet = user?.stealfWallet ?? '';
+  const wallet = user?.bankWallet ?? '';
 
   return useQuery({
     queryKey: claimScanQueries.byWallet(wallet),

@@ -166,9 +166,9 @@ export function ClaimsScreen() {
     setClaimingIndex(index);
 
     const bankWallet = user?.bankWallet ?? null;
-    const stealfWallet = user?.stealfWallet ?? null;
-    const claimKey = stealfWallet
-      ? claimScanQueries.byWallet(stealfWallet)
+    const wallet = user?.bankWallet ?? null;
+    const claimKey = wallet
+      ? claimScanQueries.byWallet(wallet)
       : null;
 
     const snapshot = claimKey
@@ -226,19 +226,19 @@ export function ClaimsScreen() {
         pendingOps.setPhase(opId, 'confirming');
 
         const invalidate = () => {
-          if (stealfWallet) {
+          if (wallet) {
             queryClient.invalidateQueries({
-              queryKey: claimScanQueries.byWallet(stealfWallet),
+              queryKey: claimScanQueries.byWallet(wallet),
             });
           }
           if (isEncrypted) {
-            if (!stealfWallet) return;
+            if (!wallet) return;
             queryClient.invalidateQueries({
-              queryKey: shieldedBalanceQueries.byWallet(stealfWallet),
+              queryKey: shieldedBalanceQueries.byWallet(wallet),
             });
             queryClient.invalidateQueries({
               queryKey:
-                encryptedBalancesQueries.byWalletPrefix(stealfWallet),
+                encryptedBalancesQueries.byWalletPrefix(wallet),
             });
           } else {
             if (!bankWallet) return;
@@ -266,10 +266,7 @@ export function ClaimsScreen() {
         // wrap() already captures StealthError — skip to avoid dup.
         if (err?.name !== 'StealthError') {
           Sentry.captureException(err, {
-            tags: {
-              'op.kind': isEncrypted ? 'claim-encrypted' : 'claim-bank',
-              'wallet.source': 'stealf',
-            },
+            tags: { 'op.kind': isEncrypted ? 'claim-encrypted' : 'claim-bank' },
             extra: { userMessage: msg },
           });
         }

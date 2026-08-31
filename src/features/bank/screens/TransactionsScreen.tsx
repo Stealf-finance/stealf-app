@@ -1,5 +1,5 @@
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
@@ -10,20 +10,9 @@ import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
-import { useCombinedHistory } from '@/src/features/bank/hooks/useCombinedHistory';
 import { useHomeBalances } from '@/src/features/home/hooks/useHomeBalances';
 import { BalanceDonut } from '@/src/features/bank/components/BalanceDonut';
 import type { Transaction } from '@/src/features/bank/types';
-
-type WalletKind = 'bank' | 'stealth';
-
-const CONFIG: Record<
-  WalletKind,
-  { title: string; subtitle: string; tone: Tone }
-> = {
-  bank: { title: 'History', subtitle: 'History from Cash account', tone: 'silver' },
-  stealth: { title: 'History', subtitle: 'History from your wallet', tone: 'gold' },
-};
 
 function formatTxRow(tx: Transaction): {
   type: 'sent' | 'received';
@@ -51,27 +40,18 @@ export function TransactionsScreen({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ wallet?: WalletKind }>();
-  const walletKind: WalletKind = params.wallet === 'stealth' ? 'stealth' : 'bank';
-  // The Home tab (embedded) shows the merged history of both wallets; the
-  // modal keeps the per-wallet view driven by the `wallet` param.
-  const config = embedded
-    ? { title: 'History', subtitle: 'History from all accounts', tone: 'silver' as Tone }
-    : CONFIG[walletKind];
+  const config = {
+    title: 'History',
+    subtitle: embedded
+      ? 'History from all accounts'
+      : 'History from Cash account',
+    tone: 'silver' as Tone,
+  };
   const palette = txPalette(config.tone);
 
-  const address =
-    walletKind === 'stealth' ? user?.stealfWallet : user?.bankWallet;
-  const combined = useCombinedHistory(
-    embedded ? user?.bankWallet : null,
-    embedded ? user?.stealfWallet : null,
-  );
-  const single = useHistory(embedded ? null : address);
-
-  const txs = embedded
-    ? combined.transactions
-    : (single.data?.transactions ?? []);
-  const isLoading = embedded ? combined.isLoading : single.isLoading;
+  const history = useHistory(user?.bankWallet ?? null);
+  const txs = history.data?.transactions ?? [];
+  const isLoading = history.isLoading;
 
   // Balance-split donut on the Home tab only (same aggregation as the grid).
   const balances = useHomeBalances();
@@ -153,7 +133,8 @@ export function TransactionsScreen({
                   key={`${tx.signature}:${tx.walletAddress}`}
                   onPress={() =>
                     void Linking.openURL(
-                      tx.signatureURL || `https://solscan.io/tx/${tx.signature}`,
+                      tx.signatureURL ||
+                        `https://solscan.io/tx/${tx.signature}`,
                     )
                   }
                   accessibilityRole="link"
