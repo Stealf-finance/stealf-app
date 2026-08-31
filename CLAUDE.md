@@ -42,13 +42,18 @@ Notes:
 
 ## What this app is
 
-Stealf is a privacy-first neobank on Solana. Two wallets per user:
+Stealf is a privacy-first neobank on Solana. **One wallet per user:**
 
 - **Bank wallet** — Turnkey-custodied Solana account, bridged to virtual
-  bank account + Stealf card. Signing via Turnkey remote signing.
-- **Stealth wallet** — Local ED25519 wallet, private key in
-  SecureStore (Keychain on iOS, Keystore on Android). Holds a public
-  ATA _and_ an Umbra-encrypted balance. Signing happens locally.
+  bank account + Stealf card. Signing via Turnkey remote signing, always.
+  Holds a public ATA _and_ an Umbra-encrypted balance behind it.
+
+> A second, locally-keyed **stealth wallet** used to sit alongside it and
+> carried the whole privacy layer. It was removed on
+> `feat/single-turnkey-wallet`; Turnkey now signs xStocks, Reflect, Jito,
+> Umbra, swap and send alike. Its Keychain items (`STEALF_PRIVATE_KEY`,
+> `STEALF_MNEMONIC`, `STEALF_WALLET_ADDRESS`) are still on existing
+> devices and are only wiped on account deletion — see rule 4.
 
 Real money, real users (currently ~150 in a separate prod app called
 `front-stealf`; this repo is the UI/UX rebuild). Treat every change
@@ -72,16 +77,18 @@ In this order:
 
 ### 1. The internal-code / UI-copy split is a wall
 
-Code keeps `stealfWallet`, `STEALF_*` SecureStore keys,
-`keychainService: 'com.stealf.wallet'`, `shielded` / `unshielded` verbs
-internally. UI strings say "Stealth wallet", "Encrypted balance",
-"Shield" / "Unshield".
+Code keeps the `STEALF_*` SecureStore keys,
+`keychainService: 'com.stealf.wallet'`, and the `shielded` / `unshielded`
+verbs internally. UI strings say "Encrypted balance", "Shield" /
+"Unshield".
 
-> The feature folder moved `src/features/stealth/` → `src/features/umbra/`
-> on `feat/umbra-review`, and the ZK layer with it, to
-> `src/services/umbra/zk/`. Signed-off exception: folder names carry no
-> user state. The identifiers listed above are the ones that must never
-> move — renaming any of them is a breaking change.
+> Two signed-off exceptions, both already applied: the feature folder
+> moved `src/features/stealth/` → `src/features/umbra/` (with the ZK
+> layer, to `src/services/umbra/zk/`) on `feat/umbra-review`; and
+> `stealfWallet` / `stealthRegistered` left the user schema entirely on
+> `feat/single-turnkey-wallet`, when the wallet they named was removed.
+> The identifiers listed above are the ones that must never move —
+> renaming any of them is a breaking change.
 
 **Do NOT** rename schema fields, SecureStore keys, or DB-side
 identifiers in pursuit of clarity. Renaming them resets every existing
@@ -109,16 +116,30 @@ If you think you've found an inconsistency to fix, check
 When a screen file gets >700 LOC, that's the signal it's leaking
 business logic. Decompose before adding more.
 
-### 3. Signing paths don't mix
+### 3. There is exactly one signing path
 
-- Bank wallet → Turnkey signer.
-- Stealth wallet → local ED25519 signer (`@solana/kit` keypair from
-  SecureStore).
+**Everything signs through Turnkey.** There is no local key left in the
+app — no keypair to construct, nothing to read out of SecureStore.
+Turnkey holds the private key inside TEEs and the client never sees it;
+keep it that way.
 
-Never reach across. If you need to sign on behalf of the stealth
-wallet, you go through `walletKeyCache` → SecureStore → ED25519.
-Never expose the bank wallet's private key (Turnkey holds it inside
-TEEs; the client never sees it).
+Two shapes, depending on the caller:
+
+- **React** — `useTurnkeySigning()` binds Turnkey's `signTransaction` to
+  the bank wallet's Solana account (matched by address, never
+  `accounts[0]`) and hands back a hex-in/hex-out `signHex`. Services take
+  it as a plain argument, which is what keeps them free of React.
+  `signAndSendWithTurnkey` (`services/turnkey/solanaTx.ts`) wraps it for
+  legacy web3.js transactions that also need ephemeral co-signers.
+- **Umbra's service layer** — plain async code with no React context, so
+  it reads an `IUmbraSigner` from `services/umbra/signers/active.ts`.
+  `useUmbraSigner` (mounted once in `DataBootstrap`) installs it. The
+  installed signer is stable per address and delegates through refs to
+  the current Turnkey callbacks — do not bind today's closures into it,
+  the assembled client is cached by address and holds the signer object.
+
+If no signer is installed yet, Turnkey has not finished hydrating. Fail
+and let the caller retry; never fall back to anything else.
 
 ### 4. Secrets handling
 
@@ -144,10 +165,15 @@ TEEs; the client never sees it).
   `com.stealf.wallet:auth` — a different Keychain item. Every existing
   user's private key and mnemonic become unreadable, recoverable only by
   manual mnemonic re-import. Write the migration first.
-- `walletKeyCache` has a 15-minute TTL. Don't extend it; don't bypass
-  it; don't log its contents. Note the TTL currently gates nothing on its
-  own: expiry falls through to a silent Keychain read (see above), so it
-  triggers a transparent reload rather than a re-authentication.
+- ⚠️ **The removed stealth wallet's Keychain items survive on existing
+  devices.** `STEALF_PRIVATE_KEY` and `STEALF_MNEMONIC` still hold a live
+  ED25519 key and its recovery phrase. Sign-out deliberately leaves them
+  alone: funds left on that address are reachable only through the phrase
+  and the app has no re-import path any more, so wiping there would
+  strand them for good. Only account deletion clears them, via
+  `clearLegacyStealthKeys()`. **There is no sweep yet** — nothing moves
+  those funds to the bank wallet. Write one before telling users the old
+  wallet is gone.
 - Umbra's MMKV note store is encrypted at rest under a random key held in
   the Keychain (`storage/mmkvStorageBackend.ts`). It holds _decrypted_
   UTXOs — wipe it via `clearAllMmkvStorageBackend()` on any logout or
@@ -165,20 +191,19 @@ The app is built in vertical slices. Current state:
 
 - ✅ Onboarding (single OAuth + Email-OTP `AuthFlow`)
 - ✅ Bank (balance, history, send simple, receive)
-- ✅ Stealth (Umbra wallet setup, shield, unshield, private send,
-  claims, encrypted balance)
-- ✅ Move flow (bank ↔ stealth ↔ encrypted balance) — internal
-  feature folder is `src/features/moove/`
-- ✅ Profile (private key export, mnemonic export, logout, delete
-  account)
+- ✅ Privacy / Umbra (registration, shield, unshield, private send,
+  claims, encrypted balance) — all on the bank wallet
+- ✅ Move flow (public balance ↔ encrypted balance, two directions) —
+  internal feature folder is `src/features/moove/`
+- ✅ Profile (Turnkey recovery-phrase export, logout, delete account)
 - ✅ Telemetry (Sentry crashes, PostHog events — session replay
   disabled per security policy)
 - ⚠️ Yield (Grow) — three products wired, all **mainnet-only**, so none
   has run end-to-end: Reflect/STLF (`features/reflect/`), xStocks
   (`features/xstocks/`), JitoSOL (`features/jito/`, APY read from Jito's
-  public stake-pool API). Trades sign with the **bank** wallet — the
-  backend `resolveSigner` authorizes only that one, and routing through
-  the backend must not leak the stealth↔identity link.
+  public stake-pool API). Jito's stake/unstake instructions carry
+  ephemeral co-signers, so they go through `signAndSendWithTurnkey`
+  rather than Turnkey's sign-and-broadcast.
 - ⚠️ Swap (`features/swap/`) — public swap via Jupiter. The private swap
   (unshield → ephemeral → Jupiter → re-shield) is not in the tree: it
   lives in open draft PR #56, guarded off, on standby.
@@ -209,8 +234,13 @@ Staff Engineer runs the backend locally (no Railway dev environment).
 Front-stealf (the legacy prod app) hits the prod API. The live port is
 whatever `EXPO_PUBLIC_API_URL` in `.env` points at — currently
 `http://192.168.1.29:3000` (a LAN IP, so a physical iOS device must be
-on the same Wi-Fi; a simulator can use `localhost`). On-chain stealth
+on the same Wi-Fi; a simulator can use `localhost`). On-chain privacy
 ops go through the public devnet RPC + relayer, not this backend.
+
+The backend still accepts and returns `stealf_wallet` on the user
+profile and `walletType: 'stealf'` on the faucet. The client ignores the
+first and always sends `'cash'` for the second; dropping them server-side
+is a separate cleanup.
 
 ## Mopro / ZK FFI
 
@@ -222,9 +252,9 @@ in-bundle at `assets/zk/`; others are lazy-fetched at first use via
 `src/services/umbra/zk/services/zkAssetService.ts`. Changes to the
 zkey loading strategy ripple into `metro.config.js` and the splash gate.
 
-## Umbra SDK v5 (stealth core)
+## Umbra SDK v5 (privacy core)
 
-The stealth flow runs on `@umbra-privacy/sdk` `5.0.0-rc.4`
+The privacy flow runs on `@umbra-privacy/sdk` `5.0.0-rc.4`
 (`rn-zk-prover` 5.0.0). The version is pinned **exact — no caret**: the
 `patch-package` patch targets rc.4's built chunk filenames, so any float
 (rc.6 included) makes it fail to apply, and note scanning breaks against
@@ -238,7 +268,8 @@ Key integration facts, all in `src/services/umbra/`:
   → sharded stores → final client), `getPollingComputationMonitor` in
   deps, and `legacyMasterSeedSchemes: [v4]` so notes created under older
   SDK versions still decrypt. `masterSeedSchemeId` is threaded scan →
-  claim.
+  claim. `getActiveClient()` is the only accessor; it reads the signer
+  from `signers/active.ts` (see rule 3) and caches per address.
 - **Storage** (`storage/mmkvStorageBackend.ts`): the sharded UTXO /
   nullifier stores persist to **MMKV** (`react-native-mmkv`, Nitro), not
   AsyncStorage. A version-gated one-time wipe forces a clean re-scan on
