@@ -10,7 +10,7 @@ export type HomeGridIconKey =
 
 type Base = {
   // Card keys match their route segment — `/public-balance`, `/private-balance`,
-  // `/earn`. `store` has no screen yet, hence no route.
+  // `/earn`, `/store`.
   key: 'public-balance' | 'private-balance' | 'earn' | 'store';
   label: string;
   accent: HomeGridAccent;
@@ -58,7 +58,8 @@ export function buildHomeCards(b: HomeBalances): HomeGridCardVM[] {
       label: 'Store',
       accent: 'silver',
       iconKey: 'store',
-      teaser: 'Soon',
+      teaser: 'Gift cards',
+      route: '/store',
     },
   ];
 }

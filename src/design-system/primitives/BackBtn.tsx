@@ -9,6 +9,9 @@ type Props = {
   color?: string;
   /** Render a chevron (‹) instead of the full arrow. */
   chevron?: boolean;
+  /** Drop the rounded backdrop, leaving the glyph alone. Only the chevron
+   *  form draws one, so this is a no-op when `chevron` is false. */
+  bare?: boolean;
 };
 
 export function BackBtn({
@@ -17,6 +20,7 @@ export function BackBtn({
   size = 22,
   color = T.ink,
   chevron = true,
+  bare = false,
 }: Props) {
   const Icon = chevron ? Icons.chevL : Icons.arrLeft;
   return (
@@ -30,7 +34,7 @@ export function BackBtn({
         height: 38,
         alignItems: 'center',
         justifyContent: 'center',
-        ...(chevron
+        ...(chevron && !bare
           ? {
               borderRadius: 12,
               backgroundColor: 'rgba(255,255,255,0.05)',

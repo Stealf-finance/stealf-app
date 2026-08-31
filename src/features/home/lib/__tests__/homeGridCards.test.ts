@@ -36,10 +36,10 @@ describe('buildHomeCards', () => {
     });
     expect('valueUSD' in earn).toBe(false);
   });
-  it('leaves Store routeless until its screen exists', () => {
+  it('teases Store with what it sells rather than a value', () => {
     const store = buildHomeCards(balances).find((c) => c.key === 'store')!;
-    expect(store).toMatchObject({ teaser: 'Soon', iconKey: 'store' });
-    expect(store.route).toBeUndefined();
+    expect(store).toMatchObject({ teaser: 'Gift cards', iconKey: 'store' });
+    expect('valueUSD' in store).toBe(false);
   });
   it('routes each built card at its matching screen', () => {
     const routes = Object.fromEntries(
@@ -48,6 +48,7 @@ describe('buildHomeCards', () => {
     expect(routes['public-balance']).toBe('/public-balance');
     expect(routes['private-balance']).toBe('/private-balance');
     expect(routes.earn).toBe('/earn');
+    expect(routes.store).toBe('/store');
   });
   it('uses the correct user-facing labels', () => {
     expect(buildHomeCards(balances).map((c) => c.label)).toEqual([
