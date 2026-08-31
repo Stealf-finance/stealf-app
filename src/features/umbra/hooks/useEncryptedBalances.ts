@@ -52,13 +52,13 @@ const STABLE_PRICES: Record<string, number> = {
 };
 
 export const encryptedBalancesQueries = {
-  byStealfWallet: (wallet: string, mints: readonly string[]) =>
+  byWallet: (wallet: string, mints: readonly string[]) =>
     ['stealth', 'encrypted-balances', wallet, ...mints] as const,
   /**
    * Mint-agnostic prefix — use for `invalidateQueries` to hit every
    * per-mint variant of a wallet's encrypted balances at once.
    */
-  byStealfWalletPrefix: (wallet: string) =>
+  byWalletPrefix: (wallet: string) =>
     ['stealth', 'encrypted-balances', wallet] as const,
 };
 
@@ -100,7 +100,7 @@ export async function prefetchEncryptedBalancesFor(
   const mints = buildEncryptedMintList(publicBalance);
   if (mints.length === 0) return;
   await queryClient.prefetchQuery({
-    queryKey: encryptedBalancesQueries.byStealfWallet(stealfWallet, mints),
+    queryKey: encryptedBalancesQueries.byWallet(stealfWallet, mints),
     queryFn: () => fetchEncryptedBalancesRaw(mints),
     staleTime: 30_000,
   });
@@ -121,7 +121,7 @@ export function useEncryptedBalances() {
   }, [publicBalance]);
   const mints = useMemo(() => mintsSignature.split('|'), [mintsSignature]);
   const queryKey = useMemo(
-    () => encryptedBalancesQueries.byStealfWallet(wallet, mints),
+    () => encryptedBalancesQueries.byWallet(wallet, mints),
     [wallet, mints],
   );
 

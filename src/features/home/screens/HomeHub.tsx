@@ -48,12 +48,12 @@ export function HomeHub() {
             }),
           stealfWallet &&
             queryClient.invalidateQueries({
-              queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),
+              queryKey: shieldedBalanceQueries.byWallet(stealfWallet),
             }),
           stealfWallet &&
             queryClient.invalidateQueries({
               queryKey:
-                encryptedBalancesQueries.byStealfWalletPrefix(stealfWallet),
+                encryptedBalancesQueries.byWalletPrefix(stealfWallet),
             }),
         ].filter(Boolean),
       );

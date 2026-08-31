@@ -16,7 +16,7 @@ import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton'
 import { Icons } from '@/src/design-system/icons';
 import { sansation, serif } from '@/src/design-system/typography';
 import { ChoiceSheet } from '@/src/features/wallet-detail/ChoiceSheet';
-import { StealthSetupOverlay } from '@/src/features/umbra/components/StealthSetupOverlay';
+import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import {
@@ -48,7 +48,6 @@ import {
   useUmbra,
   getEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
   getPublicBalanceToReceiverClaimableUtxoCreatorFunction,
-  getPublicBalanceToSelfClaimableUtxoCreatorFunction,
 } from '@/src/features/umbra/hooks/useUmbra';
 import { claimScanQueries } from '@/src/features/umbra/hooks/useClaimScan';
 import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/umbra/lib/errors';
@@ -65,15 +64,10 @@ function kindForDirection(d: MoveDirection): PendingOpKind {
       return 'move-bank-to-shielded';
     case 'shielded-to-bank':
       return 'move-shielded-to-bank';
-    case 'stealth-to-bank':
-      return 'move-stealth-to-bank';
   }
 }
 
-export type MoveDirection =
-  | 'bank-to-shielded'
-  | 'shielded-to-bank'
-  | 'stealth-to-bank';
+export type MoveDirection = 'bank-to-shielded' | 'shielded-to-bank';
 
 type DirectionConfig = {
   title: string;
@@ -95,29 +89,18 @@ const CONFIG: Record<MoveDirection, DirectionConfig> = {
     toLabel: 'Cash account',
     cta: 'Slide to move',
   },
-  'stealth-to-bank': {
-    title: 'Wallet to Cash account',
-    fromLabel: 'Wallet',
-    toLabel: 'Cash account',
-    cta: 'Slide to move',
-  },
 };
 
-const DIRECTIONS: MoveDirection[] = [
-  'bank-to-shielded',
-  'shielded-to-bank',
-  'stealth-to-bank',
-];
+const DIRECTIONS: MoveDirection[] = ['bank-to-shielded', 'shielded-to-bank'];
 
 // Flat Solana network fee (same value the send flow uses).
 const NETWORK_FEE_SOL = 0.000005;
 
-type Account = 'bank' | 'stealth' | 'encrypted';
+type Account = 'bank' | 'encrypted';
 
 const DIR_ACCOUNTS: Record<MoveDirection, { from: Account; to: Account }> = {
   'bank-to-shielded': { from: 'bank', to: 'encrypted' },
   'shielded-to-bank': { from: 'encrypted', to: 'bank' },
-  'stealth-to-bank': { from: 'stealth', to: 'bank' },
 };
 
 function formatBalance(amount: number): string {
@@ -146,12 +129,8 @@ export function MoveFlow() {
 
   const supportsMultiToken = true;
 
-  const pickerWalletParam: 'bank' | 'stealth' | 'encrypted' =
-    direction === 'bank-to-shielded'
-      ? 'bank'
-      : direction === 'shielded-to-bank'
-        ? 'encrypted'
-        : 'stealth';
+  const pickerWalletParam: Account =
+    direction === 'bank-to-shielded' ? 'bank' : 'encrypted';
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -159,12 +138,9 @@ export function MoveFlow() {
   const { data: solPrice } = useSolPrice();
   const posthog = usePostHog(); // stable client; async capture() closes over it directly
 
-  const { wrap, getStealthClient, getBankClient, ensureRegistered } =
-    useUmbra();
+  const { wrap, getClient, ensureRegistered } = useUmbra();
 
   const { data: bankBalanceData } = useBalance(user?.bankWallet ?? null);
-
-  const { data: stealthBalanceData } = useBalance(user?.stealfWallet ?? null);
   const { data: shielded } = useShieldedSolBalance();
   const { data: encrypted } = useEncryptedBalances();
 
@@ -186,8 +162,7 @@ export function MoveFlow() {
             0)
         : (shielded?.sol ?? 0);
     }
-    const tokens =
-      (acct === 'bank' ? bankBalanceData : stealthBalanceData)?.tokens ?? [];
+    const tokens = bankBalanceData?.tokens ?? [];
     return selectionActive
       ? (tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0)
       : (tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0);
@@ -201,8 +176,7 @@ export function MoveFlow() {
       ? solPrice
       : 0;
 
-  const sourcePaysFees =
-    direction === 'bank-to-shielded' || direction === 'stealth-to-bank';
+  const sourcePaysFees = direction === 'bank-to-shielded';
 
   const hasProtocolFee = true;
   const reserveFees = sourcePaysFees && !selectionActive;
@@ -263,12 +237,10 @@ export function MoveFlow() {
       : 0;
   const privacyFeeUsd = protocolFeeSol(solAmount) * rate;
 
-  // Resolve the on-chain address backing an account (encrypted balance + stealth
-  // both live on the stealf wallet); shortened for the confirmation rows.
-  const addressForAccount = (a: Account): string | undefined =>
-    a === 'bank'
-      ? (user?.bankWallet ?? undefined)
-      : (user?.stealfWallet ?? undefined);
+  // Both accounts are two views of the same wallet — the public ATA and the
+  // Umbra encrypted balance sitting behind it. Shortened for the confirm rows.
+  const addressForAccount = (_a: Account): string | undefined =>
+    user?.bankWallet ?? undefined;
   const shortAddr = (s?: string): string | undefined =>
     s ? `${s.slice(0, 4)}…${s.slice(-4)}` : undefined;
   const dirAccounts = DIR_ACCOUNTS[direction];
@@ -283,42 +255,24 @@ export function MoveFlow() {
   const swipeDisabled = solAmount <= 0 || insufficient;
 
   const invalidateAll = async () => {
-    const keys: Promise<unknown>[] = [
+    const wallet = user?.bankWallet ?? '';
+    await Promise.all([
       queryClient.invalidateQueries({
-        queryKey: shieldedBalanceQueries.byStealfWallet(
-          user?.stealfWallet ?? '',
-        ),
+        queryKey: shieldedBalanceQueries.byWallet(wallet),
       }),
       queryClient.invalidateQueries({
-        queryKey: encryptedBalancesQueries.byStealfWalletPrefix(
-          user?.stealfWallet ?? '',
-        ),
+        queryKey: encryptedBalancesQueries.byWalletPrefix(wallet),
       }),
-    ];
-    if (user?.bankWallet) {
-      keys.push(
-        queryClient.invalidateQueries({
-          queryKey: balanceQueries.byAddress(user.bankWallet),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: historyQueries.byAddress(user.bankWallet),
-        }),
-      );
-    }
-    if (user?.stealfWallet) {
-      keys.push(
-        queryClient.invalidateQueries({
-          queryKey: balanceQueries.byAddress(user.stealfWallet),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: historyQueries.byAddress(user.stealfWallet),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: claimScanQueries.byStealfWallet(user.stealfWallet),
-        }),
-      );
-    }
-    await Promise.all(keys);
+      queryClient.invalidateQueries({
+        queryKey: balanceQueries.byAddress(wallet),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: historyQueries.byAddress(wallet),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: claimScanQueries.byWallet(wallet),
+      }),
+    ]);
   };
 
   const onSubmit = () => {
@@ -337,24 +291,9 @@ export function MoveFlow() {
     };
 
     if (!user) return failPre('Please sign in again before continuing.');
-    if (direction === 'bank-to-shielded' && !user.stealfWallet) {
-      return failPre(
-        'Set up your wallet first. Open the Payment tab to create or import one.',
-      );
-    }
-    if (direction === 'shielded-to-bank' && !user.bankWallet) {
+    if (!user.bankWallet) {
       return failPre(
         'Virtual bank account missing. Sign out and back in to restore it.',
-      );
-    }
-    if (
-      direction === 'stealth-to-bank' &&
-      (!user.bankWallet || !user.stealfWallet)
-    ) {
-      return failPre(
-        !user.stealfWallet
-          ? 'Set up your wallet first.'
-          : 'Virtual bank account missing. Sign out and back in to restore it.',
       );
     }
     if (num > sourceBalance) {
@@ -363,13 +302,13 @@ export function MoveFlow() {
       );
     }
 
-    const stealthSigns =
-      direction === 'shielded-to-bank' || direction === 'stealth-to-bank';
-    if (stealthSigns) {
-      const stealthPublicSol =
-        stealthBalanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL')
+    // Encrypted-side moves queue an Arcium computation whose fees are paid in
+    // SOL from the public balance, even though the source is the encrypted one.
+    if (direction === 'shielded-to-bank') {
+      const publicSol =
+        bankBalanceData?.tokens?.find((t) => t.tokenSymbol === 'SOL')
           ?.balance ?? 0;
-      if (stealthPublicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
+      if (publicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
         return failPre(INSUFFICIENT_FEE_SOL_MESSAGE);
       }
     }
@@ -377,8 +316,7 @@ export function MoveFlow() {
     const mintAddr = selectionActive ? selected!.mint : SOL_MINT;
     const lamportsBig = BigInt(Math.floor(num * 10 ** decimals));
     const mint = toAddress(mintAddr);
-    const stealfWallet = user.stealfWallet ?? null;
-    const bankWallet = user.bankWallet ?? null;
+    const wallet = user.bankWallet;
 
     setMoveSig(undefined);
     const opId = pendingOps.enqueue({
@@ -408,45 +346,29 @@ export function MoveFlow() {
               } Try again in a moment.`,
             });
           }
-          const bankClient = await getBankClient();
+          const client = await getClient();
           const create = getPublicBalanceToReceiverClaimableUtxoCreatorFunction(
-            {
-              client: bankClient,
-            },
+            { client },
           );
           res = await wrap(
             'getPublicBalanceToReceiverClaimableUtxoCreatorFunction',
             () =>
               create({
-                destinationAddress: toAddress(stealfWallet!),
-                mint,
-                amount: lamportsBig,
-              }),
-          );
-        } else if (direction === 'shielded-to-bank') {
-          const stealthClient = await getStealthClient();
-          const create = getEncryptedBalanceToSelfClaimableUtxoCreatorFunction({
-            client: stealthClient,
-          });
-          res = await wrap(
-            'getEncryptedBalanceToSelfClaimableUtxoCreatorFunction',
-            () =>
-              create({
-                destinationAddress: toAddress(bankWallet!),
+                destinationAddress: toAddress(wallet),
                 mint,
                 amount: lamportsBig,
               }),
           );
         } else {
-          const stealthClient = await getStealthClient();
-          const create = getPublicBalanceToSelfClaimableUtxoCreatorFunction({
-            client: stealthClient,
+          const client = await getClient();
+          const create = getEncryptedBalanceToSelfClaimableUtxoCreatorFunction({
+            client,
           });
           res = await wrap(
-            'getPublicBalanceToSelfClaimableUtxoCreatorFunction',
+            'getEncryptedBalanceToSelfClaimableUtxoCreatorFunction',
             () =>
               create({
-                destinationAddress: toAddress(bankWallet!),
+                destinationAddress: toAddress(wallet),
                 mint,
                 amount: lamportsBig,
               }),
@@ -472,15 +394,12 @@ export function MoveFlow() {
         });
         pendingOps.complete(opId, 'done');
 
-        const stealfAddr = user?.stealfWallet;
-        if (stealfAddr) {
-          const targetQueryKey = claimScanQueries.byStealfWallet(stealfAddr);
-          [3000, 8000, 15000].forEach((d) =>
-            setTimeout(() => {
-              queryClient.invalidateQueries({ queryKey: targetQueryKey });
-            }, d),
-          );
-        }
+        const targetQueryKey = claimScanQueries.byWallet(wallet);
+        [3000, 8000, 15000].forEach((d) =>
+          setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: targetQueryKey });
+          }, d),
+        );
       } catch (err: any) {
         clearTimeout(provingTimer);
         const msg = err?.userMessage || err?.message || 'Move failed';
@@ -488,7 +407,7 @@ export function MoveFlow() {
         // wrap() already captures StealthError — skip to avoid dup.
         if (err?.name !== 'StealthError') {
           Sentry.captureException(err, {
-            tags: { 'op.kind': `move-${direction}`, 'wallet.source': 'mixed' },
+            tags: { 'op.kind': `move-${direction}` },
             extra: {
               userMessage: msg,
               amountBand: amountBand(num),
@@ -737,7 +656,7 @@ export function MoveFlow() {
         signature={moveSig}
       />
 
-      <StealthSetupOverlay onClose={close} />
+      <UmbraSetupOverlay onClose={close} />
 
       <AssetSelectSheet
         open={assetPickerOpen}

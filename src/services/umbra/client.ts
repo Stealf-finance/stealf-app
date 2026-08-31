@@ -12,11 +12,7 @@ import { masterSeedSchemeV4 } from '@umbra-privacy/sdk/master-seed-schemes';
 import { UMBRA_CONFIG } from './constant';
 import { createMasterSeedStorage } from './storage/masterSeed';
 import { createMmkvStorageBackend } from './storage/mmkvStorageBackend';
-import { getLocaleSigner } from './signers/locale';
-import {
-  createTurnkeyUmbraSigner,
-  type CreateTurnkeyUmbraSignerArgs,
-} from './signers/turnkey';
+import { clearActiveSigner, getActiveSigner } from './signers/active';
 
 export type UmbraClient = Awaited<ReturnType<typeof getUmbraClient>>;
 
@@ -87,16 +83,16 @@ export async function getClient(signer: IUmbraSigner): Promise<UmbraClient> {
 export function clearClients(): void {
   clientCache.clear();
   inFlight.clear();
+  clearActiveSigner();
 }
 
-export async function getStealthClient(): Promise<UmbraClient> {
-  return getClient(await getLocaleSigner());
-}
-
-export async function getBankClient(
-  args: CreateTurnkeyUmbraSignerArgs,
-): Promise<UmbraClient> {
-  return getClient(createTurnkeyUmbraSigner(args));
+/**
+ * The client for the wallet this device signs with — the Turnkey bank wallet.
+ * Reads the signer `useUmbraSigner` installed at mount, so service-layer callers
+ * stay free of React. Throws until Turnkey has hydrated.
+ */
+export async function getActiveClient(): Promise<UmbraClient> {
+  return getClient(getActiveSigner());
 }
 
 export function getRelayer() {

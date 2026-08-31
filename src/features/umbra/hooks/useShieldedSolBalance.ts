@@ -14,7 +14,7 @@ export interface ShieldedSolBalance {
 const MAX_PLAUSIBLE_LAMPORTS = 1_000_000_000n * BigInt(LAMPORTS_PER_SOL);
 
 export const shieldedBalanceQueries = {
-  byStealfWallet: (wallet: string) =>
+  byWallet: (wallet: string) =>
     ['stealth', 'shielded-sol-balance', wallet] as const,
 };
 
@@ -23,7 +23,7 @@ export function useShieldedSolBalance() {
   const wallet = user?.stealfWallet ?? '';
 
   return useQuery<ShieldedSolBalance>({
-    queryKey: shieldedBalanceQueries.byStealfWallet(wallet),
+    queryKey: shieldedBalanceQueries.byWallet(wallet),
     queryFn: async () => {
       const balances = await fetchEncryptedBalances([SOL_MINT as Address]);
       const entry = balances.get(SOL_MINT as Address);

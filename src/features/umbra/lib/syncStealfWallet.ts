@@ -63,7 +63,7 @@ export async function runSyncScan(
         onProgress: options.onProgress,
       });
       queryClient.setQueryData(
-        claimScanQueries.byStealfWallet(walletAddress),
+        claimScanQueries.byWallet(walletAddress),
         result,
       );
 

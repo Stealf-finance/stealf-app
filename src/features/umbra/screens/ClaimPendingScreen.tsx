@@ -64,7 +64,7 @@ export function ClaimPendingScreen() {
 
     const stealfWallet = user?.stealfWallet ?? null;
     const claimKey = stealfWallet
-      ? claimScanQueries.byStealfWallet(stealfWallet)
+      ? claimScanQueries.byWallet(stealfWallet)
       : null;
 
     const snapshot = claimKey
@@ -112,14 +112,14 @@ export function ClaimPendingScreen() {
         const invalidate = () => {
           if (!stealfWallet) return;
           queryClient.invalidateQueries({
-            queryKey: claimScanQueries.byStealfWallet(stealfWallet),
+            queryKey: claimScanQueries.byWallet(stealfWallet),
           });
           queryClient.invalidateQueries({
-            queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),
+            queryKey: shieldedBalanceQueries.byWallet(stealfWallet),
           });
           queryClient.invalidateQueries({
             queryKey:
-              encryptedBalancesQueries.byStealfWalletPrefix(stealfWallet),
+              encryptedBalancesQueries.byWalletPrefix(stealfWallet),
           });
         };
         invalidate();

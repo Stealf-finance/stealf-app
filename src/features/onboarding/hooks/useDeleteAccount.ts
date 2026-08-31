@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/react-native';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { persister } from '@/src/services/queryClient';
 import { socketService } from '@/src/services/real-time/socket';
-import { clearStealthState } from '@/src/features/umbra/hooks/useUmbra';
+import { clearUmbraState } from '@/src/features/umbra/hooks/useUmbra';
 import { clearMasterSeed } from '@/src/services/umbra/storage/masterSeed';
 import { clearAllMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { useAuth } from '../context/AuthContext';
@@ -48,7 +48,7 @@ export function useDeleteAccount() {
       }
 
       socketService.disconnect();
-      clearStealthState();
+      clearUmbraState();
       if (user?.stealfWallet) await clearMasterSeed(user.stealfWallet);
       if (user?.bankWallet) await clearMasterSeed(user.bankWallet);
       // Deleting the account must not leave the decrypted UTXO / nullifier

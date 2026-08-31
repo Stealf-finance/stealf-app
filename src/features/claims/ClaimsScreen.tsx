@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { StealthSetupOverlay } from '@/src/features/umbra/components/StealthSetupOverlay';
+import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { LoaderRefreshButton } from '@/src/design-system/primitives/LoaderRefreshButton';
@@ -168,7 +168,7 @@ export function ClaimsScreen() {
     const bankWallet = user?.bankWallet ?? null;
     const stealfWallet = user?.stealfWallet ?? null;
     const claimKey = stealfWallet
-      ? claimScanQueries.byStealfWallet(stealfWallet)
+      ? claimScanQueries.byWallet(stealfWallet)
       : null;
 
     const snapshot = claimKey
@@ -228,17 +228,17 @@ export function ClaimsScreen() {
         const invalidate = () => {
           if (stealfWallet) {
             queryClient.invalidateQueries({
-              queryKey: claimScanQueries.byStealfWallet(stealfWallet),
+              queryKey: claimScanQueries.byWallet(stealfWallet),
             });
           }
           if (isEncrypted) {
             if (!stealfWallet) return;
             queryClient.invalidateQueries({
-              queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),
+              queryKey: shieldedBalanceQueries.byWallet(stealfWallet),
             });
             queryClient.invalidateQueries({
               queryKey:
-                encryptedBalancesQueries.byStealfWalletPrefix(stealfWallet),
+                encryptedBalancesQueries.byWalletPrefix(stealfWallet),
             });
           } else {
             if (!bankWallet) return;
@@ -371,7 +371,7 @@ export function ClaimsScreen() {
 
       {/* Claiming (to encrypted or to cash) requires the wallet to be
           registered on Umbra. Self-hides once registered. */}
-      <StealthSetupOverlay onClose={close} />
+      <UmbraSetupOverlay onClose={close} />
     </CenterGlow>
   );
 }

@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
-import { clearStealthState } from '@/src/features/umbra/hooks/useUmbra';
+import { clearUmbraState } from '@/src/features/umbra/hooks/useUmbra';
 import { clearMasterSeed } from '@/src/services/umbra/storage/masterSeed';
 import { clearAllMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { persister } from '@/src/services/queryClient';
@@ -35,7 +35,7 @@ async function run(
     reason === 'session_expired' ? 'auth_session_expired' : 'auth_signed_out',
   );
   socketService.disconnect();
-  clearStealthState();
+  clearUmbraState();
   // The master seed is keyed per wallet address; wipe both wallets' seeds so a
   // previous user's viewing keys don't linger on a shared device.
   if (deps.stealthWallet) await clearMasterSeed(deps.stealthWallet);

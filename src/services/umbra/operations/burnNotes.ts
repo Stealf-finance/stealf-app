@@ -7,7 +7,7 @@ import {
   createClaimReceiverZkProver,
   createClaimEphemeralZkProver,
 } from '@/src/services/umbra/zk';
-import { getStealthClient, getRelayer } from '../client';
+import { getActiveClient, getRelayer } from '../client';
 import {
   loadBurntUtxosForCurrentWallet,
   isAlreadyBurntError,
@@ -88,9 +88,9 @@ async function burnEach(
   return lastResult;
 }
 
-/** Claim received UTXOs into stealth's encrypted balance. */
+/** Claim received UTXOs into the wallet's encrypted balance. */
 export async function claimReceived(utxos: any[]) {
-  const client = await getStealthClient();
+  const client = await getActiveClient();
   return burnEach(
     client.signer.address.toString(),
     utxos,
@@ -110,7 +110,7 @@ export async function claimReceived(utxos: any[]) {
 
 /** Claim self-burnable UTXOs to their destination's public ATA (via relayer). */
 export async function claimSelfToPublic(utxos: any[]) {
-  const client = await getStealthClient();
+  const client = await getActiveClient();
   return burnEach(
     client.signer.address.toString(),
     utxos,

@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const clearAllMmkvStorageBackend = vi.fn(async () => {});
 const clearMasterSeed = vi.fn(async (_w: string) => {});
 const walletKeyCacheClearAll = vi.fn(async () => {});
-const clearStealthState = vi.fn();
+const clearUmbraState = vi.fn();
 const socketDisconnect = vi.fn();
 const purgeTurnkeyState = vi.fn(async () => {});
 const removeClient = vi.fn(async () => {});
@@ -19,7 +19,7 @@ vi.mock('@/src/services/cache/walletKeyCache', () => ({
   walletKeyCache: { clearAll: () => walletKeyCacheClearAll() },
 }));
 vi.mock('@/src/features/umbra/hooks/useUmbra', () => ({
-  clearStealthState: () => clearStealthState(),
+  clearUmbraState: () => clearUmbraState(),
 }));
 vi.mock('@/src/services/real-time/socket', () => ({
   socketService: { disconnect: () => socketDisconnect() },
@@ -79,7 +79,7 @@ describe('performSessionTeardown', () => {
     expect(clearAllMmkvStorageBackend).toHaveBeenCalled();
     expect(walletKeyCacheClearAll).toHaveBeenCalled();
     expect(purgeTurnkeyState).toHaveBeenCalled();
-    expect(clearStealthState).toHaveBeenCalled();
+    expect(clearUmbraState).toHaveBeenCalled();
   });
 
   it('reports the reason to analytics', async () => {

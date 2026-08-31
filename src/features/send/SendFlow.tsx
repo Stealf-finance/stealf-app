@@ -15,7 +15,7 @@ import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { MoveConfirm } from '@/src/features/moove/components/MoveConfirm';
-import { StealthSetupOverlay } from '@/src/features/umbra/components/StealthSetupOverlay';
+import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -98,7 +98,6 @@ function selectedToAsset(sel: SelectedAsset): Asset {
   };
 }
 
-type WalletSource = 'bank' | 'stealth';
 type SendMode = 'public' | 'private';
 
 // Rendered for a simple transfer when the wallet has no public holdings yet,
@@ -114,34 +113,26 @@ const SOL_FALLBACK_ASSET: Asset = {
   decimals: SOL_DECIMALS,
 };
 
-type Props = { tone?: Tone; wallet?: WalletSource; mode?: SendMode };
+type Props = { tone?: Tone; mode?: SendMode };
 
-export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
+export function SendFlow({ mode = 'public' }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   // The send flow renders in the silver theme regardless of the caller's tone
-  // (private sends previously themed gold — silver throughout now). The
-  // original `tone` prop is still used below only for the wallet-source logic.
+  // (private sends previously themed gold — silver throughout now).
   const uiTone: Tone = 'silver';
   const S = txPalette(uiTone);
   const { user, isAuthenticated } = useAuth();
-  const walletSource: WalletSource =
-    wallet ?? (tone === 'gold' ? 'stealth' : 'bank');
   const isPrivate = mode === 'private';
   const title = isPrivate ? 'Private send' : 'Send';
-  // Which wallet's tokens the asset picker should show.
-  const pickerWalletParam: 'stealth' | 'encrypted' = isPrivate
+  // Which side of the wallet the asset picker should show.
+  const pickerWalletParam: 'bank' | 'encrypted' = isPrivate
     ? 'encrypted'
-    : 'stealth';
+    : 'bank';
   const selected = useSelectedAsset();
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
-  const fromAddress =
-    (walletSource === 'stealth' ? user?.stealfWallet : user?.bankWallet) ?? '';
-  const fromLabel = isPrivate
-    ? 'Encrypted balance'
-    : walletSource === 'stealth'
-      ? 'Wallet'
-      : 'Virtual bank account';
+  const fromAddress = user?.bankWallet ?? '';
+  const fromLabel = isPrivate ? 'Encrypted balance' : 'Cash account';
   const { data: balance, isLoading: balanceLoading } = useBalance(fromAddress);
   const { data: encrypted } = useEncryptedBalances();
   const { data: solPrice } = useSolPrice();
@@ -219,8 +210,8 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
   }, [selected]);
   // Default to the first holding when nothing has been picked yet. For a
   // simple (public) transfer, fall back to a 0-balance SOL asset once the
-  // balance has loaded empty — otherwise an unfunded stealth wallet would
-  // render a blank screen (only the title) with no asset to send.
+  // balance has loaded empty — otherwise an unfunded wallet would render a
+  // blank screen (only the title) with no asset to send.
   useEffect(() => {
     if (selected || asset) return;
     if (assets.length > 0) {
@@ -356,11 +347,11 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         const result = await umbra.sendEncrypted(destination, mint, amountRaw);
         await Promise.all([
           queryClient.invalidateQueries({
-            queryKey: shieldedBalanceQueries.byStealfWallet(fromAddress),
+            queryKey: shieldedBalanceQueries.byWallet(fromAddress),
           }),
           queryClient.invalidateQueries({
             queryKey:
-              encryptedBalancesQueries.byStealfWalletPrefix(fromAddress),
+              encryptedBalancesQueries.byWalletPrefix(fromAddress),
           }),
           queryClient.invalidateQueries({
             queryKey: historyQueries.byAddress(fromAddress),
@@ -371,7 +362,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
           mode: 'private',
           asset_symbol: asset.symbol,
           amount_band: amountBand(Number(fiatValue)),
-          wallet_source: walletSource,
         });
         setTxSig(result?.queueSignature ?? null);
         return;
@@ -382,7 +372,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         amount: typedAssetAmount,
         mint: asset.mint,
         decimals: asset.decimals ?? SOL_DECIMALS,
-        walletSource,
         balance: balanceNum,
       });
       if (__DEV__) console.log('[SendFlow] success, sig=', sig);
@@ -390,7 +379,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         mode: 'public',
         asset_symbol: asset.symbol,
         amount_band: amountBand(Number(fiatValue)),
-        wallet_source: walletSource,
       });
       setTxSig(sig);
     } catch (err: any) {
@@ -403,10 +391,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
       // wrap() already captures StealthError to Sentry — skip to avoid dup.
       if (err?.name !== 'StealthError') {
         Sentry.captureException(err, {
-          tags: {
-            'op.kind': isPrivate ? 'send-private' : 'send-public',
-            'wallet.source': walletSource,
-          },
+          tags: { 'op.kind': isPrivate ? 'send-private' : 'send-public' },
           extra: {
             userMessage: msg,
             amountBand: amountBand(Number(fiatValue)),
@@ -418,7 +403,6 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
         mode: isPrivate ? 'private' : 'public',
         asset_symbol: asset.symbol,
         error: scrubString(msg),
-        wallet_source: walletSource,
       });
       setSendError(msg);
       // Force the swipe widget to reset visually so the user can retry.
@@ -721,7 +705,7 @@ export function SendFlow({ tone = 'silver', wallet, mode = 'public' }: Props) {
 
       {/* Private transfers spend the encrypted balance — gate on Umbra
           registration. Simple/public sends don't need it. */}
-      {isPrivate ? <StealthSetupOverlay onClose={close} /> : null}
+      {isPrivate ? <UmbraSetupOverlay onClose={close} /> : null}
 
       <AssetSelectSheet
         open={assetPickerOpen}

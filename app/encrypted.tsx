@@ -3,7 +3,7 @@ import { WalletBottomBar } from '@/src/features/wallet-detail/WalletBottomBar';
 import { type QuickAction } from '@/src/components/nav/QuickActionMenu';
 import { useEncryptedBalances } from '@/src/features/umbra/hooks/useEncryptedBalances';
 import { StealthWalletGate } from '@/src/features/umbra/screens/StealthWalletGate';
-import { StealthSetupOverlay } from '@/src/features/umbra/components/StealthSetupOverlay';
+import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 
 const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
@@ -47,7 +47,7 @@ export default function EncryptedScreen() {
         }
         tone="gold"
       />
-      <StealthSetupOverlay onClose={() => router.back()} />
+      <UmbraSetupOverlay onClose={() => router.back()} />
     </StealthWalletGate>
   );
 }

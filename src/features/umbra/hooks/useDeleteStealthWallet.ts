@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { clearMasterSeed } from '@/src/services/umbra/storage/masterSeed';
-import { clearStealthState } from '@/src/features/umbra/hooks/useUmbra';
+import { clearUmbraState } from '@/src/features/umbra/hooks/useUmbra';
 import { clearAsyncStorageBackend } from '@/src/services/umbra/storage/asyncStorageBackend';
 import { clearMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { balanceQueries } from '@/src/features/bank/api/balance';
@@ -16,7 +16,7 @@ export function useDeleteStealthWallet() {
     mutationFn: async () => {
       const prevStealfWallet = user?.stealfWallet ?? null;
 
-      clearStealthState();
+      clearUmbraState();
       if (prevStealfWallet) await clearMasterSeed(prevStealfWallet);
       await walletKeyCache.clearAll();
       if (prevStealfWallet) {

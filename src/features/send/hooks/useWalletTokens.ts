@@ -1,7 +1,7 @@
 /**
- * Tokens available to pick from a wallet source (bank / stealth public ATA, or
- * the stealth encrypted balances). Extracted from the old AssetPickerScreen so
- * the Send / Shield / Move flows can drive the shared TokenSelectSheet.
+ * Tokens available to pick from a wallet source — the wallet's public ATA, or
+ * its Umbra encrypted balances. Extracted from the old AssetPickerScreen so the
+ * Send / Shield / Move flows can drive the shared TokenSelectSheet.
  */
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
@@ -10,7 +10,7 @@ import { useEncryptedBalances } from '@/src/features/umbra/hooks/useEncryptedBal
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import type { SelectedAsset } from '../lib/selectedAssetStore';
 
-export type WalletTokenSource = 'bank' | 'stealth' | 'encrypted';
+export type WalletTokenSource = 'bank' | 'encrypted';
 export type WalletToken = SelectedAsset & { name: string };
 
 const TOKEN_DECIMALS: Record<string, number> = {
@@ -33,11 +33,7 @@ const TOKEN_NAMES: Record<string, string> = {
 export function useWalletTokens(source: WalletTokenSource): WalletToken[] {
   const { user } = useAuth();
   const isEncrypted = source === 'encrypted';
-  const publicSourceAddress = isEncrypted
-    ? null
-    : source === 'bank'
-      ? user?.bankWallet ?? null
-      : user?.stealfWallet ?? null;
+  const publicSourceAddress = isEncrypted ? null : user?.bankWallet ?? null;
 
   const { data: walletBalance } = useBalance(publicSourceAddress);
   const { data: encrypted } = useEncryptedBalances();

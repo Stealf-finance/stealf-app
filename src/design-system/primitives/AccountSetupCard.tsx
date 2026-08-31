@@ -6,7 +6,7 @@ import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 
-type Kind = 'stealth' | 'bank';
+type Kind = 'privacy' | 'bank';
 
 type Props = {
   kind?: Kind;
@@ -30,10 +30,10 @@ const COPY: Record<
     cost: string;
   }
 > = {
-  stealth: {
-    kicker: 'wallets · not registered',
+  privacy: {
+    kicker: 'wallet · not registered',
     title: 'Register your',
-    titleEm: 'wallets',
+    titleEm: 'wallet',
     body: [
       'Required to use ',
       'private balances',
@@ -43,12 +43,12 @@ const COPY: Record<
     insufficientTitle: 'Insufficient',
     insufficientTitleEm: 'SOL',
     insufficientBody: [
-      'More SOL is required on your wallets to register your ',
-      'wallets',
-      ' on Umbra Privacy.',
+      'More SOL is required on your wallet to register it on ',
+      'Umbra Privacy',
+      '.',
     ],
     ctaInsufficient: 'Go back',
-    cost: '~0.024 SOL',
+    cost: '~0.012 SOL',
   },
   bank: {
     kicker: 'bank account · not yet activated',
@@ -74,7 +74,7 @@ const COPY: Record<
 
 // CTA wears the FAB silver for both kinds — gold stays on text accents only.
 const ACCENTS: Record<Kind, { accent: string; faint: string; gradient: [string, string]; glow: string }> = {
-  stealth: {
+  privacy: {
     accent: '#c9c9cc',
     faint: 'rgba(201,201,204,0.14)',
     gradient: ['#e8e8ea', '#9a9a9f'],
@@ -89,7 +89,7 @@ const ACCENTS: Record<Kind, { accent: string; faint: string; gradient: [string, 
 };
 
 export function AccountSetupCard({
-  kind = 'stealth',
+  kind = 'privacy',
   insufficient = false,
   onPress,
   loading = false,
@@ -273,7 +273,7 @@ export function AccountSetupCard({
             },
           ]}
         >
-          {kind === 'stealth' ? 'One-time setup · ' : 'Setup · '}
+          {kind === 'privacy' ? 'One-time setup · ' : 'Setup · '}
           <Text
             style={[
               sansation,
@@ -282,7 +282,7 @@ export function AccountSetupCard({
           >
             {copy.cost}
           </Text>
-          {kind === 'stealth' ? ' network fee' : ' to verify'}
+          {kind === 'privacy' ? ' network fee' : ' to verify'}
         </Text>
       ) : null}
       </View>
