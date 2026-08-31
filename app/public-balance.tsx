@@ -3,6 +3,7 @@ import {
   QuickActionMenu,
   type QuickAction,
 } from '@/src/components/nav/QuickActionMenu';
+import { StlfSwapCta } from '@/src/features/reflect/components/StlfSwapCta';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { USDC_LOGO_URI } from '@/src/constants/solana';
@@ -45,6 +46,7 @@ export default function CashScreen() {
       iconImage={require('@/assets/images/coin.png')}
       balanceUSD={bal.data?.totalUSD ?? 0}
       assets={assets}
+      belowBalance={<StlfSwapCta />}
       bottomBar={<QuickActionMenu actions={ACTIONS} />}
       tone="silver"
     />
