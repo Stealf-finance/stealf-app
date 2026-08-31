@@ -5,6 +5,7 @@ import { type QuickAction } from '@/src/components/nav/QuickActionMenu';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { USDC_LOGO_URI } from '@/src/constants/solana';
+import { isOfframpAvailable } from '@/src/features/offramp/constants';
 
 const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
 
@@ -15,6 +16,13 @@ const ACTIONS: QuickAction[] = [
   { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive-choice?scope=cash' },
   { key: 'buy', label: 'Buy', iconKey: 'dollar' }, // not built yet
   { key: 'move', label: 'Move', iconKey: 'moove', route: '/moove' },
+];
+
+// Cash-out (crypto→fiat via Noah) is mainnet-only and env-gated; the entry
+// only appears once `isOfframpAvailable()` is true, so devnet UI is unchanged.
+const ACTIONS_WITH_CASHOUT: QuickAction[] = [
+  ...ACTIONS,
+  { key: 'cashout', label: 'Cash out', iconKey: 'bank', route: '/cash-out' },
 ];
 
 export default function CashScreen() {
@@ -41,7 +49,11 @@ export default function CashScreen() {
       assets={assets}
       belowBalance={<BankProducts />}
       bottomBar={
-        <WalletBottomBar fabActions={ACTIONS} historyRoute="/transactions" claimTarget="bank" />
+        <WalletBottomBar
+          fabActions={isOfframpAvailable() ? ACTIONS_WITH_CASHOUT : ACTIONS}
+          historyRoute="/transactions"
+          claimTarget="bank"
+        />
       }
       tone="silver"
     />
