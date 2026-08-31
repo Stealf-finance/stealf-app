@@ -136,6 +136,18 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
+                            name="stlf"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
+                            name="stlf-buy"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
+                            name="stlf-sell"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
                             name="xstock-trade/[symbol]"
                             options={{ presentation: 'pageSheet' }}
                           />
@@ -173,6 +185,14 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="jito-about"
+                            options={{
+                              presentation: 'transparentModal',
+                              animation: 'fade',
+                              contentStyle: { backgroundColor: 'transparent' },
+                            }}
+                          />
+                          <Stack.Screen
+                            name="stlf-about"
                             options={{
                               presentation: 'transparentModal',
                               animation: 'fade',
