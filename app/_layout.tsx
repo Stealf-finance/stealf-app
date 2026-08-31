@@ -144,6 +144,10 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
+                            name="cash-out"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
                             name="card"
                             options={{ presentation: 'pageSheet' }}
                           />
