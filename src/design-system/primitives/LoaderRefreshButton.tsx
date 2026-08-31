@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { Pressable } from 'react-native';
-import { Image } from 'expo-image';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -9,20 +8,24 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+import { Icons } from '@/src/design-system/icons';
+import { T } from '@/src/design-system/tokens';
 
 type Props = {
   onPress: () => void;
   /** While true, the loader spins continuously (background fetch in flight). */
   spinning?: boolean;
   size?: number;
+  color?: string;
 };
 
-/** A refresh control rendered as loader.png. Spins once on tap and keeps
- *  spinning while `spinning` is true. */
+/** A refresh control rendered as the two-arc `loader` glyph. Spins once on tap
+ *  and keeps spinning while `spinning` is true. */
 export function LoaderRefreshButton({
   onPress,
   spinning = false,
   size = 28,
+  color = T.gold,
 }: Props) {
   const angle = useSharedValue(0);
   const pressScale = useSharedValue(1);
@@ -83,12 +86,7 @@ export function LoaderRefreshButton({
       hitSlop={10}
     >
       <Animated.View style={style}>
-        <Image
-          source={require('@/assets/images/loader.png')}
-          contentFit="contain"
-          cachePolicy="memory-disk"
-          style={{ width: size, height: size }}
-        />
+        <Icons.loader size={size} color={color} strokeWidth={1.6} />
       </Animated.View>
     </Pressable>
   );

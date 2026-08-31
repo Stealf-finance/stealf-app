@@ -16,17 +16,24 @@ const GAP = 12; // Sp.md — uniform spacing between cards (rows and columns)
 // outer edges line up with the greeting message.
 const H_PAD = 24;
 
+// Cards without an entry fall back to the tinted icon disc below.
 const CARD_IMAGE: Partial<Record<HomeGridCardVM['key'], number>> = {
-  cash: require('@/assets/images/coin.png'),
+  'public-balance': require('@/assets/images/coin.png'),
   earn: require('@/assets/images/earn.png'),
-  encrypted: require('@/assets/images/shield.png'),
+  'private-balance': require('@/assets/images/shield.png'),
+  store: require('@/assets/images/store.png'),
 };
 
 function CardValue({ vm, hidden }: { vm: HomeGridCardVM; hidden: boolean }) {
   const pal = txPalette(vm.accent);
   if ('teaser' in vm && vm.teaser) {
     return (
-      <Text style={[sansation, { fontSize: 22, lineHeight: 28, letterSpacing: -0.4, color: pal.ink }]}>
+      <Text
+        style={[
+          sansation,
+          { fontSize: 22, lineHeight: 28, letterSpacing: -0.4, color: pal.ink },
+        ]}
+      >
         {vm.teaser}
       </Text>
     );
@@ -34,11 +41,23 @@ function CardValue({ vm, hidden }: { vm: HomeGridCardVM; hidden: boolean }) {
   const { int, dec } = splitUsd(vm.valueUSD ?? 0);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-      <Text style={[sansation, { fontSize: 22, lineHeight: 28, letterSpacing: -0.4, color: pal.ink }]}>
+      <Text
+        style={[
+          sansation,
+          { fontSize: 22, lineHeight: 28, letterSpacing: -0.4, color: pal.ink },
+        ]}
+      >
         {hidden ? '$****' : `$${int}`}
       </Text>
       {hidden ? null : (
-        <Text style={[sansation, { fontSize: 14, lineHeight: 20, color: pal.inkDim }]}>{dec}</Text>
+        <Text
+          style={[
+            sansation,
+            { fontSize: 14, lineHeight: 20, color: pal.inkDim },
+          ]}
+        >
+          {dec}
+        </Text>
       )}
     </View>
   );
@@ -69,7 +88,11 @@ function HomeGridCard({
     >
       <BlurGlass
         radius={22}
-        innerStyle={{ padding: 20, aspectRatio: 1.15, justifyContent: 'space-between' }}
+        innerStyle={{
+          padding: 20,
+          aspectRatio: 1.15,
+          justifyContent: 'space-between',
+        }}
       >
         {image ? (
           <Image
@@ -96,7 +119,12 @@ function HomeGridCard({
           <Text
             style={[
               sansation,
-              { fontSize: 14, lineHeight: 20, letterSpacing: 0.2, color: pal.inkDim },
+              {
+                fontSize: 14,
+                lineHeight: 20,
+                letterSpacing: 0.2,
+                color: pal.inkDim,
+              },
             ]}
           >
             {vm.label}
@@ -127,9 +155,15 @@ function HomeGridCard({
   );
 }
 
-/** Grid of the three home cards: Cash and Encrypted Balance side by side,
- *  Earn spanning the row below. */
-export function HomeGrid({ balances, hidden }: { balances: HomeBalances; hidden: boolean }) {
+/** Grid of the four home cards, two per row: Public Balance / Private Balance,
+ *  then Earn / Store. */
+export function HomeGrid({
+  balances,
+  hidden,
+}: {
+  balances: HomeBalances;
+  hidden: boolean;
+}) {
   const router = useSafeRouter();
   const { user } = useAuth();
 
@@ -146,16 +180,28 @@ export function HomeGrid({ balances, hidden }: { balances: HomeBalances; hidden:
   const press = (c: HomeGridCardVM) =>
     c.route ? () => router.push(c.route as never) : undefined;
   const locked = (c: HomeGridCardVM) =>
-    c.key === 'encrypted' && registered === false;
+    c.key === 'private-balance' && registered === false;
+
+  // Two per row. A trailing odd card stretches to the full width, which is what
+  // the 3-card layout used to do by hand.
+  const rows: HomeGridCardVM[][] = [];
+  for (let i = 0; i < cards.length; i += 2) rows.push(cards.slice(i, i + 2));
+
   return (
     <View style={{ paddingHorizontal: H_PAD, gap: GAP }}>
-      <View style={{ flexDirection: 'row', gap: GAP }}>
-        <HomeGridCard vm={cards[0]} hidden={hidden} onPress={press(cards[0])} locked={locked(cards[0])} />
-        <HomeGridCard vm={cards[1]} hidden={hidden} onPress={press(cards[1])} locked={locked(cards[1])} />
-      </View>
-      <View style={{ flexDirection: 'row', gap: GAP }}>
-        <HomeGridCard vm={cards[2]} hidden={hidden} onPress={press(cards[2])} locked={locked(cards[2])} />
-      </View>
+      {rows.map((row) => (
+        <View key={row[0].key} style={{ flexDirection: 'row', gap: GAP }}>
+          {row.map((c) => (
+            <HomeGridCard
+              key={c.key}
+              vm={c}
+              hidden={hidden}
+              onPress={press(c)}
+              locked={locked(c)}
+            />
+          ))}
+        </View>
+      ))}
     </View>
   );
 }

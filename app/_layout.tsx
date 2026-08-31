@@ -44,9 +44,7 @@ initSentry();
 
 const env = getEnv();
 
-const PRELOAD_IMAGES = [
-  require('../assets/images/splash-icon.png'),
-];
+const PRELOAD_IMAGES = [require('../assets/images/splash-icon.png')];
 
 const BOOT_START = Date.now();
 
@@ -123,10 +121,6 @@ function RootLayout() {
                             options={{ animation: 'fade' }}
                           />
                           <Stack.Screen
-                            name="moove"
-                            options={{ presentation: 'pageSheet' }}
-                          />
-                          <Stack.Screen
                             name="shield"
                             options={{ presentation: 'pageSheet' }}
                           />
@@ -142,10 +136,8 @@ function RootLayout() {
                             name="stake-withdraw"
                             options={{ presentation: 'pageSheet' }}
                           />
-                          <Stack.Screen
-                            name="stlf"
-                            options={{ presentation: 'pageSheet' }}
-                          />
+                          {/* `stlf` (like `jitosol`) is intentionally absent:
+                              a product detail is a plain push, not a sheet. */}
                           <Stack.Screen
                             name="stlf-buy"
                             options={{ presentation: 'pageSheet' }}
@@ -176,14 +168,6 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="send-choice"
-                            options={{
-                              presentation: 'transparentModal',
-                              animation: 'fade',
-                              contentStyle: { backgroundColor: 'transparent' },
-                            }}
-                          />
-                          <Stack.Screen
-                            name="receive-choice"
                             options={{
                               presentation: 'transparentModal',
                               animation: 'fade',

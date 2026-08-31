@@ -23,7 +23,7 @@ export function AuthGuard() {
     const inTabsGroup = top === TABS_GROUP;
 
     if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)/bank');
+      router.replace('/(tabs)/home');
       return;
     }
 

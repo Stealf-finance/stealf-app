@@ -8,7 +8,7 @@ export default function Index() {
   // Defense-in-depth: bypass is dev-only even if the env var leaks
   // into a release build.
   if (__DEV__ && getEnv().EXPO_PUBLIC_DEV_BYPASS_AUTH) {
-    return <Redirect href="/(tabs)/bank" />;
+    return <Redirect href="/(tabs)/home" />;
   }
 
   // Wait for the AuthProvider's keychain hydration before deciding where to
@@ -16,7 +16,7 @@ export default function Index() {
   if (isLoading) return null;
 
   return isAuthenticated ? (
-    <Redirect href="/(tabs)/bank" />
+    <Redirect href="/(tabs)/home" />
   ) : (
     <Redirect href="/(auth)/welcome" />
   );

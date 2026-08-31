@@ -27,7 +27,7 @@ type Props = {
 
 /** Centered danger-confirmation dialog — shared by the export and
  *  delete-wallet sheets. Blurred backdrop + opaque #0d0d0d panel (the
- *  receive-qr / MoveConfirm recipe), acknowledge checkbox gating the CTA. */
+ *  receive-qr / TxConfirmSheet recipe), acknowledge checkbox gating the CTA. */
 export function DangerConfirmSheet({
   visible,
   iconKey,

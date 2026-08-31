@@ -3,7 +3,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { TabBar, type TabId } from '@/src/design-system/primitives/TabBar';
 import { QuickActionMenu } from './QuickActionMenu';
 
-const TAB_IDS: TabId[] = ['bank', 'history', 'profile'];
+const TAB_IDS: TabId[] = ['home', 'history', 'profile'];
 
 /**
  * The app's bottom navigation — the pill TabBar (Home / History / Profile) plus
@@ -21,7 +21,7 @@ export function AppNavBar() {
   // Remember the last real tab so a pushed non-tab route keeps a tab lit.
   // Held in a ref (mutated in an effect, read during render) rather than
   // state+effect, which would fire an extra render on every tab change.
-  const lastTabRef = useRef<TabId>(tabSegment ?? 'bank');
+  const lastTabRef = useRef<TabId>(tabSegment ?? 'home');
   useEffect(() => {
     if (tabSegment) lastTabRef.current = tabSegment;
   }, [tabSegment]);
@@ -36,7 +36,7 @@ export function AppNavBar() {
     <>
       <TabBar active={active} tone="silver" onTab={handleTab} />
       {/* FAB only on Home — hidden on the History and Profile tabs. */}
-      {active === 'bank' ? <QuickActionMenu /> : null}
+      {active === 'home' ? <QuickActionMenu /> : null}
     </>
   );
 }

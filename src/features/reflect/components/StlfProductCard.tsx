@@ -1,10 +1,11 @@
 /**
  * STLF "Savings" product card for the Earn "Available products" hub. BlurGlass
- * card: mark + APY pill + Balance/Earning/Type stats; taps into the STLF product
+ * card: logo + APY pill + Balance/Earning/Type stats; taps into the STLF product
  * screen. APY is the holder's live Reflect yield (stats.realtimeApy); balance is
  * the bank wallet's STLF holding. STLF is Stealf's branded stablecoin backed by
  * Reflect USDC+.
  */
+import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { sansation } from '@/src/design-system/typography';
@@ -13,7 +14,6 @@ import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useReflectStats, useReflectBalance } from '../hooks/useReflectData';
-import { StlfMark } from './StlfMark';
 
 const S = txPalette('silver');
 
@@ -27,7 +27,9 @@ export function StlfProductCard() {
   const { data: balance } = useReflectBalance(user?.bankWallet);
 
   const apyPct =
-    typeof stats?.realtimeApy === 'number' ? stats.realtimeApy : FALLBACK_APY_PCT;
+    typeof stats?.realtimeApy === 'number'
+      ? stats.realtimeApy
+      : FALLBACK_APY_PCT;
   const apyLabel = `${apyPct.toFixed(2)}% APY`;
   const usdValue = balance?.usdValue ?? 0;
   const balanceLabel = usdValue > 0 ? `$${usdValue.toFixed(2)}` : '$0';
@@ -35,9 +37,14 @@ export function StlfProductCard() {
   return (
     <Pressable onPress={() => router.push('/stlf')}>
       <BlurGlass radius={22} innerStyle={{ padding: 20 }}>
-        {/* Header: mark + (title row with APY pill → kicker) */}
+        {/* Header: logo + (title row with APY pill → kicker) */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-          <StlfMark size={44} />
+          <Image
+            source={require('@/assets/images/icon.png')}
+            style={{ width: 44, height: 44, borderRadius: 22 }}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
           <View style={{ flex: 1, minWidth: 0 }}>
             <View
               style={{
@@ -61,7 +68,7 @@ export function StlfProductCard() {
                 ]}
                 numberOfLines={1}
               >
-                Savings
+                Yield-bearing stablecoin
               </Text>
               <View
                 style={{
@@ -74,7 +81,12 @@ export function StlfProductCard() {
                 <Text
                   style={[
                     sansation,
-                    { fontSize: 12, lineHeight: 16, fontWeight: '600', color: T.green },
+                    {
+                      fontSize: 12,
+                      lineHeight: 16,
+                      fontWeight: '600',
+                      color: T.green,
+                    },
                   ]}
                 >
                   {apyLabel}
@@ -82,9 +94,12 @@ export function StlfProductCard() {
               </View>
             </View>
             <Text
-              style={[sansation, { fontSize: 13, lineHeight: 18, color: S.inkDim, marginTop: 3 }]}
+              style={[
+                sansation,
+                { fontSize: 13, lineHeight: 18, color: S.inkDim, marginTop: 3 },
+              ]}
             >
-              STLF · Reflect
+              $STLF · Reflect
             </Text>
           </View>
         </View>
@@ -104,11 +119,22 @@ export function StlfProductCard() {
 function CardStat({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ flex: 1 }}>
-      <Text style={[sansation, { fontSize: 12, lineHeight: 16, color: S.inkFaint }]}>
+      <Text
+        style={[sansation, { fontSize: 12, lineHeight: 16, color: S.inkFaint }]}
+      >
         {label}
       </Text>
       <Text
-        style={[sansation, { fontSize: 15, lineHeight: 20, fontWeight: '500', color: S.ink, marginTop: 4 }]}
+        style={[
+          sansation,
+          {
+            fontSize: 15,
+            lineHeight: 20,
+            fontWeight: '500',
+            color: S.ink,
+            marginTop: 4,
+          },
+        ]}
       >
         {value}
       </Text>

@@ -36,7 +36,8 @@ local key). Signer via `createTurnkeyUmbraSigner`, published to the service
 layer by `signers/active.ts`.
 
 Its public ATA and its Umbra encrypted balance are two views of the same
-address — that is what "Move" moves between.
+address — Shield / Unshield (`features/shield/`) move value between them.
+(The standalone "Move" flow that also did this was removed.)
 
 **Private-transfer model used**: **stealth pool notes** (mixer). The sender
 creates a _burnable_ note, the recipient _claims_ it → hence the Claims screen.
@@ -142,7 +143,7 @@ On-chain order: `initialised → x25519 → commitment → isActiveForAnonymousU
 - `checkRegistrationStatus(client)` → throws if not ready (operation gate)
 - `ensureRegistered()` / `ensureRegisteredFor(client)` → **registers** if needed
   (idempotent, in-flight dedup, gated by `isFullyRegistered` to avoid loading
-  the 49.5 MB prover for nothing). Explicit: setup / MoveFlow / `useUmbra.register`.
+  the 49.5 MB prover for nothing). Explicit: setup / ShieldFlow / `useUmbra.register`.
 
 **Operations** verify (`checkRegistrationStatus`) but **do not trigger**
 registration. `precheckRecipient` (in `transfer.ts`) verifies the **recipient**

@@ -4,24 +4,57 @@ import { buildHomeCards, EARN_APY_TEASER } from '../homeGridCards';
 const balances = { totalUSD: 105, bankUSD: 100, encryptedUSD: 5 };
 
 describe('buildHomeCards', () => {
-  it('returns the three cards in order: cash, encrypted, earn', () => {
+  it('returns the four cards in order', () => {
     expect(buildHomeCards(balances).map((c) => c.key)).toEqual([
-      'cash', 'encrypted', 'earn',
+      'public-balance',
+      'private-balance',
+      'earn',
+      'store',
     ]);
   });
   it('maps balances to the value cards', () => {
-    const byKey = Object.fromEntries(buildHomeCards(balances).map((c) => [c.key, c]));
-    expect(byKey.cash).toMatchObject({ valueUSD: 100, accent: 'silver', iconKey: 'bank' });
-    expect(byKey.encrypted).toMatchObject({ valueUSD: 5, accent: 'gold', iconKey: 'shieldFull' });
+    const byKey = Object.fromEntries(
+      buildHomeCards(balances).map((c) => [c.key, c]),
+    );
+    expect(byKey['public-balance']).toMatchObject({
+      valueUSD: 100,
+      accent: 'silver',
+      iconKey: 'bank',
+    });
+    expect(byKey['private-balance']).toMatchObject({
+      valueUSD: 5,
+      accent: 'gold',
+      iconKey: 'shieldFull',
+    });
   });
   it('gives Earn a hardcoded APY teaser instead of a value', () => {
     const earn = buildHomeCards(balances).find((c) => c.key === 'earn')!;
-    expect(earn).toMatchObject({ teaser: `${EARN_APY_TEASER} APY`, accent: 'silver', iconKey: 'invest' });
+    expect(earn).toMatchObject({
+      teaser: `${EARN_APY_TEASER} APY`,
+      accent: 'silver',
+      iconKey: 'invest',
+    });
     expect('valueUSD' in earn).toBe(false);
+  });
+  it('leaves Store routeless until its screen exists', () => {
+    const store = buildHomeCards(balances).find((c) => c.key === 'store')!;
+    expect(store).toMatchObject({ teaser: 'Soon', iconKey: 'store' });
+    expect(store.route).toBeUndefined();
+  });
+  it('routes each built card at its matching screen', () => {
+    const routes = Object.fromEntries(
+      buildHomeCards(balances).map((c) => [c.key, c.route]),
+    );
+    expect(routes['public-balance']).toBe('/public-balance');
+    expect(routes['private-balance']).toBe('/private-balance');
+    expect(routes.earn).toBe('/earn');
   });
   it('uses the correct user-facing labels', () => {
     expect(buildHomeCards(balances).map((c) => c.label)).toEqual([
-      'Cash', 'Encrypted Balance', 'Earn',
+      'Public Balance',
+      'Private Balance',
+      'Earn',
+      'Store',
     ]);
   });
 });

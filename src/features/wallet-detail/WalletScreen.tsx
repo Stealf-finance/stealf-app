@@ -24,7 +24,11 @@ type Props = {
   iconImage: number;
   balanceUSD: number;
   assets: WalletAsset[];
-  /** Optional slot rendered right under the balance (e.g. a Claim button). */
+  /** Optional slot on the header's right edge, level with the title (e.g. the
+   *  Claim vault on Private Balance). Absent, the slot just balances the back
+   *  chevron so the title stays centred. */
+  headerRight?: ReactNode;
+  /** Optional slot rendered right under the balance. */
   belowBalance?: ReactNode;
   /** Optional slot rendered after the assets list (e.g. an "Available
    *  products" section). When provided, the empty-assets placeholder is
@@ -36,7 +40,7 @@ type Props = {
 };
 
 /**
- * Shared wallet-detail scaffold (Cash / Earn / Encrypted Balance / Wallet):
+ * Shared wallet-detail scaffold (Public Balance / Private Balance / Earn):
  * header (back + icon + title) → Balance → assets list, over the app nav bar.
  * Per-wallet actions live in the nav bar's "+" menu. Follows the type scale
  * (Title 28 / Display 48 / Caption 14) and 8-pt spacing.
@@ -46,6 +50,7 @@ export function WalletScreen({
   iconImage,
   balanceUSD,
   assets,
+  headerRight,
   belowBalance,
   footer,
   bottomBar,
@@ -67,7 +72,13 @@ export function WalletScreen({
         showsVerticalScrollIndicator={false}
       >
         {/* Header: back on the left, icon + title centered (spacer balances) */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 40 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 40,
+          }}
+        >
           <GlassBackButton onPress={() => router.back()} />
           <View
             style={{
@@ -87,19 +98,35 @@ export function WalletScreen({
             <Text
               style={[
                 sansation,
-                { fontSize: 22, lineHeight: 28, fontWeight: '600', color: T.ink },
+                {
+                  fontSize: 22,
+                  lineHeight: 28,
+                  fontWeight: '600',
+                  color: T.ink,
+                },
               ]}
             >
               {title}
             </Text>
           </View>
-          <View style={{ width: 26 }} />
+          {/* Balances the back chevron; holds `headerRight` when given. */}
+          <View style={{ minWidth: 26, alignItems: 'flex-end' }}>
+            {headerRight}
+          </View>
         </View>
 
         {/* Balance */}
         <View style={{ marginBottom: 40 }}>
           <Text
-            style={[sansation, { fontSize: 14, lineHeight: 20, color: pal.inkDim, marginBottom: 8 }]}
+            style={[
+              sansation,
+              {
+                fontSize: 14,
+                lineHeight: 20,
+                color: pal.inkDim,
+                marginBottom: 8,
+              },
+            ]}
           >
             Balance
           </Text>
@@ -107,7 +134,12 @@ export function WalletScreen({
             <Text
               style={[
                 serif,
-                { fontSize: 22, fontStyle: 'italic', color: pal.accent, includeFontPadding: false },
+                {
+                  fontSize: 22,
+                  fontStyle: 'italic',
+                  color: pal.accent,
+                  includeFontPadding: false,
+                },
               ]}
             >
               $
@@ -126,18 +158,27 @@ export function WalletScreen({
             >
               {int}
             </Text>
-            <Text style={[sansation, { fontSize: 22, color: pal.inkDim, includeFontPadding: false }]}>
+            <Text
+              style={[
+                sansation,
+                { fontSize: 22, color: pal.inkDim, includeFontPadding: false },
+              ]}
+            >
               {dec}
             </Text>
           </View>
 
-          {belowBalance ? <View style={{ marginTop: 16 }}>{belowBalance}</View> : null}
+          {belowBalance ? (
+            <View style={{ marginTop: 16 }}>{belowBalance}</View>
+          ) : null}
         </View>
 
         {/* Assets */}
         {assets.length === 0 ? (
           footer ? null : (
-            <Text style={{ fontSize: 14, color: pal.inkFaint, paddingVertical: 16 }}>
+            <Text
+              style={{ fontSize: 14, color: pal.inkFaint, paddingVertical: 16 }}
+            >
               No assets yet.
             </Text>
           )

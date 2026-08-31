@@ -1,9 +1,9 @@
 /** A payment method tile on the Pay hub. `discKey` selects the leading Disc
  *  in PayMethodTiles; `route` is omitted for coming-soon tiles. */
 export type PayMethod = {
-  key: 'private' | 'simple' | 'bank' | 'moove' | 'stealf-tag';
+  key: 'private' | 'simple' | 'bank' | 'stealf-tag';
   label: string;
-  discKey: 'umbra' | 'solana' | 'bank' | 'move' | 'stealf';
+  discKey: 'umbra' | 'solana' | 'bank' | 'stealf';
   route?: string;
   disabled?: boolean;
 };
@@ -21,7 +21,6 @@ export const PAY_METHODS: PayMethod[] = [
     discKey: 'solana',
     route: '/send/flow',
   },
-  { key: 'moove', label: 'Move', discKey: 'move', route: '/moove' },
   { key: 'bank', label: 'Bank transfer', discKey: 'bank', disabled: true },
   { key: 'stealf-tag', label: 'Stealf tag', discKey: 'stealf', disabled: true },
 ];

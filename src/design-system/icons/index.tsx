@@ -51,15 +51,6 @@ export const Icons = {
       <Circle cx="19" cy="12" r="1.5" fill={color} stroke="none" />
     </>
   )),
-  moove: make(
-    <Path d="M7 7h11M18 7l-3-3M18 7l-3 3M17 17H6M6 17l3-3M6 17l3 3" />,
-  ),
-  move: make(
-    <>
-      <Path d="M3 7h3l12 10h3M18 14l3 3-3 3" />
-      <Path d="M3 17h3l4-3.3M14 10.3l4-3.3h3M18 4l3 3-3 3" />
-    </>,
-  ),
   shield: make(<Path d="M12 2L3 6v6c0 5 4 9.5 9 10 5-.5 9-5 9-10V6l-9-4z" />),
   shieldCheck: make(
     <>
@@ -109,6 +100,13 @@ export const Icons = {
   ),
   bank: make(
     <Path d="M3 9l9-6 9 6M5 9v10h14V9M3 21h18M9 13v3M12 13v3M15 13v3" />,
+  ),
+  store: make(
+    <>
+      <Path d="M4 3h16l2 5a3 3 0 01-6 0 3 3 0 01-6 0 3 3 0 01-6 0l2-5z" />
+      <Path d="M5 10v10h14V10" />
+      <Path d="M10 20v-6h4v6" />
+    </>,
   ),
   dollar: make(
     <>
@@ -208,7 +206,9 @@ export const Icons = {
   sparkle: make(<Path d="M12 3l2 7 7 2-7 2-2 7-2-7-7-2 7-2z" />),
   close: make(<Path d="M6 6l12 12M18 6L6 18" />),
   check: make(<Path d="M5 12l5 5 9-11" />),
-  pencil: make(<Path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />),
+  pencil: make(
+    <Path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />,
+  ),
   mail: make(
     <>
       <Rect x="3" y="5" width="18" height="14" rx="2" />
@@ -262,6 +262,17 @@ export const Icons = {
   refresh: make(
     <>
       <Path d="M21 12a9 9 0 11-3.05-6.74M21 4v5h-5" />
+    </>,
+  ),
+  // Two chasing arcs — the shape loader.png drew, as a stroke glyph. Rotated
+  // by LoaderRefreshButton, so it has to read the same at every angle: both
+  // arcs span 135° and sit 180° apart.
+  loader: make(
+    <>
+      <Path d="M4 12a8 8 0 0113.66-5.66" />
+      <Path d="M18 3v3.5h-3.5" />
+      <Path d="M20 12a8 8 0 01-13.66 5.66" />
+      <Path d="M6 21v-3.5h3.5" />
     </>,
   ),
   trash: make(

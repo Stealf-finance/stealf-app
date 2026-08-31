@@ -14,7 +14,7 @@ import Animated, {
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
-import { MoveConfirm } from '@/src/features/moove/components/MoveConfirm';
+import { TxConfirmSheet } from '@/src/features/send/components/TxConfirmSheet';
 import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { sansation } from '@/src/design-system/typography';
@@ -416,7 +416,7 @@ export function SendFlow({ mode = 'public' }: Props) {
   // tab is gone; privacy mode resets so the nav tone stays silver on Home.)
   const finishToHome = () => {
     setMode('public');
-    router.replace('/(tabs)/bank');
+    router.replace('/(tabs)/home');
   };
 
   // "Make new transfer" — reset the flow back to a fresh recipient step.
@@ -673,10 +673,10 @@ export function SendFlow({ mode = 'public' }: Props) {
         )}
       </Animated.View>
 
-      {/* Confirmation — same bottom sheet as the Move flow, including the
-          in-sheet "submitted / pending" state after the slide. */}
+      {/* Confirmation — the shared bottom sheet, including the in-sheet
+          "submitted / pending" state after the slide. */}
       {asset && recipient ? (
-        <MoveConfirm
+        <TxConfirmSheet
           visible={step === 3}
           onClose={() => setStep(2)}
           onDone={finishToHome}
