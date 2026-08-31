@@ -6,7 +6,7 @@ import { performSessionTeardown } from '../lib/sessionTeardown';
 
 export function useLogout() {
   const { logout: turnkeyLogout } = useTurnkey();
-  const { reset } = useAuth();
+  const { reset, user } = useAuth();
   const queryClient = useQueryClient();
   const posthog = usePostHog();
 
@@ -22,6 +22,8 @@ export function useLogout() {
         queryClient,
         capture: (event) => posthog?.capture(event),
         resetAnalytics: () => posthog?.reset(),
+        stealthWallet: user?.stealfWallet,
+        bankWallet: user?.bankWallet,
       }),
   });
 }

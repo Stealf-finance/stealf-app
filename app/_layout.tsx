@@ -22,7 +22,7 @@ import {
   TURNKEY_CALLBACKS,
 } from '@/src/services/turnkey/config';
 import { AuthProvider } from '@/src/features/onboarding/context/AuthContext';
-import { PrivacyModeProvider } from '@/src/features/stealth/PrivacyModeContext';
+import { PrivacyModeProvider } from '@/src/features/umbra/PrivacyModeContext';
 import { BalanceVisibilityProvider } from '@/src/features/wallet/BalanceVisibilityContext';
 import { SocketProvider } from '@/src/components/SocketProvider';
 import { DataBootstrap } from '@/src/components/DataBootstrap';
@@ -136,6 +136,18 @@ function RootLayout() {
                             options={{ presentation: 'pageSheet' }}
                           />
                           <Stack.Screen
+                            name="stlf"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
+                            name="stlf-buy"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
+                            name="stlf-sell"
+                            options={{ presentation: 'pageSheet' }}
+                          />
+                          <Stack.Screen
                             name="xstock-trade/[symbol]"
                             options={{ presentation: 'pageSheet' }}
                           />
@@ -173,6 +185,14 @@ function RootLayout() {
                           />
                           <Stack.Screen
                             name="jito-about"
+                            options={{
+                              presentation: 'transparentModal',
+                              animation: 'fade',
+                              contentStyle: { backgroundColor: 'transparent' },
+                            }}
+                          />
+                          <Stack.Screen
+                            name="stlf-about"
                             options={{
                               presentation: 'transparentModal',
                               animation: 'fade',

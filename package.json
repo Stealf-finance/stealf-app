@@ -76,6 +76,7 @@
     "react-native-url-polyfill": "^3.0.0",
     "react-native-worklets": "0.5.1",
     "readable-stream": "4.7.0",
+    "snarkjs": "^0.7.6",
     "socket.io-client": "^4.8.3",
     "sonner-native": "^0.26.4",
     "text-encoding-polyfill": "^0.6.7",

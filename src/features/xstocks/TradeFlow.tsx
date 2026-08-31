@@ -42,7 +42,7 @@ export function TradeFlow({ symbol, mode }: { symbol: string; mode: Mode }) {
   const { user } = useAuth();
   const { data: detail } = useXstockAsset(symbol);
   const { data: xbal } = useXstockBalance(symbol);
-  const { data: wallet } = useBalance(isBuy ? user?.stealfWallet ?? null : null);
+  const { data: wallet } = useBalance(isBuy ? user?.bankWallet ?? null : null);
   const { buy, sell } = useXstockTrade();
 
   const price = detail?.referencePrice ?? 0;

@@ -1,6 +1,6 @@
 import { WalletScreen } from '@/src/features/wallet-detail/WalletScreen';
 import { AvailableProducts } from '@/src/features/earn/components/AvailableProducts';
-import { StealthWalletGate } from '@/src/features/stealth/screens/StealthWalletGate';
+import { StealthWalletGate } from '@/src/features/umbra/screens/StealthWalletGate';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 
 // Earn (yield) — no staked position yet, so a $0 balance hero over the

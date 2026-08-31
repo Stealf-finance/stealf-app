@@ -13,7 +13,6 @@ config.resolver.extraNodeModules = {
   buffer: require.resolve('buffer'),
   crypto: path.resolve(__dirname, 'crypto-shim.js'),
   fs: path.resolve(__dirname, 'fs-shim.js'),
-  snarkjs: path.resolve(__dirname, 'snarkjs-shim.js'),
 };
 
 
@@ -22,6 +21,11 @@ if (!config.resolver.assetExts.includes('zkey')) {
 }
 
 const moduleOverrides = {
+  // snarkjs is a declared dep, so extraNodeModules (a not-found fallback) is
+  // bypassed once it's installed. Force the stub via resolveRequest so the
+  // real snarkjs (which `require('readline')` — a Node builtin RN lacks) is
+  // never bundled. Proofs run natively via @umbra-privacy/rn-zk-prover.
+  snarkjs: path.resolve(__dirname, 'snarkjs-shim.js'),
   '@bufbuild/protobuf/codegenv2': path.resolve(
     __dirname,
     'node_modules/@bufbuild/protobuf/dist/cjs/codegenv2/index.js',

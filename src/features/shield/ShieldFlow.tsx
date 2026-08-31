@@ -14,7 +14,7 @@ import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { sansation } from '@/src/design-system/typography';
-import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
+import { StealthSetupOverlay } from '@/src/features/umbra/components/StealthSetupOverlay';
 import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
@@ -26,22 +26,22 @@ import {
 } from '@/src/features/send/lib/selectedAssetStore';
 import { Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
-import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
+import { useUmbra } from '@/src/features/umbra/hooks/useUmbra';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import {
   shieldedBalanceQueries,
   useShieldedSolBalance,
-} from '@/src/features/stealth/hooks/useShieldedSolBalance';
+} from '@/src/features/umbra/hooks/useShieldedSolBalance';
 import {
   useEncryptedBalances,
   encryptedBalancesQueries,
-} from '@/src/features/stealth/hooks/useEncryptedBalances';
+} from '@/src/features/umbra/hooks/useEncryptedBalances';
 import { balanceQueries } from '@/src/features/bank/api/balance';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
-import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
+import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/umbra/lib/errors';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
 import * as Sentry from '@sentry/react-native';
 

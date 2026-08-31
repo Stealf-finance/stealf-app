@@ -16,7 +16,7 @@ import {
   buildLegacyServiceKey,
   buildHashedServiceKey,
   createMasterSeedStorage,
-} from '../seed';
+} from '../storage/masterSeed';
 
 const getItemAsync = vi.mocked(SecureStore.getItemAsync);
 const setItemAsync = vi.mocked(SecureStore.setItemAsync);

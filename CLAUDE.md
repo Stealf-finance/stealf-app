@@ -30,9 +30,11 @@ npm run prebuild:ios:clean    # nuke ios/ and regenerate
 
 Notes:
 
-- `postinstall` runs `patch-package` — the Umbra SDK scanner patch
-  (`patches/@umbra-privacy+sdk+*.patch`) is applied on every install. Don't
-  hand-edit `node_modules`; edit the patch.
+- `postinstall` runs `patch-package` — the Umbra SDK patch
+  (`patches/@umbra-privacy+sdk+5.0.0-rc.4.patch`) is applied on every
+  install. Don't hand-edit `node_modules`; edit the patch. It is
+  version-locked: if it stops applying, the SDK moved — see the Umbra SDK
+  section before bumping anything.
 - Vitest only covers pure functions (`environment: 'node'`, `@` aliased to
   repo root). Anything importing a React Native native module won't run under
   Vitest — keep testable logic in `lib/` helpers, not in hooks/screens.
@@ -71,15 +73,23 @@ In this order:
 ### 1. The internal-code / UI-copy split is a wall
 
 Code keeps `stealfWallet`, `STEALF_*` SecureStore keys,
-`src/features/stealth/`, `keychainService: 'com.stealf.wallet'`,
-`shielded` / `unshielded` verbs internally. UI strings say "Stealth
-wallet", "Encrypted balance", "Shield" / "Unshield".
+`keychainService: 'com.stealf.wallet'`, `shielded` / `unshielded` verbs
+internally. UI strings say "Stealth wallet", "Encrypted balance",
+"Shield" / "Unshield".
 
-**Do NOT** rename schema fields, SecureStore keys, folder names, or
-DB-side identifiers in pursuit of clarity. Renaming them resets every
-existing user's wallet access, breaks AuthContext hydration, and
-forces a backend migration. UI-only changes are cheap; everything
-else is a breaking change.
+> The feature folder moved `src/features/stealth/` → `src/features/umbra/`
+> on `feat/umbra-review`, and the ZK layer with it, to
+> `src/services/umbra/zk/`. Signed-off exception: folder names carry no
+> user state. The identifiers listed above are the ones that must never
+> move — renaming any of them is a breaking change.
+
+**Do NOT** rename schema fields, SecureStore keys, or DB-side
+identifiers in pursuit of clarity. Renaming them resets every existing
+user's wallet access, breaks AuthContext hydration, and forces a backend
+migration. UI-only changes are cheap; everything else is a breaking
+change. Folder and file names are the one safe category — they hold no
+user state — but they still need sign-off, because half the docs point
+at them.
 
 If you think you've found an inconsistency to fix, check
 `.claude/docs/glossary.md` first — most "drift" is internal vs UI by design.
@@ -163,7 +173,15 @@ The app is built in vertical slices. Current state:
   account)
 - ✅ Telemetry (Sentry crashes, PostHog events — session replay
   disabled per security policy)
-- ⚠️ Yield (Grow) — UI exists, services not yet fully wired
+- ⚠️ Yield (Grow) — three products wired, all **mainnet-only**, so none
+  has run end-to-end: Reflect/STLF (`features/reflect/`), xStocks
+  (`features/xstocks/`), JitoSOL (`features/jito/`, APY read from Jito's
+  public stake-pool API). Trades sign with the **bank** wallet — the
+  backend `resolveSigner` authorizes only that one, and routing through
+  the backend must not leak the stealth↔identity link.
+- ⚠️ Swap (`features/swap/`) — public swap via Jupiter. The private swap
+  (unshield → ephemeral → Jupiter → re-shield) is not in the tree: it
+  lives in open draft PR #56, guarded off, on standby.
 - ⚠️ Card — stub
 - ⚠️ App lock screen (`app/lock.tsx`) — stub by design (Thomas
   deferred niveau-2 lock; AppState background clear also deferred)
@@ -201,14 +219,20 @@ native xcframework distributed via npm). Don't touch the package source
 unless you've read `.claude/docs/spike-mopro.md`. The provers consume zkey
 assets — one (`createdepositwithpublicamount.zkey`, ~4.0 MB) is shipped
 in-bundle at `assets/zk/`; others are lazy-fetched at first use via
-`src/features/stealth/zk/services/zkAssetService.ts`. Changes to the
+`src/services/umbra/zk/services/zkAssetService.ts`. Changes to the
 zkey loading strategy ripple into `metro.config.js` and the splash gate.
 
 ## Umbra SDK v5 (stealth core)
 
 The stealth flow runs on `@umbra-privacy/sdk` `5.0.0-rc.4`
-(`rn-zk-prover` 5.0.0). Key integration facts, all in
-`src/services/umbra/`:
+(`rn-zk-prover` 5.0.0). The version is pinned **exact — no caret**: the
+`patch-package` patch targets rc.4's built chunk filenames, so any float
+(rc.6 included) makes it fail to apply, and note scanning breaks against
+the v5 indexer with no error at the call site. Moving off rc.4 is a
+deliberate three-step job: install → regenerate the patch → re-test a
+full scan.
+
+Key integration facts, all in `src/services/umbra/`:
 
 - **Client** (`client.ts`): two-phase `getUmbraClient` build (bare client
   → sharded stores → final client), `getPollingComputationMonitor` in
@@ -223,9 +247,14 @@ The stealth flow runs on `@umbra-privacy/sdk` `5.0.0-rc.4`
   uses native crypto — AES-256-GCM via `react-native-quick-crypto`, and
   X25519 via `@umbra-privacy/rn-quick-x25519` `scalarMultAsync` (runs on a
   background thread, zero-copy ArrayBuffer). Without this a full
-  merkle-tree scan blocks the JS thread for ~20s. The SDK scanner is
-  patched (`patches/@umbra-privacy+sdk+5.0.0-rc.4.patch`) to `await` the
-  async X25519; the same patch carries a base64-LE bigint parse fix.
+  merkle-tree scan blocks the JS thread for ~20s. The async function is
+  injected as a scanner dep in `queries/scanNotes.ts`; rc.4 already
+  `await`s it upstream, so no patch is involved in that path.
+- **SDK patch** (`patches/@umbra-privacy+sdk+5.0.0-rc.4.patch`) — two
+  unrelated fixes, neither about X25519: a base64-LE bigint decode for
+  the indexer's `h1_version` / `h1_commitment_index` (the parser calls
+  `BigInt()` straight on a base64 string), and `await import(…)` →
+  `require(…)` for the indexer chunk so Metro can resolve it.
 - Devnet test tokens dUSDC / dUSDT live in `src/constants/solana.ts`.
 
 ## When in doubt, defer to .claude/docs/

@@ -15,7 +15,7 @@ import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { MoveConfirm } from '@/src/features/moove/components/MoveConfirm';
-import { StealthSetupOverlay } from '@/src/features/stealth/components/StealthSetupOverlay';
+import { StealthSetupOverlay } from '@/src/features/umbra/components/StealthSetupOverlay';
 import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
@@ -41,13 +41,13 @@ import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import { useSendSimple } from './hooks/useSendSimple';
 import { mapTokensToAssets } from './lib/mapTokenToAsset';
 import { useQueryClient } from '@tanstack/react-query';
-import { shieldedBalanceQueries } from '@/src/features/stealth/hooks/useShieldedSolBalance';
+import { shieldedBalanceQueries } from '@/src/features/umbra/hooks/useShieldedSolBalance';
 import {
   useEncryptedBalances,
   encryptedBalancesQueries,
-} from '@/src/features/stealth/hooks/useEncryptedBalances';
+} from '@/src/features/umbra/hooks/useEncryptedBalances';
 import { historyQueries } from '@/src/features/bank/api/history';
-import { useUmbra } from '@/src/features/stealth/hooks/useUmbra';
+import { useUmbra } from '@/src/features/umbra/hooks/useUmbra';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import {
@@ -56,8 +56,8 @@ import {
   toRawAmount,
   PRIVATE_OP_SOL_FEE_RESERVE,
 } from '@/src/features/send/lib/amount';
-import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/stealth/lib/errors';
-import { usePrivacyMode } from '@/src/features/stealth/PrivacyModeContext';
+import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/umbra/lib/errors';
+import { usePrivacyMode } from '@/src/features/umbra/PrivacyModeContext';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
 import * as Sentry from '@sentry/react-native';
 

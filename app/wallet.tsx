@@ -3,7 +3,7 @@ import { WalletBottomBar } from '@/src/features/wallet-detail/WalletBottomBar';
 import { type QuickAction } from '@/src/components/nav/QuickActionMenu';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
-import { StealthWalletGate } from '@/src/features/stealth/screens/StealthWalletGate';
+import { StealthWalletGate } from '@/src/features/umbra/screens/StealthWalletGate';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { SOL_ICON_URI } from '@/src/constants/solana';
 

@@ -1,11 +1,6 @@
 import { z } from 'zod';
 import { apiGet } from '@/src/services/api/client';
 
-/**
- * SOL/USD price — backend `/api/pricing/sol-price` (CoinGecko-backed, cached).
- * Authenticated (Turnkey session JWT). `apiGet` unwraps the `{ success, data }`
- * envelope and throws on non-200; on error React Query keeps the last value.
- */
 export const SolPriceSchema = z.object({
   price_usd: z.number().positive(),
 });

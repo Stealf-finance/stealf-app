@@ -1,8 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
-import { clearStealthState } from '@/src/features/stealth/hooks/useUmbra';
-import { umbraClearSeed } from '@/src/services/umbra/seed';
+import { clearStealthState } from '@/src/features/umbra/hooks/useUmbra';
+import { clearMasterSeed } from '@/src/services/umbra/storage/masterSeed';
 import { clearAllMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { persister } from '@/src/services/queryClient';
 import { purgeTurnkeyState } from './passkeyHelpers';
@@ -15,6 +15,9 @@ export interface SessionTeardownDeps {
   queryClient: QueryClient;
   capture?: (event: string) => void;
   resetAnalytics?: () => void;
+  /** Wallet addresses whose master seed should be wiped from the Keychain. */
+  stealthWallet?: string | null;
+  bankWallet?: string | null;
 }
 
 // A 401 storm (several queries in flight when the JWT dies) emits one event
@@ -33,7 +36,10 @@ async function run(
   );
   socketService.disconnect();
   clearStealthState();
-  await umbraClearSeed();
+  // The master seed is keyed per wallet address; wipe both wallets' seeds so a
+  // previous user's viewing keys don't linger on a shared device.
+  if (deps.stealthWallet) await clearMasterSeed(deps.stealthWallet);
+  if (deps.bankWallet) await clearMasterSeed(deps.bankWallet);
   // Drops the decrypted UTXO / nullifier store. It belongs here rather than in
   // useLogout so the session_expired path wipes it too — that's the case where
   // the user did *not* choose to sign out, on a possibly shared device.

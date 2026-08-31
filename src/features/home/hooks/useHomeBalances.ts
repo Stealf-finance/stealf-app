@@ -1,6 +1,6 @@
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
-import { useEncryptedBalances } from '@/src/features/stealth/hooks/useEncryptedBalances';
+import { useEncryptedBalances } from '@/src/features/umbra/hooks/useEncryptedBalances';
 import { aggregateHomeBalances, type HomeBalances } from '../lib/aggregateHomeBalances';
 
 export function useHomeBalances(): HomeBalances & { isLoading: boolean } {
