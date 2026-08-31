@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { socketService } from '@/src/services/real-time/socket';
 import { clearUmbraState } from '@/src/features/umbra/hooks/useUmbra';
 import { clearMasterSeed } from '@/src/services/umbra/storage/masterSeed';
+import { clearLegacyStealthKeys } from '@/src/services/auth/legacyStealthKeys';
 import { clearAllMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { persister } from '@/src/services/queryClient';
 import { purgeTurnkeyState } from './passkeyHelpers';
@@ -41,6 +42,7 @@ async function run(
   // useLogout so the session_expired path wipes it too — that's the case where
   // the user did *not* choose to sign out, on a possibly shared device.
   await clearAllMmkvStorageBackend();
+  await clearLegacyStealthKeys();
   try {
     await turnkeyLogout();
   } catch {

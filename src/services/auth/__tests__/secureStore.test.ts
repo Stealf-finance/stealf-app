@@ -25,9 +25,19 @@ describe('secureStore options', () => {
     }
   });
 
-  it('classifies PK, mnemonic, and session token as the keys to gate first when biometric is restored', () => {
-    expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.STEALF_PRIVATE_KEY);
-    expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.STEALF_MNEMONIC);
-    expect(HIGH_SENSITIVITY_KEYS).toContain(SECURE_STORE_KEYS.SESSION_TOKEN);
+  it('classifies the session token as the key to gate first when biometric is restored', () => {
+    expect(HIGH_SENSITIVITY_KEYS).toEqual([SECURE_STORE_KEYS.SESSION_TOKEN]);
+  });
+
+  // The stealth wallet's key and mnemonic are delete-only now: nothing writes
+  // them, `clearLegacyStealthKeys` only removes them. Gating them would be
+  // gating something that should not exist on the device at all.
+  it('no longer gates the retired stealth wallet keys', () => {
+    expect(HIGH_SENSITIVITY_KEYS).not.toContain(
+      SECURE_STORE_KEYS.STEALF_PRIVATE_KEY,
+    );
+    expect(HIGH_SENSITIVITY_KEYS).not.toContain(
+      SECURE_STORE_KEYS.STEALF_MNEMONIC,
+    );
   });
 });

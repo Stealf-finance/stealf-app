@@ -26,6 +26,7 @@ import { PrivacyModeProvider } from '@/src/features/umbra/PrivacyModeContext';
 import { BalanceVisibilityProvider } from '@/src/features/wallet/BalanceVisibilityContext';
 import { SocketProvider } from '@/src/components/SocketProvider';
 import { DataBootstrap } from '@/src/components/DataBootstrap';
+import { purgeLegacyStealthKeysOnce } from '@/src/services/auth/legacyStealthKeys';
 import { AuthGuard } from '@/src/components/AuthGuard';
 import { SessionSync } from '@/src/components/SessionSync';
 import { TelemetrySmokeTest } from '@/src/components/TelemetrySmokeTest';
@@ -61,6 +62,12 @@ function RootLayout() {
     CormorantGaramond_500Medium_Italic,
     JetBrainsMono_400Regular,
   });
+
+  // Drops the removed stealth wallet's Keychain items on existing installs.
+  // Fire-and-forget: nothing downstream depends on it.
+  useEffect(() => {
+    purgeLegacyStealthKeysOnce();
+  }, []);
 
   useEffect(() => {
     Asset.loadAsync(PRELOAD_IMAGES)

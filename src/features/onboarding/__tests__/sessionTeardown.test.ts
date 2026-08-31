@@ -80,16 +80,15 @@ describe('performSessionTeardown', () => {
     expect(clearUmbraState).toHaveBeenCalled();
   });
 
-  // Deliberate: the retired stealth wallet's private key and recovery phrase
-  // stay in the Keychain on sign-out. Any funds left on that address are
-  // reachable only through them and the app no longer offers a re-import path,
-  // so wiping here would strand them. Account deletion clears them instead.
+  // The stealth wallet only ever existed on devnet, so there is nothing to
+  // preserve — its key and recovery phrase go on both teardown paths, not just
+  // the one the user chose.
   it.each(['user_signed_out', 'session_expired'] as const)(
-    'leaves the legacy stealth keys in place on the %s path',
+    'wipes the legacy stealth keys on the %s path',
     async (reason) => {
       await performSessionTeardown(reason, makeDeps());
 
-      expect(clearLegacyStealthKeys).not.toHaveBeenCalled();
+      expect(clearLegacyStealthKeys).toHaveBeenCalledTimes(1);
     },
   );
 

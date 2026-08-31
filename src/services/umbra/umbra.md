@@ -256,9 +256,9 @@ The code keeps the internal names (`STEALF_*` keys, the `shielded` verb).
 and the MMKV encryption key live under it, so moving it locks every existing
 user out of their own notes.
 
-`STEALF_PRIVATE_KEY` / `STEALF_MNEMONIC` are **legacy**: nothing reads them any
-more, they are only wiped on account deletion. See rule 4 in `CLAUDE.md` for why
-sign-out deliberately leaves them alone.
+`STEALF_PRIVATE_KEY` / `STEALF_MNEMONIC` are **legacy and delete-only**: nothing
+reads or writes them, and `clearLegacyStealthKeys()` purges them at boot, on
+sign-out / session expiry, and on account deletion.
 
 In the UI we say "Encrypted balance", "Shield/Unshield". The name "Umbra" is
 **internal**, never in visible copy.

@@ -53,8 +53,6 @@ export function useDeleteAccount() {
       // Deleting the account must not leave the decrypted UTXO / nullifier
       // store behind on the device.
       await clearAllMmkvStorageBackend();
-      // The user is leaving — take the removed stealth wallet's Keychain
-      // items with them. Sign-out deliberately leaves them in place.
       await clearLegacyStealthKeys();
       try {
         await turnkeyLogout();

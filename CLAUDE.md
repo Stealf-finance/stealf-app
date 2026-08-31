@@ -51,9 +51,8 @@ Stealf is a privacy-first neobank on Solana. **One wallet per user:**
 > A second, locally-keyed **stealth wallet** used to sit alongside it and
 > carried the whole privacy layer. It was removed on
 > `feat/single-turnkey-wallet`; Turnkey now signs xStocks, Reflect, Jito,
-> Umbra, swap and send alike. Its Keychain items (`STEALF_PRIVATE_KEY`,
-> `STEALF_MNEMONIC`, `STEALF_WALLET_ADDRESS`) are still on existing
-> devices and are only wiped on account deletion — see rule 4.
+> Umbra, swap and send alike. It only ever ran on devnet, so no migration
+> was needed and its Keychain items are purged outright — see rule 4.
 
 Real money, real users (currently ~150 in a separate prod app called
 `front-stealf`; this repo is the UI/UX rebuild). Treat every change
@@ -165,15 +164,16 @@ and let the caller retry; never fall back to anything else.
   `com.stealf.wallet:auth` — a different Keychain item. Every existing
   user's private key and mnemonic become unreadable, recoverable only by
   manual mnemonic re-import. Write the migration first.
-- ⚠️ **The removed stealth wallet's Keychain items survive on existing
-  devices.** `STEALF_PRIVATE_KEY` and `STEALF_MNEMONIC` still hold a live
-  ED25519 key and its recovery phrase. Sign-out deliberately leaves them
-  alone: funds left on that address are reachable only through the phrase
-  and the app has no re-import path any more, so wiping there would
-  strand them for good. Only account deletion clears them, via
-  `clearLegacyStealthKeys()`. **There is no sweep yet** — nothing moves
-  those funds to the bank wallet. Write one before telling users the old
-  wallet is gone.
+- The removed stealth wallet's Keychain items (`STEALF_PRIVATE_KEY`,
+  `STEALF_MNEMONIC`, `STEALF_WALLET_ADDRESS`) are **delete-only**: nothing
+  writes them, and `clearLegacyStealthKeys()` wipes them at boot, on both
+  teardown paths, and on account deletion. The wallet was devnet-only, so
+  no sweep was needed. `SECURE_STORE_KEYS` keeps the names purely so the
+  deletion can address them — don't reintroduce a writer.
+- `HIGH_SENSITIVITY_KEYS` now lists only `SESSION_TOKEN`. The genuinely
+  sensitive material sits under runtime-built names that list can't hold:
+  `umbra_master_seed_<hash>` (the viewing key) and
+  `umbra_store_encryption_key` (unlocks the decrypted UTXO store).
 - Umbra's MMKV note store is encrypted at rest under a random key held in
   the Keychain (`storage/mmkvStorageBackend.ts`). It holds _decrypted_
   UTXOs — wipe it via `clearAllMmkvStorageBackend()` on any logout or
