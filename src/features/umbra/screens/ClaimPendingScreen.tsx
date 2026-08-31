@@ -22,7 +22,7 @@ import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { usePendingClaims } from '@/src/features/umbra/hooks/usePendingClaims';
 import { claimScanQueries } from '@/src/features/umbra/hooks/useClaimScan';
-import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
+import type { ClaimScanResult } from '@/src/services/umbra/queries/scanNotes';
 import { useUmbra } from '@/src/features/umbra/hooks/useUmbra';
 import { shieldedBalanceQueries } from '@/src/features/umbra/hooks/useShieldedSolBalance';
 import { encryptedBalancesQueries } from '@/src/features/umbra/hooks/useEncryptedBalances';

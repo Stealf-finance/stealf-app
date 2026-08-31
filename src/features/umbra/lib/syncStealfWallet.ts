@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/react-native';
 import {
   fetchClaimScan,
   type ClaimScanResult,
-} from '@/src/services/umbra/queries/claims';
+} from '@/src/services/umbra/queries/scanNotes';
 import { hasMmkvStorageBackendData } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import {
   fetchUmbraRegistration,

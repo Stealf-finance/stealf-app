@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useClaimScan, type UseClaimScanOptions } from './useClaimScan';
-import type { ClaimScanResult } from '@/src/services/umbra/queries/claims';
+import type { ClaimScanResult } from '@/src/services/umbra/queries/scanNotes';
 
 export function usePendingClaimsForCash(options?: UseClaimScanOptions) {
   const { user } = useAuth();

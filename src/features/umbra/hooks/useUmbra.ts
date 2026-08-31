@@ -20,14 +20,14 @@ import {
   ensureRegisteredFor,
 } from '@/src/services/umbra/registration';
 import { clearBurntUtxos } from '@/src/services/umbra/burntUtxos';
-import { clearClaimScanner } from '@/src/services/umbra/queries/claims';
+import { clearClaimScanner } from '@/src/services/umbra/queries/scanNotes';
 
 import { deposit } from '@/src/services/umbra/operations/deposit';
 import { withdraw } from '@/src/services/umbra/operations/withdraw';
 import {
   claimReceived,
   claimSelfToPublic,
-} from '@/src/services/umbra/operations/claim';
+} from '@/src/services/umbra/operations/burnNotes';
 import {
   getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
   getEncryptedBalanceToSelfClaimableUtxoCreatorFunction,
