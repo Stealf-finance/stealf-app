@@ -1,6 +1,10 @@
+import { Pressable } from 'react-native';
 import { WalletScreen } from '@/src/features/wallet-detail/WalletScreen';
-import { WalletBottomBar } from '@/src/features/wallet-detail/WalletBottomBar';
-import { type QuickAction } from '@/src/components/nav/QuickActionMenu';
+import {
+  QuickActionMenu,
+  type QuickAction,
+} from '@/src/components/nav/QuickActionMenu';
+import { VaultGlyph } from '@/src/design-system/icons/VaultGlyph';
 import { useEncryptedBalances } from '@/src/features/umbra/hooks/useEncryptedBalances';
 import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
@@ -9,9 +13,19 @@ const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
 
 const ACTIONS: QuickAction[] = [
   { key: 'shield', label: 'Shield', iconKey: 'shieldFull', route: '/shield' },
-  { key: 'unshield', label: 'Unshield', iconKey: 'shieldSplit', route: '/unshield' },
+  {
+    key: 'unshield',
+    label: 'Unshield',
+    iconKey: 'shieldSplit',
+    route: '/unshield',
+  },
   { key: 'swap', label: 'Private Swap', iconKey: 'swap' }, // not built yet
-  { key: 'send', label: 'Private Send', iconKey: 'arrUpRight', route: '/send/flow?mode=private' },
+  {
+    key: 'send',
+    label: 'Private Send',
+    iconKey: 'arrUpRight',
+    route: '/send/flow?mode=private',
+  },
 ];
 
 export default function EncryptedScreen() {
@@ -35,13 +49,17 @@ export default function EncryptedScreen() {
         iconImage={require('@/assets/images/shield.png')}
         balanceUSD={encrypted.data?.totalUSD ?? 0}
         assets={assets}
-        bottomBar={
-          <WalletBottomBar
-            fabActions={ACTIONS}
-            historyRoute="/transactions"
-            claimTarget="encrypted"
-          />
+        headerRight={
+          <Pressable
+            onPress={() => router.push('/claims?target=encrypted')}
+            accessibilityRole="button"
+            accessibilityLabel="Claim"
+            hitSlop={12}
+          >
+            <VaultGlyph width={30} />
+          </Pressable>
         }
+        bottomBar={<QuickActionMenu actions={ACTIONS} />}
         tone="gold"
       />
       <UmbraSetupOverlay onClose={() => router.back()} />

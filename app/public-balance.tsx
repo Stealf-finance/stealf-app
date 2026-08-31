@@ -1,17 +1,26 @@
 import { WalletScreen } from '@/src/features/wallet-detail/WalletScreen';
-import { WalletBottomBar } from '@/src/features/wallet-detail/WalletBottomBar';
-import { BankProducts } from '@/src/features/bank/components/BankProducts';
-import { type QuickAction } from '@/src/components/nav/QuickActionMenu';
+import {
+  QuickActionMenu,
+  type QuickAction,
+} from '@/src/components/nav/QuickActionMenu';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { USDC_LOGO_URI } from '@/src/constants/solana';
 
 const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
 
+// Send goes straight to the public flow, not the /send-choice hub: neither of
+// the hub's other options can spend this balance — private send draws on the
+// encrypted balance, and fiat isn't built.
 const ACTIONS: QuickAction[] = [
-  { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send-choice' },
-  { key: 'receive', label: 'Receive', iconKey: 'arrDownLeft', route: '/receive-choice' },
   { key: 'swap', label: 'Swap', iconKey: 'swap', route: '/swap' },
+  { key: 'send', label: 'Send', iconKey: 'arrUpRight', route: '/send/flow' },
+  {
+    key: 'receive',
+    label: 'Receive',
+    iconKey: 'arrDownLeft',
+    route: '/receive-choice',
+  },
 ];
 
 export default function CashScreen() {
@@ -36,10 +45,7 @@ export default function CashScreen() {
       iconImage={require('@/assets/images/coin.png')}
       balanceUSD={bal.data?.totalUSD ?? 0}
       assets={assets}
-      belowBalance={<BankProducts />}
-      bottomBar={
-        <WalletBottomBar fabActions={ACTIONS} historyRoute="/transactions" claimTarget="bank" />
-      }
+      bottomBar={<QuickActionMenu actions={ACTIONS} />}
       tone="silver"
     />
   );
