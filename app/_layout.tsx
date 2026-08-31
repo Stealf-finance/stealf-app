@@ -123,10 +123,6 @@ function RootLayout() {
                             options={{ animation: 'fade' }}
                           />
                           <Stack.Screen
-                            name="moove"
-                            options={{ presentation: 'pageSheet' }}
-                          />
-                          <Stack.Screen
                             name="shield"
                             options={{ presentation: 'pageSheet' }}
                           />

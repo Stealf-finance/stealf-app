@@ -193,8 +193,6 @@ The app is built in vertical slices. Current state:
 - ✅ Bank (balance, history, send simple, receive)
 - ✅ Privacy / Umbra (registration, shield, unshield, private send,
   claims, encrypted balance) — all on the bank wallet
-- ✅ Move flow (public balance ↔ encrypted balance, two directions) —
-  internal feature folder is `src/features/moove/`
 - ✅ Profile (Turnkey recovery-phrase export, logout, delete account)
 - ✅ Telemetry (Sentry crashes, PostHog events — session replay
   disabled per security policy)

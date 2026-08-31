@@ -2,11 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { PAY_METHODS } from '../payMethods';
 
 describe('PAY_METHODS', () => {
-  it('lists Private, Simple, Move, Bank, Stealf-tag in order', () => {
+  it('lists Private, Simple, Bank, Stealf-tag in order', () => {
     expect(PAY_METHODS.map((m) => m.key)).toEqual([
       'private',
       'simple',
-      'moove',
       'bank',
       'stealf-tag',
     ]);
@@ -23,13 +22,6 @@ describe('PAY_METHODS', () => {
     expect(m?.label).toBe('Simple transfer');
     expect(m?.discKey).toBe('solana');
     expect(m?.route).toBe('/send/flow');
-    expect(m?.disabled).toBeFalsy();
-  });
-  it('routes Move to the move flow', () => {
-    const m = PAY_METHODS.find((m) => m.key === 'moove');
-    expect(m?.label).toBe('Move');
-    expect(m?.discKey).toBe('move');
-    expect(m?.route).toBe('/moove');
     expect(m?.disabled).toBeFalsy();
   });
   it('marks Bank as coming-soon (disabled, no route)', () => {

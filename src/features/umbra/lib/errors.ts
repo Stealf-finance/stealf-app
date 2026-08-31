@@ -77,8 +77,8 @@ export class StealthError extends Error {
 
 /**
  * The user-facing message for `INSUFFICIENT_FEE_SOL`. Exported so the
- * `MoveFlow` pre-flight can reuse it verbatim — same wording whether the
- * failure surfaces from a simulation log or from the local balance check.
+ * `ShieldFlow` / `SendFlow` pre-flights can reuse it verbatim — same wording
+ * whether the failure surfaces from a simulation log or the local balance check.
  */
 export const INSUFFICIENT_FEE_SOL_MESSAGE =
   "Your wallet doesn't have enough SOL to pay network fees. Send a small amount of SOL (around 0.01) to your wallet, then try again.";

@@ -37,7 +37,6 @@ const DEFAULT_ACTIONS: QuickAction[] = [
     iconKey: 'arrDownLeft',
     route: '/receive-choice',
   },
-  { key: 'move', label: 'Move', iconKey: 'moove', route: '/moove' },
   { key: 'buy', label: 'Buy', iconKey: 'dollar' }, // not built yet
 ];
 

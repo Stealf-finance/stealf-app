@@ -20,7 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
+import { SwipeToSend } from './SwipeToSend';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette, type Tone } from '@/src/design-system/palettes';
@@ -245,10 +245,10 @@ function DetailRow({
   );
 }
 
-/** Move confirmation — a compact bottom sheet: title, hero amount ($ + token),
- *  the transfer details (from / receiving / token), fee breakdown, and a
- *  slide-to-confirm. */
-export function MoveConfirm({
+/** Transaction confirmation — a compact bottom sheet: title, hero amount
+ *  ($ + token), the transfer details (from / receiving / token), fee breakdown,
+ *  and a slide-to-confirm, followed in place by the pending / success states. */
+export function TxConfirmSheet({
   visible,
   onClose,
   onDone,
