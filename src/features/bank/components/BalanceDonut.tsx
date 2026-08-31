@@ -14,8 +14,8 @@ const RADIUS = (SIZE - STROKE) / 2;
  *  light→dark ramp, differentiated by secondary encoding (segment gaps +
  *  dot/label legend). */
 const SECTIONS = [
-  { key: 'cash', label: 'Cash', color: '#e8e8ea' },
-  { key: 'encrypted', label: 'Encrypted Balance', color: '#c9c9cc' },
+  { key: 'cash', label: 'Public Balance', color: '#e8e8ea' },
+  { key: 'encrypted', label: 'Private Balance', color: '#c9c9cc' },
   { key: 'earn', label: 'Earn', color: '#666670' },
 ] as const;
 

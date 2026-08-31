@@ -40,7 +40,7 @@ type Props = {
 };
 
 /**
- * Shared wallet-detail scaffold (Cash / Earn / Encrypted Balance / Wallet):
+ * Shared wallet-detail scaffold (Public Balance / Private Balance / Earn):
  * header (back + icon + title) → Balance → assets list, over the app nav bar.
  * Per-wallet actions live in the nav bar's "+" menu. Follows the type scale
  * (Title 28 / Display 48 / Caption 14) and 8-pt spacing.
