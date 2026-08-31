@@ -8,6 +8,7 @@
  * wallet's STLF holding. Buy/Sell route into the amount-entry flow.
  */
 import { ReactNode, useState } from 'react';
+import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,7 +22,6 @@ import { splitUsd } from '@/src/features/home/lib/formatUsd';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useReflectStats, useReflectBalance } from '../hooks/useReflectData';
-import { StlfMark } from '../components/StlfMark';
 
 const S = txPalette('silver');
 
@@ -52,7 +52,9 @@ export function StlfProductScreen() {
   const [copied, setCopied] = useState(false);
 
   const apyPct =
-    typeof stats?.realtimeApy === 'number' ? stats.realtimeApy : FALLBACK_APY_PCT;
+    typeof stats?.realtimeApy === 'number'
+      ? stats.realtimeApy
+      : FALLBACK_APY_PCT;
   const stlf = balance?.usdcPlusUiAmount ?? 0;
   const usdValue = balance?.usdValue ?? 0;
   const mint = balance?.mint ?? '';
@@ -80,8 +82,14 @@ export function StlfProductScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header: back · mark + title · help */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 32 }}>
+        {/* Header: back · logo + title · help */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 32,
+          }}
+        >
           <GlassBackButton onPress={() => router.back()} />
           <View
             style={{
@@ -92,14 +100,24 @@ export function StlfProductScreen() {
               gap: 10,
             }}
           >
-            <StlfMark size={30} />
+            <Image
+              source={require('@/assets/images/icon.png')}
+              style={{ width: 30, height: 30, borderRadius: 15 }}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
             <Text
               style={[
                 sansation,
-                { fontSize: 22, lineHeight: 28, fontWeight: '600', color: T.ink },
+                {
+                  fontSize: 22,
+                  lineHeight: 28,
+                  fontWeight: '600',
+                  color: T.ink,
+                },
               ]}
             >
-              STLF
+              $STLF
             </Text>
           </View>
           <Pressable
@@ -109,14 +127,29 @@ export function StlfProductScreen() {
             accessibilityLabel="About STLF"
             style={{ width: 40, alignItems: 'flex-end' }}
           >
-            <Text style={[sansation, { fontSize: 20, fontWeight: '700', color: S.ink }]}>?</Text>
+            <Text
+              style={[
+                sansation,
+                { fontSize: 20, fontWeight: '700', color: S.ink },
+              ]}
+            >
+              ?
+            </Text>
           </Pressable>
         </View>
 
         {/* Balance — wallet-screen style */}
         <View style={{ marginBottom: 32 }}>
           <Text
-            style={[sansation, { fontSize: 14, lineHeight: 20, color: S.inkDim, marginBottom: 8 }]}
+            style={[
+              sansation,
+              {
+                fontSize: 14,
+                lineHeight: 20,
+                color: S.inkDim,
+                marginBottom: 8,
+              },
+            ]}
           >
             Balance
           </Text>
@@ -124,7 +157,12 @@ export function StlfProductScreen() {
             <Text
               style={[
                 serif,
-                { fontSize: 22, fontStyle: 'italic', color: S.accent, includeFontPadding: false },
+                {
+                  fontSize: 22,
+                  fontStyle: 'italic',
+                  color: S.accent,
+                  includeFontPadding: false,
+                },
               ]}
             >
               $
@@ -143,11 +181,21 @@ export function StlfProductScreen() {
             >
               {int}
             </Text>
-            <Text style={[sansation, { fontSize: 22, color: S.inkDim, includeFontPadding: false }]}>
+            <Text
+              style={[
+                sansation,
+                { fontSize: 22, color: S.inkDim, includeFontPadding: false },
+              ]}
+            >
               {dec}
             </Text>
           </View>
-          <Text style={[sansation, { fontSize: 13, color: S.inkFaint, marginTop: 8 }]}>
+          <Text
+            style={[
+              sansation,
+              { fontSize: 13, color: S.inkFaint, marginTop: 8 },
+            ]}
+          >
             {fmtStlf(stlf)} STLF
           </Text>
         </View>
@@ -156,7 +204,14 @@ export function StlfProductScreen() {
         <Text
           style={[
             sansation,
-            { fontSize: 18, lineHeight: 24, fontWeight: '600', letterSpacing: -0.2, color: S.ink, marginBottom: 12 },
+            {
+              fontSize: 18,
+              lineHeight: 24,
+              fontWeight: '600',
+              letterSpacing: -0.2,
+              color: S.ink,
+              marginBottom: 12,
+            },
           ]}
         >
           Details
@@ -167,8 +222,16 @@ export function StlfProductScreen() {
               iconKey="key"
               label="Contract address"
               value={
-                <Pressable onPress={copyMint} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[sansation, { fontSize: 15, fontWeight: '500', color: S.ink }]}>
+                <Pressable
+                  onPress={copyMint}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                >
+                  <Text
+                    style={[
+                      sansation,
+                      { fontSize: 15, fontWeight: '500', color: S.ink },
+                    ]}
+                  >
                     {shortAddr(mint)}
                   </Text>
                   {copied ? (
@@ -183,7 +246,16 @@ export function StlfProductScreen() {
           <InfoRow
             iconKey="trend"
             label="APY"
-            value={<Text style={[sansation, { fontSize: 15, fontWeight: '600', color: T.green }]}>+{apyPct.toFixed(2)}%</Text>}
+            value={
+              <Text
+                style={[
+                  sansation,
+                  { fontSize: 15, fontWeight: '600', color: T.green },
+                ]}
+              >
+                +{apyPct.toFixed(2)}%
+              </Text>
+            }
           />
           <InfoRow iconKey="swapV" label="Exchange rate" value={rate} />
           <InfoRow iconKey="bank" label="Total value locked" value={tvl} />
@@ -236,13 +308,33 @@ function InfoRow({
 }) {
   const Icon = Icons[iconKey];
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 13 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1, minWidth: 0 }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 13,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 14,
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
         <Icon size={18} color={S.inkFaint} />
-        <Text style={[sansation, { fontSize: 15, color: S.inkDim }]}>{label}</Text>
+        <Text style={[sansation, { fontSize: 15, color: S.inkDim }]}>
+          {label}
+        </Text>
       </View>
       {typeof value === 'string' ? (
-        <Text style={[sansation, { fontSize: 15, fontWeight: '500', color: S.ink }]}>{value}</Text>
+        <Text
+          style={[sansation, { fontSize: 15, fontWeight: '500', color: S.ink }]}
+        >
+          {value}
+        </Text>
       ) : (
         value
       )}
