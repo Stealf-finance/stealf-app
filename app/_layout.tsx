@@ -175,14 +175,6 @@ function RootLayout() {
                             }}
                           />
                           <Stack.Screen
-                            name="receive-choice"
-                            options={{
-                              presentation: 'transparentModal',
-                              animation: 'fade',
-                              contentStyle: { backgroundColor: 'transparent' },
-                            }}
-                          />
-                          <Stack.Screen
                             name="jito-about"
                             options={{
                               presentation: 'transparentModal',

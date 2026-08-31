@@ -4,7 +4,6 @@ import { ChoiceSheet } from '@/src/features/wallet-detail/ChoiceSheet';
 import { Icons } from '@/src/design-system/icons';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { useToast } from '@/src/components/toast/ToastContext';
 
 function Disc({ children }: { children: ReactNode }) {
   return (
@@ -26,28 +25,9 @@ function Disc({ children }: { children: ReactNode }) {
 /** Send hub. One account, so a flat list rather than grouped sections. */
 export default function SendChoice() {
   const router = useSafeRouter();
-  const { show } = useToast();
   const close = () => router.back();
 
   const options = [
-    {
-      key: 'fiat',
-      icon: (
-        <Disc>
-          <Icons.bank size={22} color={T.ink} />
-        </Disc>
-      ),
-      title: 'Fiat',
-      subtitle: 'Send assets to a bank account',
-      onPress: () => {
-        close();
-        show({
-          kind: 'info',
-          title: 'Coming soon',
-          message: 'Fiat transfers are coming soon.',
-        });
-      },
-    },
     {
       key: 'simple',
       icon: (

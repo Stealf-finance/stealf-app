@@ -20,7 +20,7 @@ const ACTIONS: QuickAction[] = [
     key: 'receive',
     label: 'Receive',
     iconKey: 'arrDownLeft',
-    route: '/receive-choice',
+    route: '/receive-qr',
   },
 ];
 
