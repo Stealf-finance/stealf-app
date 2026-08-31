@@ -62,9 +62,9 @@ export function ClaimPendingScreen() {
     if (!item.utxo || claimingIndex !== null) return;
     setClaimingIndex(index);
 
-    const stealfWallet = user?.stealfWallet ?? null;
-    const claimKey = stealfWallet
-      ? claimScanQueries.byStealfWallet(stealfWallet)
+    const wallet = user?.bankWallet ?? null;
+    const claimKey = wallet
+      ? claimScanQueries.byWallet(wallet)
       : null;
 
     const snapshot = claimKey
@@ -110,16 +110,16 @@ export function ClaimPendingScreen() {
         pendingOps.setPhase(opId, 'confirming');
 
         const invalidate = () => {
-          if (!stealfWallet) return;
+          if (!wallet) return;
           queryClient.invalidateQueries({
-            queryKey: claimScanQueries.byStealfWallet(stealfWallet),
+            queryKey: claimScanQueries.byWallet(wallet),
           });
           queryClient.invalidateQueries({
-            queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet),
+            queryKey: shieldedBalanceQueries.byWallet(wallet),
           });
           queryClient.invalidateQueries({
             queryKey:
-              encryptedBalancesQueries.byStealfWalletPrefix(stealfWallet),
+              encryptedBalancesQueries.byWalletPrefix(wallet),
           });
         };
         invalidate();

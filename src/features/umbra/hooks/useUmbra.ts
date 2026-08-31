@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import type { Address } from '@solana/kit';
-import { useTurnkey } from '@turnkey/react-native-wallet-kit';
 import * as Sentry from '@sentry/react-native';
 
 import {
@@ -10,8 +9,7 @@ import {
 } from '@/src/features/umbra/lib/errors';
 import {
   clearClients,
-  getStealthClient as sdkGetStealthClient,
-  getBankClient as sdkGetBankClient,
+  getActiveClient,
   type UmbraClient,
 } from '@/src/services/umbra/client';
 import {
@@ -46,8 +44,8 @@ export { StealthError };
 export type { StealthErrorCode } from '@/src/features/umbra/lib/errors';
 export type { UmbraClient };
 
-/** Reset every stealth-related cache. Called on logout / wallet switch. */
-export function clearStealthState(): void {
+/** Reset every Umbra-related cache. Called on logout / account deletion. */
+export function clearUmbraState(): void {
   clearClients();
   clearRegistration();
   clearBurntUtxos();
@@ -60,13 +58,6 @@ export function useUmbra() {
   // surviving useUmbra-level state — `currentOp` and `error` were dropped after
   // verifying zero external readers (commit 4 of the Big Review polish sprint).
   const [loading, setLoading] = useState(false);
-
-  const {
-    signTransaction: turnkeySignTransaction,
-    signMessage: turnkeySignMessage,
-    wallets,
-  } = useTurnkey();
-  const bankWalletAccount = wallets?.[0]?.accounts?.[0] ?? null;
 
   const wrap = useCallback(
     async <T>(op: StealthOp, fn: () => Promise<T>): Promise<T> => {
@@ -120,29 +111,13 @@ export function useUmbra() {
     [],
   );
 
-  const getStealthClient = useCallback(() => sdkGetStealthClient(), []);
-
-  const getBankClient = useCallback(async () => {
-    if (
-      !bankWalletAccount ||
-      !turnkeySignTransaction ||
-      !turnkeySignMessage
-    ) {
-      throw new Error('Virtual bank account not ready');
-    }
-    return sdkGetBankClient({
-      walletAccount: bankWalletAccount as any,
-      signTransaction: turnkeySignTransaction as any,
-      signMessage: turnkeySignMessage as any,
-    });
-  }, [bankWalletAccount, turnkeySignTransaction, turnkeySignMessage]);
+  const getClient = useCallback(() => getActiveClient(), []);
 
   return {
     loading,
     wrap,
 
-    getStealthClient,
-    getBankClient,
+    getClient,
     ensureRegistered,
     ensureRegisteredFor,
 
@@ -168,7 +143,7 @@ export function useUmbra() {
         wrap(
           'getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction',
           async () => {
-            const client = await sdkGetStealthClient();
+            const client = await getActiveClient();
             const create =
               getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction({
                 client,

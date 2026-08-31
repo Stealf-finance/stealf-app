@@ -9,10 +9,9 @@ const SolanaAddress = z
 export const UserSchema = z.object({
   username: z.string().min(1),
   bankWallet: SolanaAddress,
-  stealfWallet: SolanaAddress.optional().nullable(),
   subOrgId: z.string().min(1),
   points: z.number().int().nonnegative().default(0),
-  stealthRegistered: z.boolean().optional(),
+  /** Whether the wallet is registered with Umbra (one-time on-chain setup). */
   bankRegistered: z.boolean().optional(),
   email: z.string().nullish(),
   authMethod: z.enum(['google', 'apple', 'email']).nullish(),
@@ -28,8 +27,7 @@ export type Session = z.infer<typeof SessionSchema>;
 const BackendUserSchema = z.object({
   username: z.string().nullish(),
   pseudo: z.string().nullish(),
-  bank_wallet: SolanaAddress,
-  stealf_wallet: SolanaAddress.optional().nullable(),
+  wallet: SolanaAddress,
   subOrgId: z.string().min(1),
   points: z.number().int().nonnegative().nullish(),
 });
@@ -39,8 +37,7 @@ export const UserProfileResponseSchema = z
   .or(BackendUserSchema.transform((user) => ({ user })))
   .transform(({ user }) => UserSchema.parse({
     username: user.username ?? user.pseudo ?? '',
-    bankWallet: user.bank_wallet,
-    stealfWallet: user.stealf_wallet ?? null,
+    bankWallet: user.wallet,
     subOrgId: user.subOrgId,
     points: user.points ?? 0,
   }));

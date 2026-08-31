@@ -3,7 +3,6 @@ import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import { Icons } from '@/src/design-system/icons';
@@ -16,11 +15,9 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 export default function ReceiveQr() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
-  const { wallet } = useLocalSearchParams<{ wallet?: string }>();
   const { user } = useAuth();
 
-  const isStealth = wallet === 'stealth';
-  const address = (isStealth ? user?.stealfWallet : user?.bankWallet) ?? '';
+  const address = user?.bankWallet ?? '';
   const short = address ? `${address.slice(0, 4)}…${address.slice(-4)}` : '—';
 
   const [copied, setCopied] = useState(false);
@@ -99,7 +96,7 @@ export default function ReceiveQr() {
 
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 24 }}>
           <Text style={[sansation, { fontSize: 16, fontWeight: '600', color: T.ink }]}>
-            {isStealth ? 'Wallet' : 'Cash'}
+            Cash
           </Text>
           <Text style={[sansation, { fontSize: 15, color: T.inkDim }]}>· {short}</Text>
         </View>

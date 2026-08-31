@@ -18,7 +18,7 @@ export function useSwapQuote(
 ) {
   const { user, session } = useAuth();
   const token = session?.sessionToken ?? null;
-  const taker = user?.stealfWallet ?? null;
+  const taker = user?.bankWallet ?? null;
   const debounced = useDebouncedValue(payAmount, 400);
 
   const enabled =

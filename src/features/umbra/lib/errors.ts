@@ -85,7 +85,7 @@ export const INSUFFICIENT_FEE_SOL_MESSAGE =
 
 const MSG: Record<StealthErrorCode, string> = {
   WALLET_NOT_SETUP:
-    "Your Stealth wallet isn't set up on this device yet. Set it up to continue.",
+    "Your wallet isn't ready yet. Give it a moment, then try again.",
   REGISTRATION_REJECTED: 'Registration cancelled.',
   REGISTRATION_PROOF_FAILED: 'Failed to generate proof. Please try again.',
   USER_NOT_REGISTERED:
@@ -318,8 +318,14 @@ export function parseStealthError(err: unknown, op: StealthOp): StealthError {
   const rawMessage = rawMessageOf(err);
   const simulationLogs = logsOf(err);
 
-  // Raised by `getLocaleSigner` when no signing key exists on this device.
-  if (/no wallet key|wallet setup required/i.test(rawMessage)) {
+  // Raised by `getActiveSigner` before Turnkey has hydrated its wallet
+  // accounts — the signer is not installed yet, so there is nothing to sign
+  // with. Transient: the caller should retry rather than re-onboard.
+  if (
+    /no wallet key|wallet setup required|virtual bank account not ready/i.test(
+      rawMessage,
+    )
+  ) {
     return build(err, op, 'WALLET_NOT_SETUP');
   }
   if (/receiver is not registered/i.test(rawMessage)) {

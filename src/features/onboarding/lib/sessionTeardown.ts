@@ -1,8 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import { socketService } from '@/src/services/real-time/socket';
-import { clearStealthState } from '@/src/features/umbra/hooks/useUmbra';
+import { clearUmbraState } from '@/src/features/umbra/hooks/useUmbra';
 import { clearMasterSeed } from '@/src/services/umbra/storage/masterSeed';
+import { clearLegacyStealthKeys } from '@/src/services/auth/legacyStealthKeys';
 import { clearAllMmkvStorageBackend } from '@/src/services/umbra/storage/mmkvStorageBackend';
 import { persister } from '@/src/services/queryClient';
 import { purgeTurnkeyState } from './passkeyHelpers';
@@ -15,8 +15,7 @@ export interface SessionTeardownDeps {
   queryClient: QueryClient;
   capture?: (event: string) => void;
   resetAnalytics?: () => void;
-  /** Wallet addresses whose master seed should be wiped from the Keychain. */
-  stealthWallet?: string | null;
+  /** Wallet address whose master seed should be wiped from the Keychain. */
   bankWallet?: string | null;
 }
 
@@ -35,16 +34,15 @@ async function run(
     reason === 'session_expired' ? 'auth_session_expired' : 'auth_signed_out',
   );
   socketService.disconnect();
-  clearStealthState();
-  // The master seed is keyed per wallet address; wipe both wallets' seeds so a
-  // previous user's viewing keys don't linger on a shared device.
-  if (deps.stealthWallet) await clearMasterSeed(deps.stealthWallet);
+  clearUmbraState();
+  // The master seed is keyed per wallet address; wipe it so a previous user's
+  // viewing key doesn't linger on a shared device.
   if (deps.bankWallet) await clearMasterSeed(deps.bankWallet);
   // Drops the decrypted UTXO / nullifier store. It belongs here rather than in
   // useLogout so the session_expired path wipes it too — that's the case where
   // the user did *not* choose to sign out, on a possibly shared device.
   await clearAllMmkvStorageBackend();
-  await walletKeyCache.clearAll();
+  await clearLegacyStealthKeys();
   try {
     await turnkeyLogout();
   } catch {

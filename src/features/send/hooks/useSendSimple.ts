@@ -1,18 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTurnkey } from '@turnkey/react-native-wallet-kit';
 import { getTransactionEncoder } from '@solana/kit';
-import {
-  compileTransaction,
-  createSignerFromBase58,
-  signTransaction,
-  getSignatureFromTransaction,
-  getBase64EncodedWireTransaction,
-  assertIsTransactionWithinSizeLimit,
-  getRpc,
-  toSignature,
-} from '@/src/services/solana/kit';
+import { compileTransaction, getRpc, toSignature } from '@/src/services/solana/kit';
 import { getEnv } from '@/src/services/env';
-import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
 import {
   guardTransaction,
   type GuardResult,
@@ -30,15 +20,12 @@ import {
   type FetchSignatureStatus,
 } from '../lib/confirmSignature';
 
-export type WalletSource = 'bank' | 'stealth';
-
 export interface SendSimpleParams {
   fromAddress: string;
   toAddress: string;
   amount: number;
   mint: string | null;
   decimals: number;
-  walletSource: WalletSource;
   balance?: number;
 }
 
@@ -71,7 +58,6 @@ export function useSendSimple() {
       amount,
       mint,
       decimals,
-      walletSource,
       balance,
     }: SendSimpleParams): Promise<string> => {
       const native = isNativeSolMint(mint);
@@ -112,48 +98,23 @@ export function useSendSimple() {
           });
       const compiled = compileTransaction(message);
 
-      if (walletSource === 'bank') {
-        const wallet = wallets?.[0];
-        const walletAccount = wallet?.accounts?.find(
-          (account) => account.address === fromAddress,
-        );
-        if (!walletAccount) {
-          throw new Error(
-            `Wallet account not found for address: ${fromAddress}`,
-          );
-        }
-        const wireBytes = getTransactionEncoder().encode(compiled);
-        const hexString = Buffer.from(wireBytes).toString('hex');
-        const bankSignature = await signAndSendTransaction({
-          walletAccount,
-          unsignedTransaction: hexString,
-          transactionType: 'TRANSACTION_TYPE_SOLANA',
-          rpcUrl: EXPO_PUBLIC_SOLANA_RPC_URL,
-        });
-        // Turnkey resolves once the transaction is broadcast, not once it is
-        // settled — so this path has to wait too.
-        await confirmSignature(bankSignature, makeStatusFetcher());
-        return bankSignature;
+      const walletAccount = wallets?.[0]?.accounts?.find(
+        (account) => account.address === fromAddress,
+      );
+      if (!walletAccount) {
+        throw new Error(`Wallet account not found for address: ${fromAddress}`);
       }
-
-      const privateKeyB58 = await walletKeyCache.getPrivateKey();
-      if (!privateKeyB58) {
-        throw new Error('Wallet key unavailable. Please re-import or unlock.');
-      }
-      const signer = await createSignerFromBase58(privateKeyB58);
-      const signed = await signTransaction([signer.keyPair], compiled);
-      assertIsTransactionWithinSizeLimit(signed);
-      const signature = getSignatureFromTransaction(signed);
-
-      const rpc = getRpc();
-      const encodedTx = getBase64EncodedWireTransaction(signed);
-      await rpc.sendTransaction(encodedTx, { encoding: 'base64' }).send();
-
-      // Previously this loop fell through to `return signature` on timeout, so
-      // a dropped transfer was reported as a completed one.
+      const wireBytes = getTransactionEncoder().encode(compiled);
+      const hexString = Buffer.from(wireBytes).toString('hex');
+      const signature = await signAndSendTransaction({
+        walletAccount,
+        unsignedTransaction: hexString,
+        transactionType: 'TRANSACTION_TYPE_SOLANA',
+        rpcUrl: EXPO_PUBLIC_SOLANA_RPC_URL,
+      });
+      // Turnkey resolves once the transaction is broadcast, not once it has
+      // settled — without this a dropped transfer reads as a completed one.
       await confirmSignature(signature, makeStatusFetcher());
-
-      walletKeyCache.touch();
       return signature;
     },
     onSuccess: (_txId, { fromAddress }) => {

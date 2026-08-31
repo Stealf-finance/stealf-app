@@ -9,8 +9,9 @@ import {
 import { subscribeToWalletUpdates } from '@/src/features/bank/api/subscriptions';
 import { balanceQueries, fetchBalance } from '@/src/features/bank/api/balance';
 import { historyQueries, fetchHistory } from '@/src/features/bank/api/history';
-import { walletKeyCache } from '@/src/services/cache/walletKeyCache';
-import { getStealthClient } from '@/src/services/umbra/client';
+import { getActiveClient } from '@/src/services/umbra/client';
+import { hasActiveSigner } from '@/src/services/umbra/signers/active';
+import { useUmbraSigner } from '@/src/features/umbra/hooks/useUmbraSigner';
 import { prefetchEncryptedBalancesFor } from '@/src/features/umbra/hooks/useEncryptedBalances';
 
 /**
@@ -20,6 +21,10 @@ import { prefetchEncryptedBalancesFor } from '@/src/features/umbra/hooks/useEncr
 export function DataBootstrap() {
   const { isAuthenticated, user, session } = useAuth();
   const queryClient = useQueryClient();
+
+  // Publishes the Turnkey signer to Umbra's service layer. Mounted here so it
+  // installs once, before any flow reaches for a client.
+  useUmbraSigner();
 
   useEffect(() => {
     if (!isAuthenticated || !user || !session) {
@@ -33,10 +38,7 @@ export function DataBootstrap() {
     }
 
     if (__DEV__)
-      console.log(
-        '[DataBootstrap] init — bankWallet=' + user.bankWallet,
-        'stealfWallet=' + (user.stealfWallet ?? 'none'),
-      );
+      console.log('[DataBootstrap] init — bankWallet=' + user.bankWallet);
 
     void queryClient.prefetchQuery({
       queryKey: userProfileQueries.byBankWallet(user.bankWallet),
@@ -59,32 +61,30 @@ export function DataBootstrap() {
         staleTime: Infinity,
       });
     };
-    if (user.bankWallet) warmWallet(user.bankWallet);
-    if (user.stealfWallet) warmWallet(user.stealfWallet);
+    const bankWallet = user.bankWallet;
+    if (bankWallet) warmWallet(bankWallet);
 
-
-    const stealfWallet = user.stealfWallet;
-    if (stealfWallet) {
+    if (bankWallet) {
       void (async () => {
         try {
-          // No eager walletKeyCache.warmup() at bootstrap — it would prompt
-          // Face ID on every cold start (STEALF_PRIVATE_KEY is biometric-gated).
-          // Warmup runs after explicit sign-in in useAuthFlow; signing flows
-          // read lazily through the cache and prompt at action time.
-          if (!walletKeyCache.hasKeys()) return;
+          // Turnkey hydrates its wallet accounts asynchronously; until the
+          // signer is installed there is no Umbra client to build. The flows
+          // that need one build it lazily at action time, so skipping here
+          // only costs a cold first read.
+          if (!hasActiveSigner()) return;
 
           const [publicBalance] = await Promise.all([
             queryClient.fetchQuery({
-              queryKey: balanceQueries.byAddress(stealfWallet),
-              queryFn: () => fetchBalance(session.sessionToken, stealfWallet),
+              queryKey: balanceQueries.byAddress(bankWallet),
+              queryFn: () => fetchBalance(session.sessionToken, bankWallet),
               staleTime: Infinity,
             }),
-            getStealthClient(),
+            getActiveClient(),
           ]);
 
           await prefetchEncryptedBalancesFor(
             queryClient,
-            stealfWallet,
+            bankWallet,
             publicBalance,
           );
 
@@ -98,20 +98,17 @@ export function DataBootstrap() {
           // explicitly looking at claim state). Returning users hit the
           // AsyncStorage cache there and feel it instant.
 
-          if (__DEV__) console.log('[DataBootstrap] stealth warmup done');
+          if (__DEV__) console.log('[DataBootstrap] umbra warmup done');
         } catch (err) {
           if (__DEV__)
-            console.warn('[DataBootstrap] stealth warmup failed:', err);
+            console.warn('[DataBootstrap] umbra warmup failed:', err);
         }
       })();
     }
 
     const cleanups: (() => void)[] = [];
-    if (user.bankWallet) {
-      cleanups.push(subscribeToWalletUpdates(queryClient, user.bankWallet));
-    }
-    if (user.stealfWallet) {
-      cleanups.push(subscribeToWalletUpdates(queryClient, user.stealfWallet));
+    if (bankWallet) {
+      cleanups.push(subscribeToWalletUpdates(queryClient, bankWallet));
     }
 
     cleanups.push(
@@ -120,20 +117,12 @@ export function DataBootstrap() {
           console.log(
             '[DataBootstrap] socket reconnected → invalidating wallet queries',
           );
-        if (user.bankWallet) {
+        if (bankWallet) {
           queryClient.invalidateQueries({
-            queryKey: balanceQueries.byAddress(user.bankWallet),
+            queryKey: balanceQueries.byAddress(bankWallet),
           });
           queryClient.invalidateQueries({
-            queryKey: historyQueries.byAddress(user.bankWallet),
-          });
-        }
-        if (user.stealfWallet) {
-          queryClient.invalidateQueries({
-            queryKey: balanceQueries.byAddress(user.stealfWallet),
-          });
-          queryClient.invalidateQueries({
-            queryKey: historyQueries.byAddress(user.stealfWallet),
+            queryKey: historyQueries.byAddress(bankWallet),
           });
         }
       }),
@@ -148,13 +137,7 @@ export function DataBootstrap() {
     // tears down sockets + re-warms Umbra on every `setUser({...user,x:y})`,
     // causing a ~10s freeze on profile partial updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    isAuthenticated,
-    user?.bankWallet,
-    user?.stealfWallet,
-    session?.sessionToken,
-    queryClient,
-  ]);
+  }, [isAuthenticated, user?.bankWallet, session?.sessionToken, queryClient]);
 
   return null;
 }

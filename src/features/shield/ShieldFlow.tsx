@@ -14,7 +14,7 @@ import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { sansation } from '@/src/design-system/typography';
-import { StealthSetupOverlay } from '@/src/features/umbra/components/StealthSetupOverlay';
+import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
@@ -73,8 +73,8 @@ export function ShieldFlow({ direction }: Props) {
   const pendingOps = usePendingOps();
   const posthog = usePostHog(); // stable client; async capture() closes over it directly
 
-  const { data: stealthBalance } = useBalance(
-    isShield ? (user?.stealfWallet ?? null) : null,
+  const { data: publicBalance } = useBalance(
+    isShield ? (user?.bankWallet ?? null) : null,
   );
   const { data: shielded } = useShieldedSolBalance();
   const { data: encrypted } = useEncryptedBalances();
@@ -91,7 +91,7 @@ export function ShieldFlow({ direction }: Props) {
 
   let sourceBalance = 0;
   if (isShield) {
-    const tokens = stealthBalance?.tokens ?? [];
+    const tokens = publicBalance?.tokens ?? [];
     sourceBalance = selectionActive
       ? (tokens.find((t) => t.tokenMint === selected!.mint)?.balance ?? 0)
       : (tokens.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0);
@@ -164,9 +164,9 @@ export function ShieldFlow({ direction }: Props) {
       close();
     };
 
-    if (!user?.stealfWallet) {
+    if (!user?.bankWallet) {
       return failPre(
-        'Set up your wallet first. Open the Payment tab to create or import one.',
+        'Virtual bank account missing. Sign out and back in to restore it.',
       );
     }
     if (num > sourceBalance) {
@@ -175,17 +175,16 @@ export function ShieldFlow({ direction }: Props) {
       );
     }
 
-    const stealthPublicSol =
-      stealthBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ??
-      0;
-    if (isShield && stealthPublicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
+    const publicSol =
+      publicBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
+    if (isShield && publicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
       return failPre(INSUFFICIENT_FEE_SOL_MESSAGE);
     }
 
     const mintAddr = selectionActive ? selected!.mint : SOL_MINT;
     const amountBigInt = BigInt(Math.floor(num * 10 ** decimals));
     const mint = toAddress(mintAddr);
-    const stealfWallet = user?.stealfWallet ?? null;
+    const wallet = user.bankWallet;
 
     const opId = pendingOps.enqueue({
       kind: isShield ? 'shield' : 'unshield',
@@ -214,25 +213,19 @@ export function ShieldFlow({ direction }: Props) {
           console.log('[ShieldFlow] success → invalidating balances');
         await Promise.all([
           queryClient.invalidateQueries({
-            queryKey: shieldedBalanceQueries.byStealfWallet(stealfWallet ?? ''),
+            queryKey: shieldedBalanceQueries.byWallet(wallet),
           }),
           // Multi-mint encrypted query — key includes the mint list so we
           // invalidate by prefix to catch every active variant.
           queryClient.invalidateQueries({
-            queryKey: encryptedBalancesQueries.byStealfWalletPrefix(
-              stealfWallet ?? '',
-            ),
+            queryKey: encryptedBalancesQueries.byWalletPrefix(wallet),
           }),
-          stealfWallet
-            ? queryClient.invalidateQueries({
-                queryKey: balanceQueries.byAddress(stealfWallet),
-              })
-            : Promise.resolve(),
-          stealfWallet
-            ? queryClient.invalidateQueries({
-                queryKey: historyQueries.byAddress(stealfWallet),
-              })
-            : Promise.resolve(),
+          queryClient.invalidateQueries({
+            queryKey: balanceQueries.byAddress(wallet),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: historyQueries.byAddress(wallet),
+          }),
         ]);
 
         posthog?.capture('shield_completed', {
@@ -250,10 +243,7 @@ export function ShieldFlow({ direction }: Props) {
         // wrap() already captures StealthError — skip to avoid dup.
         if (err?.name !== 'StealthError') {
           Sentry.captureException(err, {
-            tags: {
-              'op.kind': `shield-${direction}`,
-              'wallet.source': 'stealf',
-            },
+            tags: { 'op.kind': `shield-${direction}` },
             extra: {
               userMessage: msg,
               amountBand: amountBand(num),
@@ -344,12 +334,12 @@ export function ShieldFlow({ direction }: Props) {
 
       {/* Registration overlay only on Shield (public → encrypted). Unshield
           already implies a registered encrypted balance, so it's not gated. */}
-      {isShield ? <StealthSetupOverlay onClose={close} /> : null}
+      {isShield ? <UmbraSetupOverlay onClose={close} /> : null}
 
       <AssetSelectSheet
         open={assetPickerOpen}
         onClose={() => setAssetPickerOpen(false)}
-        source={isShield ? 'stealth' : 'encrypted'}
+        source={isShield ? 'bank' : 'encrypted'}
       />
     </CenterGlow>
   );

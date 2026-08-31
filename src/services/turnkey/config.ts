@@ -8,7 +8,7 @@ import { decodeOidcEmail, decodeOidcSub } from '@/src/features/onboarding/lib/oi
 import { emitOauthAuthSuccess } from './oauthAuthEvents';
 import { emitSessionExpired } from '@/src/services/auth/sessionEvents';
 
-export const BANK_WALLET_CONFIG = {
+export const wallet_CONFIG = {
   walletName: 'Virtual Bank Account',
   walletAccounts: [
     {
@@ -37,8 +37,8 @@ export const TURNKEY_CONFIG: TurnkeyProviderConfig = {
     },
 
     createSuborgParams: {
-      oauth: { customWallet: BANK_WALLET_CONFIG },
-      emailOtpAuth: { customWallet: BANK_WALLET_CONFIG },
+      oauth: { customWallet: wallet_CONFIG },
+      emailOtpAuth: { customWallet: wallet_CONFIG },
     },
     autoRefreshSession: true,
   },

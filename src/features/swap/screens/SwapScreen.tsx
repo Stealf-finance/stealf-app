@@ -65,7 +65,7 @@ export function SwapScreen() {
   const [pickerSide, setPickerSide] = useState<'pay' | 'receive' | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
 
-  const { data: wallet } = useBalance(user?.stealfWallet ?? null);
+  const { data: wallet } = useBalance(user?.bankWallet ?? null);
   const payBalance =
     wallet?.tokens?.find((t) => t.tokenSymbol === payToken.symbol)?.balance ?? 0;
 

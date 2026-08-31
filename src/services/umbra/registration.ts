@@ -1,6 +1,6 @@
 import { getUserAccountQuerierFunction } from '@umbra-privacy/sdk/query';
 import { getUserRegistrationFunction } from '@umbra-privacy/sdk/registration';
-import { getStealthClient, type UmbraClient } from './client';
+import { getActiveClient, type UmbraClient } from './client';
 import { createUserRegistrationProver } from './zk/provers/register';
 
 const registered = new Set<string>();
@@ -64,7 +64,7 @@ async function registerWith(client: UmbraClient): Promise<void> {
 }
 
 export async function ensureRegistered(): Promise<void> {
-  return registerWith(await getStealthClient());
+  return registerWith(await getActiveClient());
 }
 
 export async function ensureRegisteredFor(client: UmbraClient): Promise<void> {

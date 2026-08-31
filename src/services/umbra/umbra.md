@@ -18,10 +18,10 @@ exact**) + `@umbra-privacy/rn-zk-prover` (native Mopro proving).
 
 ## 1. The two layers
 
-| Layer | Role | Location |
-|---|---|---|
+| Layer                 | Role                                                                                        | Location              |
+| --------------------- | ------------------------------------------------------------------------------------------- | --------------------- |
 | **`services/umbra/`** | SDK integration / infra: client, signers, on-chain operations, queries, storage, crypto, zk | `src/services/umbra/` |
-| **`features/umbra/`** | UI: screens, React Query hooks, feature lib | `src/features/umbra/` |
+| **`features/umbra/`** | UI: screens, React Query hooks, feature lib                                                 | `src/features/umbra/` |
 
 Rule: `services/` **never** depends on `features/`. Operations throw raw; the
 mapping to user-facing messages happens in the feature layer
@@ -29,15 +29,17 @@ mapping to user-facing messages happens in the feature layer
 
 ---
 
-## 2. The two wallets & the two transfer models
+## 2. The wallet & the transfer model
 
-**Two wallets** per user:
-- **Stealth** — **local** ED25519 key (Keychain). Signer via `getLocaleSigner`.
-- **Bank** — **Turnkey**-custodied (TEE, no local key). Signer via
-  `createTurnkeyUmbraSigner`.
+**One wallet** per user: the **bank** wallet, **Turnkey**-custodied (TEE, no
+local key). Signer via `createTurnkeyUmbraSigner`, published to the service
+layer by `signers/active.ts`.
+
+Its public ATA and its Umbra encrypted balance are two views of the same
+address — that is what "Move" moves between.
 
 **Private-transfer model used**: **stealth pool notes** (mixer). The sender
-creates a *burnable* note, the recipient *claims* it → hence the Claims screen.
+creates a _burnable_ note, the recipient _claims_ it → hence the Claims screen.
 (The SDK also exposes a direct ETA→ETA transfer `getTransferorFunction` — **not
 used** here.)
 
@@ -46,13 +48,13 @@ used** here.)
 ## 3. `services/umbra/` tree
 
 ```
-client.ts              unified getClient(signer) + getStealthClient/getBankClient/getRelayer
+client.ts              getClient(signer) + getActiveClient/getRelayer
 constant.ts            UMBRA_CONFIG (mainnet/devnet switch) + dUSDC/dUSDT mints
 registration.ts        isFullyRegistered / checkRegistrationStatus / ensureRegistered…
 burntUtxos.ts          blacklist of already-burnt notes (self-healing)
 
 signers/
-  locale.ts            getLocaleSigner()  — stealth wallet (local key)
+  active.ts            the installed IUmbraSigner — React-free access point
   turnkey.ts           createTurnkeyUmbraSigner() + signTx() + signMessage()
 
 storage/
@@ -87,6 +89,7 @@ zk/                    native Mopro proving (see §7)
 ## 4. The client (`client.ts`)
 
 Single entry point **`getClient(signer)`**:
+
 - cached by address (`Map<address, client>`) + **in-flight dedup**
   (`Map<address, Promise>`) → one concurrent build per wallet, no double write
   to the MMKV store.
@@ -95,18 +98,34 @@ Single entry point **`getClient(signer)`**:
 - deps: `masterSeedStorage` (seed), `computationMonitor` (polling),
   `legacyMasterSeedSchemes` (decrypt old notes).
 
-Wrappers: `getStealthClient()` = `getClient(getLocaleSigner())`,
-`getBankClient(args)` = `getClient(createTurnkeyUmbraSigner(args))`,
-`getRelayer()`. `clearClients()` clears everything (logout / switch).
+Wrapper: **`getActiveClient()`** = `getClient(getActiveSigner())` — the only
+accessor the rest of the code uses. `getRelayer()` is separate.
+`clearClients()` clears the cache and the installed signer (logout / switch).
+
+### Why a signer registry
+
+`operations/`, `queries/` and `registration.ts` are plain async modules with no
+React context, but Turnkey's `signTransaction` / `signMessage` only exist inside
+`useTurnkey()`. `signers/active.ts` bridges the two: `useUmbraSigner` (mounted
+once in `DataBootstrap`) installs the signer, everything else reads it back.
+
+The installed signer is **stable per address** and delegates through refs to the
+current Turnkey callbacks. That matters — the assembled client is cached by
+address and holds the signer object, so binding today's closures into it would
+leave the cached client calling a stale one after a session refresh, and
+rebuilding on every callback identity change would re-create the sharded UTXO
+stores on each render.
 
 ---
 
 ## 5. Signing
 
-| Wallet | Key | How |
-|---|---|---|
-| Stealth | local (Keychain `STEALF_PRIVATE_KEY`) | `createSignerFromPrivateKeyBytes(bs58.decode(pk))` — the SDK accepts a 32-byte seed **or** a 64-byte keypair |
-| Bank | remote (Turnkey TEE) | hex↔bytes adapter: the SDK speaks bytes/objects, Turnkey speaks hex |
+| Wallet | Key                  | How                                                                 |
+| ------ | -------------------- | ------------------------------------------------------------------- |
+| Bank   | remote (Turnkey TEE) | hex↔bytes adapter: the SDK speaks bytes/objects, Turnkey speaks hex |
+
+There is no local-key path any more. A missing signer means Turnkey has not
+finished hydrating — surface it and let the caller retry, never fall back.
 
 `IUmbraSigner` requires `signTransaction` **and** `signMessage` (the latter
 derives the master seed once — not just for txs).
@@ -159,11 +178,11 @@ download; no in-flight lock on the download (`register.ts` not memoized).
 
 ## 8. Storage — three distinct tiers
 
-| Data | Backend | Where | Wipe |
-|---|---|---|---|
-| **Master seed** (root secret) | Keychain (SecureStore) | `storage/masterSeed.ts` | `clearMasterSeed(address)` |
+| Data                               | Backend                               | Where                           | Wipe                           |
+| ---------------------------------- | ------------------------------------- | ------------------------------- | ------------------------------ |
+| **Master seed** (root secret)      | Keychain (SecureStore)                | `storage/masterSeed.ts`         | `clearMasterSeed(address)`     |
 | **Decrypted UTXO/nullifier notes** | MMKV (encrypted under a Keychain key) | `storage/mmkvStorageBackend.ts` | `clearAllMmkvStorageBackend()` |
-| **Burnt-note blacklist** | SecureStore (hashed key) | `burntUtxos.ts` | `clearBurntUtxos()` |
+| **Burnt-note blacklist**           | SecureStore (hashed key)              | `burntUtxos.ts`                 | `clearBurntUtxos()`            |
 
 The seed is a **cache**: deterministically re-derivable via
 `signer.signMessage`. Losing it costs a re-derivation, never funds. All of this
@@ -177,16 +196,16 @@ devices).
 Redirect modules Metro can't/shouldn't bundle. **Don't remove without a control
 `expo export`.**
 
-| Shim | Target | Wired via | Why |
-|---|---|---|---|
-| `crypto-shim.js` | `crypto` (Node) | `extraNodeModules` | minimal polyfill `randomBytes` + `createHash('sha256')` |
-| `fs-shim.js` | `fs` (Node) | `extraNodeModules` | empty stub for a never-executed `require('fs')` |
-| `snarkjs-shim.js` | `snarkjs` | **`moduleOverrides`** | throw stub: the SDK references snarkjs (JS prover), we prove natively |
+| Shim              | Target          | Wired via             | Why                                                                   |
+| ----------------- | --------------- | --------------------- | --------------------------------------------------------------------- |
+| `crypto-shim.js`  | `crypto` (Node) | `extraNodeModules`    | minimal polyfill `randomBytes` + `createHash('sha256')`               |
+| `fs-shim.js`      | `fs` (Node)     | `extraNodeModules`    | empty stub for a never-executed `require('fs')`                       |
+| `snarkjs-shim.js` | `snarkjs`       | **`moduleOverrides`** | throw stub: the SDK references snarkjs (JS prover), we prove natively |
 
 ⚠️ The snarkjs entry sits in `moduleOverrides` (the `resolveRequest` hook), **not**
 in `extraNodeModules`, and must stay there. `extraNodeModules` is only a fallback
 for modules Metro fails to resolve — `crypto` and `fs` work there because Node
-builtins are never in `node_modules`. But `snarkjs` *is* a declared dep, so the
+builtins are never in `node_modules`. But `snarkjs` _is_ a declared dep, so the
 moment it's installed the alias is skipped, the real package gets bundled, and
 the build dies on its `require('readline')`. `resolveRequest` runs first and wins
 either way.
@@ -215,15 +234,12 @@ real money + different program IDs → keep `devnet` while testing.
 ## 11. On the `features/umbra/` side
 
 ```
-screens/     StealthWalletGate, ClaimPendingScreen, StealfWalletSetup
-components/   StealthSetupOverlay
+screens/     ClaimPendingScreen
+components/   UmbraSetupOverlay
 hooks/       useUmbra (ops facade), useClaimScan, useEncryptedBalances,
              usePendingClaims(ForCash), useShieldedSolBalance, useUmbraRegistration,
-             useSetupStealfWallet, useStealfWalletSetupFlow, useRegisterStealfWallet,
-             useDeleteStealthWallet
-lib/         errors (parseStealthError + StealthError + codes), payMethods,
-             syncStealfWallet
-api/         registerStealfWallet (REST backend)
+             useUmbraSigner (installs the Turnkey signer, mounted in DataBootstrap)
+lib/         errors (parseStealthError + StealthError + codes), payMethods
 PrivacyModeContext.tsx
 ```
 
@@ -235,9 +251,14 @@ claimReceived/claimSelfToPublic/register`.
 
 ## 12. The internal / UI-copy wall (reminder)
 
-The code keeps the internal names (`stealfWallet`, `STEALF_*` keys, `shielded`
-verb, historical folder). The **SecureStore keys** (`STEALF_PRIVATE_KEY`,
-`keychainService: 'com.stealf.wallet'`) must **never** change — otherwise every
-existing user loses access. In the UI we say "Stealth wallet", "Encrypted
-balance", "Shield/Unshield". The name "Umbra" is **internal**, never in visible
-copy.
+The code keeps the internal names (`STEALF_*` keys, the `shielded` verb).
+`keychainService: 'com.stealf.wallet'` must **never** change — the master seed
+and the MMKV encryption key live under it, so moving it locks every existing
+user out of their own notes.
+
+`STEALF_PRIVATE_KEY` / `STEALF_MNEMONIC` are **legacy and delete-only**: nothing
+reads or writes them, and `clearLegacyStealthKeys()` purges them at boot, on
+sign-out / session expiry, and on account deletion.
+
+In the UI we say "Encrypted balance", "Shield/Unshield". The name "Umbra" is
+**internal**, never in visible copy.

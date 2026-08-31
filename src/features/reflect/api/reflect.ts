@@ -121,7 +121,7 @@ export async function fetchReflectBalance(
 export type BuildMintRequest = {
   amount: number; // USDC base units
   slippageBps?: number;
-  signer?: string; // omit → backend uses bank_wallet
+  signer?: string; // omit → backend uses wallet
 };
 
 export type BuildBurnRequest = {

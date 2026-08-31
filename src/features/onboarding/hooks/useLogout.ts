@@ -22,7 +22,6 @@ export function useLogout() {
         queryClient,
         capture: (event) => posthog?.capture(event),
         resetAnalytics: () => posthog?.reset(),
-        stealthWallet: user?.stealfWallet,
         bankWallet: user?.bankWallet,
       }),
   });

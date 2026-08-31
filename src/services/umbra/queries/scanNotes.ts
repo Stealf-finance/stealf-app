@@ -1,5 +1,5 @@
 import { getBurnableStealthPoolNoteScannerFunction } from '@umbra-privacy/sdk/burn';
-import { getStealthClient } from '../client';
+import { getActiveClient } from '../client';
 import {
   nativeAesDecryptor,
   nativeX25519GetSharedSecretAsync,
@@ -68,7 +68,7 @@ export async function fetchClaimScan(
   wallet: string,
   options: FetchClaimScanOptions = {},
 ): Promise<ClaimScanResult> {
-  const client = await getStealthClient();
+  const client = await getActiveClient();
   await ensureBlacklistLoaded(wallet);
   const scan = getOrCreateScanner(wallet, client);
 

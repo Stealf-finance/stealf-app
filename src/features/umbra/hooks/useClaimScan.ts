@@ -6,7 +6,7 @@ import {
 } from '@/src/services/umbra/queries/scanNotes';
 
 export const claimScanQueries = {
-  byStealfWallet: (wallet: string) =>
+  byWallet: (wallet: string) =>
     ['stealth', 'claim-scan', wallet] as const,
 };
 
@@ -19,10 +19,10 @@ export function useClaimScan<TSelect = ClaimScanResult>(
   options: UseClaimScanOptions = {},
 ) {
   const { user } = useAuth();
-  const wallet = user?.stealfWallet ?? '';
+  const wallet = user?.bankWallet ?? '';
 
   return useQuery({
-    queryKey: claimScanQueries.byStealfWallet(wallet),
+    queryKey: claimScanQueries.byWallet(wallet),
     queryFn: () => fetchClaimScan(wallet),
     enabled: !!wallet && (options.fetch ?? false),
     staleTime: Infinity,

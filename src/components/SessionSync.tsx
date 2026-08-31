@@ -22,7 +22,13 @@ export function SessionSync() {
     setSession({ sessionToken: turnkeyToken });
   }, [currentToken, turnkeyToken, setSession]);
 
-  const teardownDeps = useRef({ turnkeyLogout, reset, queryClient, posthog, user });
+  const teardownDeps = useRef({
+    turnkeyLogout,
+    reset,
+    queryClient,
+    posthog,
+    user,
+  });
   useEffect(() => {
     teardownDeps.current = { turnkeyLogout, reset, queryClient, posthog, user };
   });
@@ -44,7 +50,6 @@ export function SessionSync() {
           queryClient: qc,
           capture: (event) => ph?.capture(event),
           resetAnalytics: () => ph?.reset(),
-          stealthWallet: usr?.stealfWallet,
           bankWallet: usr?.bankWallet,
         });
       }),

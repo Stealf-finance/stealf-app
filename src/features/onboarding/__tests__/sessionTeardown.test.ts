@@ -3,8 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const clearAllMmkvStorageBackend = vi.fn(async () => {});
 const clearMasterSeed = vi.fn(async (_w: string) => {});
-const walletKeyCacheClearAll = vi.fn(async () => {});
-const clearStealthState = vi.fn();
+const clearLegacyStealthKeys = vi.fn(async () => {});
+const clearUmbraState = vi.fn();
 const socketDisconnect = vi.fn();
 const purgeTurnkeyState = vi.fn(async () => {});
 const removeClient = vi.fn(async () => {});
@@ -15,11 +15,11 @@ vi.mock('@/src/services/umbra/storage/mmkvStorageBackend', () => ({
 vi.mock('@/src/services/umbra/storage/masterSeed', () => ({
   clearMasterSeed: (w: string) => clearMasterSeed(w),
 }));
-vi.mock('@/src/services/cache/walletKeyCache', () => ({
-  walletKeyCache: { clearAll: () => walletKeyCacheClearAll() },
+vi.mock('@/src/services/auth/legacyStealthKeys', () => ({
+  clearLegacyStealthKeys: () => clearLegacyStealthKeys(),
 }));
 vi.mock('@/src/features/umbra/hooks/useUmbra', () => ({
-  clearStealthState: () => clearStealthState(),
+  clearUmbraState: () => clearUmbraState(),
 }));
 vi.mock('@/src/services/real-time/socket', () => ({
   socketService: { disconnect: () => socketDisconnect() },
@@ -40,7 +40,6 @@ function makeDeps(overrides: Record<string, unknown> = {}) {
     queryClient: { clear: vi.fn() } as never,
     capture: vi.fn(),
     resetAnalytics: vi.fn(),
-    stealthWallet: 'StealthAddr',
     bankWallet: 'BankAddr',
     ...overrides,
   };
@@ -77,10 +76,21 @@ describe('performSessionTeardown', () => {
 
     expect(clearMasterSeed).toHaveBeenCalled();
     expect(clearAllMmkvStorageBackend).toHaveBeenCalled();
-    expect(walletKeyCacheClearAll).toHaveBeenCalled();
     expect(purgeTurnkeyState).toHaveBeenCalled();
-    expect(clearStealthState).toHaveBeenCalled();
+    expect(clearUmbraState).toHaveBeenCalled();
   });
+
+  // The stealth wallet only ever existed on devnet, so there is nothing to
+  // preserve — its key and recovery phrase go on both teardown paths, not just
+  // the one the user chose.
+  it.each(['user_signed_out', 'session_expired'] as const)(
+    'wipes the legacy stealth keys on the %s path',
+    async (reason) => {
+      await performSessionTeardown(reason, makeDeps());
+
+      expect(clearLegacyStealthKeys).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('reports the reason to analytics', async () => {
     const deps = makeDeps();
