@@ -6,7 +6,7 @@ import { AvailableProducts } from '@/src/features/earn/components/AvailableProdu
 export default function EarnScreen() {
   return (
     <WalletScreen
-      title="Earn"
+      title="Investments"
       iconImage={require('@/assets/images/earn.png')}
       balanceUSD={0}
       assets={[]}

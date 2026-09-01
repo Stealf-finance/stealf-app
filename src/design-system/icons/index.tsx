@@ -108,6 +108,27 @@ export const Icons = {
       <Path d="M10 20v-6h4v6" />
     </>,
   ),
+  /** Shopping cart — the Store header's cart button. */
+  cart: make(
+    <>
+      <Path d="M3 4h2l2.4 11.4a2 2 0 002 1.6h7.7a2 2 0 002-1.6L21 8H6" />
+      <Circle cx="9" cy="20" r="1.4" />
+      <Circle cx="18" cy="20" r="1.4" />
+    </>,
+  ),
+  /** Favourite, unset. */
+  heart: make(<Path d="M12 20.3l-1.35-1.24C6.4 15.22 4 13.05 4 10.4 4 8.05 5.84 6.2 8.2 6.2c1.33 0 2.6.62 3.43 1.6h.74A4.55 4.55 0 0115.8 6.2c2.36 0 4.2 1.85 4.2 4.2 0 2.65-2.4 4.82-6.65 8.66L12 20.3z" />),
+  /** Favourite, set — filled with the current colour. */
+  heartFilled: make((c) => <Path d="M12 20.3l-1.35-1.24C6.4 15.22 4 13.05 4 10.4 4 8.05 5.84 6.2 8.2 6.2c1.33 0 2.6.62 3.43 1.6h.74A4.55 4.55 0 0115.8 6.2c2.36 0 4.2 1.85 4.2 4.2 0 2.65-2.4 4.82-6.65 8.66L12 20.3z" fill={c} stroke={c} />),
+  /** Sliders — the Store header's filter button. */
+  filter: make(
+    <>
+      <Path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h10M18 18h2" />
+      <Circle cx="16" cy="6" r="2" />
+      <Circle cx="10" cy="12" r="2" />
+      <Circle cx="16" cy="18" r="2" />
+    </>,
+  ),
   dollar: make(
     <>
       <Path d="M12 2v20" />

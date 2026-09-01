@@ -16,7 +16,7 @@ const RADIUS = (SIZE - STROKE) / 2;
 const SECTIONS = [
   { key: 'cash', label: 'Public Balance', color: '#e8e8ea' },
   { key: 'encrypted', label: 'Private Balance', color: '#c9c9cc' },
-  { key: 'earn', label: 'Earn', color: '#666670' },
+  { key: 'earn', label: 'Investments', color: '#666670' },
 ] as const;
 
 const EMPTY_STROKE = 'rgba(255,255,255,0.08)';

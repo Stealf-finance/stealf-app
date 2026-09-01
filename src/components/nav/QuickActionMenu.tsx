@@ -143,13 +143,6 @@ export function QuickActionMenu({
             zIndex: 30,
             width: FAB_SIZE,
             height: FAB_SIZE,
-            // Silver glow, matching the primary (Continue) pill. The shadow
-            // lives here because the Pressable clips to a circle below.
-            borderRadius: FAB_SIZE / 2,
-            shadowColor: 'rgba(220,220,225,0.5)',
-            shadowOpacity: 0.5,
-            shadowRadius: 14,
-            shadowOffset: { width: 0, height: 6 },
           },
           fabStyle,
         ]}

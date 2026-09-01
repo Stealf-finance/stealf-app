@@ -14,6 +14,9 @@ type Props = {
   tone?: Tone;
   rightIcon?: ReactNode;
   disabled?: boolean;
+  /** Tighter padding for a button that sits inside a card rather than
+   *  pinned to the bottom of a screen. Same fill, type and glow. */
+  compact?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 };
@@ -35,9 +38,13 @@ export function PillBtn({
   tone = 'silver',
   rightIcon,
   disabled = false,
+  compact = false,
   style,
   accessibilityLabel,
 }: Props) {
+  const density = compact
+    ? { paddingVertical: 12, paddingHorizontal: 16, gap: 8 }
+    : { paddingVertical: 20, paddingHorizontal: 22, gap: 10 };
   if (variant === 'primary') {
     return (
       <Pressable
@@ -64,12 +71,10 @@ export function PillBtn({
           start={{ x: 0, y: 0 }}
           end={{ x: 0.6, y: 1 }}
           style={{
-            paddingVertical: 20,
-            paddingHorizontal: 22,
+            ...density,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 10,
           }}
         >
           <Text
@@ -115,8 +120,7 @@ export function PillBtn({
       accessibilityLabel={accessibilityLabel ?? label}
       style={[
         {
-          paddingVertical: 20,
-          paddingHorizontal: 22,
+          ...density,
           borderRadius: 100,
           backgroundColor: 'rgba(255,255,255,0.035)',
           borderWidth: 1,
@@ -124,7 +128,6 @@ export function PillBtn({
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 10,
           opacity: disabled ? 0.5 : 1,
         },
         style,
