@@ -133,6 +133,23 @@ logo on a tint); `BrandMark` still uses `brandIconUrl` for the small square
 marks in the cart and on the detail header. Both fall back to a tinted monogram
 when the image fails.
 
+## Product detail
+
+Artwork hero, name, then the amount picker: `−` / big value / `+`, and a
+slider under it. The slider **snaps to the product's denominations** — there
+are no values between them — so it is a picker, not a free input. Chips were
+tried first and dropped: products carry 5 to 13 denominations, which is a lot
+of little labels for a phone.
+
+`denominations()` sorts ascending and de-duplicates, because Bitrefill returns
+them in no order at all (Amazon descends, IKEA ascends). A product with no
+packages but a range gets eight proposed steps snapped to its `step`, so an
+open-amount product stays buyable; those carry no `packageId`, which is what
+the order endpoint expects for a ranged purchase.
+
+**No quantity control here** — one tap adds one card, and the cart's own
+stepper changes the count. The mock has none either.
+
 ## Four render states
 
 `resolveStoreState(groups, error)` in `lib/listState.ts`:
