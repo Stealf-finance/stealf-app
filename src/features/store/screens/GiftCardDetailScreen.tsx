@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
+import { ScreenHeader } from '@/src/design-system/primitives/ScreenHeader';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
@@ -11,12 +11,22 @@ import { useToast } from '@/src/components/toast/ToastContext';
 import { BrandMark } from '../components/BrandMark';
 import { QtyStepper } from '../components/QtyStepper';
 import { useCart } from '../context/CartContext';
-import { STORE_CATALOG } from '../lib/catalog';
+import { useCuratedProducts } from '../hooks/useCuratedProducts';
+import { findProduct } from '../lib/catalog';
 import { formatMoney, packageValue, unitPriceOf } from '../lib/format';
+import { resolveDetailState } from '../lib/listState';
 import { rangeAmountError } from '../lib/range';
-import { CATEGORY_LABELS } from '../lib/types';
+import { GROUP_LABELS } from '../lib/types';
 
 const S = txPalette('silver');
+
+const DETAIL_NOTICE = {
+  skeleton: 'Loading…',
+  unavailable: "Gift cards aren't live yet.",
+  error: "Couldn't load this gift card.",
+  missing: 'This gift card is no longer available.',
+  groups: '',
+} as const;
 
 function Label({ children }: { children: string }) {
   return (
@@ -51,30 +61,35 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
   const toast = useToast();
   const cart = useCart();
 
-  const product = useMemo(
-    () => STORE_CATALOG.find((p) => p.id === productId),
-    [productId],
-  );
+  const { data: groups, error } = useCuratedProducts();
 
-  const [selectedPackageId, setSelectedPackageId] = useState<string | undefined>(
-    () => product?.packages[0]?.packageId,
-  );
-  const [amountText, setAmountText] = useState(() =>
-    String(product?.range?.min ?? ''),
-  );
+  const [selectedPackageId, setSelectedPackageId] = useState<string>();
+  // null until the user types, so a product arriving late still seeds the min.
+  const [typedAmount, setTypedAmount] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
 
-  if (!product) {
+  const product = useMemo(
+    () => findProduct(groups, productId),
+    [groups, productId],
+  );
+  const state = resolveDetailState(groups, error, product !== undefined);
+
+  if (state !== 'groups' || !product) {
     return (
       <View style={{ flex: 1, backgroundColor: T.bg }}>
-        <PageTitleHeader title="Gift card" onBack={() => router.back()} />
+        <ScreenHeader title="Gift card" onBack={() => router.back()} />
         <Text
           style={[
             sansation,
-            { fontSize: 14, color: S.inkDim, textAlign: 'center', marginTop: 40 },
+            {
+              fontSize: 14,
+              color: S.inkDim,
+              textAlign: 'center',
+              marginTop: 40,
+            },
           ]}
         >
-          This gift card is no longer available.
+          {DETAIL_NOTICE[state]}
         </Text>
       </View>
     );
@@ -85,6 +100,7 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
     product.packages.find((p) => p.packageId === selectedPackageId) ??
     product.packages[0];
 
+  const amountText = typedAmount ?? String(product.range?.min ?? '');
   const amount = Number(amountText.replace(',', '.'));
   const rangeError = ranged
     ? rangeAmountError(amount, product.range ?? {}, product.currency)
@@ -114,7 +130,11 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <PageTitleHeader title={product.name} onBack={() => router.back()} adjustFontSize />
+      <ScreenHeader
+        title={product.name}
+        onBack={() => router.back()}
+        adjustFontSize
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -132,8 +152,13 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
             size={104}
             radius={28}
           />
-          <Text style={[sansation, { marginTop: 14, fontSize: 13, color: S.inkDim }]}>
-            {CATEGORY_LABELS[product.category]}
+          <Text
+            style={[
+              sansation,
+              { marginTop: 14, fontSize: 13, color: S.inkDim },
+            ]}
+          >
+            {GROUP_LABELS[product.group]}
             {product.country ? ` · ${product.country}` : ''}
           </Text>
         </View>
@@ -142,7 +167,12 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
           <Text
             style={[
               sansation,
-              { fontSize: 13, color: T.error, textAlign: 'center', marginBottom: 24 },
+              {
+                fontSize: 13,
+                color: T.error,
+                textAlign: 'center',
+                marginBottom: 24,
+              },
             ]}
           >
             This card is out of stock right now.
@@ -168,14 +198,20 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
             >
               <TextInput
                 value={amountText}
-                onChangeText={setAmountText}
+                onChangeText={setTypedAmount}
                 keyboardType="decimal-pad"
                 placeholder="0"
                 placeholderTextColor={S.inkFaint}
                 accessibilityLabel="Amount"
                 style={[
                   sansation,
-                  { flex: 1, fontSize: 22, fontWeight: '600', color: S.ink, padding: 0 },
+                  {
+                    flex: 1,
+                    fontSize: 22,
+                    fontWeight: '600',
+                    color: S.ink,
+                    padding: 0,
+                  },
                 ]}
               />
               <Text style={[sansation, { fontSize: 16, color: S.inkDim }]}>
@@ -185,7 +221,11 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
             <Text
               style={[
                 sansation,
-                { marginTop: 8, fontSize: 12, color: rangeError ? T.error : S.inkFaint },
+                {
+                  marginTop: 8,
+                  fontSize: 12,
+                  color: rangeError ? T.error : S.inkFaint,
+                },
               ]}
             >
               {rangeError ??
@@ -197,7 +237,12 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
           </View>
         ) : (
           <View
-            style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 28 }}
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 10,
+              marginBottom: 28,
+            }}
           >
             {product.packages.map((pkg) => {
               const active = pkg.packageId === selectedPackage?.packageId;
@@ -207,7 +252,10 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
                   onPress={() => setSelectedPackageId(pkg.packageId)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: active }}
-                  accessibilityLabel={formatMoney(packageValue(pkg), product.currency)}
+                  accessibilityLabel={formatMoney(
+                    packageValue(pkg),
+                    product.currency,
+                  )}
                   style={{
                     paddingVertical: 14,
                     paddingHorizontal: 22,
@@ -249,7 +297,12 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
           <Text
             style={[
               sansation,
-              { fontSize: 22, fontWeight: '600', color: S.ink, includeFontPadding: false },
+              {
+                fontSize: 22,
+                fontWeight: '600',
+                color: S.ink,
+                includeFontPadding: false,
+              },
             ]}
           >
             {formatMoney(unitPrice * quantity, product.currency)}

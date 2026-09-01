@@ -1,14 +1,3 @@
-/**
- * Store cart — in-memory, scoped to the Store stack.
- *
- * Mounted by `app/store/_layout.tsx`, so the cart survives navigation between
- * the catalog and a product detail and is dropped when the user leaves the
- * Store. Deliberately NOT persisted: nothing can be bought yet, and a cart
- * that outlives the session would need catalog/price revalidation on rehydrate.
- *
- * All arithmetic lives in `../lib/cart` (pure, unit-tested); this file is only
- * the React binding.
- */
 import {
   createContext,
   useCallback,
@@ -24,7 +13,6 @@ import {
   removeLine,
   setQuantity,
 } from '../lib/cart';
-import { STORE_CURRENCY } from '../lib/catalog';
 import type { CartLine } from '../lib/types';
 
 type CartApi = {
@@ -63,9 +51,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       lines,
       count: cartCount(lines),
       total: cartTotal(lines),
-      // One market, one currency (see STORE_COUNTRY). Revisit if the Store
-      // ever spans countries.
-      currency: lines[0]?.currency ?? STORE_CURRENCY,
+      // Per-product currency; see STORE.md on mixed-currency totals.
+      currency: lines[0]?.currency ?? '',
       add,
       remove,
       setQty,

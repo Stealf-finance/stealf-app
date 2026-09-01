@@ -1,13 +1,3 @@
-/**
- * Brand marks without brand assets.
- *
- * The Store ships no logo images: a gift card is drawn as a monogram on a
- * tinted tile, derived deterministically from the product. When the catalog
- * goes live, Bitrefill's `image` URL takes over and this becomes the fallback
- * for products that have none — which is the case for a real slice of them.
- */
-
-/** Up to two initials: "Amazon" → "A", "Uber Eats" → "UE", "H&M" → "H". */
 export function monogram(name: string): string {
   const words = name
     .split(/[\s\-_]+/)
@@ -18,11 +8,6 @@ export function monogram(name: string): string {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
-/**
- * A stable hue per product, so a brand keeps its colour across renders and
- * screens without a lookup table. FNV-1a — small, deterministic, and it
- * scatters neighbouring ids (amazon-fr / apple-fr) to different hues.
- */
 export function brandHue(seed: string): number {
   let hash = 0x811c9dc5;
   for (let i = 0; i < seed.length; i++) {
@@ -32,11 +17,35 @@ export function brandHue(seed: string): number {
   return Math.abs(hash) % 360;
 }
 
-/** The tile's fill and the monogram's ink, muted enough to sit on black. */
 export function brandColors(seed: string): { bg: string; ink: string } {
   const hue = brandHue(seed);
   return {
     bg: `hsl(${hue}, 42%, 26%)`,
     ink: `hsl(${hue}, 62%, 82%)`,
   };
+}
+
+/** Bitrefill's `image` is unverified — anything not absolute http(s) is unusable. */
+export function isRemoteImage(uri: string | undefined): boolean {
+  if (!uri) return false;
+  return /^https?:\/\/\S+$/i.test(uri.trim());
+}
+
+const ICON_BUCKETS = [64, 128, 256, 512];
+const ART_BUCKETS = [360, 540, 720];
+
+/** Aspect ratio of Bitrefill's card artwork. */
+export const BRAND_ART_RATIO = 5 / 3;
+
+/** Square logo, letterboxed on a flat ground. See STORE.md. */
+export function brandIconUrl(id: string, size: number): string {
+  const px = ICON_BUCKETS.find((b) => b >= size * 3) ?? 512;
+  return `https://cdn.bitrefill.com/primg/i1w${px}h${px}/${encodeURIComponent(id)}.webp`;
+}
+
+/** The full 5:3 card artwork — the brand's own design, not just its logo. */
+export function brandArtUrl(id: string, width: number): string {
+  const w = ART_BUCKETS.find((b) => b >= width * 3) ?? 720;
+  const h = Math.round(w / BRAND_ART_RATIO);
+  return `https://cdn.bitrefill.com/primg/w${w}h${h}/${encodeURIComponent(id)}.webp`;
 }

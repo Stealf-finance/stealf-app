@@ -1,14 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  CATEGORY_ORDER,
-  STORE_CATALOG,
-  filterByCategories,
-  groupByCategory,
-  searchCatalog,
-} from '../catalog';
-import { FEATURED_PRODUCT_IDS, resolveFeatured } from '../featured';
-import { STORE_CATEGORIES } from '../types';
-import type { StoreProduct } from '../types';
+import { findProduct, flattenGroups, searchCatalog } from '../catalog';
+import type { StoreGroupSection, StoreProduct } from '../../api/curated';
 
 const product = (over: Partial<StoreProduct> = {}): StoreProduct => ({
   id: 'x',
@@ -16,63 +8,55 @@ const product = (over: Partial<StoreProduct> = {}): StoreProduct => ({
   currency: 'EUR',
   inStock: true,
   packages: [],
-  category: 'retail',
+  group: 'ecommerce',
   ...over,
 });
 
-describe('STORE_CATALOG', () => {
-  it('carries no duplicate product ids', () => {
-    const ids = STORE_CATALOG.map((p) => p.id);
-    expect(new Set(ids).size).toBe(ids.length);
+const section = (
+  group: StoreGroupSection['group'],
+  products: StoreProduct[],
+): StoreGroupSection => ({ group, products });
+
+const groups: StoreGroupSection[] = [
+  section('ecommerce', [product({ id: 'amazon', name: 'Amazon' })]),
+  section('gaming', [
+    product({ id: 'steam', name: 'Steam' }),
+    product({ id: 'xbox', name: 'Xbox', inStock: false }),
+  ]),
+];
+
+describe('flattenGroups', () => {
+  it('returns every product in section order', () => {
+    expect(flattenGroups(groups).map((p) => p.id)).toEqual([
+      'amazon',
+      'steam',
+      'xbox',
+    ]);
   });
 
-  it('only uses categories the backend accepts', () => {
-    for (const p of STORE_CATALOG) {
-      expect(STORE_CATEGORIES).toContain(p.category);
-    }
-  });
-
-  it('gives every product either packages or a range', () => {
-    for (const p of STORE_CATALOG) {
-      expect(p.packages.length > 0 || p.range != null).toBe(true);
-    }
-  });
-
-  it('places every product in a category the sections render', () => {
-    for (const p of STORE_CATALOG) {
-      expect(CATEGORY_ORDER).toContain(p.category);
-    }
-  });
-
-  it('resolves enough curated ids to fill the Best Selling rail', () => {
-    const featured = resolveFeatured(STORE_CATALOG, FEATURED_PRODUCT_IDS);
-    expect(featured.length).toBeGreaterThanOrEqual(4);
+  it('treats a catalog that has not loaded as empty', () => {
+    expect(flattenGroups(undefined)).toEqual([]);
   });
 });
 
-describe('groupByCategory', () => {
-  it('returns sections in the configured order', () => {
-    const out = groupByCategory([
-      product({ id: 'a', category: 'streaming' }),
-      product({ id: 'b', category: 'retail' }),
-    ]);
-    expect(out.map((s) => s.category)).toEqual(['retail', 'streaming']);
+describe('findProduct', () => {
+  it('resolves an id across groups', () => {
+    expect(findProduct(groups, 'xbox')?.name).toBe('Xbox');
   });
 
-  it('drops categories left with no products', () => {
-    const out = groupByCategory([product({ category: 'retail' })]);
-    expect(out).toHaveLength(1);
+  it('returns undefined for an unknown id', () => {
+    expect(findProduct(groups, 'nope')).toBeUndefined();
   });
 
-  it('returns nothing for an empty catalog', () => {
-    expect(groupByCategory([])).toEqual([]);
+  it('returns undefined before the catalog loads', () => {
+    expect(findProduct(undefined, 'amazon')).toBeUndefined();
   });
 });
 
 describe('searchCatalog', () => {
   const catalog = [
     product({ id: 'a', name: 'Netflix' }),
-    product({ id: 'b', name: 'Deliveroo' }),
+    product({ id: 'b', name: 'Just Eat' }),
     product({ id: 'c', name: 'Décathlon' }),
   ];
 
@@ -84,26 +68,23 @@ describe('searchCatalog', () => {
     expect(searchCatalog(catalog, 'decathlon').map((p) => p.id)).toEqual(['c']);
   });
 
-  it('returns the whole catalog for a blank query', () => {
+  it('returns everything for a blank query', () => {
     expect(searchCatalog(catalog, '   ')).toHaveLength(3);
   });
 
   it('returns nothing when nothing matches', () => {
     expect(searchCatalog(catalog, 'zzz')).toEqual([]);
   });
-});
 
-describe('filterByCategories', () => {
-  const catalog = [
-    product({ id: 'a', category: 'retail' }),
-    product({ id: 'b', category: 'games' }),
-  ];
-
-  it('treats an empty selection as no filter', () => {
-    expect(filterByCategories(catalog, [])).toHaveLength(2);
+  it('matches the shortened name shown on the tile', () => {
+    const amazon = [product({ id: 'z', name: 'Amazon.co.uk United Kingdom' })];
+    expect(searchCatalog(amazon, 'amazon uk').map((p) => p.id)).toEqual(['z']);
   });
 
-  it('keeps only the selected categories', () => {
-    expect(filterByCategories(catalog, ['games']).map((p) => p.id)).toEqual(['b']);
+  it('still matches the full name the API returned', () => {
+    const amazon = [product({ id: 'z', name: 'Amazon.co.uk United Kingdom' })];
+    expect(searchCatalog(amazon, 'united kingdom').map((p) => p.id)).toEqual([
+      'z',
+    ]);
   });
 });

@@ -1,9 +1,3 @@
-/**
- * Favourited gift cards — in-memory, scoped to the Store stack, exactly like
- * the cart. Nothing is persisted yet: a favourite is a product id and would
- * survive a restart happily, but persistence is a deliberate later call
- * (see CartContext's note).
- */
 import {
   createContext,
   useCallback,
@@ -43,6 +37,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 
 export function useFavorites(): FavoritesApi {
   const ctx = useContext(FavoritesContext);
-  if (!ctx) throw new Error('useFavorites must be used inside a FavoritesProvider');
+  if (!ctx)
+    throw new Error('useFavorites must be used inside a FavoritesProvider');
   return ctx;
 }

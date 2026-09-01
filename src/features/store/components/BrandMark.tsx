@@ -1,26 +1,39 @@
+import { useState } from 'react';
 import { Image } from 'expo-image';
 import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { sansationBold } from '@/src/design-system/typography';
-import { brandColors, monogram } from '../lib/brand';
+import {
+  brandColors,
+  brandIconUrl,
+  isRemoteImage,
+  monogram,
+} from '../lib/brand';
 
 type Props = {
   /** Seeds the tint — the product id, so a brand keeps its colour. */
   id: string;
   name: string;
-  /** Bitrefill's product image, once the catalog is live. */
+  /** An absolute URL if one is ever supplied; otherwise derived from `id`. */
   uri?: string;
   size?: number;
   radius?: number;
   style?: StyleProp<ViewStyle>;
 };
 
-/**
- * A brand tile: the product image when there is one, a tinted monogram
- * otherwise. Bitrefill leaves `image` unset on a fair share of products, so
- * the monogram is a permanent fallback, not just scaffolding.
- */
-export function BrandMark({ id, name, uri, size = 56, radius = 16, style }: Props) {
+/** Product image when usable, tinted monogram otherwise — including on load failure. */
+export function BrandMark({
+  id,
+  name,
+  uri,
+  size = 56,
+  radius = 16,
+  style,
+}: Props) {
   const { bg, ink } = brandColors(id);
+  // Keyed by id so a recycled row never inherits another brand's failure.
+  const [failedId, setFailedId] = useState<string>();
+  const source = isRemoteImage(uri) ? (uri as string) : brandIconUrl(id, size);
+  const showImage = failedId !== id;
 
   return (
     <View
@@ -37,12 +50,14 @@ export function BrandMark({ id, name, uri, size = 56, radius = 16, style }: Prop
         style,
       ]}
     >
-      {uri ? (
+      {showImage ? (
         <Image
-          source={{ uri }}
+          source={{ uri: source }}
           style={{ width: '100%', height: '100%' }}
           contentFit="contain"
+          cachePolicy="memory-disk"
           transition={150}
+          onError={() => setFailedId(id)}
         />
       ) : (
         <Text

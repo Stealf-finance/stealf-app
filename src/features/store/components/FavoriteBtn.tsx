@@ -1,12 +1,12 @@
 import { Pressable } from 'react-native';
 import { Icons } from '@/src/design-system/icons';
 import { txPalette } from '@/src/design-system/palettes';
+import { T } from '@/src/design-system/tokens';
 import { useFavorites } from '../context/FavoritesContext';
 
 const S = txPalette('silver');
 
-/** The heart on a gift-card. Sits inside the card's Pressable, so it stops
- *  the tap from reaching the card and opening the product. */
+/** Saves a card for later. Sits inside the tile's Pressable and swallows the tap. */
 export function FavoriteBtn({
   productId,
   name,
@@ -18,7 +18,6 @@ export function FavoriteBtn({
 }) {
   const { has, toggle } = useFavorites();
   const active = has(productId);
-  const Icon = active ? Icons.heartFilled : Icons.heart;
 
   return (
     <Pressable
@@ -27,11 +26,11 @@ export function FavoriteBtn({
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
       accessibilityLabel={
-        active ? `Remove ${name} from favourites` : `Add ${name} to favourites`
+        active ? `Remove ${name} from saved` : `Save ${name} for later`
       }
       style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
     >
-      <Icon size={size} color={active ? S.accent : S.inkFaint} />
+      <Icons.cart size={size} color={active ? T.favorite : S.ink} />
     </Pressable>
   );
 }

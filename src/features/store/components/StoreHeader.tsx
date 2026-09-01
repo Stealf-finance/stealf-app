@@ -1,26 +1,26 @@
 import type { ReactNode } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BackBtn } from '@/src/design-system/primitives/BackBtn';
+import { ScreenHeader } from '@/src/design-system/primitives/ScreenHeader';
 import { Icons } from '@/src/design-system/icons';
 import { sansation, sansationBold } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import { CountryPill } from './CountryPill';
 
 const S = txPalette('silver');
+
+const STORE_ICON = require('@/assets/images/store.png');
 
 /** A bare header icon — no disc, no border, no blur behind it. */
 function IconBtn({
   iconKey,
   onPress,
   label,
-  dot,
   children,
 }: {
   iconKey: keyof typeof Icons;
   onPress: () => void;
   label: string;
-  dot?: boolean;
   children?: ReactNode;
 }) {
   const Icon = Icons[iconKey];
@@ -39,20 +39,6 @@ function IconBtn({
       })}
     >
       <Icon size={20} color={S.ink} />
-      {dot ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 6,
-            right: 3,
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: S.accent,
-          }}
-        />
-      ) : null}
       {children}
     </Pressable>
   );
@@ -87,98 +73,91 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
-/**
- * The Store's top bar: back, a search field, the filter button and the cart.
- * Every control in the row is a bare glyph — the back chevron included —
- * and the search field is a fill with no outline. Search is controlled by the screen; filtering is local to the
- * loaded catalog, so there is no debounce to worry about.
- */
+/** Shared header, then search and cart. Gutter 20 to match the tile grid. */
 export function StoreHeader({
   query,
   onQueryChange,
   onBack,
-  onFilter,
   onCart,
   cartCount,
-  filterActive,
+  market,
 }: {
   query: string;
   onQueryChange: (q: string) => void;
   onBack: () => void;
-  onFilter: () => void;
   onCart: () => void;
   cartCount: number;
-  filterActive: boolean;
+  market: string | undefined;
 }) {
-  const insets = useSafeAreaInsets();
-
   return (
-    <View
-      style={{
-        paddingTop: insets.top + 6,
-        paddingHorizontal: 20,
-        paddingBottom: 14,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-      }}
-    >
-      {/* Chevron glyph, no backdrop — see BackBtn's `bare`. */}
-      <BackBtn onPress={onBack} bare />
+    <View>
+      <ScreenHeader
+        title="Gift Cards"
+        icon={STORE_ICON}
+        onBack={onBack}
+        right={<CountryPill code={market} />}
+        top="hero"
+        gutter={20}
+        style={{ paddingBottom: 4 }}
+      />
 
       <View
         style={{
-          flex: 1,
-          height: 44,
-          borderRadius: 100,
-          paddingHorizontal: 14,
+          paddingHorizontal: 20,
+          paddingTop: 14,
+          paddingBottom: 14,
           flexDirection: 'row',
           alignItems: 'center',
-          gap: 8,
-          backgroundColor: T.bgCard,
+          gap: 12,
         }}
       >
-        <Icons.search size={16} color={S.inkFaint} />
-        <TextInput
-          value={query}
-          onChangeText={onQueryChange}
-          placeholder="Search"
-          placeholderTextColor={S.inkFaint}
-          autoCorrect={false}
-          autoCapitalize="none"
-          returnKeyType="search"
-          accessibilityLabel="Search gift cards"
-          style={[
-            sansation,
-            { flex: 1, fontSize: 14, color: S.ink, padding: 0 },
-          ]}
-        />
-        {query.length > 0 ? (
-          <Pressable
-            onPress={() => onQueryChange('')}
-            hitSlop={10}
-            accessibilityRole="button"
-            accessibilityLabel="Clear search"
-          >
-            <Icons.close size={15} color={S.inkFaint} />
-          </Pressable>
-        ) : null}
+        <View
+          style={{
+            flex: 1,
+            height: 44,
+            borderRadius: 100,
+            paddingHorizontal: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: T.bgCard,
+          }}
+        >
+          <Icons.search size={16} color={S.inkFaint} />
+          <TextInput
+            value={query}
+            onChangeText={onQueryChange}
+            placeholder="Search"
+            placeholderTextColor={S.inkFaint}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+            accessibilityLabel="Search gift cards"
+            style={[
+              sansation,
+              { flex: 1, fontSize: 14, color: S.ink, padding: 0 },
+            ]}
+          />
+          {query.length > 0 ? (
+            <Pressable
+              onPress={() => onQueryChange('')}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
+              <Icons.close size={15} color={S.inkFaint} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        <IconBtn
+          iconKey="cart"
+          onPress={onCart}
+          label={`Cart, ${cartCount} items`}
+        >
+          {cartCount > 0 ? <CountBadge count={cartCount} /> : null}
+        </IconBtn>
       </View>
-
-      <IconBtn
-        iconKey="filter"
-        onPress={onFilter}
-        label="Filter"
-        dot={filterActive}
-      />
-
-      <IconBtn
-        iconKey="cart"
-        onPress={onCart}
-        label={`Cart, ${cartCount} items`}
-      >
-        {cartCount > 0 ? <CountBadge count={cartCount} /> : null}
-      </IconBtn>
     </View>
   );
 }

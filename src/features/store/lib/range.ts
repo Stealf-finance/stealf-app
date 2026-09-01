@@ -3,7 +3,7 @@
  * `{ min, max, step }` instead of fixed packages; the value the user types
  * has to land on a step inside the bounds or the order is rejected upstream.
  */
-import type { StoreRange } from './types';
+import type { StoreRange } from '../api/curated';
 import { formatMoney } from './format';
 
 /** Null when the amount is orderable, otherwise the reason, as UI copy. */

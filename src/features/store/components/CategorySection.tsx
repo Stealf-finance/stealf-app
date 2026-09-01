@@ -2,29 +2,30 @@ import { Text, View } from 'react-native';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { GiftCardTile } from './GiftCardTile';
-import { CATEGORY_LABELS } from '../lib/types';
-import type { StoreCategory, StoreProduct } from '../lib/types';
+import { GRID_GAP, GRID_GUTTER, rowsOfTwo } from '../lib/grid';
+import { GROUP_LABELS } from '../lib/types';
+import type { StoreGroup, StoreProduct } from '../api/curated';
 
 const S = txPalette('silver');
 
-/** A titled 2-column grid of gift cards. `title` overrides the category
- *  label — search results reuse this section without a category. */
+/** `title` overrides the group label — search results reuse this section. */
 export function CategorySection({
-  category,
+  group,
   title,
   products,
   onSelect,
 }: {
-  category?: StoreCategory;
+  group?: StoreGroup;
   title?: string;
   products: StoreProduct[];
   onSelect: (product: StoreProduct) => void;
 }) {
   if (products.length === 0) return null;
-  const heading = title ?? (category ? CATEGORY_LABELS[category] : '');
+  const heading = title ?? (group ? GROUP_LABELS[group] : '');
+  const rows = rowsOfTwo(products);
 
   return (
-    <View style={{ marginBottom: 28, paddingHorizontal: 20 }}>
+    <View style={{ marginBottom: 28, paddingHorizontal: GRID_GUTTER }}>
       <Text
         style={[
           sansation,
@@ -41,9 +42,19 @@ export function CategorySection({
         {heading}
       </Text>
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-        {products.map((p) => (
-          <GiftCardTile key={p.id} product={p} onPress={() => onSelect(p)} />
+      <View style={{ gap: 20 }}>
+        {rows.map((row) => (
+          <View key={row[0].id} style={{ flexDirection: 'row', gap: GRID_GAP }}>
+            {row.map((p) => (
+              <GiftCardTile
+                key={p.id}
+                product={p}
+                onPress={() => onSelect(p)}
+              />
+            ))}
+            {/* Keeps a lone trailing tile half-width instead of stretching. */}
+            {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
+          </View>
         ))}
       </View>
     </View>

@@ -6,7 +6,7 @@ import {
   packageValue,
   unitPriceOf,
 } from '../format';
-import type { StoreProduct } from '../types';
+import type { StoreProduct } from '../../api/curated';
 
 const product = (over: Partial<StoreProduct> = {}): StoreProduct => ({
   id: 'x',
@@ -14,7 +14,7 @@ const product = (over: Partial<StoreProduct> = {}): StoreProduct => ({
   currency: 'EUR',
   inStock: true,
   packages: [],
-  category: 'retail',
+  group: 'ecommerce',
   ...over,
 });
 
@@ -68,21 +68,29 @@ describe('unitPriceOf', () => {
 });
 
 describe('denominationSummary', () => {
-  it('lists fixed denominations', () => {
+  it('shows fixed denominations as a range', () => {
     const p = product({
       packages: [
         { packageId: 'a', value: 25 },
         { packageId: 'b', value: 50 },
       ],
     });
-    expect(denominationSummary(p)).toBe('€25 · €50');
+    expect(denominationSummary(p)).toBe('€25 – €50');
   });
 
-  it('elides past the third denomination', () => {
+  it('takes the bounds, not the ends — Bitrefill does not sort packages', () => {
     const p = product({
-      packages: [25, 50, 100, 200].map((v) => ({ packageId: `p${v}`, value: v })),
+      packages: [1000, 200, 500].map((v) => ({
+        packageId: `p${v}`,
+        value: v,
+      })),
     });
-    expect(denominationSummary(p)).toBe('€25 · €50 · €100 · …');
+    expect(denominationSummary(p)).toBe('€200 – €1000');
+  });
+
+  it('shows a single denomination once, not as a range', () => {
+    const p = product({ packages: [{ packageId: 'a', value: 25 }] });
+    expect(denominationSummary(p)).toBe('€25');
   });
 
   it('shows the bounds of a ranged product', () => {
