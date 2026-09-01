@@ -20,14 +20,23 @@ type Base = {
 };
 
 export type HomeGridCardVM =
-  | (Base & { valueUSD: number; teaser?: never })
-  | (Base & { teaser: string; valueUSD?: never });
+  | (Base & {
+      /** `undefined` while the figure is still unknown. */
+      valueUSD: number | undefined;
+      /** Its query settled in error with nothing to show. */
+      error: boolean;
+      teaser?: never;
+    })
+  | (Base & { teaser: string; valueUSD?: never; error?: never });
 
 /** Hardcoded yield teaser — Grow is not wired yet. Swap for a live APY later. */
 export const EARN_APY_TEASER = '5.41%';
 
 /** View-models for the 4 home grid cards, in fixed display order. Pure. */
-export function buildHomeCards(b: HomeBalances): HomeGridCardVM[] {
+export function buildHomeCards(
+  b: HomeBalances,
+  errors: { bank: boolean; encrypted: boolean } = { bank: false, encrypted: false },
+): HomeGridCardVM[] {
   return [
     {
       key: 'public-balance',
@@ -35,6 +44,7 @@ export function buildHomeCards(b: HomeBalances): HomeGridCardVM[] {
       accent: 'silver',
       iconKey: 'bank',
       valueUSD: b.bankUSD,
+      error: errors.bank,
       route: '/public-balance',
     },
     {
@@ -43,6 +53,7 @@ export function buildHomeCards(b: HomeBalances): HomeGridCardVM[] {
       accent: 'gold',
       iconKey: 'shieldFull',
       valueUSD: b.encryptedUSD,
+      error: errors.encrypted,
       route: '/private-balance',
     },
     {

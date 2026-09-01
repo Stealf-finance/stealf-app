@@ -3,7 +3,14 @@ import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useEncryptedBalances } from '@/src/features/umbra/hooks/useEncryptedBalances';
 import { aggregateHomeBalances, type HomeBalances } from '../lib/aggregateHomeBalances';
 
-export function useHomeBalances(): HomeBalances & { isLoading: boolean } {
+/** Errors stay split by source: one side failing shouldn't blank the other's
+ *  card. A combined flag would mark both. */
+export type HomeBalancesResult = HomeBalances & {
+  bankError: boolean;
+  encryptedError: boolean;
+};
+
+export function useHomeBalances(): HomeBalancesResult {
   const { user } = useAuth();
   const bank = useBalance(user?.bankWallet ?? null);
   const encrypted = useEncryptedBalances();
@@ -13,8 +20,12 @@ export function useHomeBalances(): HomeBalances & { isLoading: boolean } {
     encrypted: encrypted.data,
   });
 
+  // Deliberately not `isLoading`: a query still disabled while auth hydrates
+  // reports `isLoading: false` with no data at all, so the absence of a value
+  // — not a flag — is what the UI keys off.
   return {
     ...totals,
-    isLoading: bank.isLoading || encrypted.isLoading,
+    bankError: bank.isError,
+    encryptedError: encrypted.isError,
   };
 }

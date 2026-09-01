@@ -67,3 +67,28 @@ export function XstockRow({ asset }: { asset: SolanaXstock }) {
     </Pressable>
   );
 }
+
+/** `XstockRow`'s shape without an asset to fill it — the logo disc, the name,
+ *  and the price/change pair. Used while the catalogue itself is loading,
+ *  where there is not even a symbol to hand to the real row. */
+export function XstockRowSkeleton() {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        paddingVertical: 16,
+      }}
+    >
+      <Skeleton width={38} height={38} radius={19} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Skeleton width={132} height={16} radius={5} />
+      </View>
+      <View style={{ alignItems: 'flex-end', gap: 3 }}>
+        <Skeleton width={64} height={15} radius={5} />
+        <Skeleton width={40} height={11} radius={4} />
+      </View>
+    </View>
+  );
+}

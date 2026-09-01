@@ -7,25 +7,32 @@
 import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
+import { Skeleton } from '@/src/design-system/primitives/Skeleton';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
+import { resolveValueState, type AsyncValueState } from '@/src/lib/asyncValue';
 import { useJitoApy } from '../hooks/useJitoApy';
 import { useJitoSolPosition } from '../hooks/useJitoSolBalance';
 
 const S = txPalette('silver');
 
-/** Shown while the live pool APY is loading or unavailable. */
-const FALLBACK_APY_PCT = 0.0;
-
 export function JitoProductCard() {
   const router = useSafeRouter();
-  const { data: apy } = useJitoApy();
-  const apyPct = typeof apy === 'number' ? apy : FALLBACK_APY_PCT;
-  const apyLabel = `${apyPct.toFixed(2)}% APY`;
-  const { usdValue } = useJitoSolPosition();
-  const balanceLabel = usdValue > 0 ? `$${usdValue.toFixed(2)}` : '$0';
+  const apyQuery = useJitoApy();
+  const apy = typeof apyQuery.data === 'number' ? apyQuery.data : undefined;
+  const apyState = resolveValueState(apy, apyQuery.isError);
+  const apyLabel = apy !== undefined ? `${apy.toFixed(2)}% APY` : '— APY';
+
+  const { usdValue, error: positionError } = useJitoSolPosition();
+  const balanceState = resolveValueState(usdValue, positionError);
+  const balanceLabel =
+    usdValue === undefined
+      ? '—'
+      : usdValue > 0
+        ? `$${usdValue.toFixed(2)}`
+        : '$0';
 
   return (
     <Pressable onPress={() => router.push('/jitosol')}>
@@ -71,14 +78,18 @@ export function JitoProductCard() {
                   backgroundColor: 'rgba(255,255,255,0.06)',
                 }}
               >
-                <Text
-                  style={[
-                    sansation,
-                    { fontSize: 12, lineHeight: 16, fontWeight: '600', color: T.green },
-                  ]}
-                >
-                  {apyLabel}
-                </Text>
+                {apyState === 'skeleton' ? (
+                  <Skeleton width={56} height={16} radius={8} />
+                ) : (
+                  <Text
+                    style={[
+                      sansation,
+                      { fontSize: 12, lineHeight: 16, fontWeight: '600', color: T.green },
+                    ]}
+                  >
+                    {apyLabel}
+                  </Text>
+                )}
               </View>
             </View>
             <Text
@@ -92,7 +103,7 @@ export function JitoProductCard() {
         {/* Position stats. Balance is live; Earning needs a cost basis we don't
             track yet, so it stays a placeholder for now. */}
         <View style={{ flexDirection: 'row', marginTop: 18 }}>
-          <CardStat label="Balance" value={balanceLabel} />
+          <CardStat label="Balance" value={balanceLabel} state={balanceState} />
           <CardStat label="Earning" value="$0" />
           <CardStat label="Type" value="Staking" />
         </View>
@@ -101,17 +112,31 @@ export function JitoProductCard() {
   );
 }
 
-function CardStat({ label, value }: { label: string; value: string }) {
+function CardStat({
+  label,
+  value,
+  state = 'value',
+}: {
+  label: string;
+  value: string;
+  state?: AsyncValueState;
+}) {
   return (
     <View style={{ flex: 1 }}>
       <Text style={[sansation, { fontSize: 12, lineHeight: 16, color: S.inkFaint }]}>
         {label}
       </Text>
-      <Text
-        style={[sansation, { fontSize: 15, lineHeight: 20, fontWeight: '500', color: S.ink, marginTop: 4 }]}
-      >
-        {value}
-      </Text>
+      {state === 'skeleton' ? (
+        <View style={{ height: 20, justifyContent: 'center', marginTop: 4 }}>
+          <Skeleton width={52} height={14} radius={5} />
+        </View>
+      ) : (
+        <Text
+          style={[sansation, { fontSize: 15, lineHeight: 20, fontWeight: '500', color: S.ink, marginTop: 4 }]}
+        >
+          {value}
+        </Text>
+      )}
     </View>
   );
 }

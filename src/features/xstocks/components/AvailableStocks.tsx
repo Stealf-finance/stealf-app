@@ -1,22 +1,29 @@
 /**
  * "Tokenized Stocks" group card for the Earn screen's "Available products"
  * section, below the JitoSOL card. One BlurGlass card: title + provider
- * subtitle, then a row per xStock (logo + name + live price). Renders nothing
- * until the catalogue loads.
+ * subtitle, then a row per xStock (logo + name + live price).
+ *
+ * The card used to render nothing until the catalogue loaded, which made the
+ * whole section appear late and looked identical to an empty catalogue and to
+ * a failed fetch. It now holds its shape while loading, and says so when the
+ * catalogue can't be reached — see `resolveCatalogueState` for why that isn't
+ * the same as hiding it.
  */
 import { Text } from 'react-native';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
+import { resolveCatalogueState } from '../lib/catalogueState';
 import { useXstockAssets } from '../hooks/useXstockAssets';
-import { XstockRow } from './XstockRow';
+import { XstockRow, XstockRowSkeleton } from './XstockRow';
 
 const S = txPalette('silver');
 
 export function AvailableStocks() {
-  const { data: assets } = useXstockAssets();
+  const { data: assets, isError } = useXstockAssets();
+  const state = resolveCatalogueState(assets, isError);
 
-  if (!assets || assets.length === 0) return null;
+  if (state === 'hidden') return null;
 
   return (
     <BlurGlass radius={22} innerStyle={{ padding: 20 }}>
@@ -31,9 +38,17 @@ export function AvailableStocks() {
         Tokenized US equities · xStocks
       </Text>
 
-      {assets.map((asset) => (
-        <XstockRow key={asset.id} asset={asset} />
-      ))}
+      {state === 'skeleton' ? (
+        [0, 1, 2].map((i) => <XstockRowSkeleton key={i} />)
+      ) : state === 'error' ? (
+        <Text
+          style={[sansation, { fontSize: 14, color: S.inkFaint, paddingVertical: 16 }]}
+        >
+          Couldn&apos;t load the catalogue.
+        </Text>
+      ) : (
+        assets?.map((asset) => <XstockRow key={asset.id} asset={asset} />)
+      )}
     </BlurGlass>
   );
 }

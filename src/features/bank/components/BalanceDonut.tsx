@@ -25,9 +25,13 @@ const EMPTY_STROKE = 'rgba(255,255,255,0.08)';
  *  legend. Zero accounts are omitted from the ring (equal greyed slices when
  *  everything is zero) but always listed in the legend. */
 export function BalanceDonut({ balances }: { balances: HomeBalances }) {
+  // TODO: the donut still collapses an unknown balance into 0, so a cold load
+  // draws an empty ring rather than a loading one. Home and the balance
+  // screens no longer do this; History hasn't been given the same treatment
+  // yet, and holding the old behaviour keeps that a separate change.
   const values: Record<(typeof SECTIONS)[number]['key'], number> = {
-    cash: balances.bankUSD,
-    encrypted: balances.encryptedUSD,
+    cash: balances.bankUSD ?? 0,
+    encrypted: balances.encryptedUSD ?? 0,
     earn: 0, // Grow isn't wired yet
   };
   const arcs = donutArcs(
@@ -36,7 +40,7 @@ export function BalanceDonut({ balances }: { balances: HomeBalances }) {
   );
   const colorOf = (key: string, empty?: boolean) =>
     empty ? EMPTY_STROKE : SECTIONS.find((s) => s.key === key)!.color;
-  const { int, dec } = splitUsd(balances.totalUSD);
+  const { int, dec } = splitUsd(balances.totalUSD ?? 0);
 
   return (
     <View style={{ alignItems: 'center' }}>

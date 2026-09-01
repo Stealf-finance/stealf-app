@@ -33,7 +33,9 @@ export default function EncryptedScreen() {
   const router = useSafeRouter();
   const encrypted = useEncryptedBalances();
 
-  const assets = (encrypted.data?.tokens ?? []).map((t) => ({
+  // See the note in public-balance: `undefined` means "not known yet", which
+  // an `?? []` would flatten into "this wallet is empty".
+  const assets = encrypted.data?.tokens.map((t) => ({
     key: t.mint,
     iconSource: t.iconUri ? { uri: t.iconUri } : undefined,
     symbol: t.symbol,
@@ -48,8 +50,9 @@ export default function EncryptedScreen() {
       <WalletScreen
         title="Private Balance"
         iconImage={require('@/assets/images/shield.png')}
-        balanceUSD={encrypted.data?.totalUSD ?? 0}
+        balanceUSD={encrypted.data?.totalUSD}
         assets={assets}
+        error={encrypted.isError}
         belowBalance={<ShieldPromptRow />}
         headerRight={
           <Pressable

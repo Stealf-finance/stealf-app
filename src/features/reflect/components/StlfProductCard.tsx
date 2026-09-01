@@ -8,31 +8,48 @@
 import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
+import { Skeleton } from '@/src/design-system/primitives/Skeleton';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
+import { resolveValueState, type AsyncValueState } from '@/src/lib/asyncValue';
 import { useReflectStats, useReflectBalance } from '../hooks/useReflectData';
 
 const S = txPalette('silver');
 
-/** Shown while the live holder APY is loading or unavailable. */
-const FALLBACK_APY_PCT = 0.0;
-
 export function StlfProductCard() {
   const router = useSafeRouter();
   const { user } = useAuth();
-  const { data: stats } = useReflectStats();
-  const { data: balance } = useReflectBalance(user?.bankWallet);
+  const statsQuery = useReflectStats();
+  const balanceQuery = useReflectBalance(user?.bankWallet);
 
-  const apyPct =
-    typeof stats?.realtimeApy === 'number'
-      ? stats.realtimeApy
-      : FALLBACK_APY_PCT;
-  const apyLabel = `${apyPct.toFixed(2)}% APY`;
-  const usdValue = balance?.usdValue ?? 0;
-  const balanceLabel = usdValue > 0 ? `$${usdValue.toFixed(2)}` : '$0';
+  // `api/reflect` catches its own network errors and resolves to `null`, so
+  // these queries never report `isError`. Holding *anything* — including that
+  // null — means the fetch settled; if no usable figure came out of it, that's
+  // a failure, not work still in flight.
+  const apy =
+    typeof statsQuery.data?.realtimeApy === 'number'
+      ? statsQuery.data.realtimeApy
+      : undefined;
+  const apyState = resolveValueState(
+    apy,
+    statsQuery.data !== undefined || statsQuery.isError,
+  );
+  const apyLabel = apy !== undefined ? `${apy.toFixed(2)}% APY` : '— APY';
+
+  const usdValue = balanceQuery.data?.usdValue;
+  const balanceState = resolveValueState(
+    usdValue,
+    balanceQuery.data !== undefined || balanceQuery.isError,
+  );
+  const balanceLabel =
+    usdValue === undefined
+      ? '—'
+      : usdValue > 0
+        ? `$${usdValue.toFixed(2)}`
+        : '$0';
 
   return (
     <Pressable onPress={() => router.push('/stlf')}>
@@ -78,19 +95,23 @@ export function StlfProductCard() {
                   backgroundColor: 'rgba(255,255,255,0.06)',
                 }}
               >
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 12,
-                      lineHeight: 16,
-                      fontWeight: '600',
-                      color: T.green,
-                    },
-                  ]}
-                >
-                  {apyLabel}
-                </Text>
+                {apyState === 'skeleton' ? (
+                  <Skeleton width={56} height={16} radius={8} />
+                ) : (
+                  <Text
+                    style={[
+                      sansation,
+                      {
+                        fontSize: 12,
+                        lineHeight: 16,
+                        fontWeight: '600',
+                        color: T.green,
+                      },
+                    ]}
+                  >
+                    {apyLabel}
+                  </Text>
+                )}
               </View>
             </View>
             <Text
@@ -107,7 +128,7 @@ export function StlfProductCard() {
         {/* Position stats. Balance is live; Earning needs a cost basis we don't
             track yet, so it stays a placeholder for now. */}
         <View style={{ flexDirection: 'row', marginTop: 18 }}>
-          <CardStat label="Balance" value={balanceLabel} />
+          <CardStat label="Balance" value={balanceLabel} state={balanceState} />
           <CardStat label="Earning" value="$0" />
           <CardStat label="Type" value="Stablecoin" />
         </View>
@@ -116,7 +137,15 @@ export function StlfProductCard() {
   );
 }
 
-function CardStat({ label, value }: { label: string; value: string }) {
+function CardStat({
+  label,
+  value,
+  state = 'value',
+}: {
+  label: string;
+  value: string;
+  state?: AsyncValueState;
+}) {
   return (
     <View style={{ flex: 1 }}>
       <Text
@@ -124,20 +153,26 @@ function CardStat({ label, value }: { label: string; value: string }) {
       >
         {label}
       </Text>
-      <Text
-        style={[
-          sansation,
-          {
-            fontSize: 15,
-            lineHeight: 20,
-            fontWeight: '500',
-            color: S.ink,
-            marginTop: 4,
-          },
-        ]}
-      >
-        {value}
-      </Text>
+      {state === 'skeleton' ? (
+        <View style={{ height: 20, justifyContent: 'center', marginTop: 4 }}>
+          <Skeleton width={52} height={14} radius={5} />
+        </View>
+      ) : (
+        <Text
+          style={[
+            sansation,
+            {
+              fontSize: 15,
+              lineHeight: 20,
+              fontWeight: '500',
+              color: S.ink,
+              marginTop: 4,
+            },
+          ]}
+        >
+          {value}
+        </Text>
+      )}
     </View>
   );
 }
