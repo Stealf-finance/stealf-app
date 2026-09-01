@@ -39,7 +39,7 @@ export function HomeTotal({
   const state = hidden ? 'value' : resolveValueState(amountUSD, error);
 
   return (
-    <View style={{ alignItems: 'center', marginTop: 40, marginBottom: 16 }}>
+    <View style={{ alignItems: 'center', marginVertical: 24 }}>
       {/* The wrapper holds the Hero-60 line height in every state so the
           grid below doesn't shift when the figure lands. */}
       {state === 'value' ? (
