@@ -11,8 +11,8 @@ import { encryptedBalancesQueries } from '@/src/features/umbra/hooks/useEncrypte
 import { useHomeBalances } from '../hooks/useHomeBalances';
 import { HomeHeader } from '../components/HomeHeader';
 import { HomeTotal } from '../components/HomeTotal';
-import { HomeSparkline } from '../components/HomeSparkline';
 import { HomeGrid } from '../components/HomeGrid';
+import { HomePromoCarousel } from '../components/HomePromoCarousel';
 
 export function HomeHub() {
   const insets = useSafeAreaInsets();
@@ -52,6 +52,7 @@ export function HomeHub() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
+          flexGrow: 1,
           paddingTop: insets.top + 16,
           paddingBottom: insets.bottom + 90,
         }}
@@ -67,19 +68,23 @@ export function HomeHub() {
         }
       >
         <HomeHeader />
-        <HomeTotal
-          amountUSD={balances.totalUSD}
-          // Either failure makes the total unobtainable, so `||`, not `&&`:
-          // one side erroring leaves `totalUSD` undefined forever, and an
-          // `&&` here would leave the skeleton pulsing with nothing coming.
-          // A total that did resolve still wins — see resolveValueState.
-          error={balances.bankError || balances.encryptedError}
-          hidden={hidden}
-          onToggleHidden={() => setHidden((h) => !h)}
-        />
-        {/* Hardcoded curve (design placeholder) — pushes the grid down */}
-        <HomeSparkline />
+        {/* Takes the slack between header and grid and centres the total in
+            it, so pushing the cards down doesn't leave a hole. Collapses once
+            the content is tall enough to scroll. */}
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <HomeTotal
+            amountUSD={balances.totalUSD}
+            // Either failure makes the total unobtainable, so `||`, not `&&`:
+            // one side erroring leaves `totalUSD` undefined forever, and an
+            // `&&` here would leave the skeleton pulsing with nothing coming.
+            // A total that did resolve still wins — see resolveValueState.
+            error={balances.bankError || balances.encryptedError}
+            hidden={hidden}
+            onToggleHidden={() => setHidden((h) => !h)}
+          />
+        </View>
         <HomeGrid balances={balances} hidden={hidden} />
+        <HomePromoCarousel />
       </ScrollView>
     </View>
   );
