@@ -15,6 +15,7 @@ import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { AmountSlider } from '../components/AmountSlider';
+import { BuyConfirmSheet } from '../components/BuyConfirmSheet';
 import { BrandArt } from '../components/BrandArt';
 import { useCuratedProducts } from '../hooks/useCuratedProducts';
 import { findProduct } from '../lib/catalog';
@@ -77,6 +78,7 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
   const { data: groups, error } = useCuratedProducts();
 
   const [index, setIndex] = useState(0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const product = useMemo(
     () => findProduct(groups, productId),
@@ -247,8 +249,21 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
           bottom: insets.bottom + 16,
         }}
       >
-        <PillBtn label="Buy — coming soon" disabled />
+        <PillBtn
+          label="Buy"
+          onPress={() => setConfirmOpen(true)}
+          disabled={!selected || !product.inStock}
+        />
       </View>
+
+      {selected ? (
+        <BuyConfirmSheet
+          open={confirmOpen}
+          onClose={() => setConfirmOpen(false)}
+          product={product}
+          amount={selected}
+        />
+      ) : null}
     </View>
   );
 }

@@ -15,8 +15,16 @@ Favourites because nothing ever listed them: `useFavorites` had no consumer but
 its own button. `CartContext`, `CartSheet`, `QtyStepper`, `lib/cart.ts`,
 `FavoritesContext`, `FavoriteBtn` and `lib/favorites.ts` are in git history.
 
-Buying is still not wired — the product page's CTA is inert. `POST /orders`,
-the USDC payment leg and the code reveal are the next slice.
+Buying is still not wired. Buy opens `BuyConfirmSheet` — the same
+swipe-to-confirm the send flow uses, on the Store's own `StoreSheet` shell —
+which summarises the order and stops there. **Its swipe is the single call site
+for the next slice**: `POST /orders`, then building and signing the USDC
+transfer to the address Bitrefill returns.
+
+The sheet says "USDC on Solana" without an amount on purpose. The figure only
+exists on the order response (`cost` / `payment.amount`), computed by Bitrefill
+at invoice time; nothing at catalog level exposes a rate, so quoting one here
+would be a guess.
 
 ## Layers
 
