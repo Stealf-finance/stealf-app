@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import { ScreenHeader } from '@/src/design-system/primitives/ScreenHeader';
 import { Icons } from '@/src/design-system/icons';
-import { sansation, sansationBold } from '@/src/design-system/typography';
+import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { CountryPill } from './CountryPill';
@@ -11,82 +10,16 @@ const S = txPalette('silver');
 
 const STORE_ICON = require('@/assets/images/store.png');
 
-/** A bare header icon — no disc, no border, no blur behind it. */
-function IconBtn({
-  iconKey,
-  onPress,
-  label,
-  children,
-}: {
-  iconKey: keyof typeof Icons;
-  onPress: () => void;
-  label: string;
-  children?: ReactNode;
-}) {
-  const Icon = Icons[iconKey];
-  return (
-    <Pressable
-      onPress={onPress}
-      hitSlop={10}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={({ pressed }) => ({
-        width: 34,
-        height: 38,
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: pressed ? 0.55 : 1,
-      })}
-    >
-      <Icon size={20} color={S.ink} />
-      {children}
-    </Pressable>
-  );
-}
-
-function CountBadge({ count }: { count: number }) {
-  return (
-    <View
-      pointerEvents="none"
-      style={{
-        position: 'absolute',
-        top: 2,
-        right: -4,
-        minWidth: 16,
-        height: 16,
-        paddingHorizontal: 4,
-        borderRadius: 8,
-        backgroundColor: S.accent,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Text
-        style={[
-          sansationBold,
-          { fontSize: 9, color: T.bgLightInk, includeFontPadding: false },
-        ]}
-      >
-        {count > 99 ? '99+' : count}
-      </Text>
-    </View>
-  );
-}
-
-/** Shared header, then search and cart. Gutter 20 to match the tile grid. */
+/** Shared header, then the search field. Gutter 20 to match the tile grid. */
 export function StoreHeader({
   query,
   onQueryChange,
   onBack,
-  onCart,
-  cartCount,
   market,
 }: {
   query: string;
   onQueryChange: (q: string) => void;
   onBack: () => void;
-  onCart: () => void;
-  cartCount: number;
   market: string | undefined;
 }) {
   return (
@@ -149,14 +82,6 @@ export function StoreHeader({
             </Pressable>
           ) : null}
         </View>
-
-        <IconBtn
-          iconKey="cart"
-          onPress={onCart}
-          label={`Cart, ${cartCount} items`}
-        >
-          {cartCount > 0 ? <CountBadge count={cartCount} /> : null}
-        </IconBtn>
       </View>
     </View>
   );

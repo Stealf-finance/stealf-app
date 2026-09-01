@@ -14,11 +14,9 @@ import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { useToast } from '@/src/components/toast/ToastContext';
 import { AmountSlider } from '../components/AmountSlider';
 import { BrandArt } from '../components/BrandArt';
 import { FavoriteBtn } from '../components/FavoriteBtn';
-import { useCart } from '../context/CartContext';
 import { useCuratedProducts } from '../hooks/useCuratedProducts';
 import { findProduct } from '../lib/catalog';
 import { clampIndex, denominations } from '../lib/denominations';
@@ -77,8 +75,6 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
   const { width: screen } = useWindowDimensions();
-  const toast = useToast();
-  const cart = useCart();
   const { data: groups, error } = useCuratedProducts();
 
   const [index, setIndex] = useState(0);
@@ -118,27 +114,7 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
   }
 
   const selected = options[clampIndex(index, options.length)];
-  const canAdd = product.inStock && selected !== undefined;
   const contentWidth = screen - GRID_GUTTER * 2;
-
-  const addToCart = () => {
-    if (!selected) return;
-    cart.add({
-      productId: product.id,
-      name: product.name,
-      currency: product.currency ?? '',
-      packageId: selected.packageId,
-      value: selected.value,
-      unitPrice: selected.unitPrice,
-      quantity: 1,
-    });
-    toast.show({
-      kind: 'success',
-      title: 'Added to cart',
-      message: `${shortProductName(product.name)} ${formatMoney(selected.value, product.currency)}`,
-    });
-    router.back();
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
@@ -276,7 +252,7 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
           bottom: insets.bottom + 16,
         }}
       >
-        <PillBtn label="Add to cart" onPress={addToCart} disabled={!canAdd} />
+        <PillBtn label="Buy — coming soon" disabled />
       </View>
     </View>
   );

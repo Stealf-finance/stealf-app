@@ -6,9 +6,15 @@ before changing anything under `src/features/store/`.
 ## What is wired
 
 Only the **catalog**. One authenticated call, `GET /api/giftcards/products/curated`,
-builds the whole Buy tab. Buying is not wired: the cart is local and its
-checkout is inert. `POST /orders`, the USDC payment leg and the code reveal are
-later slices.
+builds the whole Buy tab.
+
+**There is no cart.** It was removed for the MVP: you order from the product
+page, and `POST /api/giftcards/orders` takes one product anyway, so a cart only
+ever meant walking it line by line. `CartContext`, `CartSheet`, `QtyStepper`
+and `lib/cart.ts` are in git history if a basket is ever wanted back.
+
+Buying is still not wired — the product page's CTA is inert. `POST /orders`,
+the USDC payment leg and the code reveal are the next slice.
 
 ## Layers
 
@@ -119,41 +125,25 @@ next column out of the row.
 170pt tile truncates `£1000 · £500 · £200 · …` into noise. Bitrefill does not
 sort `packages`, so the range takes the bounds, not the first and last.
 
-### Two image shapes
+### Image URLs
 
-The CDN serves both, and they are not interchangeable:
+**Bitrefill's `image` field is not a URL — it is an internal slug** (`amazon_uk`,
+`2024_logos/netflix_logo`). The art is served from a CDN keyed on the **product
+id** instead, in two shapes:
 
-| Builder | Path | What it is |
-|---|---|---|
-| `brandIconUrl` | `/primg/i1w<n>h<n>/` | square logo, letterboxed on a flat ground |
-| `brandArtUrl` | `/primg/w<w>h<h>/` | the brand's own 5:3 card artwork |
+```
+/primg/w<w>h<h>/<id>.webp      the brand's own 5:3 card artwork
+/primg/i1w<n>h<n>/<id>.webp    the square logo, letterboxed on a flat ground
+```
 
-The tile uses `brandArtUrl` (that black Amazon card is the real artwork, not a
-logo on a tint); `BrandMark` still uses `brandIconUrl` for the small square
-marks in the cart and on the detail header. Both fall back to a tinted monogram
-when the image fails.
+`brandArtUrl` builds the first, which is what the tiles and the product hero
+use. The square form has no consumer since the cart went — rebuild it from the
+pattern above when "My Cards" needs small marks. Verified 200 `image/webp` for
+all fourteen curated ids, underscores included (`nando_s-ie`).
 
-## Product detail
-
-Artwork hero, name, then the amount picker: `−` / big value / `+`, and a
-slider under it. The slider **snaps to the product's denominations** — there
-are no values between them — so it is a picker, not a free input. Chips were
-tried first and dropped: products carry 5 to 13 denominations, which is a lot
-of little labels for a phone.
-
-`lib/slider.ts` carries a `'worklet'` directive on both functions. The pan
-gesture's `onEnd` runs on the UI thread, and calling a plain imported JS
-function from there crashes the app the moment you release the thumb — which is
-exactly what it did. Anything the gesture calls must be workletized.
-
-`denominations()` sorts ascending and de-duplicates, because Bitrefill returns
-them in no order at all (Amazon descends, IKEA ascends). A product with no
-packages but a range gets eight proposed steps snapped to its `step`, so an
-open-amount product stays buyable; those carry no `packageId`, which is what
-the order endpoint expects for a ranged purchase.
-
-**No quantity control here** — one tap adds one card, and the cart's own
-stepper changes the count. The mock has none either.
+`BrandArt` falls back to a tinted monogram when the image fails to load, keyed
+on the id so a recycled tile never inherits another brand's failure. Logos are
+cached `memory-disk`.
 
 ## Four render states
 

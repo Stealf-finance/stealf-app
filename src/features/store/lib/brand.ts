@@ -25,23 +25,10 @@ export function brandColors(seed: string): { bg: string; ink: string } {
   };
 }
 
-/** Bitrefill's `image` is unverified — anything not absolute http(s) is unusable. */
-export function isRemoteImage(uri: string | undefined): boolean {
-  if (!uri) return false;
-  return /^https?:\/\/\S+$/i.test(uri.trim());
-}
-
-const ICON_BUCKETS = [64, 128, 256, 512];
 const ART_BUCKETS = [360, 540, 720];
 
 /** Aspect ratio of Bitrefill's card artwork. */
 export const BRAND_ART_RATIO = 5 / 3;
-
-/** Square logo, letterboxed on a flat ground. See STORE.md. */
-export function brandIconUrl(id: string, size: number): string {
-  const px = ICON_BUCKETS.find((b) => b >= size * 3) ?? 512;
-  return `https://cdn.bitrefill.com/primg/i1w${px}h${px}/${encodeURIComponent(id)}.webp`;
-}
 
 /** The full 5:3 card artwork — the brand's own design, not just its logo. */
 export function brandArtUrl(id: string, width: number): string {

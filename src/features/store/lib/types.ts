@@ -7,14 +7,3 @@ export const GROUP_LABELS: Record<StoreGroup, string> = {
   streaming: 'Streaming',
   food: 'Food & Delivery',
 };
-
-export type CartLine = {
-  productId: string;
-  name: string;
-  currency: string;
-  /** Absent for a ranged amount. */
-  packageId?: string;
-  value: number;
-  unitPrice: number;
-  quantity: number;
-};

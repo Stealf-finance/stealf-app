@@ -8,14 +8,12 @@ import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { StoreHeader } from './components/StoreHeader';
 import { StoreSegments, type StoreTab } from './components/StoreSegments';
 import { CategorySection } from './components/CategorySection';
-import { CartSheet } from './components/CartSheet';
 import { MyCardsEmpty } from './components/MyCardsEmpty';
 import {
   StoreError,
   StoreSkeleton,
   StoreUnavailable,
 } from './components/StoreStates';
-import { useCart } from './context/CartContext';
 import { useCuratedProducts } from './hooks/useCuratedProducts';
 import { flattenGroups, searchCatalog } from './lib/catalog';
 import { resolveStoreState } from './lib/listState';
@@ -65,12 +63,10 @@ function EmptyResults({ query }: { query: string }) {
 export function StoreScreen() {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
-  const cart = useCart();
   const { data: groups, error } = useCuratedProducts();
 
   const [tab, setTab] = useState<StoreTab>('buy');
   const [query, setQuery] = useState('');
-  const [cartOpen, setCartOpen] = useState(false);
 
   const state = resolveStoreState(groups, error);
   const searching = query.trim().length > 0;
@@ -121,8 +117,6 @@ export function StoreScreen() {
         query={query}
         onQueryChange={setQuery}
         onBack={() => router.back()}
-        onCart={() => setCartOpen(true)}
-        cartCount={cart.count}
         market={market}
       />
 
@@ -139,16 +133,6 @@ export function StoreScreen() {
       ) : (
         <MyCardsEmpty />
       )}
-
-      <CartSheet
-        open={cartOpen}
-        onClose={() => setCartOpen(false)}
-        lines={cart.lines}
-        total={cart.total}
-        currency={cart.currency}
-        onSetQty={cart.setQty}
-        onRemove={cart.remove}
-      />
     </View>
   );
 }
