@@ -24,6 +24,7 @@ export type StealthOp =
   | 'getEncryptedBalanceToSelfClaimableUtxoCreatorFunction'
   | 'getPublicBalanceToReceiverClaimableUtxoCreatorFunction'
   | 'getPublicBalanceToSelfClaimableUtxoCreatorFunction'
+  | 'confidentialTransfer'
   | 'claimReceived'
   | 'claimSelfToPublic'
   | 'fetchClaims'

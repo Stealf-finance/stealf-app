@@ -15,26 +15,100 @@ Favourites because nothing ever listed them: `useFavorites` had no consumer but
 its own button. `CartContext`, `CartSheet`, `QtyStepper`, `lib/cart.ts`,
 `FavoritesContext`, `FavoriteBtn` and `lib/favorites.ts` are in git history.
 
-Buying is still not wired. Buy opens `BuyConfirmSheet` — the same
-swipe-to-confirm the send flow uses, on the Store's own `StoreSheet` shell —
-which summarises the order and stops there. **Its swipe is the single call site
-for the next slice**: `POST /orders`, then building and signing the USDC
-transfer to the address Bitrefill returns.
+**Payment is wired; ordering is not.** See "Paying" below.
 
-The sheet says "USDC on Solana" without an amount on purpose. The figure only
-exists on the order response (`cost` / `payment.amount`), computed by Bitrefill
-at invoice time; nothing at catalog level exposes a rate, so quoting one here
-would be a guess.
+## Paying
+
+Swiping `BuyConfirmSheet` runs an Umbra **confidential transfer**, ETA → ETA:
+the buyer's encrypted balance to Stealf's, in one MPC round-trip. Nothing else
+happens — there is no `POST /api/giftcards/orders`, so **the user pays and
+receives no card.** The sheet says so in as many words. Remove that copy the
+day the backend reconciles payments into orders.
+
+`STORE_TREASURY_ADDRESS` is the backend's `AUTHORITY_PUBLIC_KEY`, registered on
+Umbra. It is hard-coded here because nothing serves it to the client; if it ever
+needs to differ per network, make it an `EXPO_PUBLIC_*` var rather than a second
+constant.
+
+### Why confidential and not a stealth-pool note
+
+The note path (`operations/transfer.ts`, still used by the private send) is
+_unlinkable_: the deposit and the receiver's claim cannot be tied together. It
+costs a ZK proof on the buyer's phone, and a second proof plus a merkle scan on
+the receiver's.
+
+The confidential transfer costs **no ZK proof at all** — the amount is
+rescue-encrypted and settled by Arcium's MPC cluster — and the receiver's
+balance moves on the callback, with nothing to claim. That is the whole
+performance argument, and it is why this path was chosen.
+
+What it gives up: the sender → receiver edge is public. An observer sees _that_
+a given wallet paid Stealf, and when, though never how much. Batching Stealf's
+withdrawals hides the amounts leaving the treasury; it does not hide the
+purchase graph. Any such batching is a treasury policy on Stealf's side — the
+app cannot express it.
+
+### Two constraints that will bite
+
+**Devnet only, on SDK rc.4.** The pipeline looks up ALT entries named
+`transfer_from_{shared,network}_balance_to_*_v18`. All eight live in the
+devnet network config; the mainnet config carries only the older
+`*_token_account_{mxe,shared}_transfer_v9` names, which rc.4 never asks for. A
+mainnet transfer therefore fails at submit. Moving the Store to mainnet needs an
+SDK bump — a deliberate job, see CLAUDE.md.
+
+**Shared-mode senders only.** `getTransferorFunction` runs build + submit for
+the four `shared_*` variants; a network-mode sender returns `kind: "prepared"`
+with nothing broadcast. `confidentialTransfer` throws on that rather than
+reporting a success that never happened. It is also why the SDK's own `.d.ts`
+comment — "Build/submit phase not yet wired in" — is stale: the compiled rc.4
+does run both stages.
+
+`getTransferorFunction` additionally _requires_ an `executorConfig` dep, unlike
+every other operation in this repo, which lets the SDK derive one. All four
+fields come off the client.
+
+### Amount and token
+
+`resolvePaymentToken` picks the settlement token off the encrypted balance by
+symbol (`USDC`, then `dUSDC`, `USDT`, `dUSDT`) and uses its mint and decimals.
+The mint is deliberately **not** a constant: devnet and mainnet disagree, and
+`services/umbra/constant.ts` already carries a `dUSDC` address that nothing
+imports.
+
+`paymentAmountRaw` charges `unitPrice` 1:1 in that token. **On a non-USD
+catalogue this is wrong** — the live Irish list is mostly EUR, one GBP — so the
+confirmation row shows both the face value and what is actually charged rather
+than hiding the gap. A US-only list makes it correct.
+
+### The dev SOL fallback
+
+In `__DEV__` only, `resolvePaymentToken` accepts native **SOL** as a last
+resort, after every stablecoin. A devnet wallet holds SOL and no stablecoin, so
+without this there is nothing to pay with and the transfer can never be
+exercised.
+
+When SOL is the resolved token the charge is a flat `DEV_SOL_TEST_AMOUNT`
+(0.001 SOL), **not** the card price — a €25 card would otherwise mean 25 SOL.
+The confirmation row says so verbatim rather than passing the figure off as a
+price. A release build never reaches this path: `allowNative` is `__DEV__`.
+
+`resolvePaymentBlocker` decides whether the swipe is live, in a fixed order:
+signer hydrated → in stock → settlement token held → encrypted balance
+sufficient → ≥ 0.02 public SOL for fees. It compares `amountRaw` as bigint, not
+floats.
 
 ## Layers
 
-| File                                           | Role                                                  |
-| ---------------------------------------------- | ----------------------------------------------------- |
-| `api/curated.ts`                               | Zod schemas, query key, `fetchCuratedProducts(token)` |
-| `hooks/useCuratedProducts.ts`                  | React Query wrap, token-gated                         |
-| `lib/catalog.ts`                               | pure helpers over the fetched groups                  |
-| `lib/listState.ts`                             | which of the four render states applies               |
-| `lib/format.ts`, `lib/range.ts`, `lib/cart.ts` | pure, unit-tested                                     |
+| File                            | Role                                                  |
+| ------------------------------- | ----------------------------------------------------- |
+| `api/curated.ts`                | Zod schemas, query key, `fetchCuratedProducts(token)` |
+| `hooks/useCuratedProducts.ts`   | React Query wrap, token-gated                         |
+| `lib/catalog.ts`                | pure helpers over the fetched groups                  |
+| `lib/listState.ts`              | which of the four render states applies               |
+| `lib/payment.ts`                | treasury address, token pick, amount, blockers        |
+| `hooks/useStorePayment.ts`      | balances + pre-flight + `umbra.sendConfidential`      |
+| `lib/format.ts`, `lib/range.ts` | pure, unit-tested                                     |
 
 ## The response is data, not a fixed set
 
@@ -68,10 +142,10 @@ Consequences:
   rate belongs server-side and must be shown _in addition to_ the face value,
   never instead of it — it would only ever be an estimate, since Bitrefill
   applies its own rate and margin.
-- **Known gap:** `cartTotal` sums line prices as plain numbers. If the curated
-  list ever mixes currencies (the Irish list does — `amazon-uk` is GBP, the
-  rest EUR), the cart total is meaningless. This is unresolved and waiting on
-  the market decision. A US-only list makes it moot.
+- **Known gap:** checkout charges the face value 1:1 in USDC regardless of
+  `currency`. On the Irish list (mostly EUR, `amazon-uk` in GBP) that is simply
+  the wrong amount. Unresolved, waiting on the market decision; a US-only list
+  makes it moot. See "Paying".
 
 ## Brand images
 
