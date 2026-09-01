@@ -6,11 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
@@ -236,7 +236,7 @@ export function SendFlow({ mode = 'public' }: Props) {
     translate.set(
       withTiming(8 * sign, { duration: FADE_OUT }, (done) => {
         if (!done) return;
-        runOnJS(setStep)(next);
+        scheduleOnRN(setStep, next);
         translate.value = -8 * sign;
         opacity.value = withTiming(1, { duration: FADE_IN });
         translate.value = withTiming(0, { duration: FADE_IN });

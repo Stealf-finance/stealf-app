@@ -31,9 +31,13 @@ export function useUmbraSigner(): void {
   const accountRef = useRef(walletAccount);
   const signTxRef = useRef(signTransaction);
   const signMsgRef = useRef(signMessage);
-  accountRef.current = walletAccount;
-  signTxRef.current = signTransaction;
-  signMsgRef.current = signMessage;
+  // Refreshed after commit, not during render: a ref write in render blocks
+  // React Compiler from memoizing the hook.
+  useEffect(() => {
+    accountRef.current = walletAccount;
+    signTxRef.current = signTransaction;
+    signMsgRef.current = signMessage;
+  });
 
   const signer = useMemo(() => {
     if (!address) return null;

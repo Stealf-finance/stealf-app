@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { TabBar, type TabId } from '@/src/design-system/primitives/TabBar';
 import { QuickActionMenu } from './QuickActionMenu';
@@ -18,14 +18,14 @@ export function AppNavBar() {
   const tabSegment = segments.find((s) => TAB_IDS.includes(s as TabId)) as
     | TabId
     | undefined;
-  // Remember the last real tab so a pushed non-tab route keeps a tab lit.
-  // Held in a ref (mutated in an effect, read during render) rather than
-  // state+effect, which would fire an extra render on every tab change.
-  const lastTabRef = useRef<TabId>(tabSegment ?? 'home');
+  // Remember the last real tab so a pushed non-tab route keeps a tab lit. It
+  // drives what renders, so it is state — a ref read in render blocks React
+  // Compiler, and React bails out when the tab is unchanged.
+  const [lastTab, setLastTab] = useState<TabId>(tabSegment ?? 'home');
   useEffect(() => {
-    if (tabSegment) lastTabRef.current = tabSegment;
+    if (tabSegment) setLastTab(tabSegment);
   }, [tabSegment]);
-  const active = tabSegment ?? lastTabRef.current;
+  const active = tabSegment ?? lastTab;
 
   const handleTab = (id: TabId) => {
     if (tabSegment === id) return;

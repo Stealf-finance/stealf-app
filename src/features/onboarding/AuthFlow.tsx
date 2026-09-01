@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { AuthScreen } from './screens/AuthScreen';
 import { EmailEntryScreen } from './screens/EmailEntryScreen';
 import { OtpScreen } from './screens/OtpScreen';
@@ -26,7 +26,7 @@ export function AuthFlow() {
     opacity.set(
       withTiming(0, { duration: FADE_OUT }, (done) => {
         if (!done) return;
-        runOnJS(setMode)(next);
+        scheduleOnRN(setMode, next);
         opacity.value = withTiming(1, { duration: FADE_IN });
       }),
     );

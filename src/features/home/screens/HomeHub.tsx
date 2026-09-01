@@ -27,24 +27,22 @@ export function HomeHub() {
     const wallet = user?.bankWallet;
     if (!wallet) return;
     setRefreshing(true);
-    try {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: balanceQueries.byAddress(wallet),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: historyQueries.byAddress(wallet),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: shieldedBalanceQueries.byWallet(wallet),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: encryptedBalancesQueries.byWalletPrefix(wallet),
-        }),
-      ]);
-    } finally {
-      setRefreshing(false);
-    }
+    // `.finally()` rather than try/finally: React Compiler cannot lower a
+    // finalizer clause, and this bails it out of the whole screen.
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: balanceQueries.byAddress(wallet),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: historyQueries.byAddress(wallet),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: shieldedBalanceQueries.byWallet(wallet),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: encryptedBalancesQueries.byWalletPrefix(wallet),
+      }),
+    ]).finally(() => setRefreshing(false));
   }, [queryClient, user?.bankWallet]);
 
   return (

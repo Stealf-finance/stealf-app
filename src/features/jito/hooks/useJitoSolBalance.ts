@@ -12,6 +12,9 @@ import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import { getJitoSolBalance, type JitoSolBalance } from '@/src/services/jitoSOL/balance';
 import { usePoolInfo } from './usePoolInfo';
 
+// Module scope: React Compiler cannot lower a BigInt literal inside a hook.
+const ZERO_RAW = 0n;
+
 export const jitoSolBalanceQueries = {
   byWallet: (wallet: string) => ['jito-sol-balance', wallet] as const,
 };
@@ -55,7 +58,7 @@ export function useJitoSolPosition() {
   return {
     jitoSol,
     usdValue,
-    raw: balanceQuery.data?.raw ?? 0n,
+    raw: balanceQuery.data?.raw ?? ZERO_RAW,
     /**
      * `usePoolInfo` reads a mainnet-only stake pool account, so against a
      * devnet RPC it fails on every call. Surfacing that is the point: the old
