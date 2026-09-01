@@ -1,22 +1,17 @@
-import { Pressable, Text, View } from 'react-native';
-import { Icons } from '@/src/design-system/icons';
-import { PillBtn } from '@/src/design-system/primitives/PillBtn';
+import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { Skeleton } from '@/src/design-system/primitives/Skeleton';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
-import { T } from '@/src/design-system/tokens';
-import { BrandMark } from './BrandMark';
-import { FavoriteBtn } from './FavoriteBtn';
+import { BRAND_ART_RATIO } from '../lib/brand';
 import { denominationSummary } from '../lib/format';
-import type { StoreProduct } from '../lib/types';
+import { tileWidth } from '../lib/grid';
+import { shortProductName } from '../lib/productName';
+import { BrandArt } from './BrandArt';
+import type { StoreProduct } from '../api/curated';
 
 const S = txPalette('silver');
 
-/**
- * One card in a category grid — brand mark, favourite, name, denominations
- * and a Buy button. Buy opens the product rather than adding straight to the
- * cart: the denomination is the whole decision on a gift card, so it can't be
- * guessed on the user's behalf.
- */
+/** Artwork, name, denominations. Tapping opens the product — see STORE.md. */
 export function GiftCardTile({
   product,
   onPress,
@@ -24,6 +19,8 @@ export function GiftCardTile({
   product: StoreProduct;
   onPress: () => void;
 }) {
+  const { width: screen } = useWindowDimensions();
+  const width = tileWidth(screen);
   const disabled = !product.inStock;
 
   return (
@@ -34,31 +31,19 @@ export function GiftCardTile({
       accessibilityLabel={`${product.name} gift card`}
       accessibilityState={{ disabled }}
       style={({ pressed }) => ({
-        flexGrow: 1,
-        flexBasis: '47%',
-        borderRadius: 20,
-        padding: 14,
-        backgroundColor: T.bgCard,
+        width,
         opacity: disabled ? 0.42 : pressed ? 0.7 : 1,
       })}
     >
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-        }}
-      >
-        <BrandMark id={product.id} name={product.name} uri={product.image} size={44} radius={13} />
-        <FavoriteBtn productId={product.id} name={product.name} />
-      </View>
+      <BrandArt id={product.id} name={product.name} width={width} />
 
       <Text
         numberOfLines={1}
         style={[
           sansation,
           {
-            marginTop: 12,
+            width,
+            marginTop: 10,
             fontSize: 15,
             fontWeight: '600',
             color: S.ink,
@@ -66,25 +51,40 @@ export function GiftCardTile({
           },
         ]}
       >
-        {product.name}
+        {shortProductName(product.name)}
       </Text>
 
       <Text
         numberOfLines={1}
-        style={[sansation, { marginTop: 3, fontSize: 12, color: S.inkDim }]}
+        style={[
+          sansation,
+          { width, marginTop: 3, fontSize: 13, color: S.inkDim },
+        ]}
       >
         {disabled ? 'Out of stock' : denominationSummary(product)}
       </Text>
-
-      <PillBtn
-        label="Buy"
-        compact
-        disabled={disabled}
-        onPress={onPress}
-        accessibilityLabel={`Buy ${product.name}`}
-        rightIcon={<Icons.arrRight size={14} color="#0a0a0a" />}
-        style={{ marginTop: 14 }}
-      />
     </Pressable>
+  );
+}
+
+/** Holds a tile's shape while the catalog loads. */
+export function GiftCardTileSkeleton() {
+  const { width: screen } = useWindowDimensions();
+  const width = tileWidth(screen);
+
+  return (
+    <View style={{ width }}>
+      <Skeleton
+        width={width}
+        height={Math.round(width / BRAND_ART_RATIO)}
+        radius={14}
+      />
+      <View style={{ marginTop: 10 }}>
+        <Skeleton width="70%" height={15} radius={5} />
+      </View>
+      <View style={{ marginTop: 4 }}>
+        <Skeleton width="52%" height={13} radius={4} />
+      </View>
+    </View>
   );
 }

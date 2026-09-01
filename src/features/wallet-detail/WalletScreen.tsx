@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Image, type ImageSource } from 'expo-image';
+import { type ImageSource } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AssetRow } from '@/src/design-system/primitives/AssetRow';
-import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
+import { ScreenHeader } from '@/src/design-system/primitives/ScreenHeader';
 import { Skeleton } from '@/src/design-system/primitives/Skeleton';
 import { txPalette, type Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
@@ -117,49 +117,15 @@ export function WalletScreen({
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header: back on the left, icon + title centered (spacer balances) */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginBottom: 40,
-          }}
-        >
-          <GlassBackButton onPress={() => router.back()} />
-          <View
-            style={{
-              flex: 1,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 12,
-            }}
-          >
-            <Image
-              source={iconImage}
-              style={{ width: 32, height: 32 }}
-              contentFit="contain"
-              cachePolicy="memory-disk"
-            />
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 22,
-                  lineHeight: 28,
-                  fontWeight: '600',
-                  color: T.ink,
-                },
-              ]}
-            >
-              {title}
-            </Text>
-          </View>
-          {/* Balances the back chevron; holds `headerRight` when given. */}
-          <View style={{ minWidth: 26, alignItems: 'flex-end' }}>
-            {headerRight}
-          </View>
-        </View>
+        <ScreenHeader
+          title={title}
+          icon={iconImage}
+          onBack={() => router.back()}
+          right={headerRight}
+          top="none"
+          gutter={0}
+          style={{ paddingBottom: 0, marginBottom: 40 }}
+        />
 
         {/* Balance */}
         <View style={{ marginBottom: 40 }}>
@@ -211,7 +177,11 @@ export function WalletScreen({
               <Text
                 style={[
                   sansation,
-                  { fontSize: 22, color: pal.inkDim, includeFontPadding: false },
+                  {
+                    fontSize: 22,
+                    color: pal.inkDim,
+                    includeFontPadding: false,
+                  },
                 ]}
               >
                 {dec}

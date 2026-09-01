@@ -1,272 +1,269 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { PageTitleHeader } from '@/src/design-system/primitives/PageTitleHeader';
+import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
+import { Icons } from '@/src/design-system/icons';
 import { sansation } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { useToast } from '@/src/components/toast/ToastContext';
-import { BrandMark } from '../components/BrandMark';
-import { QtyStepper } from '../components/QtyStepper';
-import { useCart } from '../context/CartContext';
-import { STORE_CATALOG } from '../lib/catalog';
-import { formatMoney, packageValue, unitPriceOf } from '../lib/format';
-import { rangeAmountError } from '../lib/range';
-import { CATEGORY_LABELS } from '../lib/types';
+import { AmountSlider } from '../components/AmountSlider';
+import { BuyConfirmSheet } from '../components/BuyConfirmSheet';
+import { BrandArt } from '../components/BrandArt';
+import { useCuratedProducts } from '../hooks/useCuratedProducts';
+import { findProduct } from '../lib/catalog';
+import { clampIndex, denominations } from '../lib/denominations';
+import { formatMoney } from '../lib/format';
+import { GRID_GUTTER } from '../lib/grid';
+import { resolveDetailState } from '../lib/listState';
+import { shortProductName } from '../lib/productName';
 
 const S = txPalette('silver');
 
-function Label({ children }: { children: string }) {
+const DETAIL_NOTICE = {
+  skeleton: 'Loading…',
+  unavailable: "Gift cards aren't live yet.",
+  error: "Couldn't load this gift card.",
+  missing: 'This gift card is no longer available.',
+  groups: '',
+} as const;
+
+function StepBtn({
+  icon,
+  onPress,
+  disabled,
+  label,
+}: {
+  icon: 'minus' | 'plus';
+  onPress: () => void;
+  disabled: boolean;
+  label: string;
+}) {
+  const Icon = Icons[icon];
   return (
-    <Text
-      style={[
-        sansation,
-        {
-          fontSize: 11,
-          letterSpacing: 2,
-          textTransform: 'uppercase',
-          color: S.inkFaint,
-          marginBottom: 12,
-        },
-      ]}
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => ({
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: T.hairlineStrong,
+        opacity: disabled ? 0.3 : pressed ? 0.6 : 1,
+      })}
     >
-      {children}
-    </Text>
+      <Icon size={18} color={S.ink} />
+    </Pressable>
   );
 }
 
-/**
- * A gift card's detail: pick a denomination and a quantity, add it to the
- * cart. Two product shapes — fixed `packages` become selectable pills, an
- * open `range` becomes a bounded amount field (see ../lib/range).
- *
- * Nothing is bought here: the CTA fills the local cart, whose checkout is
- * inert until the payment path lands.
- */
 export function GiftCardDetailScreen({ productId }: { productId: string }) {
   const router = useSafeRouter();
   const insets = useSafeAreaInsets();
-  const toast = useToast();
-  const cart = useCart();
+  const { width: screen } = useWindowDimensions();
+  const { data: groups, error } = useCuratedProducts();
+
+  const [index, setIndex] = useState(0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const product = useMemo(
-    () => STORE_CATALOG.find((p) => p.id === productId),
-    [productId],
+    () => findProduct(groups, productId),
+    [groups, productId],
+  );
+  const state = resolveDetailState(groups, error, product !== undefined);
+
+  const options = useMemo(
+    () => (product ? denominations(product) : []),
+    [product],
   );
 
-  const [selectedPackageId, setSelectedPackageId] = useState<string | undefined>(
-    () => product?.packages[0]?.packageId,
-  );
-  const [amountText, setAmountText] = useState(() =>
-    String(product?.range?.min ?? ''),
-  );
-  const [quantity, setQuantity] = useState(1);
-
-  if (!product) {
+  if (state !== 'groups' || !product) {
     return (
       <View style={{ flex: 1, backgroundColor: T.bg }}>
-        <PageTitleHeader title="Gift card" onBack={() => router.back()} />
+        <View style={{ paddingTop: insets.top + 8, paddingHorizontal: 20 }}>
+          <GlassBackButton onPress={() => router.back()} />
+        </View>
         <Text
           style={[
             sansation,
-            { fontSize: 14, color: S.inkDim, textAlign: 'center', marginTop: 40 },
+            {
+              fontSize: 14,
+              color: S.inkDim,
+              textAlign: 'center',
+              marginTop: 40,
+            },
           ]}
         >
-          This gift card is no longer available.
+          {DETAIL_NOTICE[state]}
         </Text>
       </View>
     );
   }
 
-  const ranged = product.packages.length === 0 && product.range != null;
-  const selectedPackage =
-    product.packages.find((p) => p.packageId === selectedPackageId) ??
-    product.packages[0];
-
-  const amount = Number(amountText.replace(',', '.'));
-  const rangeError = ranged
-    ? rangeAmountError(amount, product.range ?? {}, product.currency)
-    : null;
-
-  const value = ranged ? amount : packageValue(selectedPackage);
-  const unitPrice = ranged ? amount : unitPriceOf(selectedPackage);
-  const canAdd = product.inStock && rangeError === null && value > 0;
-
-  const addToCart = () => {
-    cart.add({
-      productId: product.id,
-      name: product.name,
-      currency: product.currency ?? '',
-      packageId: ranged ? undefined : selectedPackage?.packageId,
-      value,
-      unitPrice,
-      quantity,
-    });
-    toast.show({
-      kind: 'success',
-      title: 'Added to cart',
-      message: `${quantity} × ${product.name} ${formatMoney(value, product.currency)}`,
-    });
-    router.back();
-  };
+  const selected = options[clampIndex(index, options.length)];
+  const contentWidth = screen - GRID_GUTTER * 2;
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <PageTitleHeader title={product.name} onBack={() => router.back()} adjustFontSize />
+      <View
+        style={{
+          paddingTop: insets.top + 8,
+          paddingHorizontal: GRID_GUTTER,
+          paddingBottom: 8,
+        }}
+      >
+        <GlassBackButton onPress={() => router.back()} />
+      </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
-          paddingHorizontal: 24,
+          paddingHorizontal: GRID_GUTTER,
           paddingBottom: insets.bottom + 140,
         }}
       >
-        <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-          <BrandMark
-            id={product.id}
-            name={product.name}
-            uri={product.image}
-            size={104}
-            radius={28}
-          />
-          <Text style={[sansation, { marginTop: 14, fontSize: 13, color: S.inkDim }]}>
-            {CATEGORY_LABELS[product.category]}
-            {product.country ? ` · ${product.country}` : ''}
-          </Text>
-        </View>
+        <BrandArt id={product.id} name={product.name} width={contentWidth} />
+
+        <Text
+          style={[
+            sansation,
+            {
+              marginTop: 16,
+              fontSize: 20,
+              fontWeight: '600',
+              color: S.ink,
+              includeFontPadding: false,
+            },
+          ]}
+        >
+          {shortProductName(product.name)}
+        </Text>
 
         {!product.inStock ? (
           <Text
-            style={[
-              sansation,
-              { fontSize: 13, color: T.error, textAlign: 'center', marginBottom: 24 },
-            ]}
+            style={[sansation, { marginTop: 8, fontSize: 13, color: T.error }]}
           >
             This card is out of stock right now.
           </Text>
         ) : null}
 
-        <Label>{ranged ? 'Amount' : 'Denomination'}</Label>
+        <Text
+          style={[
+            sansation,
+            {
+              marginTop: 32,
+              fontSize: 13,
+              color: S.inkDim,
+              textAlign: 'center',
+            },
+          ]}
+        >
+          Select amount
+        </Text>
 
-        {ranged ? (
-          <View style={{ marginBottom: 28 }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 8,
-                paddingHorizontal: 18,
-                height: 58,
-                borderRadius: 18,
-                backgroundColor: T.bgCard,
-                borderWidth: 1,
-                borderColor: rangeError ? T.error : T.hairline,
-              }}
-            >
-              <TextInput
-                value={amountText}
-                onChangeText={setAmountText}
-                keyboardType="decimal-pad"
-                placeholder="0"
-                placeholderTextColor={S.inkFaint}
-                accessibilityLabel="Amount"
-                style={[
-                  sansation,
-                  { flex: 1, fontSize: 22, fontWeight: '600', color: S.ink, padding: 0 },
-                ]}
-              />
-              <Text style={[sansation, { fontSize: 16, color: S.inkDim }]}>
-                {product.currency}
-              </Text>
-            </View>
-            <Text
-              style={[
-                sansation,
-                { marginTop: 8, fontSize: 12, color: rangeError ? T.error : S.inkFaint },
-              ]}
-            >
-              {rangeError ??
-                `${formatMoney(product.range?.min ?? 0, product.currency)} – ${formatMoney(
-                  product.range?.max ?? 0,
-                  product.currency,
-                )}`}
-            </Text>
-          </View>
-        ) : (
-          <View
-            style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 28 }}
-          >
-            {product.packages.map((pkg) => {
-              const active = pkg.packageId === selectedPackage?.packageId;
-              return (
-                <Pressable
-                  key={pkg.packageId}
-                  onPress={() => setSelectedPackageId(pkg.packageId)}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
-                  accessibilityLabel={formatMoney(packageValue(pkg), product.currency)}
-                  style={{
-                    paddingVertical: 14,
-                    paddingHorizontal: 22,
-                    borderRadius: 16,
-                    backgroundColor: active ? S.accentSoft : T.bgCard,
-                    borderWidth: 1,
-                    borderColor: active ? T.hairlineStrong : T.hairline,
-                  }}
-                >
-                  <Text
-                    style={[
-                      sansation,
-                      {
-                        fontSize: 16,
-                        fontWeight: active ? '700' : '500',
-                        color: active ? S.ink : S.inkDim,
-                        includeFontPadding: false,
-                      },
-                    ]}
-                  >
-                    {formatMoney(packageValue(pkg), product.currency)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
-
-        <Label>Quantity</Label>
         <View
           style={{
+            marginTop: 12,
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingVertical: 6,
+            justifyContent: 'center',
+            gap: 28,
           }}
         >
-          <QtyStepper quantity={quantity} onChange={setQuantity} size={34} />
+          <StepBtn
+            icon="minus"
+            onPress={() => setIndex((i) => clampIndex(i - 1, options.length))}
+            disabled={index <= 0}
+            label="Lower amount"
+          />
           <Text
             style={[
               sansation,
-              { fontSize: 22, fontWeight: '600', color: S.ink, includeFontPadding: false },
+              {
+                fontSize: 42,
+                lineHeight: 50,
+                fontWeight: '600',
+                letterSpacing: -1,
+                color: S.ink,
+                includeFontPadding: false,
+              },
             ]}
           >
-            {formatMoney(unitPrice * quantity, product.currency)}
+            {selected ? formatMoney(selected.value, product.currency) : '—'}
           </Text>
+          <StepBtn
+            icon="plus"
+            onPress={() => setIndex((i) => clampIndex(i + 1, options.length))}
+            disabled={index >= options.length - 1}
+            label="Raise amount"
+          />
         </View>
+
+        {options.length > 1 ? (
+          <View style={{ marginTop: 28 }}>
+            <AmountSlider
+              count={options.length}
+              index={clampIndex(index, options.length)}
+              onChange={setIndex}
+            />
+            <View
+              style={{
+                marginTop: 10,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text style={[sansation, { fontSize: 12, color: S.inkFaint }]}>
+                {formatMoney(options[0].value, product.currency)}
+              </Text>
+              <Text style={[sansation, { fontSize: 12, color: S.inkFaint }]}>
+                {formatMoney(
+                  options[options.length - 1].value,
+                  product.currency,
+                )}
+              </Text>
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
 
       <View
         style={{
           position: 'absolute',
-          left: 24,
-          right: 24,
+          left: GRID_GUTTER,
+          right: GRID_GUTTER,
           bottom: insets.bottom + 16,
         }}
       >
-        <PillBtn label="Add to cart" onPress={addToCart} disabled={!canAdd} />
+        <PillBtn
+          label="Buy"
+          onPress={() => setConfirmOpen(true)}
+          disabled={!selected || !product.inStock}
+        />
       </View>
+
+      {selected ? (
+        <BuyConfirmSheet
+          open={confirmOpen}
+          onClose={() => setConfirmOpen(false)}
+          product={product}
+          amount={selected}
+        />
+      ) : null}
     </View>
   );
 }

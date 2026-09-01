@@ -1,16 +1,3 @@
-/**
- * useReflectYield — buy (mint) / sell (burn) STLF via Reflect.
- *
- * Bank-wallet flow: the backend (`/api/yield/usdc/build-{mint,burn}`) returns an
- * unsigned tx (base64) + the mainnet `rpcUrl` to broadcast on (STLF is mainnet;
- * the app bundle is devnet). Turnkey signs + broadcasts, then we POLL the
- * signature to confirmation on that rpcUrl BEFORE recording the position via
- * `/confirm` — so a dropped/reverted tx never leaves a phantom position.
- *
- * Signing is Turnkey (bank wallet) only — hard rule #3. Stealth/umbra signing is
- * intentionally out of scope here (the backend resolveSigner accepts the bank
- * wallet, and routing STLF through the backend must not leak the stealth wallet).
- */
 import { useCallback, useState } from 'react';
 import { Buffer } from 'buffer';
 import { useTurnkey } from '@turnkey/react-native-wallet-kit';
@@ -33,7 +20,6 @@ export interface ReflectExecResult {
   expectedReceivedBaseUnits: number;
   minimumReceivedBaseUnits: number;
   rate: number;
-  /** Whether the tx was seen confirmed on-chain (position recorded). */
   confirmed: boolean;
 }
 

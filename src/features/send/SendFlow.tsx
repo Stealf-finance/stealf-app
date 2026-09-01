@@ -20,7 +20,7 @@ import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectShee
 import { sansation } from '@/src/design-system/typography';
 import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
-import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
+import { ScreenHeader } from '@/src/design-system/primitives/ScreenHeader';
 import { Asset } from '@/src/features/send/components/AssetPill';
 import {
   useSelectedAsset,
@@ -350,8 +350,7 @@ export function SendFlow({ mode = 'public' }: Props) {
             queryKey: shieldedBalanceQueries.byWallet(fromAddress),
           }),
           queryClient.invalidateQueries({
-            queryKey:
-              encryptedBalancesQueries.byWalletPrefix(fromAddress),
+            queryKey: encryptedBalancesQueries.byWalletPrefix(fromAddress),
           }),
           queryClient.invalidateQueries({
             queryKey: historyQueries.byAddress(fromAddress),
@@ -431,49 +430,16 @@ export function SendFlow({ mode = 'public' }: Props) {
 
   return (
     <CenterGlow tone={uiTone} flat>
-      {/* Header: flat background, bare chevron back button, centered 22pt
-          title. paddingTop uses insets.top so the title sits near the
-          wallet-detail title height (see docs/screen-patterns.md). The title
-          is step-aware: recipient step vs amount step (with the recipient
-          echoed underneath). */}
-      <View
-        style={{
-          paddingTop: insets.top,
-          paddingBottom: 14,
-          paddingHorizontal: 24,
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-      >
-        <GlassBackButton onPress={handleBack} />
-        <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 22,
-                lineHeight: 28,
-                fontWeight: '600',
-                color: T.ink,
-                includeFontPadding: false,
-              },
-            ]}
-          >
-            {step === 1 ? title : 'Enter amount'}
-          </Text>
-          {step !== 1 && recipient ? (
-            <Text
-              style={[
-                sansation,
-                { fontSize: 14, lineHeight: 20, color: T.inkDim, marginTop: 4 },
-              ]}
-            >
-              to: {truncateAddress(recipient.name)}
-            </Text>
-          ) : null}
-        </View>
-        <View style={{ width: 26 }} />
-      </View>
+      <ScreenHeader
+        title={step === 1 ? title : 'Enter amount'}
+        subtitle={
+          step !== 1 && recipient
+            ? `to: ${truncateAddress(recipient.name)}`
+            : undefined
+        }
+        onBack={handleBack}
+        top="inset"
+      />
 
       <Animated.View style={[{ flex: 1 }, contentStyle]}>
         {step === 1 && asset && (
