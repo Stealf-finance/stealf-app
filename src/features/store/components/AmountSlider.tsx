@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
@@ -58,7 +58,7 @@ export function AmountSlider({
     .onEnd(() => {
       const snapped = indexFromPosition(x.get(), travel.get(), count);
       x.set(withSpring(positionForIndex(snapped, travel.get(), count), SPRING));
-      runOnJS(onChange)(snapped);
+      scheduleOnRN(onChange, snapped);
     })
     .onFinalize(() => {
       active.set(withSpring(0, SPRING));

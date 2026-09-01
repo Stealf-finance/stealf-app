@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { LayoutChangeEvent, Text } from 'react-native';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Icons } from '@/src/design-system/icons';
@@ -98,7 +98,7 @@ export function SwipeToSend({
                 { duration: SUCCESS_HOLD_MS },
                 (held) => {
                   'worklet';
-                  if (held) runOnJS(fireOnSend)();
+                  if (held) scheduleOnRN(fireOnSend);
                 },
               );
             },

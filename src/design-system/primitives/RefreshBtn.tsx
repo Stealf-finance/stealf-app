@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { Icons } from '@/src/design-system/icons';
 
 const SPIN_DURATION_MS = 1100;
@@ -47,7 +47,7 @@ export function RefreshBtn({ onPress, spinning }: Props) {
         360 * SPIN_ROTATIONS,
         { duration: SPIN_DURATION_MS, easing: Easing.out(Easing.cubic) },
         () => {
-          runOnJS(setLocalSpinning)(false);
+          scheduleOnRN(setLocalSpinning, false);
         },
       ),
     );

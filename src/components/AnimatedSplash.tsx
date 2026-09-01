@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import Animated, {
   Easing,
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 
@@ -49,7 +49,7 @@ export function AnimatedSplash() {
             easing: Easing.out(Easing.ease),
           },
           (finished) => {
-            if (finished) runOnJS(setDone)(true);
+            if (finished) scheduleOnRN(setDone, true);
           },
         ),
       ),
