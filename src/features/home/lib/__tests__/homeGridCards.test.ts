@@ -27,6 +27,37 @@ describe('buildHomeCards', () => {
       iconKey: 'shieldFull',
     });
   });
+  it('carries an unknown balance through as undefined, not 0', () => {
+    const byKey = Object.fromEntries(
+      buildHomeCards({
+        totalUSD: undefined,
+        bankUSD: undefined,
+        encryptedUSD: 5,
+      }).map((c) => [c.key, c]),
+    );
+    expect(byKey['public-balance']).toMatchObject({ valueUSD: undefined });
+    expect(byKey['private-balance']).toMatchObject({ valueUSD: 5 });
+  });
+
+  it('flags each value card with only its own source error', () => {
+    const byKey = Object.fromEntries(
+      buildHomeCards(balances, { bank: true, encrypted: false }).map((c) => [
+        c.key,
+        c,
+      ]),
+    );
+    expect(byKey['public-balance']).toMatchObject({ error: true });
+    expect(byKey['private-balance']).toMatchObject({ error: false });
+  });
+
+  it('defaults both value cards to no error', () => {
+    const byKey = Object.fromEntries(
+      buildHomeCards(balances).map((c) => [c.key, c]),
+    );
+    expect(byKey['public-balance']).toMatchObject({ error: false });
+    expect(byKey['private-balance']).toMatchObject({ error: false });
+  });
+
   it('gives Earn a hardcoded APY teaser instead of a value', () => {
     const earn = buildHomeCards(balances).find((c) => c.key === 'earn')!;
     expect(earn).toMatchObject({

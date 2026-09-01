@@ -69,6 +69,11 @@ export function HomeHub() {
         <HomeHeader />
         <HomeTotal
           amountUSD={balances.totalUSD}
+          // Either failure makes the total unobtainable, so `||`, not `&&`:
+          // one side erroring leaves `totalUSD` undefined forever, and an
+          // `&&` here would leave the skeleton pulsing with nothing coming.
+          // A total that did resolve still wins — see resolveValueState.
+          error={balances.bankError || balances.encryptedError}
           hidden={hidden}
           onToggleHidden={() => setHidden((h) => !h)}
         />

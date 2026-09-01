@@ -6,10 +6,12 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useUmbraRegistration } from '@/src/features/umbra/hooks/useUmbraRegistration';
 import { txPalette } from '@/src/design-system/palettes';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
+import { Skeleton } from '@/src/design-system/primitives/Skeleton';
 import { sansation } from '@/src/design-system/typography';
+import { resolveValueState } from '@/src/lib/asyncValue';
 import { splitUsd } from '../lib/formatUsd';
 import { buildHomeCards, type HomeGridCardVM } from '../lib/homeGridCards';
-import type { HomeBalances } from '../lib/aggregateHomeBalances';
+import type { HomeBalancesResult } from '../hooks/useHomeBalances';
 
 const GAP = 12; // Sp.md — uniform spacing between cards (rows and columns)
 // Matches the header's paddingHorizontal (24 / SCREEN_GUTTER) so the grid's
@@ -39,6 +41,29 @@ function CardValue({ vm, hidden }: { vm: HomeGridCardVM; hidden: boolean }) {
     );
   }
   const { int, dec } = splitUsd(vm.valueUSD ?? 0);
+  // Hiding wins over loading — see HomeTotal.
+  const state = hidden ? 'value' : resolveValueState(vm.valueUSD, vm.error ?? false);
+
+  if (state !== 'value') {
+    // Holds the 28-pt line height so the card's contents don't jump.
+    return (
+      <View style={{ height: 28, justifyContent: 'center' }}>
+        {state === 'error' ? (
+          <Text
+            style={[
+              sansation,
+              { fontSize: 22, lineHeight: 28, letterSpacing: -0.4, color: pal.inkFaint },
+            ]}
+          >
+            &mdash;
+          </Text>
+        ) : (
+          <Skeleton width={76} height={20} radius={6} />
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
       <Text
@@ -161,7 +186,7 @@ export function HomeGrid({
   balances,
   hidden,
 }: {
-  balances: HomeBalances;
+  balances: HomeBalancesResult;
   hidden: boolean;
 }) {
   const router = useSafeRouter();
@@ -176,7 +201,10 @@ export function HomeGrid({
   );
   const registered = persistedReg ?? probedReg;
 
-  const cards = buildHomeCards(balances);
+  const cards = buildHomeCards(balances, {
+    bank: balances.bankError,
+    encrypted: balances.encryptedError,
+  });
   const press = (c: HomeGridCardVM) =>
     c.route ? () => router.push(c.route as never) : undefined;
   const locked = (c: HomeGridCardVM) =>

@@ -28,15 +28,39 @@ export function useJitoSolBalance() {
   });
 }
 
-/** Derived JitoSOL position: amount held + its USD value (jitoSOL · rate · SOL price). */
+/**
+ * Derived JitoSOL position: amount held + its USD value (jitoSOL · rate · SOL
+ * price).
+ *
+ * The three inputs are separate queries, and each was previously defaulted to
+ * 0 — which multiplied out to a confident `$0` whenever any one of them was
+ * missing, indistinguishable from an empty position. They now stay
+ * `undefined` until known, so callers can tell the two apart.
+ */
 export function useJitoSolPosition() {
-  const { data: balance } = useJitoSolBalance();
-  const { data: pool } = usePoolInfo();
-  const { data: solPrice } = useSolPrice();
+  const balanceQuery = useJitoSolBalance();
+  const poolQuery = usePoolInfo();
+  const priceQuery = useSolPrice();
 
-  const jitoSol = balance?.uiAmount ?? 0;
-  const rate = pool?.solJitoConversion ?? 0;
-  const price = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
+  const jitoSol = balanceQuery.data?.uiAmount;
+  const rate = poolQuery.data?.solJitoConversion;
+  const solPrice = priceQuery.data;
+  const price = typeof solPrice === 'number' && solPrice > 0 ? solPrice : undefined;
 
-  return { jitoSol, usdValue: jitoSol * rate * price, raw: balance?.raw ?? 0n };
+  const usdValue =
+    jitoSol === undefined || rate === undefined || price === undefined
+      ? undefined
+      : jitoSol * rate * price;
+
+  return {
+    jitoSol,
+    usdValue,
+    raw: balanceQuery.data?.raw ?? 0n,
+    /**
+     * `usePoolInfo` reads a mainnet-only stake pool account, so against a
+     * devnet RPC it fails on every call. Surfacing that is the point: the old
+     * `?? 0` turned a hard failure into a plausible-looking `$0`.
+     */
+    error: balanceQuery.isError || poolQuery.isError || priceQuery.isError,
+  };
 }

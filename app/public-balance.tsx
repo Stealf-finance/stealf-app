@@ -28,7 +28,9 @@ export default function CashScreen() {
   const { user } = useAuth();
   const bal = useBalance(user?.bankWallet ?? null);
 
-  const assets = (bal.data?.tokens ?? []).map((t) => ({
+  // Deliberately not `?? []`: an absent list has to stay distinguishable from
+  // an empty one, or WalletScreen can't tell "loading" from "no holdings".
+  const assets = bal.data?.tokens.map((t) => ({
     key: t.tokenMint ?? t.tokenSymbol,
     iconSource: t.tokenIcon
       ? { uri: t.tokenIcon }
@@ -44,8 +46,9 @@ export default function CashScreen() {
     <WalletScreen
       title="Public Balance"
       iconImage={require('@/assets/images/coin.png')}
-      balanceUSD={bal.data?.totalUSD ?? 0}
+      balanceUSD={bal.data?.totalUSD}
       assets={assets}
+      error={bal.isError}
       belowBalance={<StlfSwapCta />}
       bottomBar={<QuickActionMenu actions={ACTIONS} />}
       tone="silver"

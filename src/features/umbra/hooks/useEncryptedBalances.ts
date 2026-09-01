@@ -8,6 +8,7 @@ import { fetchEncryptedBalances } from '@/src/services/umbra/queries/balances';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import { LAMPORTS_PER_SOL } from '@/src/services/solana/kit';
 import type { BalanceResponse } from '@/src/features/bank/types';
+import { useHasActiveSigner } from './useHasActiveSigner';
 
 export type EncryptedTokenBalance = {
   mint: string;
@@ -109,6 +110,7 @@ export async function prefetchEncryptedBalancesFor(
 export function useEncryptedBalances() {
   const { user } = useAuth();
   const wallet = user?.bankWallet ?? '';
+  const signerReady = useHasActiveSigner();
   const { data: publicBalance } = useBalance(user?.bankWallet ?? null);
   const { data: solPrice } = useSolPrice();
 
@@ -165,7 +167,11 @@ export function useEncryptedBalances() {
   const baseQuery = useQuery<RawEncryptedBalances>({
     queryKey,
     queryFn: () => fetchEncryptedBalancesRaw(mints),
-    enabled: !!wallet && mints.length > 0,
+    // `fetchEncryptedBalancesRaw` reaches `getActiveClient()`, which throws
+    // synchronously when Turnkey hasn't hydrated. Without `signerReady` the
+    // query fires on mount, fails, retries once, and settles in error — which
+    // the screen then renders as an empty balance.
+    enabled: signerReady && !!wallet && mints.length > 0,
     staleTime: 30_000,
     refetchOnReconnect: true,
   });

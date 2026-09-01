@@ -37,7 +37,12 @@ export function UmbraSetupOverlay({ onClose }: Props) {
   // Persisted flag first; the chain probe is the fallback for users onboarded
   // before the flag existed, and its result is written back once.
   const persisted = user?.bankRegistered;
-  const { data: probed, isLoading: checking } = useUmbraRegistration(
+  // `isPending`, not `isLoading`: the probe is now held disabled until the
+  // Turnkey signer is installed, and a disabled query reports `isLoading:
+  // false` with no data — which would read as "resolved, not registered" and
+  // drop this overlay for a moment mid-hydration. `isPending` stays true
+  // across both the disabled wait and the fetch itself.
+  const { data: probed, isPending: checking } = useUmbraRegistration(
     persisted === undefined ? wallet : null,
   );
   const registered = persisted ?? probed;

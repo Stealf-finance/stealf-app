@@ -11,17 +11,41 @@ import type { IUmbraSigner } from '@umbra-privacy/sdk';
  * finished hydrating yet — callers must surface that and let the user retry,
  * never sign with anything else (hard rule #3: the bank wallet's key lives in
  * Turnkey's TEEs and the client never sees it).
+ *
+ * Installation is observable via `subscribeToActiveSigner`, so React Query can
+ * hold a query disabled until the signer exists instead of firing it early and
+ * catching the throw below as a fetch error.
  */
 
 let activeSigner: IUmbraSigner | null = null;
 
+const listeners = new Set<() => void>();
+
+function notify(): void {
+  listeners.forEach((listener) => listener());
+}
+
+/**
+ * Observe installation / teardown. Built for `useSyncExternalStore`, whose
+ * snapshot is the boolean from `hasActiveSigner` — so re-notifying with an
+ * unchanged availability is harmless, it just re-reads the same value.
+ */
+export function subscribeToActiveSigner(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 /** Install the Turnkey-backed signer. Idempotent per address. */
 export function setActiveSigner(signer: IUmbraSigner): void {
   activeSigner = signer;
+  notify();
 }
 
 export function clearActiveSigner(): void {
   activeSigner = null;
+  notify();
 }
 
 /** True once Turnkey has hydrated and the signer is usable. */

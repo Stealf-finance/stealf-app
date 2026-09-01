@@ -15,6 +15,8 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 import { shouldPersistQuery, shouldRetryQuery } from '@/src/services/queryClient';
 // eslint-disable-next-line import/first
 import { ApiError } from '@/src/services/api/errors';
+// eslint-disable-next-line import/first
+import { solPriceQueries } from '@/src/features/solana/api/solPrice';
 
 type QueryStatus = 'success' | 'pending' | 'error';
 
@@ -45,8 +47,11 @@ describe('shouldPersistQuery', () => {
     ).toBe(true);
   });
 
+  // Asserts the real exported key, not a literal: the allow-list matches on
+  // queryKey[0], so a key whose root drifts away from it silently stops
+  // persisting with every test still green.
   it('persists sol-price queries', () => {
-    expect(shouldPersistQuery(queryWithKey(['sol-price']))).toBe(true);
+    expect(shouldPersistQuery(queryWithKey(solPriceQueries.all))).toBe(true);
   });
 
   it('persists user-profile queries (no PII in payload)', () => {

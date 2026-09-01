@@ -16,11 +16,13 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
+import { Skeleton } from '@/src/design-system/primitives/Skeleton';
 import { Icons } from '@/src/design-system/icons';
 import { sansation, serif } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { splitUsd } from '@/src/features/home/lib/formatUsd';
+import { resolveValueState } from '@/src/lib/asyncValue';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { usePoolInfo } from '../hooks/usePoolInfo';
 import { useJitoApy } from '../hooks/useJitoApy';
@@ -29,8 +31,6 @@ import { formatCompact } from '../lib/formatCompact';
 
 const S = txPalette('silver');
 
-/** Placeholder until the APY source is wired (kept honest — 0 when unknown). */
-const FALLBACK_APY_PCT = 0;
 /** JitoSOL mint (fallback when the live pool account isn't available). */
 const JITOSOL_MINT = 'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn';
 
@@ -48,11 +48,12 @@ export function JitoProductScreen() {
   const router = useSafeRouter();
   const { data } = usePoolInfo();
 
-  const { jitoSol, usdValue } = useJitoSolPosition();
+  const { jitoSol, usdValue, error: positionError } = useJitoSolPosition();
   const [copied, setCopied] = useState(false);
 
-  const { data: apy } = useJitoApy();
-  const apyPct = typeof apy === 'number' ? apy : FALLBACK_APY_PCT;
+  const apyQuery = useJitoApy();
+  const apy = typeof apyQuery.data === 'number' ? apyQuery.data : undefined;
+  const apyState = resolveValueState(apy, apyQuery.isError);
 
   const mint = data?.poolMint ?? JITOSOL_MINT;
   const exchangeRate = data
@@ -65,8 +66,11 @@ export function JitoProductScreen() {
     ? `${formatCompact(Number(data.totalPoolTokens) / 1e9)} JitoSOL`
     : '—';
 
-  const { int, dec } = splitUsd(usdValue);
-  const canWithdraw = jitoSol > 0;
+  const balanceState = resolveValueState(usdValue, positionError);
+  const { int, dec } = splitUsd(usdValue ?? 0);
+  // An unknown holding can't be withdrawn either, so the guard holds while it
+  // loads — the button re-enables when the balance actually lands.
+  const canWithdraw = (jitoSol ?? 0) > 0;
 
   const copyMint = () => {
     void Clipboard.setStringAsync(mint);
@@ -129,36 +133,65 @@ export function JitoProductScreen() {
           >
             Balance
           </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-            <Text
-              style={[
-                serif,
-                { fontSize: 22, fontStyle: 'italic', color: S.accent, includeFontPadding: false },
-              ]}
-            >
-              $
-            </Text>
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 48,
-                  lineHeight: 52,
-                  letterSpacing: -1.5,
-                  color: S.ink,
-                  includeFontPadding: false,
-                },
-              ]}
-            >
-              {int}
-            </Text>
-            <Text style={[sansation, { fontSize: 22, color: S.inkDim, includeFontPadding: false }]}>
-              {dec}
-            </Text>
+          {balanceState === 'value' ? (
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <Text
+                style={[
+                  serif,
+                  { fontSize: 22, fontStyle: 'italic', color: S.accent, includeFontPadding: false },
+                ]}
+              >
+                $
+              </Text>
+              <Text
+                style={[
+                  sansation,
+                  {
+                    fontSize: 48,
+                    lineHeight: 52,
+                    letterSpacing: -1.5,
+                    color: S.ink,
+                    includeFontPadding: false,
+                  },
+                ]}
+              >
+                {int}
+              </Text>
+              <Text style={[sansation, { fontSize: 22, color: S.inkDim, includeFontPadding: false }]}>
+                {dec}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ height: 52, justifyContent: 'center' }}>
+              {balanceState === 'error' ? (
+                <Text
+                  style={[
+                    sansation,
+                    {
+                      fontSize: 48,
+                      lineHeight: 52,
+                      letterSpacing: -1.5,
+                      color: S.inkFaint,
+                      includeFontPadding: false,
+                    },
+                  ]}
+                >
+                  &mdash;
+                </Text>
+              ) : (
+                <Skeleton width={180} height={40} radius={10} />
+              )}
+            </View>
+          )}
+          <View style={{ height: 18, justifyContent: 'center', marginTop: 8 }}>
+            {jitoSol === undefined ? (
+              <Skeleton width={96} height={12} radius={4} />
+            ) : (
+              <Text style={[sansation, { fontSize: 13, color: S.inkFaint }]}>
+                {fmtJitoSol(jitoSol)} JitoSOL
+              </Text>
+            )}
           </View>
-          <Text style={[sansation, { fontSize: 13, color: S.inkFaint, marginTop: 8 }]}>
-            {fmtJitoSol(jitoSol)} JitoSOL
-          </Text>
         </View>
 
         {/* Pool info */}
@@ -190,7 +223,15 @@ export function JitoProductScreen() {
           <InfoRow
             iconKey="trend"
             label="APY"
-            value={<Text style={[sansation, { fontSize: 15, fontWeight: '600', color: T.green }]}>+{apyPct.toFixed(2)}%</Text>}
+            value={
+              apyState === 'skeleton' ? (
+                <Skeleton width={60} height={15} radius={5} />
+              ) : (
+                <Text style={[sansation, { fontSize: 15, fontWeight: '600', color: T.green }]}>
+                  {apy !== undefined ? `+${apy.toFixed(2)}%` : '—'}
+                </Text>
+              )
+            }
           />
           <InfoRow iconKey="swapV" label="Exchange rate" value={exchangeRate} />
           <InfoRow iconKey="bank" label="Total value locked" value={tvl} />

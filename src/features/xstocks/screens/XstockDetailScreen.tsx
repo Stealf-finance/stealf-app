@@ -21,6 +21,7 @@ import { sansation, serif } from '@/src/design-system/typography';
 import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { splitUsd } from '@/src/features/home/lib/formatUsd';
+import { resolveValueState } from '@/src/lib/asyncValue';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useXstockAsset } from '../hooks/useXstockAsset';
 import { useXstockBalance } from '../hooks/useXstockBalance';
@@ -35,8 +36,8 @@ function shortAddr(a: string): string {
 export function XstockDetailScreen({ symbol }: { symbol: string }) {
   const insets = useSafeAreaInsets();
   const router = useSafeRouter();
-  const { data: detail, isPending } = useXstockAsset(symbol);
-  const { data: balance } = useXstockBalance(symbol);
+  const { data: detail, isPending, isError: detailError } = useXstockAsset(symbol);
+  const { data: balance, isError: balanceError } = useXstockBalance(symbol);
   const [copied, setCopied] = useState(false);
 
   const name = detail ? displayName(detail.name) : symbol;
@@ -44,9 +45,18 @@ export function XstockDetailScreen({ symbol }: { symbol: string }) {
   const change = detail?.priceChange24h ?? null;
   const mint = detail?.mint ?? '';
 
-  const shares = balance?.uiAmount ?? 0;
-  const { int, dec } = splitUsd(shares * (price ?? 0));
-  const canSell = shares > 0;
+  // The hero needs both the holding and a price. It used to default each to 0,
+  // which rendered a confident `$0` over a real position while the Price row
+  // right below it was still showing a skeleton.
+  // The API types `uiAmount` as nullable and returns `null` for a wallet with
+  // no token account — a known zero, not a missing figure. Only `undefined`
+  // (nothing fetched yet) counts as unknown here.
+  const shares = balance === undefined ? undefined : (balance.uiAmount ?? 0);
+  const usdValue =
+    shares === undefined || price == null ? undefined : shares * price;
+  const balanceState = resolveValueState(usdValue, balanceError || detailError);
+  const { int, dec } = splitUsd(usdValue ?? 0);
+  const canSell = (shares ?? 0) > 0;
 
   const copyMint = () => {
     if (!mint) return;
@@ -110,36 +120,65 @@ export function XstockDetailScreen({ symbol }: { symbol: string }) {
           >
             Balance
           </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-            <Text
-              style={[
-                serif,
-                { fontSize: 22, fontStyle: 'italic', color: S.accent, includeFontPadding: false },
-              ]}
-            >
-              $
-            </Text>
-            <Text
-              style={[
-                sansation,
-                {
-                  fontSize: 48,
-                  lineHeight: 52,
-                  letterSpacing: -1.5,
-                  color: S.ink,
-                  includeFontPadding: false,
-                },
-              ]}
-            >
-              {int}
-            </Text>
-            <Text style={[sansation, { fontSize: 22, color: S.inkDim, includeFontPadding: false }]}>
-              {dec}
-            </Text>
+          {balanceState === 'value' ? (
+            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+              <Text
+                style={[
+                  serif,
+                  { fontSize: 22, fontStyle: 'italic', color: S.accent, includeFontPadding: false },
+                ]}
+              >
+                $
+              </Text>
+              <Text
+                style={[
+                  sansation,
+                  {
+                    fontSize: 48,
+                    lineHeight: 52,
+                    letterSpacing: -1.5,
+                    color: S.ink,
+                    includeFontPadding: false,
+                  },
+                ]}
+              >
+                {int}
+              </Text>
+              <Text style={[sansation, { fontSize: 22, color: S.inkDim, includeFontPadding: false }]}>
+                {dec}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ height: 52, justifyContent: 'center' }}>
+              {balanceState === 'error' ? (
+                <Text
+                  style={[
+                    sansation,
+                    {
+                      fontSize: 48,
+                      lineHeight: 52,
+                      letterSpacing: -1.5,
+                      color: S.inkFaint,
+                      includeFontPadding: false,
+                    },
+                  ]}
+                >
+                  &mdash;
+                </Text>
+              ) : (
+                <Skeleton width={180} height={40} radius={10} />
+              )}
+            </View>
+          )}
+          <View style={{ height: 18, justifyContent: 'center', marginTop: 8 }}>
+            {shares === undefined ? (
+              <Skeleton width={96} height={12} radius={4} />
+            ) : (
+              <Text style={[sansation, { fontSize: 13, color: S.inkFaint }]}>
+                {formatAmount(shares)} {detail?.symbol ?? symbol}
+              </Text>
+            )}
           </View>
-          <Text style={[sansation, { fontSize: 13, color: S.inkFaint, marginTop: 8 }]}>
-            {formatAmount(shares)} {detail?.symbol ?? symbol}
-          </Text>
         </View>
 
         {/* Market info */}

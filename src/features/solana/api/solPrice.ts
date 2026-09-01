@@ -6,7 +6,7 @@ export const SolPriceSchema = z.object({
 });
 
 export const solPriceQueries = {
-  all: ['solana', 'sol-price'] as const,
+  all: ['sol-price'] as const,
 };
 
 export async function fetchSolPrice(token: string): Promise<number> {
