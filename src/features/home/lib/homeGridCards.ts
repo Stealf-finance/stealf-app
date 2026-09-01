@@ -47,7 +47,7 @@ export function buildHomeCards(b: HomeBalances): HomeGridCardVM[] {
     },
     {
       key: 'earn',
-      label: 'Earn',
+      label: 'Investments',
       accent: 'silver',
       iconKey: 'invest',
       teaser: `${EARN_APY_TEASER} APY`,

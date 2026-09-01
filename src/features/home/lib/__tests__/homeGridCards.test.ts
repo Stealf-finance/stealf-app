@@ -54,7 +54,7 @@ describe('buildHomeCards', () => {
     expect(buildHomeCards(balances).map((c) => c.label)).toEqual([
       'Public Balance',
       'Private Balance',
-      'Earn',
+      'Investments',
       'Store',
     ]);
   });
