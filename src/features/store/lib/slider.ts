@@ -4,6 +4,7 @@ export function indexFromPosition(
   travel: number,
   count: number,
 ): number {
+  'worklet';
   if (count <= 1 || travel <= 0) return 0;
   const raw = Math.round((x / travel) * (count - 1));
   return Math.min(count - 1, Math.max(0, raw));
@@ -15,6 +16,7 @@ export function positionForIndex(
   travel: number,
   count: number,
 ): number {
+  'worklet';
   if (count <= 1 || travel <= 0) return 0;
   const clamped = Math.min(count - 1, Math.max(0, index));
   return (clamped / (count - 1)) * travel;

@@ -141,6 +141,11 @@ are no values between them — so it is a picker, not a free input. Chips were
 tried first and dropped: products carry 5 to 13 denominations, which is a lot
 of little labels for a phone.
 
+`lib/slider.ts` carries a `'worklet'` directive on both functions. The pan
+gesture's `onEnd` runs on the UI thread, and calling a plain imported JS
+function from there crashes the app the moment you release the thumb — which is
+exactly what it did. Anything the gesture calls must be workletized.
+
 `denominations()` sorts ascending and de-duplicates, because Bitrefill returns
 them in no order at all (Amazon descends, IKEA ascends). A product with no
 packages but a range gets eight proposed steps snapped to its `step`, so an
