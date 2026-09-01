@@ -11,7 +11,6 @@ import { encryptedBalancesQueries } from '@/src/features/umbra/hooks/useEncrypte
 import { useHomeBalances } from '../hooks/useHomeBalances';
 import { HomeHeader } from '../components/HomeHeader';
 import { HomeTotal } from '../components/HomeTotal';
-import { HomeSparkline } from '../components/HomeSparkline';
 import { HomeGrid } from '../components/HomeGrid';
 
 export function HomeHub() {
@@ -77,8 +76,6 @@ export function HomeHub() {
           hidden={hidden}
           onToggleHidden={() => setHidden((h) => !h)}
         />
-        {/* Hardcoded curve (design placeholder) — pushes the grid down */}
-        <HomeSparkline />
         <HomeGrid balances={balances} hidden={hidden} />
       </ScrollView>
     </View>
