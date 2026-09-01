@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -37,7 +43,6 @@ const DEFAULT_ACTIONS: QuickAction[] = [
     iconKey: 'arrDownLeft',
     route: '/receive-qr',
   },
-  { key: 'buy', label: 'Buy', iconKey: 'dollar' }, // not built yet
 ];
 
 /**

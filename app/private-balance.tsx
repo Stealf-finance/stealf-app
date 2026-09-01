@@ -20,7 +20,6 @@ const ACTIONS: QuickAction[] = [
     iconKey: 'shieldSplit',
     route: '/unshield',
   },
-  { key: 'swap', label: 'Private Swap', iconKey: 'swap' }, // not built yet
   {
     key: 'send',
     label: 'Private Send',
