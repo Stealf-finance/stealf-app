@@ -15,7 +15,6 @@ config.resolver.extraNodeModules = {
   fs: path.resolve(__dirname, 'fs-shim.js'),
 };
 
-
 if (!config.resolver.assetExts.includes('zkey')) {
   config.resolver.assetExts.push('zkey');
 }
@@ -74,6 +73,10 @@ const moduleOverrides = {
   '@umbra-privacy/sdk/deposit': path.resolve(
     __dirname,
     'node_modules/@umbra-privacy/sdk/dist/operations/deposit/index.js',
+  ),
+  '@umbra-privacy/sdk/transfer': path.resolve(
+    __dirname,
+    'node_modules/@umbra-privacy/sdk/dist/operations/transfer/index.js',
   ),
   '@umbra-privacy/sdk/withdrawal': path.resolve(
     __dirname,
