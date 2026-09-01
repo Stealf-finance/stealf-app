@@ -10,8 +10,7 @@ import { Tone, txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useHistory } from '@/src/features/bank/hooks/useHistory';
-import { useHomeBalances } from '@/src/features/home/hooks/useHomeBalances';
-import { BalanceDonut } from '@/src/features/bank/components/BalanceDonut';
+import { LoaderOverlay } from '@/src/design-system/primitives/LoaderOverlay';
 import type { Transaction } from '@/src/features/bank/types';
 
 function formatTxRow(tx: Transaction): {
@@ -51,10 +50,11 @@ export function TransactionsScreen({
 
   const history = useHistory(user?.bankWallet ?? null);
   const txs = history.data?.transactions ?? [];
-  const isLoading = history.isLoading;
-
-  // Balance-split donut on the Home tab only (same aggregation as the grid).
-  const balances = useHomeBalances();
+  // `isPending`, not `isLoading`: the query is disabled until the session token
+  // and wallet hydrate, and a disabled query reports `isLoading: false` — which
+  // rendered "No transactions yet" before anything had been asked for.
+  const loading = history.isPending;
+  const failed = !loading && history.error != null;
 
   return (
     <CenterGlow tone={config.tone} flat>
@@ -102,13 +102,17 @@ export function TransactionsScreen({
         }}
         showsVerticalScrollIndicator={false}
       >
-        {embedded ? (
-          <View style={{ paddingTop: 8, paddingBottom: 28 }}>
-            <BalanceDonut balances={balances} />
-          </View>
-        ) : null}
         {txs.length === 0 ? (
-          <EmptyState loading={isLoading} faintColor={palette.inkFaint} />
+          <EmptyState
+            message={
+              loading
+                ? ''
+                : failed
+                  ? "Couldn't load your history."
+                  : 'No transactions yet'
+            }
+            faintColor={palette.inkFaint}
+          />
         ) : (
           <>
             <View
@@ -154,15 +158,24 @@ export function TransactionsScreen({
           </>
         )}
       </ScrollView>
+
+      {loading ? (
+        <LoaderOverlay
+          tone={config.tone}
+          label="Loading your history…"
+          sub="Fetching transactions from all your accounts."
+        />
+      ) : null}
     </CenterGlow>
   );
 }
 
 function EmptyState({
-  loading,
+  message,
   faintColor,
 }: {
-  loading: boolean;
+  /** Empty while loading — the overlay carries that state instead. */
+  message: string;
   faintColor: string;
 }) {
   return (
@@ -182,7 +195,7 @@ function EmptyState({
           },
         ]}
       >
-        {loading ? 'Loading…' : 'No transactions yet'}
+        {message}
       </Text>
     </View>
   );

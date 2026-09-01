@@ -39,10 +39,18 @@ Its public ATA and its Umbra encrypted balance are two views of the same
 address — Shield / Unshield (`features/shield/`) move value between them.
 (The standalone "Move" flow that also did this was removed.)
 
-**Private-transfer model used**: **stealth pool notes** (mixer). The sender
-creates a _burnable_ note, the recipient _claims_ it → hence the Claims screen.
-(The SDK also exposes a direct ETA→ETA transfer `getTransferorFunction` — **not
-used** here.)
+**Two transfer models, both in use:**
+
+- **Stealth pool notes** (mixer) — `operations/transfer.ts`, the private send.
+  The sender creates a _burnable_ note, the recipient _claims_ it → hence the
+  Claims screen. Unlinkable, at the cost of a ZK proof each side plus a scan.
+- **Confidential transfer** (direct ETA→ETA) — `operations/confidentialTransfer.ts`,
+  used only by the Store checkout. `getTransferorFunction` + Arcium MPC: no ZK
+  proof, no claim, but the sender→receiver edge is public. Devnet-only on rc.4
+  (mainnet lacks the `transfer_*_v18` ALT entries) and shared-mode senders only
+  — a network-mode sender stops at `kind: "prepared"` and we throw. It is the
+  one operation that requires an explicit `executorConfig`. Details in
+  `features/store/STORE.md`.
 
 ---
 

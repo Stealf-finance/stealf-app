@@ -32,6 +32,7 @@ import {
   getPublicBalanceToReceiverClaimableUtxoCreatorFunction,
   getPublicBalanceToSelfClaimableUtxoCreatorFunction,
 } from '@/src/services/umbra/operations/transfer';
+import { confidentialTransfer } from '@/src/services/umbra/operations/confidentialTransfer';
 
 export {
   getEncryptedBalanceToReceiverClaimableUtxoCreatorFunction,
@@ -77,10 +78,7 @@ export function useUmbra() {
           );
           console.error(`[Stealth] stage:`, stealthErr.stage);
           if (err?.cause?.context?.logs?.length) {
-            console.error(
-              `[Stealth] simulation logs:`,
-              err.cause.context.logs,
-            );
+            console.error(`[Stealth] simulation logs:`, err.cause.context.logs);
           }
         }
         // Surface stealth-flow failures to Sentry even in prod. Without
@@ -88,7 +86,8 @@ export function useUmbra() {
         // messages give us nothing to debug from in TestFlight. The raw
         // SDK cause + sim logs (when present) are the most useful payload.
         const simLogs: string[] | undefined =
-          Array.isArray(err?.cause?.context?.logs) && err.cause.context.logs.length
+          Array.isArray(err?.cause?.context?.logs) &&
+          err.cause.context.logs.length
             ? err.cause.context.logs.slice(0, 12)
             : undefined;
         Sentry.captureException(stealthErr, {
@@ -150,6 +149,14 @@ export function useUmbra() {
               });
             return create({ destinationAddress, mint, amount });
           },
+        ),
+      [wrap],
+    ),
+
+    sendConfidential: useCallback(
+      (receiverAddress: Address, mint: Address, amount: bigint) =>
+        wrap('confidentialTransfer', () =>
+          confidentialTransfer(receiverAddress, mint, amount),
         ),
       [wrap],
     ),
