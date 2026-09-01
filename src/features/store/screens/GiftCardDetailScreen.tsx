@@ -16,7 +16,6 @@ import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { AmountSlider } from '../components/AmountSlider';
 import { BrandArt } from '../components/BrandArt';
-import { FavoriteBtn } from '../components/FavoriteBtn';
 import { useCuratedProducts } from '../hooks/useCuratedProducts';
 import { findProduct } from '../lib/catalog';
 import { clampIndex, denominations } from '../lib/denominations';
@@ -123,13 +122,9 @@ export function GiftCardDetailScreen({ productId }: { productId: string }) {
           paddingTop: insets.top + 8,
           paddingHorizontal: GRID_GUTTER,
           paddingBottom: 8,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
         }}
       >
         <GlassBackButton onPress={() => router.back()} />
-        <FavoriteBtn productId={product.id} name={product.name} size={22} />
       </View>
 
       <ScrollView

@@ -8,10 +8,12 @@ before changing anything under `src/features/store/`.
 Only the **catalog**. One authenticated call, `GET /api/giftcards/products/curated`,
 builds the whole Buy tab.
 
-**There is no cart.** It was removed for the MVP: you order from the product
-page, and `POST /api/giftcards/orders` takes one product anyway, so a cart only
-ever meant walking it line by line. `CartContext`, `CartSheet`, `QtyStepper`
-and `lib/cart.ts` are in git history if a basket is ever wanted back.
+**There is no cart and no favourites.** Both went for the MVP. The cart because
+`POST /api/giftcards/orders` takes a single product, so a basket only ever meant
+walking it line by line at checkout — you order from the product page instead.
+Favourites because nothing ever listed them: `useFavorites` had no consumer but
+its own button. `CartContext`, `CartSheet`, `QtyStepper`, `lib/cart.ts`,
+`FavoritesContext`, `FavoriteBtn` and `lib/favorites.ts` are in git history.
 
 Buying is still not wired — the product page's CTA is inert. `POST /orders`,
 the USDC payment leg and the code reveal are the next slice.
@@ -106,9 +108,9 @@ dimensions explicit here.
 `GRID_GUTTER` (20) and `GRID_GAP` (12) are shared by the grid, the skeleton and
 `BrandArt`, so the three can't drift.
 
-A tile is artwork, then name, then denominations. No Buy button: tapping the
-tile opens the product, because the denomination is the whole decision on a
-gift card and can't be guessed.
+A tile is artwork, then name, then denominations — nothing else on it. Tapping
+it opens the product, because the denomination is the whole decision on a gift
+card and can't be guessed.
 
 Names are shortened for the tile by `shortProductName`: Bitrefill returns
 "Amazon.co.uk United Kingdom", which overflows a 170pt tile. It drops the
@@ -142,7 +144,7 @@ pattern above when "My Cards" needs small marks. Verified 200 `image/webp` for
 all fourteen curated ids, underscores included (`nando_s-ie`).
 
 `BrandArt` falls back to a tinted monogram when the image fails to load, keyed
-on the id so a recycled tile never inherits another brand's failure. Logos are
+on the id so a recycled tile never inherits another brand's failure. Artwork is
 cached `memory-disk`.
 
 ## Four render states

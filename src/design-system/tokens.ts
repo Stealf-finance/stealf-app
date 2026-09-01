@@ -24,8 +24,6 @@ export const T = {
 
   green: '#7ea688',
   error: '#d1604a',
-  // A favourite is not an error — its own red, brighter than `error`.
-  favorite: '#e8453f',
 
   shadow: '#000',
 } as const;

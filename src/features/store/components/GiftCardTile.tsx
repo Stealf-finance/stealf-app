@@ -7,7 +7,6 @@ import { denominationSummary } from '../lib/format';
 import { tileWidth } from '../lib/grid';
 import { shortProductName } from '../lib/productName';
 import { BrandArt } from './BrandArt';
-import { FavoriteBtn } from './FavoriteBtn';
 import type { StoreProduct } from '../api/curated';
 
 const S = txPalette('silver');
@@ -36,25 +35,7 @@ export function GiftCardTile({
         opacity: disabled ? 0.42 : pressed ? 0.7 : 1,
       })}
     >
-      <View>
-        <BrandArt id={product.id} name={product.name} width={width} />
-        {/* Scrim: a red heart vanishes on pink or red artwork. */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            width: 30,
-            height: 30,
-            borderRadius: 15,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.35)',
-          }}
-        >
-          <FavoriteBtn productId={product.id} name={product.name} />
-        </View>
-      </View>
+      <BrandArt id={product.id} name={product.name} width={width} />
 
       <Text
         numberOfLines={1}
