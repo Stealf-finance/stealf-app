@@ -74,6 +74,7 @@ In this order:
 
 ## Hard rules — never deviate without explicit user sign-off
 
+
 ### 1. The internal-code / UI-copy split is a wall
 
 Code keeps the `STEALF_*` SecureStore keys,
@@ -184,6 +185,8 @@ and let the caller retry; never fall back to anything else.
 - `main` is the active branch and GitHub default.
 - All work happens on `feat/*` branches stacked on `main`, PR'd back
   into it.
+
+### 6. maxium une ligne de commentaire si besoin, objectif gardé un code lisible
 
 ## Slice status (what's wired vs. what isn't)
 
