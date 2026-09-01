@@ -12,6 +12,8 @@ export interface ShieldedSolBalance {
 }
 
 const MAX_PLAUSIBLE_LAMPORTS = 1_000_000_000n * BigInt(LAMPORTS_PER_SOL);
+// Module scope: React Compiler cannot lower a BigInt literal inside a hook.
+const ZERO_LAMPORTS = 0n;
 
 export const shieldedBalanceQueries = {
   byWallet: (wallet: string) =>
@@ -30,8 +32,8 @@ export function useShieldedSolBalance() {
 
       if (entry?.state === 'shared' && typeof entry.balance === 'bigint') {
         const lamports = entry.balance as bigint;
-        if (lamports < 0n || lamports > MAX_PLAUSIBLE_LAMPORTS) {
-          return { lamports: 0n, sol: 0, state: 'corrupted' };
+        if (lamports < ZERO_LAMPORTS || lamports > MAX_PLAUSIBLE_LAMPORTS) {
+          return { lamports: ZERO_LAMPORTS, sol: 0, state: 'corrupted' };
         }
         return {
           lamports,
@@ -40,7 +42,7 @@ export function useShieldedSolBalance() {
         };
       }
 
-      return { lamports: 0n, sol: 0, state: entry?.state ?? null };
+      return { lamports: ZERO_LAMPORTS, sol: 0, state: entry?.state ?? null };
     },
     enabled: !!wallet,
     staleTime: 30_000,
