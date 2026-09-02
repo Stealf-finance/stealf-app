@@ -57,9 +57,13 @@ import { useUmbra } from '@/src/features/umbra/hooks/useUmbra';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import {
+  FEE_HEADROOM_MESSAGE,
   NETWORK_FEE_SOL,
   PROTOCOL_FEE_RATE,
   SOL_DECIMALS,
+  SOL_FEE_RESERVE,
+  isFeeShort,
+  maxSpendable,
   toRawAmount,
   PRIVATE_OP_SOL_FEE_RESERVE,
 } from '@/src/features/send/lib/amount';
@@ -259,13 +263,17 @@ export function SendFlow({ mode = 'public' }: Props) {
     : 0;
   const balanceNum = asset ? Number(asset.balance) : 0;
 
-  const networkFeeReserve =
-    !isPrivate && asset?.symbol === 'SOL' ? NETWORK_FEE_SOL : 0;
-  const protocolFeeMultiplier = isPrivate ? 1 - PROTOCOL_FEE_RATE : 1;
-  const maxSpendable = Math.max(
-    0,
-    balanceNum * protocolFeeMultiplier - networkFeeReserve,
-  );
+  // One reserve per op class: subtracted from a SOL amount, required on hand
+  // for a token one.
+  const feeReserve = isPrivate ? PRIVATE_OP_SOL_FEE_RESERVE : SOL_FEE_RESERVE;
+  const feeShort = isFeeShort(balance?.tokens, feeReserve);
+  const maxAmount = maxSpendable({
+    balance: balanceNum,
+    decimals: asset?.decimals ?? SOL_DECIMALS,
+    spendsSol: asset?.symbol === 'SOL',
+    reserve: feeReserve,
+    hasProtocolFee: isPrivate,
+  });
 
   const {
     inputMode,
@@ -277,17 +285,14 @@ export function SendFlow({ mode = 'public' }: Props) {
     onToggleMode,
   } = useAmountInput({
     rate,
-    maxSol: maxSpendable,
+    maxSol: maxAmount,
     decimals: asset?.decimals ?? SOL_DECIMALS,
   });
 
   const fiatValue = fiatAmount.toFixed(2);
   const amountNum = typedAssetAmount;
-  const exceedsBalance =
-    asset?.symbol === 'SOL'
-      ? amountNum + NETWORK_FEE_SOL > balanceNum
-      : amountNum > balanceNum;
-  const amountValid = amountNum > 0 && !exceedsBalance;
+  const exceedsBalance = amountNum > maxAmount;
+  const amountValid = amountNum > 0 && !exceedsBalance && !feeShort;
   const tokenAmountLabel =
     amountNum === 0 ? '0' : amountNum.toFixed(6).replace(/\.?0+$/, '');
   const balanceLabel = `${
@@ -629,9 +634,11 @@ export function SendFlow({ mode = 'public' }: Props) {
                 onKey={onKey}
                 tone={uiTone}
                 ctaLabel={
-                  exceedsBalance && amountNum > 0
-                    ? 'Insufficient balance'
-                    : 'Continue'
+                  feeShort
+                    ? FEE_HEADROOM_MESSAGE
+                    : exceedsBalance && amountNum > 0
+                      ? 'Insufficient balance'
+                      : 'Continue'
                 }
                 onPressCta={() => setStep(3)}
                 ctaDisabled={!amountValid}

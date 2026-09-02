@@ -17,7 +17,13 @@ import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles'
 import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
-import { NETWORK_FEE_SOL } from '@/src/features/send/lib/amount';
+import {
+  FEE_HEADROOM_MESSAGE,
+  isFeeShort,
+  maxSpendable,
+  NETWORK_FEE_SOL,
+  SOL_FEE_RESERVE,
+} from '@/src/features/send/lib/amount';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
@@ -84,6 +90,13 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
 
   const rate = isBuy ? 1 : stats && stats.rate > 0 ? stats.rate : 1;
 
+  const feeShort = isFeeShort(bankBal?.tokens, SOL_FEE_RESERVE);
+  const maxAmount = maxSpendable({
+    balance: sourceBalance,
+    decimals: STLF_DECIMALS,
+    spendsSol: false,
+  });
+
   const {
     setAmount,
     inputMode,
@@ -93,7 +106,7 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
     onKey,
     onPressPercent,
     onToggleMode,
-  } = useAmountInput({ rate, maxSol: sourceBalance, decimals: STLF_DECIMALS });
+  } = useAmountInput({ rate, maxSol: maxAmount, decimals: STLF_DECIMALS });
 
   useEffect(() => {
     setAmount('0');
@@ -122,8 +135,8 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
   const balanceLabel = `${formatBalance(sourceBalance)} ${assetSymbol}`;
 
   const close = () => router.back();
-  const insufficient = solAmount > sourceBalance;
-  const disabled = solAmount <= 0 || insufficient;
+  const insufficient = solAmount > maxAmount;
+  const disabled = solAmount <= 0 || insufficient || feeShort;
 
   const stlfRate = stats && stats.rate > 0 ? stats.rate : 1;
   const receiveAmount = isBuy ? solAmount / stlfRate : solAmount * stlfRate;
@@ -232,7 +245,13 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
         <TiledKeypadPanel
           onKey={onKey}
           tone="silver"
-          ctaLabel={insufficient ? 'Insufficient balance' : title}
+          ctaLabel={
+            feeShort
+              ? FEE_HEADROOM_MESSAGE
+              : insufficient
+                ? 'Insufficient balance'
+                : title
+          }
           onPressCta={() => setConfirmOpen(true)}
           ctaDisabled={disabled}
         />

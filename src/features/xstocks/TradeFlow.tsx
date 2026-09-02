@@ -18,6 +18,12 @@ import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles'
 import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
+import {
+  FEE_HEADROOM_MESSAGE,
+  isFeeShort,
+  maxSpendable,
+  SOL_FEE_RESERVE,
+} from '@/src/features/send/lib/amount';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useToast } from '@/src/components/toast/ToastContext';
@@ -42,20 +48,28 @@ export function TradeFlow({ symbol, mode }: { symbol: string; mode: Mode }) {
   const { user } = useAuth();
   const { data: detail } = useXstockAsset(symbol);
   const { data: xbal } = useXstockBalance(symbol);
-  const { data: wallet } = useBalance(isBuy ? user?.bankWallet ?? null : null);
+  const { data: wallet } = useBalance(user?.bankWallet ?? null);
   const { buy, sell } = useXstockTrade();
 
   const price = detail?.referencePrice ?? 0;
   const stockSymbol = detail?.symbol ?? symbol;
   const title = isBuy ? 'Buy' : 'Sell';
   const assetSymbol = isBuy ? 'USDC' : stockSymbol;
-  const iconSource = { uri: isBuy ? USDC_ICON : detail?.logo ?? USDC_ICON };
+  const iconSource = { uri: isBuy ? USDC_ICON : (detail?.logo ?? USDC_ICON) };
 
   const sharesHeld = xbal?.uiAmount ?? 0;
   const rawHeld = xbal?.rawBaseUnits ?? 0;
   const usdcBalance =
     wallet?.tokens?.find((t) => t.tokenSymbol === 'USDC')?.balance ?? 0;
   const sourceBalance = isBuy ? usdcBalance : sharesHeld;
+
+  const decimals = isBuy ? 2 : 6;
+  const feeShort = isFeeShort(wallet?.tokens, SOL_FEE_RESERVE);
+  const maxAmount = maxSpendable({
+    balance: sourceBalance,
+    decimals,
+    spendsSol: false,
+  });
 
   const {
     setAmount,
@@ -64,7 +78,7 @@ export function TradeFlow({ symbol, mode }: { symbol: string; mode: Mode }) {
     primaryDisplay,
     onKey,
     onPressPercent,
-  } = useAmountInput({ rate: 0, maxSol: sourceBalance, decimals: isBuy ? 2 : 6 });
+  } = useAmountInput({ rate: 0, maxSol: maxAmount, decimals });
 
   useEffect(() => {
     setAmount('0');
@@ -78,8 +92,8 @@ export function TradeFlow({ symbol, mode }: { symbol: string; mode: Mode }) {
   const balanceLabel = `${formatAmount(sourceBalance)} ${assetSymbol}`;
 
   const close = () => router.back();
-  const insufficient = solAmount > sourceBalance;
-  const disabled = solAmount <= 0 || insufficient;
+  const insufficient = solAmount > maxAmount;
+  const disabled = solAmount <= 0 || insufficient || feeShort;
 
   const onSubmit = () => {
     if (disabled) return;
@@ -166,7 +180,13 @@ export function TradeFlow({ symbol, mode }: { symbol: string; mode: Mode }) {
         <TiledKeypadPanel
           onKey={onKey}
           tone="silver"
-          ctaLabel={insufficient ? 'Insufficient balance' : title}
+          ctaLabel={
+            feeShort
+              ? FEE_HEADROOM_MESSAGE
+              : insufficient
+                ? 'Insufficient balance'
+                : title
+          }
           onPressCta={onSubmit}
           ctaDisabled={disabled}
         />
