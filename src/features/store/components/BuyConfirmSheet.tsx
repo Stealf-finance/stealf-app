@@ -7,6 +7,7 @@ import { StoreSheet } from './StoreSheet';
 import { formatMoney } from '../lib/format';
 import { shortProductName } from '../lib/productName';
 import { useStorePayment } from '../hooks/useStorePayment';
+import { DEV_SOL_TEST_AMOUNT } from '../lib/payment';
 import type { Denomination } from '../lib/denominations';
 import type { StoreProduct } from '../api/curated';
 
@@ -98,15 +99,18 @@ export function BuyConfirmSheet({
     pay,
     sending,
     signature,
+    order,
     error,
     blockerMessage,
     token,
-    humanAmount,
     isNativeTest,
   } = useStorePayment(product, amount);
 
   const symbol = token?.symbol ?? 'USDC';
-  const charged = humanAmount ?? amount.unitPrice;
+  // Quoted by the backend on swipe — one create is one Bitrefill invoice.
+  const charged = isNativeTest
+    ? DEV_SOL_TEST_AMOUNT
+    : (order?.amountUsdc ?? amount.unitPrice);
 
   return (
     <StoreSheet open={open} onClose={onClose} title="Confirm your order">
@@ -121,17 +125,18 @@ export function BuyConfirmSheet({
         sub={
           isNativeTest
             ? 'Dev test amount in SOL — unrelated to the card price'
-            : product.currency && product.currency !== 'USD'
-              ? `Charged 1:1 against the ${product.currency} face value`
-              : 'From your encrypted balance'
+            : order
+              ? 'From your encrypted balance'
+              : 'Estimate — the exact amount is quoted when you swipe'
         }
       />
 
       {signature ? (
         <>
           <Note tone="faint">
-            Payment sent privately to Stealf. No card is ordered yet — order
-            fulfilment is not wired.
+            {isNativeTest
+              ? 'Dev SOL payment sent. The backend only credits USDC, so this order will never be paid — the transfer is what is being tested.'
+              : 'Paid privately. Your card is being purchased — it appears in My Cards once the merchant delivers it.'}
           </Note>
           <View style={{ marginTop: 20 }}>
             <SwipeToSend label="Done" onSend={onClose} />
@@ -140,8 +145,8 @@ export function BuyConfirmSheet({
       ) : (
         <>
           <Note tone="faint">
-            Pays Stealf directly from your encrypted balance. Nothing is ordered
-            from Bitrefill yet.
+            Paid confidentially from your encrypted balance. The amount is
+            hidden on-chain.
           </Note>
           {error || blockerMessage ? (
             <Note tone="error">{error ?? blockerMessage ?? ''}</Note>

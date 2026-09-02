@@ -8,6 +8,10 @@ import {
   type StealthOp,
 } from '@/src/features/umbra/lib/errors';
 import {
+  collectSimulationLogs,
+  describeErrorChain,
+} from '@/src/features/umbra/lib/errorLogs';
+import {
   clearClients,
   getActiveClient,
   type UmbraClient,
@@ -67,29 +71,25 @@ export function useUmbra() {
         return await fn();
       } catch (err: any) {
         const stealthErr = parseStealthError(err, op);
+        const logs = collectSimulationLogs(err);
         if (__DEV__) {
           console.error(
             `[Stealth] ${op} failed (${stealthErr.code}):`,
             stealthErr.message,
           );
-          console.error(
-            `[Stealth] raw cause:`,
-            err?.cause?.message || err?.cause,
-          );
           console.error(`[Stealth] stage:`, stealthErr.stage);
-          if (err?.cause?.context?.logs?.length) {
-            console.error(`[Stealth] simulation logs:`, err.cause.context.logs);
+          console.error(`[Stealth] chain:`, describeErrorChain(err));
+          if (logs.length) {
+            console.error(`[Stealth] simulation logs:\n${logs.join('\n')}`);
+          } else {
+            console.error(`[Stealth] simulation logs: none on the error`);
           }
         }
         // Surface stealth-flow failures to Sentry even in prod. Without
         // this the user-facing "Confirmation timed out" / "Insufficient SOL"
         // messages give us nothing to debug from in TestFlight. The raw
         // SDK cause + sim logs (when present) are the most useful payload.
-        const simLogs: string[] | undefined =
-          Array.isArray(err?.cause?.context?.logs) &&
-          err.cause.context.logs.length
-            ? err.cause.context.logs.slice(0, 12)
-            : undefined;
+        const simLogs = logs.length ? logs.slice(0, 12) : undefined;
         Sentry.captureException(stealthErr, {
           tags: {
             'stealth.op': op,
@@ -99,6 +99,7 @@ export function useUmbra() {
           extra: {
             userMessage: stealthErr.userMessage,
             rawCause: err?.cause?.message ?? err?.message ?? null,
+            errorChain: describeErrorChain(err),
             simLogs,
           },
         });
@@ -154,9 +155,21 @@ export function useUmbra() {
     ),
 
     sendConfidential: useCallback(
-      (receiverAddress: Address, mint: Address, amount: bigint) =>
+      (
+        receiverAddress: Address,
+        mint: Address,
+        amount: bigint,
+        optionalData?: Uint8Array,
+        microLamportsPerAcu?: bigint,
+      ) =>
         wrap('confidentialTransfer', () =>
-          confidentialTransfer(receiverAddress, mint, amount),
+          confidentialTransfer(
+            receiverAddress,
+            mint,
+            amount,
+            optionalData,
+            microLamportsPerAcu,
+          ),
         ),
       [wrap],
     ),

@@ -53,3 +53,195 @@ index bc13673..e6f7283 100644
        fetchMerkleProof = getMerkleProofFetcher({ apiEndpoint: indexerApiEndpoint });
        fetchBatchMerkleProof = getBatchMerkleProofFetcher({ apiEndpoint: indexerApiEndpoint });
        fetchUtxoData = getUtxoDataFetcher({ apiEndpoint: indexerApiEndpoint });
+diff --git a/node_modules/@umbra-privacy/sdk/dist/chunk-TQHVA67D.cjs b/node_modules/@umbra-privacy/sdk/dist/chunk-TQHVA67D.cjs
+index 6aea6f0..9304dba 100644
+--- a/node_modules/@umbra-privacy/sdk/dist/chunk-TQHVA67D.cjs
++++ b/node_modules/@umbra-privacy/sdk/dist/chunk-TQHVA67D.cjs
+@@ -523,13 +523,21 @@ function extractMxeX25519PublicKeyFromMxeAccount(mxeAccount, decoders = getDefau
+     );
+   }
+   const utilityPubkeys = decoded.data.utilityPubkeys;
+-  if (utilityPubkeys.__kind !== "Set") {
++  // STEALF PATCH: Umbra's devnet MXE sits on `Unset` while still carrying a
++  // valid key -- the same one networkConfig.mxePubkey ships and every other
++  // operation uses. Trust the key material, not the flag. See STORE.md.
++  const rawUtilityPubkey = utilityPubkeys.fields?.[0]?.x25519Pubkey;
++  const publishedKey = rawUtilityPubkey ? new Uint8Array(rawUtilityPubkey) : null;
++  if (!publishedKey || publishedKey.length !== 32 || publishedKey.every((b) => b === 0)) {
+     throw new chunk2JZ24VRH_cjs.ArciumAccountError(
+       "missing-utility-pubkeys",
+       "MXE account has no published utility pubkeys (utilityPubkeys is Unset)."
+     );
+   }
+-  return new Uint8Array(utilityPubkeys.fields[0].x25519Pubkey);
++  if (utilityPubkeys.__kind !== "Set") {
++    console.warn("[umbra] MXE utilityPubkeys is Unset; using the key it carries (STEALF patch).");
++  }
++  return publishedKey;
+ }
+ chunkPK6SKIKE_cjs.__name(extractMxeX25519PublicKeyFromMxeAccount, "extractMxeX25519PublicKeyFromMxeAccount");
+ 
+diff --git a/node_modules/@umbra-privacy/sdk/dist/chunk-XVUENWGB.js b/node_modules/@umbra-privacy/sdk/dist/chunk-XVUENWGB.js
+index 3611527..bdc8609 100644
+--- a/node_modules/@umbra-privacy/sdk/dist/chunk-XVUENWGB.js
++++ b/node_modules/@umbra-privacy/sdk/dist/chunk-XVUENWGB.js
+@@ -521,13 +521,21 @@ function extractMxeX25519PublicKeyFromMxeAccount(mxeAccount, decoders = getDefau
+     );
+   }
+   const utilityPubkeys = decoded.data.utilityPubkeys;
+-  if (utilityPubkeys.__kind !== "Set") {
++  // STEALF PATCH: Umbra's devnet MXE sits on `Unset` while still carrying a
++  // valid key -- the same one networkConfig.mxePubkey ships and every other
++  // operation uses. Trust the key material, not the flag. See STORE.md.
++  const rawUtilityPubkey = utilityPubkeys.fields?.[0]?.x25519Pubkey;
++  const publishedKey = rawUtilityPubkey ? new Uint8Array(rawUtilityPubkey) : null;
++  if (!publishedKey || publishedKey.length !== 32 || publishedKey.every((b) => b === 0)) {
+     throw new ArciumAccountError(
+       "missing-utility-pubkeys",
+       "MXE account has no published utility pubkeys (utilityPubkeys is Unset)."
+     );
+   }
+-  return new Uint8Array(utilityPubkeys.fields[0].x25519Pubkey);
++  if (utilityPubkeys.__kind !== "Set") {
++    console.warn("[umbra] MXE utilityPubkeys is Unset; using the key it carries (STEALF patch).");
++  }
++  return publishedKey;
+ }
+ __name(extractMxeX25519PublicKeyFromMxeAccount, "extractMxeX25519PublicKeyFromMxeAccount");
+ 
+diff --git a/node_modules/@umbra-privacy/sdk/dist/operations/transfer/index.cjs b/node_modules/@umbra-privacy/sdk/dist/operations/transfer/index.cjs
+index a0035d4..ef24ee1 100644
+--- a/node_modules/@umbra-privacy/sdk/dist/operations/transfer/index.cjs
++++ b/node_modules/@umbra-privacy/sdk/dist/operations/transfer/index.cjs
+@@ -421,6 +421,23 @@ async function buildSharedSenderTransferData(preparation, deps) {
+ chunkPK6SKIKE_cjs.__name(buildSharedSenderTransferData, "buildSharedSenderTransferData");
+ 
+ // src/operations/transfer/submit.ts
++// STEALF PATCH: the SDK never sets a compute-unit limit, so the transfer runs
++// on Solana's 200k default and dies at "exceeded CUs meter" -- the
++// shared_to_new_shared variant creates the receiver's token account on top of
++// the Arcium CPI. Scoped to transfer; every other op fits in the default.
++// See src/features/store/STORE.md.
++var STEALF_TRANSFER_COMPUTE_UNIT_LIMIT = 600000;
++function stealfComputeUnitLimitInstruction(units) {
++  const data = new Uint8Array(5);
++  data[0] = 2;
++  new DataView(data.buffer).setUint32(1, units, true);
++  return {
++    programAddress: "ComputeBudget111111111111111111111111111111",
++    accounts: [],
++    data
++  };
++}
++
+ async function submitSharedSenderTransfer(preparation, data, args) {
+   const { client, executorConfig } = args;
+   const { clusterOffset, instructionName } = data;
+@@ -442,13 +459,18 @@ async function submitSharedSenderTransfer(preparation, data, args) {
+   };
+   const result = await chunk6HHGF7PH_cjs.executeMpcPipeline({
+     config: executorConfig,
+-    instructions: [data.instruction],
++    instructions: [
++      stealfComputeUnitLimitInstruction(STEALF_TRANSFER_COMPUTE_UNIT_LIMIT),
++      data.instruction
++    ],
+     altEntry,
+     awaitCallback,
+     operationName: "transfer",
+     step: `transfer:${preparation.variant}`
+   });
+-  return result.signature;
++  // STEALF PATCH: the MPC callback decides whether balances actually move.
++  // Dropping it reported a queued-but-never-executed transfer as a success.
++  return { signature: result.signature, callback: result.callback };
+ }
+ chunkPK6SKIKE_cjs.__name(submitSharedSenderTransfer, "submitSharedSenderTransfer");
+ 
+@@ -472,11 +494,16 @@ function getTransferorFunction(args, deps) {
+       );
+     }
+     const data = await buildSharedSenderTransferData(preparation, { client });
+-    const signature = await submitSharedSenderTransfer(preparation, data, {
++    const submitted = await submitSharedSenderTransfer(preparation, data, {
+       client,
+       executorConfig: resolvedExecutorConfig
+     });
+-    return { kind: "submitted", preparation, signature };
++    return {
++      kind: "submitted",
++      preparation,
++      signature: submitted.signature,
++      callback: submitted.callback
++    };
+   };
+ }
+ chunkPK6SKIKE_cjs.__name(getTransferorFunction, "getTransferorFunction");
+diff --git a/node_modules/@umbra-privacy/sdk/dist/operations/transfer/index.js b/node_modules/@umbra-privacy/sdk/dist/operations/transfer/index.js
+index 62a7e97..98740f9 100644
+--- a/node_modules/@umbra-privacy/sdk/dist/operations/transfer/index.js
++++ b/node_modules/@umbra-privacy/sdk/dist/operations/transfer/index.js
+@@ -419,6 +419,23 @@ async function buildSharedSenderTransferData(preparation, deps) {
+ __name(buildSharedSenderTransferData, "buildSharedSenderTransferData");
+ 
+ // src/operations/transfer/submit.ts
++// STEALF PATCH: the SDK never sets a compute-unit limit, so the transfer runs
++// on Solana's 200k default and dies at "exceeded CUs meter" -- the
++// shared_to_new_shared variant creates the receiver's token account on top of
++// the Arcium CPI. Scoped to transfer; every other op fits in the default.
++// See src/features/store/STORE.md.
++var STEALF_TRANSFER_COMPUTE_UNIT_LIMIT = 600000;
++function stealfComputeUnitLimitInstruction(units) {
++  const data = new Uint8Array(5);
++  data[0] = 2;
++  new DataView(data.buffer).setUint32(1, units, true);
++  return {
++    programAddress: "ComputeBudget111111111111111111111111111111",
++    accounts: [],
++    data
++  };
++}
++
+ async function submitSharedSenderTransfer(preparation, data, args) {
+   const { client, executorConfig } = args;
+   const { clusterOffset, instructionName } = data;
+@@ -440,13 +457,18 @@ async function submitSharedSenderTransfer(preparation, data, args) {
+   };
+   const result = await executeMpcPipeline({
+     config: executorConfig,
+-    instructions: [data.instruction],
++    instructions: [
++      stealfComputeUnitLimitInstruction(STEALF_TRANSFER_COMPUTE_UNIT_LIMIT),
++      data.instruction
++    ],
+     altEntry,
+     awaitCallback,
+     operationName: "transfer",
+     step: `transfer:${preparation.variant}`
+   });
+-  return result.signature;
++  // STEALF PATCH: the MPC callback decides whether balances actually move.
++  // Dropping it reported a queued-but-never-executed transfer as a success.
++  return { signature: result.signature, callback: result.callback };
+ }
+ __name(submitSharedSenderTransfer, "submitSharedSenderTransfer");
+ 
+@@ -470,11 +492,16 @@ function getTransferorFunction(args, deps) {
+       );
+     }
+     const data = await buildSharedSenderTransferData(preparation, { client });
+-    const signature = await submitSharedSenderTransfer(preparation, data, {
++    const submitted = await submitSharedSenderTransfer(preparation, data, {
+       client,
+       executorConfig: resolvedExecutorConfig
+     });
+-    return { kind: "submitted", preparation, signature };
++    return {
++      kind: "submitted",
++      preparation,
++      signature: submitted.signature,
++      callback: submitted.callback
++    };
+   };
+ }
+ __name(getTransferorFunction, "getTransferorFunction");

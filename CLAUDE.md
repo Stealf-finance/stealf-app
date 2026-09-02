@@ -282,11 +282,17 @@ Key integration facts, all in `src/services/umbra/`:
   merkle-tree scan blocks the JS thread for ~20s. The async function is
   injected as a scanner dep in `queries/scanNotes.ts`; rc.4 already
   `await`s it upstream, so no patch is involved in that path.
-- **SDK patch** (`patches/@umbra-privacy+sdk+5.0.0-rc.4.patch`) — two
-  unrelated fixes, neither about X25519: a base64-LE bigint decode for
+- **SDK patch** (`patches/@umbra-privacy+sdk+5.0.0-rc.4.patch`) — four
+  unrelated fixes, none about X25519: a base64-LE bigint decode for
   the indexer's `h1_version` / `h1_commitment_index` (the parser calls
-  `BigInt()` straight on a base64 string), and `await import(…)` →
-  `require(…)` for the indexer chunk so Metro can resolve it.
+  `BigInt()` straight on a base64 string), `await import(…)` →
+  `require(…)` for the indexer chunk so Metro can resolve it, a
+  relaxed MXE `utilityPubkeys` guard so the confidential transfer trusts
+  the key material rather than the enum flag, and a `SetComputeUnitLimit`
+  prepended to the confidential transfer, which otherwise runs on Solana's
+  200k default and never leaves simulation. The last two are Store-only,
+  explained in `src/features/store/STORE.md` and guarded by
+  `src/services/umbra/__tests__/sdkPatch.test.ts`.
 - Devnet test tokens dUSDC / dUSDT live in `src/constants/solana.ts`.
 
 ## When in doubt, defer to .claude/docs/
