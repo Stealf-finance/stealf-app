@@ -6,6 +6,7 @@ import {
   isFetchUtxosError,
   isRegistrationError,
 } from '@umbra-privacy/sdk/errors';
+import { collectSimulationLogs } from './errorLogs';
 
 export {
   isClaimUtxoError,
@@ -120,8 +121,7 @@ function rawMessageOf(err: unknown): string {
 }
 
 function logsOf(err: unknown): string[] {
-  const e = err as { cause?: { context?: { logs?: string[] } } };
-  return e?.cause?.context?.logs ?? [];
+  return collectSimulationLogs(err);
 }
 
 /**
