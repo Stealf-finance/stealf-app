@@ -4,19 +4,14 @@ import {
 } from '@/src/features/send/lib/amount';
 import type { Denomination } from './denominations';
 
-/** Stealf's Umbra-registered treasury — the backend's `AUTHORITY_PUBLIC_KEY`. */
-export const STORE_TREASURY_ADDRESS =
-  'FpRVZrZ7zAigWG4mGMirCJMibxedQ4DmMcQCo3p94nwF';
+/** The backend credits ONE mint — its treasury USDC ETA. See STORE.md. */
+const SETTLEMENT_SYMBOLS = ['USDC', 'dUSDC'] as const;
 
-/** Settlement token, best first — devnet mints carry the `d` prefix. */
-const SETTLEMENT_SYMBOLS = ['USDC', 'dUSDC', 'USDT', 'dUSDT'] as const;
-
-/** Dev-only last resort: a devnet wallet holds SOL and no stablecoin. */
+/** Dev-only last resort: a devnet wallet holds faucet SOL and no stablecoin. */
 const NATIVE_FALLBACK_SYMBOL = 'SOL';
 
-/** Flat amount charged when paying in SOL. A card's face value in SOL would
- *  be absurd and unaffordable — this path exists to exercise the transfer. */
-export const DEV_SOL_TEST_AMOUNT = 0.001;
+/** Flat charge on the SOL path — a €25 card must never mean 25 SOL. */
+export const DEV_SOL_TEST_AMOUNT = 0.2;
 
 export type PaymentToken = {
   mint: string;
@@ -47,20 +42,19 @@ export function isNativeTestToken(token: PaymentToken): boolean {
   return token.symbol === NATIVE_FALLBACK_SYMBOL;
 }
 
-/** What the buyer is actually charged, in whole units of `token`. */
-export function paymentHumanAmount(
-  amount: Denomination,
-  token: PaymentToken,
-): number {
-  return isNativeTestToken(token) ? DEV_SOL_TEST_AMOUNT : amount.unitPrice;
+/** What the SOL path actually sends — never the card price. */
+export function devNativeAmountRaw(token: PaymentToken): bigint {
+  return toRawAmount(DEV_SOL_TEST_AMOUNT, token.decimals);
 }
 
-/** Face value is charged 1:1 in the settlement token. See STORE.md. */
-export function paymentAmountRaw(
+/** Pre-flight gate only. On the stablecoin path the order quotes the truth. */
+export function estimatedAmountRaw(
   amount: Denomination,
   token: PaymentToken,
 ): bigint {
-  return toRawAmount(paymentHumanAmount(amount, token), token.decimals);
+  return isNativeTestToken(token)
+    ? devNativeAmountRaw(token)
+    : toRawAmount(amount.unitPrice, token.decimals);
 }
 
 export type PaymentBlocker =

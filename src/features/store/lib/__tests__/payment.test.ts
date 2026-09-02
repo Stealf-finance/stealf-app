@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEV_SOL_TEST_AMOUNT,
+  devNativeAmountRaw,
+  estimatedAmountRaw,
   isNativeTestToken,
-  paymentAmountRaw,
-  paymentHumanAmount,
   resolvePaymentBlocker,
   resolvePaymentToken,
   type PaymentToken,
@@ -17,76 +16,37 @@ const token = (symbol: string, amountRaw: bigint): PaymentToken => ({
 });
 
 describe('resolvePaymentToken', () => {
-  it('prefers USDC over every other settlement symbol', () => {
-    const found = resolvePaymentToken([
-      token('dUSDT', 1n),
-      token('dUSDC', 1n),
-      token('USDC', 1n),
-    ]);
+  it('prefers USDC over the devnet mint', () => {
+    const found = resolvePaymentToken([token('dUSDC', 1n), token('USDC', 1n)]);
     expect(found?.symbol).toBe('USDC');
   });
 
   it('falls back to the devnet mint when USDC is absent', () => {
-    expect(
-      resolvePaymentToken([token('SOL', 1n), token('dUSDC', 1n)])?.symbol,
-    ).toBe('dUSDC');
+    expect(resolvePaymentToken([token('dUSDC', 1n)])?.symbol).toBe('dUSDC');
   });
 
-  it('ignores SOL unless the native fallback is allowed', () => {
-    const held = [token('SOL', 5n)];
-    expect(resolvePaymentToken(held)).toBeUndefined();
-    expect(resolvePaymentToken(held, { allowNative: true })?.symbol).toBe(
-      'SOL',
-    );
-  });
-
-  it('still prefers a stablecoin over SOL when both are held', () => {
-    const held = [token('SOL', 5n), token('dUSDC', 5n)];
-    expect(resolvePaymentToken(held, { allowNative: true })?.symbol).toBe(
-      'dUSDC',
-    );
+  it('refuses USDT — the backend only ever credits its USDC account', () => {
+    expect(resolvePaymentToken([token('USDT', 5n), token('dUSDT', 5n)])).toBeUndefined();
   });
 
   it('returns undefined when the wallet holds no settlement token', () => {
-    expect(resolvePaymentToken([token('SOL', 1n)])).toBeUndefined();
+    expect(resolvePaymentToken([])).toBeUndefined();
     expect(resolvePaymentToken(undefined)).toBeUndefined();
   });
 });
 
-describe('paymentAmountRaw', () => {
-  it('charges the unit price, not the face value', () => {
+describe('estimatedAmountRaw', () => {
+  it('uses the unit price, not the face value', () => {
     const amount = { packageId: 'p', value: 50, unitPrice: 48.5 };
-    expect(paymentAmountRaw(amount, token('USDC', 0n))).toBe(48_500_000n);
+    expect(estimatedAmountRaw(amount, token('USDC', 0n))).toBe(48_500_000n);
   });
 
   it('scales to the token decimals', () => {
     const amount = { value: 25, unitPrice: 25 };
-    expect(paymentAmountRaw(amount, token('USDC', 0n))).toBe(25_000_000n);
+    expect(estimatedAmountRaw(amount, token('USDC', 0n))).toBe(25_000_000n);
     expect(
-      paymentAmountRaw(amount, { ...token('dUSDT', 0n), decimals: 9 }),
+      estimatedAmountRaw(amount, { ...token('dUSDC', 0n), decimals: 9 }),
     ).toBe(25_000_000_000n);
-  });
-
-  it('charges the flat dev amount in SOL, never the card price', () => {
-    const amount = { value: 25, unitPrice: 25 };
-    const sol = { ...token('SOL', 0n), decimals: 9 };
-    expect(paymentAmountRaw(amount, sol)).toBe(1_000_000n);
-    expect(paymentHumanAmount(amount, sol)).toBe(DEV_SOL_TEST_AMOUNT);
-  });
-
-  it('does not let the card price leak into the SOL path', () => {
-    const cheap = { value: 5, unitPrice: 5 };
-    const dear = { value: 1000, unitPrice: 1000 };
-    const sol = { ...token('SOL', 0n), decimals: 9 };
-    expect(paymentAmountRaw(cheap, sol)).toBe(paymentAmountRaw(dear, sol));
-  });
-});
-
-describe('isNativeTestToken', () => {
-  it('flags SOL and nothing else', () => {
-    expect(isNativeTestToken(token('SOL', 0n))).toBe(true);
-    expect(isNativeTestToken(token('USDC', 0n))).toBe(false);
-    expect(isNativeTestToken(token('dUSDC', 0n))).toBe(false);
   });
 });
 
@@ -142,5 +102,37 @@ describe('resolvePaymentBlocker', () => {
         publicSol: 0,
       }),
     ).toBe('signer');
+  });
+});
+
+describe('the dev SOL fallback', () => {
+  const sol = { ...token('SOL', 0n), decimals: 9 };
+
+  it('is ignored unless explicitly allowed', () => {
+    expect(resolvePaymentToken([sol])).toBeUndefined();
+    expect(resolvePaymentToken([sol], { allowNative: true })?.symbol).toBe('SOL');
+  });
+
+  it('still prefers a stablecoin when both are held', () => {
+    expect(
+      resolvePaymentToken([sol, token('dUSDC', 5n)], { allowNative: true })?.symbol,
+    ).toBe('dUSDC');
+  });
+
+  it('sends a flat amount, never the card price', () => {
+    const flat = devNativeAmountRaw(sol);
+    expect(estimatedAmountRaw({ value: 1000, unitPrice: 1000 }, sol)).toBe(flat);
+    expect(estimatedAmountRaw({ value: 5, unitPrice: 5 }, sol)).toBe(flat);
+  });
+
+  it('scales the flat amount to the token decimals', () => {
+    expect(devNativeAmountRaw({ ...sol, decimals: 6 }) * 1000n).toBe(
+      devNativeAmountRaw(sol),
+    );
+  });
+
+  it('flags SOL and nothing else', () => {
+    expect(isNativeTestToken(sol)).toBe(true);
+    expect(isNativeTestToken(token('dUSDC', 0n))).toBe(false);
   });
 });

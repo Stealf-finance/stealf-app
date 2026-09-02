@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePostHog } from 'posthog-react-native';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
@@ -13,12 +13,23 @@ import {
 import { toAddress } from '@/src/services/solana/kit';
 import { amountBand } from '@/src/services/observability/scrub';
 import {
+  checkOrderPayment,
+  createOrder,
+  orderFromConflict,
+  orderQueries,
+  type StorePaymentInstructions,
+} from '../api/orders';
+import {
+  newClientReference,
+  orderTransferAmount,
+  paymentRefBytes,
+} from '../lib/orders';
+import {
+  devNativeAmountRaw,
+  estimatedAmountRaw,
   isNativeTestToken,
-  paymentAmountRaw,
-  paymentHumanAmount,
   resolvePaymentBlocker,
   resolvePaymentToken,
-  STORE_TREASURY_ADDRESS,
   type PaymentBlocker,
 } from '../lib/payment';
 import type { Denomination } from '../lib/denominations';
@@ -34,9 +45,13 @@ export const BLOCKER_MESSAGE: Record<NonNullable<PaymentBlocker>, string> = {
   fee: "Your wallet doesn't have enough SOL to pay network fees. Send a small amount of SOL (around 0.02), then try again.",
 };
 
+const RETRY_WITH_NEW_REFERENCE =
+  'That order could not be reused. Swipe again to place a new one.';
+
 export function useStorePayment(product: StoreProduct, amount: Denomination) {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const wallet = user?.bankWallet ?? '';
+  const sessionToken = session?.sessionToken ?? null;
   const queryClient = useQueryClient();
   const posthog = usePostHog();
   const umbra = useUmbra();
@@ -46,16 +61,26 @@ export function useStorePayment(product: StoreProduct, amount: Denomination) {
 
   const [sending, setSending] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
+  const [order, setOrder] = useState<StorePaymentInstructions | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Dev builds fall back to native SOL: a devnet wallet has no stablecoin.
+  // Reused on retry so a repeat never mints a second Bitrefill invoice.
+  const reference = useRef(newClientReference());
+  useEffect(() => {
+    reference.current = newClientReference();
+  }, [product.id, amount.packageId, amount.value]);
+
+  // Dev builds fall back to faucet SOL: a devnet wallet has no stablecoin.
   const token = useMemo(
     () => resolvePaymentToken(encrypted?.tokens, { allowNative: __DEV__ }),
     [encrypted],
   );
 
-  const requiredRaw = useMemo(
-    () => (token ? paymentAmountRaw(amount, token) : undefined),
+  const isNativeTest = token ? isNativeTestToken(token) : false;
+
+  // The order quotes the real figure; this only gates the swipe.
+  const estimatedRaw = useMemo(
+    () => (token ? estimatedAmountRaw(amount, token) : undefined),
     [token, amount],
   );
 
@@ -66,20 +91,45 @@ export function useStorePayment(product: StoreProduct, amount: Denomination) {
     signerReady,
     inStock: product.inStock,
     token,
-    requiredRaw,
+    requiredRaw: estimatedRaw,
     publicSol,
   });
 
   const pay = useCallback(async () => {
-    if (blocker || !token || requiredRaw === undefined) return;
+    if (blocker || !token) return;
     setError(null);
     setSending(true);
     try {
+      const placed = await createOrder(sessionToken, {
+        ...(amount.packageId
+          ? { packageId: amount.packageId }
+          : { value: amount.value }),
+        productId: product.id,
+        quantity: 1,
+        clientReference: reference.current,
+      });
+      setOrder(placed);
+
+      // The SOL path pays a flat dev amount; no watcher credits it either way.
+      const required = isNativeTest
+        ? devNativeAmountRaw(token)
+        : orderTransferAmount(placed);
+      if (token.amountRaw < required) {
+        setError(BLOCKER_MESSAGE.balance);
+        return;
+      }
+
       const result = await umbra.sendConfidential(
-        toAddress(STORE_TREASURY_ADDRESS),
+        toAddress(placed.treasuryUmbraAddress),
         toAddress(token.mint),
-        requiredRaw,
+        required,
+        paymentRefBytes(placed),
       );
+      setSignature(String(result.signature));
+
+      // "I've paid, go look." A 60s backstop finds it anyway, so never fatal.
+      void checkOrderPayment(sessionToken, placed.id).catch(() => {});
+
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: encryptedBalancesQueries.byWalletPrefix(wallet),
@@ -87,13 +137,20 @@ export function useStorePayment(product: StoreProduct, amount: Denomination) {
         queryClient.invalidateQueries({
           queryKey: historyQueries.byAddress(wallet),
         }),
+        queryClient.invalidateQueries({ queryKey: orderQueries.list() }),
       ]);
-      posthog?.capture('store_payment_sent', {
+
+      posthog?.capture('store_order_paid', {
         product_id: product.id,
-        amount_band: amountBand(amount.unitPrice),
+        amount_band: amountBand(placed.amountUsdc ?? amount.unitPrice),
       });
-      setSignature(String(result.signature));
     } catch (err: any) {
+      // A quoted order may still owe a refund, so its reference cannot be recycled.
+      if (orderFromConflict(err)) {
+        reference.current = newClientReference();
+        setError(RETRY_WITH_NEW_REFERENCE);
+        return;
+      }
       setError(
         err?.userMessage ||
           (err instanceof Error ? err.message : 'Payment failed.'),
@@ -104,25 +161,27 @@ export function useStorePayment(product: StoreProduct, amount: Denomination) {
   }, [
     blocker,
     token,
-    requiredRaw,
+    isNativeTest,
+    sessionToken,
+    product.id,
+    amount.packageId,
+    amount.value,
+    amount.unitPrice,
     umbra,
     queryClient,
     wallet,
     posthog,
-    product.id,
-    amount.unitPrice,
   ]);
 
   return {
     pay,
     sending,
     signature,
+    order,
     error,
     blocker,
     blockerMessage: blocker ? BLOCKER_MESSAGE[blocker] : null,
     token,
-    requiredRaw,
-    humanAmount: token ? paymentHumanAmount(amount, token) : null,
-    isNativeTest: token ? isNativeTestToken(token) : false,
+    isNativeTest,
   };
 }
