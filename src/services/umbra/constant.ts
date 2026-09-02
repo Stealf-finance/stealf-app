@@ -1,6 +1,6 @@
 export type network = 'mainnet' | 'devnet';
 
-export const ACTIVE_NETWORK: network = 'devnet';
+export const ACTIVE_NETWORK: network = 'mainnet';
 
 export const UMBRA_CONFIG = ({
   mainnet: {
