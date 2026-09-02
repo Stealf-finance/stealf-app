@@ -4,7 +4,8 @@
  * STLF is Stealf's branded yield-bearing stablecoin, backed by Reflect's USDC+.
  * The backend (`/api/yield/usdc/*`) builds the unsigned mint/burn transaction;
  * the app signs (Turnkey for the bank wallet) + broadcasts on the backend-
- * supplied mainnet `rpcUrl`, then records the position via `/confirm`.
+ * supplied mainnet `rpcUrl`. Settlement is observed through the wallet's
+ * `balance:updated` socket event, not polled.
  *
  * Strict 3-layer: pure functions + Zod parse here; React Query wrappers live in
  * `../hooks/`. Internal fields keep the backend's `usdcPlus*` names; the UI
@@ -54,16 +55,6 @@ export const UnsignedReflectTxSchema = z.object({
   rpcUrl: z.string(),
 });
 export type UnsignedReflectTx = z.infer<typeof UnsignedReflectTxSchema>;
-
-export const reflectWalletContexts = ['bank', 'stealth', 'umbra'] as const;
-export type ReflectWalletContext = (typeof reflectWalletContexts)[number];
-
-const ConfirmResponseSchema = z.object({
-  recorded: z.boolean(),
-  idempotent: z.boolean().optional(),
-  id: z.string().optional(),
-});
-export type ConfirmResponse = z.infer<typeof ConfirmResponseSchema>;
 
 // ---------- Query keys ----------
 
@@ -144,24 +135,4 @@ export async function buildReflectBurn(
 ): Promise<UnsignedReflectTx> {
   const raw = await apiPost('/api/yield/usdc/build-burn', token, body);
   return UnsignedReflectTxSchema.parse(raw);
-}
-
-// ---------- Confirm (record on-chain TX after it's confirmed) ----------
-
-export type ConfirmRequest = {
-  wallet: string;
-  walletContext: ReflectWalletContext;
-  operation: 'mint' | 'burn';
-  txSignature: string;
-  usdcBaseUnits: number;
-  usdcPlusBaseUnits: number;
-  rate: number;
-};
-
-export async function confirmReflectTx(
-  token: string,
-  body: ConfirmRequest,
-): Promise<ConfirmResponse> {
-  const raw = await apiPost('/api/yield/usdc/confirm', token, body);
-  return ConfirmResponseSchema.parse(raw);
 }

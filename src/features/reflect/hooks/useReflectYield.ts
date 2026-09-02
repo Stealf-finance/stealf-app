@@ -5,10 +5,8 @@ import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import {
   buildReflectBurn,
   buildReflectMint,
-  confirmReflectTx,
   usdcToBaseUnits,
 } from '../api/reflect';
-import { waitForSignatureConfirmation } from '../lib/confirmTx';
 
 function base64ToHex(b64: string): string {
   return Buffer.from(b64, 'base64').toString('hex');
@@ -20,7 +18,6 @@ export interface ReflectExecResult {
   expectedReceivedBaseUnits: number;
   minimumReceivedBaseUnits: number;
   rate: number;
-  confirmed: boolean;
 }
 
 export interface ReflectYieldOpts {
@@ -100,42 +97,12 @@ export function useReflectYield() {
           built.rpcUrl,
         );
 
-        // Only record the position once the tx is confirmed on-chain.
-        const confirmed = await waitForSignatureConfirmation(
-          built.rpcUrl,
-          signature,
-        );
-
-        if (confirmed) {
-          try {
-            await confirmReflectTx(token, {
-              wallet,
-              walletContext: 'bank',
-              operation,
-              txSignature: signature,
-              usdcBaseUnits:
-                operation === 'mint'
-                  ? amountBaseUnits
-                  : built.minimumReceivedBaseUnits,
-              usdcPlusBaseUnits:
-                operation === 'mint'
-                  ? built.minimumReceivedBaseUnits
-                  : amountBaseUnits,
-              rate: built.rate,
-            });
-          } catch (err) {
-            // Best-effort bookkeeping — the tx already landed; never fail here.
-            if (__DEV__) console.warn('[reflect] confirm record failed:', err);
-          }
-        }
-
         return {
           signature,
           wallet,
           expectedReceivedBaseUnits: built.expectedReceivedBaseUnits,
           minimumReceivedBaseUnits: built.minimumReceivedBaseUnits,
           rate: built.rate,
-          confirmed,
         };
       } catch (err) {
         const message =

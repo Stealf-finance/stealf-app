@@ -13,7 +13,7 @@ import {
 } from './history';
 import type { HistoryResponse } from '../types';
 
-const BalanceUpdateEventSchema = z.object({
+export const BalanceUpdateEventSchema = z.object({
   address: z.string(),
   tokens: z.array(TokenBalanceSchema),
   totalUSD: z.number(),
