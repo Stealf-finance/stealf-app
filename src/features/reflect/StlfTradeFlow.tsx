@@ -1,11 +1,11 @@
 /**
  * STLF buy/sell amount entry — mirrors the JitoSOL StakeFlow. Buy mints STLF
  * from the bank wallet's USDC; Sell burns STLF back to USDC. Bank/Turnkey
- * signing via useReflectYield; the hook polls the tx to confirmation before
- * recording the position, so the success message reflects the real on-chain
- * outcome (a slow tx shows "confirming", never a false success).
+ * signing via useReflectYield, then a confirmation sheet that reports
+ * settlement from the wallet's `balance:updated` socket event — the same
+ * fire-and-observe shape as the Jupiter swap, with no polling.
  */
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,12 +17,21 @@ import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles'
 import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
+import { NETWORK_FEE_SOL } from '@/src/features/send/lib/amount';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import { useToast } from '@/src/components/toast/ToastContext';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
+import { StlfConfirmSheet } from './components/StlfConfirmSheet';
 import { useReflectYield } from './hooks/useReflectYield';
-import { useReflectBalance, useReflectStats, useInvalidateReflect } from './hooks/useReflectData';
+import { useStlfSettlement } from './hooks/useStlfSettlement';
+import { stlfBaseUnits } from './lib/stlfSettlement';
+import {
+  useReflectBalance,
+  useReflectStats,
+  useInvalidateReflect,
+} from './hooks/useReflectData';
 
 type Direction = 'buy' | 'sell';
 
@@ -48,14 +57,29 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
   const invalidate = useInvalidateReflect();
   const { buy, sell } = useReflectYield();
 
-  const { data: bankBal } = useBalance(isBuy ? user?.bankWallet ?? null : null);
-  const { data: stlfBal } = useReflectBalance(!isBuy ? user?.bankWallet : null);
+  const { data: bankBal } = useBalance(user?.bankWallet ?? null);
+  const { data: stlfBal } = useReflectBalance(user?.bankWallet);
   const { data: stats } = useReflectStats();
+  const { data: solPrice } = useSolPrice();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [txSig, setTxSig] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // Snapshot taken at submit time: the live query moves once we invalidate it.
+  const [baseline, setBaseline] = useState<number | null>(null);
+
+  const settlement = useStlfSettlement({
+    wallet: user?.bankWallet,
+    stlfMint: stlfBal?.mint,
+    baselineBaseUnits: baseline,
+    enabled: Boolean(txSig),
+  });
 
   // Buy: spend bank USDC ($1 each). Sell: send STLF (≈ its USD rate).
   const sourceBalance = isBuy
-    ? bankBal?.tokens?.find((t) => t.tokenSymbol === 'USDC')?.balance ?? 0
-    : stlfBal?.usdcPlusUiAmount ?? 0;
+    ? (bankBal?.tokens?.find((t) => t.tokenSymbol === 'USDC')?.balance ?? 0)
+    : (stlfBal?.usdcPlusUiAmount ?? 0);
 
   const rate = isBuy ? 1 : stats && stats.rate > 0 ? stats.rate : 1;
 
@@ -74,6 +98,22 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
     setAmount('0');
   }, [direction, setAmount]);
 
+  // A failure goes inline while the sheet is up; once the user has walked away
+  // only a toast can carry it.
+  const onScreen = useRef(true);
+  useEffect(() => {
+    return () => {
+      onScreen.current = false;
+    };
+  }, []);
+
+  // The settled event is the cue to refresh both sides of the trade.
+  useEffect(() => {
+    if (settlement !== 'settled') return;
+    void queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
+    invalidate(user?.bankWallet ?? undefined);
+  }, [settlement, queryClient, invalidate, user?.bankWallet]);
+
   const secondaryAmount =
     inputMode === 'asset'
       ? `$${fiatAmount.toFixed(2)}`
@@ -84,36 +124,40 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
   const insufficient = solAmount > sourceBalance;
   const disabled = solAmount <= 0 || insufficient;
 
-  const onSubmit = () => {
+  const stlfRate = stats && stats.rate > 0 ? stats.rate : 1;
+  const receiveAmount = isBuy ? solAmount / stlfRate : solAmount * stlfRate;
+  const payLabel = `${formatBalance(solAmount)} ${assetSymbol}`;
+  const receiveLabel = `≈ ${formatBalance(receiveAmount)} ${isBuy ? 'STLF' : 'USDC'}`;
+  const rateLabel = `1 STLF ≈ $${stlfRate.toFixed(4)}`;
+  const networkFeeUsd =
+    typeof solPrice === 'number' && solPrice > 0
+      ? NETWORK_FEE_SOL * solPrice
+      : 0;
+
+  const onConfirm = () => {
     const amt = solAmount;
     if (amt <= 0 || insufficient) return;
-    close();
+    setError(null);
+    setSubmitting(true);
+    setBaseline(stlfBaseUnits(bankBal?.tokens ?? [], stlfBal?.mint));
 
     void (async () => {
       try {
         const res = isBuy ? await buy(amt) : await sell(amt);
-        void queryClient.invalidateQueries({ queryKey: ['reflect-balance'] });
-        void queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
-        invalidate(user?.bankWallet ?? undefined);
-        if (res.confirmed) {
-          show({
-            kind: 'success',
-            title: isBuy ? 'Bought STLF' : 'Sold STLF',
-            message: `Tx ${res.signature.slice(0, 8)}…`,
-          });
+        setTxSig(res.signature);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Operation failed';
+        if (onScreen.current) {
+          setError(message);
         } else {
           show({
-            kind: 'info',
-            title: isBuy ? 'Buy submitted' : 'Sell submitted',
-            message: 'Confirming on-chain…',
+            kind: 'error',
+            title: isBuy ? 'Buy failed' : 'Sell failed',
+            message,
           });
         }
-      } catch (err) {
-        show({
-          kind: 'error',
-          title: isBuy ? 'Buy failed' : 'Sell failed',
-          message: err instanceof Error ? err.message : 'Operation failed',
-        });
+      } finally {
+        setSubmitting(false);
       }
     })();
   };
@@ -182,10 +226,27 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
           onKey={onKey}
           tone="silver"
           ctaLabel={insufficient ? 'Insufficient balance' : title}
-          onPressCta={onSubmit}
+          onPressCta={() => setConfirmOpen(true)}
           ctaDisabled={disabled}
         />
       </View>
+
+      <StlfConfirmSheet
+        visible={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onDone={close}
+        isBuy={isBuy}
+        fiat={fiatAmount}
+        payLabel={payLabel}
+        receiveLabel={receiveLabel}
+        rateLabel={rateLabel}
+        networkFeeUsd={networkFeeUsd}
+        onConfirm={onConfirm}
+        submitting={submitting}
+        signature={txSig ?? undefined}
+        settlement={settlement}
+        error={error ?? undefined}
+      />
     </CenterGlow>
   );
 }
