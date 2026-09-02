@@ -2,8 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Icons } from '@/src/design-system/icons';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { useAuth } from '@/src/features/onboarding/context/AuthContext';
-import { useUmbraRegistration } from '@/src/features/umbra/hooks/useUmbraRegistration';
+import { useUmbraRegistered } from '@/src/features/umbra/hooks/useUmbraRegistered';
 import { txPalette } from '@/src/design-system/palettes';
 import { BlurGlass } from '@/src/design-system/primitives/BlurGlass';
 import { Skeleton } from '@/src/design-system/primitives/Skeleton';
@@ -190,16 +189,9 @@ export function HomeGrid({
   hidden: boolean;
 }) {
   const router = useSafeRouter();
-  const { user } = useAuth();
 
-  // The encrypted balance needs the wallet registered on Umbra. Mirrors the
-  // UmbraSetupOverlay logic: persisted flag first, chain probe as fallback for
-  // users onboarded before the flag existed.
-  const persistedReg = user?.bankRegistered;
-  const { data: probedReg } = useUmbraRegistration(
-    persistedReg === undefined ? user?.bankWallet : null,
-  );
-  const registered = persistedReg ?? probedReg;
+  // The encrypted balance needs the wallet registered on Umbra for this network.
+  const { registered } = useUmbraRegistered();
 
   const cards = buildHomeCards(balances, {
     bank: balances.bankError,

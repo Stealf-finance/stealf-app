@@ -14,7 +14,8 @@ export async function fetchUmbraRegistration(
   const client = await getActiveClient();
   const querier = getUserAccountQuerierFunction({ client });
   const result = await querier(toAddress(walletAddress));
-  return result.state === 'exists';
+  // Same bar as `checkRegistrationStatus`, which every private op runs first.
+  return result.state === 'exists' && result.data.isActiveForAnonymousUsage;
 }
 
 export function useUmbraRegistration(walletAddress: string | null | undefined) {

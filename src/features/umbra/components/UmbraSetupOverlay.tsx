@@ -11,10 +11,9 @@ import { useToast } from '@/src/components/toast/ToastContext';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useUmbra } from '@/src/features/umbra/hooks/useUmbra';
-import {
-  umbraRegistrationQueries,
-  useUmbraRegistration,
-} from '@/src/features/umbra/hooks/useUmbraRegistration';
+import { umbraRegistrationQueries } from '@/src/features/umbra/hooks/useUmbraRegistration';
+import { useUmbraRegistered } from '@/src/features/umbra/hooks/useUmbraRegistered';
+import { ACTIVE_NETWORK } from '@/src/services/umbra/constant';
 
 const REGISTRATION_COST_SOL = 0.012;
 
@@ -34,24 +33,7 @@ export function UmbraSetupOverlay({ onClose }: Props) {
   const { user, setUser } = useAuth();
   const wallet = user?.bankWallet ?? null;
 
-  // Persisted flag first; the chain probe is the fallback for users onboarded
-  // before the flag existed, and its result is written back once.
-  const persisted = user?.bankRegistered;
-  // `isPending`, not `isLoading`: the probe is now held disabled until the
-  // Turnkey signer is installed, and a disabled query reports `isLoading:
-  // false` with no data — which would read as "resolved, not registered" and
-  // drop this overlay for a moment mid-hydration. `isPending` stays true
-  // across both the disabled wait and the fetch itself.
-  const { data: probed, isPending: checking } = useUmbraRegistration(
-    persisted === undefined ? wallet : null,
-  );
-  const registered = persisted ?? probed;
-
-  useEffect(() => {
-    if (!user) return;
-    if (persisted !== undefined || typeof probed !== 'boolean') return;
-    setUser({ ...user, bankRegistered: probed });
-  }, [user, persisted, probed, setUser]);
+  const { registered, checking } = useUmbraRegistered();
 
   const { data: balanceData, isLoading: balLoading } = useBalance(wallet);
   const sol =
@@ -103,7 +85,13 @@ export function UmbraSetupOverlay({ onClose }: Props) {
       await register();
       if (cancelledRef.current) return;
 
-      if (user) setUser({ ...user, bankRegistered: true });
+      if (user) {
+        setUser({
+          ...user,
+          bankRegistered: true,
+          bankRegisteredNetwork: ACTIVE_NETWORK,
+        });
+      }
 
       await queryClient.invalidateQueries({
         queryKey: umbraRegistrationQueries.byAddress(wallet),

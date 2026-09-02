@@ -13,6 +13,8 @@ export const UserSchema = z.object({
   points: z.number().int().nonnegative().default(0),
   /** Whether the wallet is registered with Umbra (one-time on-chain setup). */
   bankRegistered: z.boolean().optional(),
+  /** Network `bankRegistered` was observed on — registration is per-program. */
+  bankRegisteredNetwork: z.enum(['mainnet', 'devnet']).optional(),
   email: z.string().nullish(),
   authMethod: z.enum(['google', 'apple', 'email']).nullish(),
 });
