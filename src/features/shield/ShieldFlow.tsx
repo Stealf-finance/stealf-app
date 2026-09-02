@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePostHog } from 'posthog-react-native';
 import { Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import {
   maxSpendableSol,
+  NETWORK_FEE_SOL,
   SOL_DECIMALS,
   PRIVATE_OP_SOL_FEE_RESERVE,
 } from '@/src/features/send/lib/amount';
@@ -19,6 +20,8 @@ import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectShee
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
 import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
+import { TxConfirmSheet } from '@/src/features/send/components/TxConfirmSheet';
+import { truncateAddress } from '@/src/features/send/lib/address';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
   setSelectedAsset,
@@ -81,6 +84,11 @@ export function ShieldFlow({ direction }: Props) {
 
   const selected = useSelectedAsset();
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [txSig, setTxSig] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   const isSolSelected =
     !selected || selected.mint === SOL_MINT || selected.symbol === 'SOL';
   const selectionActive = !isSolSelected && !!selected;
@@ -131,8 +139,12 @@ export function ShieldFlow({ direction }: Props) {
     setAmount('0');
   }, [selected?.mint, setAmount]);
 
+  // A failure goes inline while the sheet is up; only once the user has walked
+  // away does the toast have to report it.
+  const onScreen = useRef(true);
   useEffect(() => {
     return () => {
+      onScreen.current = false;
       setSelectedAsset(null);
     };
   }, []);
@@ -149,43 +161,45 @@ export function ShieldFlow({ direction }: Props) {
   const insufficient = solAmount > sourceBalance;
   const swipeDisabled = solAmount <= 0 || insufficient;
 
-  const onSubmit = () => {
+  const amountLabel = `${
+    solAmount === 0 ? '0' : solAmount.toFixed(6).replace(/\.?0+$/, '')
+  } ${assetSymbol}`;
+  const networkFeeUsd =
+    typeof solPrice === 'number' && solPrice > 0
+      ? NETWORK_FEE_SOL * solPrice
+      : 0;
+  const walletLabel = truncateAddress(user?.bankWallet ?? '');
+
+  const onConfirm = async () => {
     const num = solAmount;
     if (!num || num <= 0) return;
-
-    const failPre = (msg: string) => {
-      const id = pendingOps.enqueue({
-        kind: isShield ? 'shield' : 'unshield',
-        tone,
-        amountSol: num,
-        assetSymbol,
-      });
-      pendingOps.complete(id, 'failed', msg);
-      close();
-    };
+    setError(null);
 
     if (!user?.bankWallet) {
-      return failPre(
+      setError(
         'Virtual bank account missing. Sign out and back in to restore it.',
       );
+      return;
     }
     if (num > sourceBalance) {
-      return failPre(
+      setError(
         `Not enough ${assetSymbol}. You have ${formatBalance(sourceBalance)} ${assetSymbol} available.`,
       );
+      return;
     }
 
     const publicSol =
       publicBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
     if (isShield && publicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
-      return failPre(INSUFFICIENT_FEE_SOL_MESSAGE);
+      setError(INSUFFICIENT_FEE_SOL_MESSAGE);
+      return;
     }
 
-    const mintAddr = selectionActive ? selected!.mint : SOL_MINT;
+    const mint = toAddress(selectionActive ? selected!.mint : SOL_MINT);
     const amountBigInt = BigInt(Math.floor(num * 10 ** decimals));
-    const mint = toAddress(mintAddr);
     const wallet = user.bankWallet;
 
+    setSubmitting(true);
     const opId = pendingOps.enqueue({
       kind: isShield ? 'shield' : 'unshield',
       tone,
@@ -193,72 +207,66 @@ export function ShieldFlow({ direction }: Props) {
       assetSymbol,
     });
 
-    close();
+    try {
+      const result = isShield
+        ? await deposit(mint, amountBigInt)
+        : await withdraw(mint, amountBigInt);
 
-    void (async () => {
-      const provingTimer = setTimeout(() => {
-        pendingOps.setPhase(opId, 'proving');
-      }, 700);
+      if (__DEV__) console.log('[ShieldFlow] success → invalidating balances');
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: shieldedBalanceQueries.byWallet(wallet),
+        }),
+        // Multi-mint encrypted query — key includes the mint list so we
+        // invalidate by prefix to catch every active variant.
+        queryClient.invalidateQueries({
+          queryKey: encryptedBalancesQueries.byWalletPrefix(wallet),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: balanceQueries.byAddress(wallet),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: historyQueries.byAddress(wallet),
+        }),
+      ]);
 
-      try {
-        if (isShield) {
-          await deposit(mint, amountBigInt);
-        } else {
-          await withdraw(mint, amountBigInt);
-        }
-        clearTimeout(provingTimer);
-        pendingOps.setPhase(opId, 'confirming');
-
-        if (__DEV__)
-          console.log('[ShieldFlow] success → invalidating balances');
-        await Promise.all([
-          queryClient.invalidateQueries({
-            queryKey: shieldedBalanceQueries.byWallet(wallet),
-          }),
-          // Multi-mint encrypted query — key includes the mint list so we
-          // invalidate by prefix to catch every active variant.
-          queryClient.invalidateQueries({
-            queryKey: encryptedBalancesQueries.byWalletPrefix(wallet),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: balanceQueries.byAddress(wallet),
-          }),
-          queryClient.invalidateQueries({
-            queryKey: historyQueries.byAddress(wallet),
-          }),
-        ]);
-
-        posthog?.capture('shield_completed', {
-          direction,
-          asset_symbol: assetSymbol,
-          amount_band: amountBand(
-            typeof solPrice === 'number' && solPrice > 0 ? num * solPrice : 0,
-          ),
+      posthog?.capture('shield_completed', {
+        direction,
+        asset_symbol: assetSymbol,
+        amount_band: amountBand(
+          typeof solPrice === 'number' && solPrice > 0 ? num * solPrice : 0,
+        ),
+      });
+      pendingOps.complete(opId, 'done');
+      setTxSig(result?.queueSignature ?? null);
+    } catch (err: any) {
+      const msg = err?.userMessage || err?.message || 'Operation failed';
+      if (__DEV__) console.warn('[ShieldFlow] failed:', msg);
+      // wrap() already captures StealthError — skip to avoid dup.
+      if (err?.name !== 'StealthError') {
+        Sentry.captureException(err, {
+          tags: { 'op.kind': `shield-${direction}` },
+          extra: {
+            userMessage: msg,
+            amountBand: amountBand(num),
+            asset: assetSymbol,
+          },
         });
-        pendingOps.complete(opId, 'done');
-      } catch (err: any) {
-        clearTimeout(provingTimer);
-        const msg = err?.userMessage || err?.message || 'Operation failed';
-        if (__DEV__) console.warn('[ShieldFlow] failed:', msg);
-        // wrap() already captures StealthError — skip to avoid dup.
-        if (err?.name !== 'StealthError') {
-          Sentry.captureException(err, {
-            tags: { 'op.kind': `shield-${direction}` },
-            extra: {
-              userMessage: msg,
-              amountBand: amountBand(num),
-              asset: assetSymbol,
-            },
-          });
-        }
-        posthog?.capture('shield_failed', {
-          direction,
-          asset_symbol: assetSymbol,
-          error: scrubString(msg),
-        });
+      }
+      posthog?.capture('shield_failed', {
+        direction,
+        asset_symbol: assetSymbol,
+        error: scrubString(msg),
+      });
+      if (onScreen.current) {
+        pendingOps.dismiss(opId);
+        setError(msg);
+      } else {
         pendingOps.complete(opId, 'failed', msg);
       }
-    })();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -327,10 +335,38 @@ export function ShieldFlow({ direction }: Props) {
           onKey={onKey}
           tone={uiTone}
           ctaLabel={insufficient ? 'Insufficient balance' : title}
-          onPressCta={onSubmit}
+          onPressCta={() => setConfirmOpen(true)}
           ctaDisabled={swipeDisabled}
         />
       </View>
+
+      {/* Confirmation — the same sheet the transfer flows use, pending and
+          success states included. */}
+      <TxConfirmSheet
+        visible={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onDone={close}
+        tone={uiTone}
+        title={title}
+        slideLabel={`Slide to ${title.toLowerCase()}`}
+        fiat={fiatAmount}
+        amountLabel={amountLabel}
+        fromLabel={isShield ? 'Cash account' : 'Encrypted balance'}
+        fromAddress={isShield ? walletLabel : undefined}
+        toLabel={isShield ? 'Encrypted balance' : 'Cash account'}
+        toAddress={isShield ? undefined : walletLabel}
+        toRowLabel="To"
+        networkFeeUsd={networkFeeUsd}
+        privacyFeeUsd={0}
+        showPrivacyFee={false}
+        onConfirm={onConfirm}
+        submitting={submitting}
+        error={error ?? undefined}
+        signature={txSig ?? undefined}
+        // Proving runs long, so the slide confirms optimistically — the toast
+        // carries the real outcome once the user leaves.
+        autoPending
+      />
 
       {/* Registration overlay only on Shield (public → encrypted). Unshield
           already implies a registered encrypted balance, so it's not gated. */}

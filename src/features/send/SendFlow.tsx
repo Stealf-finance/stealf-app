@@ -51,11 +51,16 @@ import { useUmbra } from '@/src/features/umbra/hooks/useUmbra';
 import { toAddress } from '@/src/services/solana/kit';
 import { SOL_ICON_URI, SOL_MINT } from '@/src/constants/solana';
 import {
+  NETWORK_FEE_SOL,
   PROTOCOL_FEE_RATE,
   SOL_DECIMALS,
   toRawAmount,
   PRIVATE_OP_SOL_FEE_RESERVE,
 } from '@/src/features/send/lib/amount';
+import {
+  SOLANA_ADDRESS_RE,
+  truncateAddress,
+} from '@/src/features/send/lib/address';
 import { INSUFFICIENT_FEE_SOL_MESSAGE } from '@/src/features/umbra/lib/errors';
 import { usePrivacyMode } from '@/src/features/umbra/PrivacyModeContext';
 import { amountBand, scrubString } from '@/src/services/observability/scrub';
@@ -64,21 +69,12 @@ import * as Sentry from '@sentry/react-native';
 const FADE_OUT = 160;
 const FADE_IN = 220;
 
-const NETWORK_FEE_SOL = 0.000005;
-const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 const SOL_NAME_RE = /^[a-zA-Z0-9._-]{1,32}\.sol$/;
 
 function isValidRecipient(input: string, selfAddress?: string): boolean {
   const s = input.trim();
   if (selfAddress && s === selfAddress) return false;
   return SOLANA_ADDRESS_RE.test(s) || SOL_NAME_RE.test(s);
-}
-
-function truncateAddress(input: string, head = 6, tail = 4): string {
-  const s = input.trim();
-  if (s.length <= head + tail + 1) return s;
-  if (!SOLANA_ADDRESS_RE.test(s)) return s;
-  return `${s.slice(0, head)}…${s.slice(-tail)}`;
 }
 
 function selectedToAsset(sel: SelectedAsset): Asset {

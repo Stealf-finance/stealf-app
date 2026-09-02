@@ -125,6 +125,8 @@ type Props = {
   fromAddress?: string;
   toLabel: string;
   toAddress?: string;
+  /** Reads "To" on shield / unshield, where the destination is a balance. */
+  toRowLabel?: string;
   networkFeeUsd: number;
   privacyFeeUsd: number;
   onConfirm: () => void;
@@ -261,6 +263,7 @@ export function TxConfirmSheet({
   fromAddress,
   toLabel,
   toAddress,
+  toRowLabel = 'Receiving address',
   networkFeeUsd,
   privacyFeeUsd,
   onConfirm,
@@ -556,11 +559,7 @@ export function TxConfirmSheet({
                 }}
               >
                 <DetailRow label="From" value={fromLabel} sub={fromAddress} />
-                <DetailRow
-                  label="Receiving address"
-                  value={toLabel}
-                  sub={toAddress}
-                />
+                <DetailRow label={toRowLabel} value={toLabel} sub={toAddress} />
                 <DetailRow
                   label="Token"
                   value={amountLabel}
