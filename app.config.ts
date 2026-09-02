@@ -83,6 +83,7 @@ const config: ExpoConfig = {
     'expo-asset',
     'expo-notifications',
     './plugins/withMoproExcludedArchs',
+    './plugins/withPodDeploymentTarget',
   ],
   experiments: {
     typedRoutes: true,
