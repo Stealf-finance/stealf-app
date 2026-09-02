@@ -43,7 +43,7 @@ export function TransactionsScreen({
     title: 'History',
     subtitle: embedded
       ? 'History from all accounts'
-      : 'History from Cash account',
+      : 'History from your public balance',
     tone: 'silver' as Tone,
   };
   const palette = txPalette(config.tone);

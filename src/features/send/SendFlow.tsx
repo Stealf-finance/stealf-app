@@ -14,7 +14,13 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { CenterGlow } from '@/src/design-system/primitives/CenterGlow';
 import { Kicker } from '@/src/design-system/primitives/Kicker';
 import { PillBtn } from '@/src/design-system/primitives/PillBtn';
-import { TxConfirmSheet } from '@/src/features/send/components/TxConfirmSheet';
+import { ConfirmSheet } from '@/src/components/confirm/ConfirmSheet';
+import {
+  feeRows,
+  transferRows,
+  PRIVATE_BALANCE,
+  PUBLIC_BALANCE,
+} from '@/src/components/confirm/rows';
 import { UmbraSetupOverlay } from '@/src/features/umbra/components/UmbraSetupOverlay';
 import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectSheet';
 import { sansation } from '@/src/design-system/typography';
@@ -128,7 +134,7 @@ export function SendFlow({ mode = 'public' }: Props) {
   const selected = useSelectedAsset();
   const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const fromAddress = user?.bankWallet ?? '';
-  const fromLabel = isPrivate ? 'Encrypted balance' : 'Cash account';
+  const fromLabel = isPrivate ? PRIVATE_BALANCE : PUBLIC_BALANCE;
   const { data: balance, isLoading: balanceLoading } = useBalance(fromAddress);
   const { data: encrypted } = useEncryptedBalances();
   const { data: solPrice } = useSolPrice();
@@ -635,10 +641,10 @@ export function SendFlow({ mode = 'public' }: Props) {
         )}
       </Animated.View>
 
-      {/* Confirmation — the shared bottom sheet, including the in-sheet
-          "submitted / pending" state after the slide. */}
+      {/* Private sends run long (ZK proving) so the slide confirms
+          optimistically; a simple transfer waits for its confirmed signature. */}
       {asset && recipient ? (
-        <TxConfirmSheet
+        <ConfirmSheet
           visible={step === 3}
           onClose={() => setStep(2)}
           onDone={finishToHome}
@@ -648,20 +654,24 @@ export function SendFlow({ mode = 'public' }: Props) {
           slideLabel="Slide to send"
           fiat={Number(fiatValue)}
           amountLabel={`${tokenAmountLabel} ${asset.symbol}`}
-          fromLabel={fromLabel}
-          fromAddress={truncateAddress(fromAddress)}
-          toLabel={truncateAddress(recipient.name)}
-          networkFeeUsd={feeUSD ?? 0}
-          privacyFeeUsd={isPrivate ? PROTOCOL_FEE_RATE * Number(fiatValue) : 0}
-          showPrivacyFee={isPrivate}
+          rows={transferRows({
+            from: fromLabel,
+            fromSub: truncateAddress(fromAddress),
+            to: truncateAddress(recipient.name),
+            amount: `${tokenAmountLabel} ${asset.symbol}`,
+            amountUsd: Number(fiatValue),
+          })}
+          feeRows={feeRows({
+            networkFeeUsd: feeUSD ?? 0,
+            privacyFeeUsd: isPrivate
+              ? PROTOCOL_FEE_RATE * Number(fiatValue)
+              : undefined,
+          })}
           onConfirm={onSwipeSend}
           submitting={sendMutation.isPending || privateSending}
           error={sendError ?? undefined}
           signature={txSig ?? undefined}
-          // Private sends take longer (ZK proving) so we optimistically show
-          // the pending state; simple transfers settle quickly on Turnkey, so
-          // we just wait for the real signature and show "confirmed".
-          autoPending={isPrivate}
+          optimistic={isPrivate}
         />
       ) : null}
 

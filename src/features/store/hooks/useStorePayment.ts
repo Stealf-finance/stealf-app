@@ -39,9 +39,9 @@ export const BLOCKER_MESSAGE: Record<NonNullable<PaymentBlocker>, string> = {
   signer: "Your wallet isn't ready yet. Give it a moment, then try again.",
   stock: 'This card is out of stock right now.',
   token: __DEV__
-    ? 'Shield some USDC or SOL first — the encrypted balance is empty.'
-    : 'You need USDC in your encrypted balance to buy a gift card.',
-  balance: 'Your encrypted balance is too low for this amount.',
+    ? 'Shield some USDC or SOL first — the private balance is empty.'
+    : 'You need USDC in your private balance to buy a gift card.',
+  balance: 'Your private balance is too low for this amount.',
   fee: "Your wallet doesn't have enough SOL to pay network fees. Send a small amount of SOL (around 0.02), then try again.",
 };
 

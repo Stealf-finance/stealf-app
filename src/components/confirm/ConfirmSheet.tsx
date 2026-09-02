@@ -1,3 +1,4 @@
+/** The confirmation sheet every money flow ends on — summary rows, slide-to-confirm, then the outcome in place. */
 import { useEffect, useState } from 'react';
 import {
   Linking,
@@ -10,40 +11,98 @@ import {
 import { BlurView } from 'expo-blur';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SwipeToSend } from './SwipeToSend';
+import { SwipeToSend } from '@/src/features/send/components/SwipeToSend';
 import { GlassBackButton } from '@/src/design-system/primitives/GlassBackButton';
 import { SuccessCheck } from '@/src/design-system/primitives/SuccessCheck';
 import { sansation } from '@/src/design-system/typography';
 import { type Tone } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
+import type { ConfirmRow } from './rows';
+
+/** `pending` = broadcast, not settled. `slow` = settlement is late but still expected. */
+export type ConfirmStatus = 'pending' | 'confirmed' | 'slow';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onDone: () => void;
-  /** Resets the flow for another transfer — renders a "Make new transfer"
-   *  button next to Close on the success state. */
+  /** Resets the flow for another transfer — adds a button next to Close. */
   onNewTransfer?: () => void;
-  tone: Tone;
+  tone?: Tone;
   title: string;
-  fiat: number;
-  amountLabel: string;
-  fromLabel: string;
-  fromAddress?: string;
-  toLabel: string;
-  toAddress?: string;
-  /** Reads "To" on shield / unshield, where the destination is a balance. */
-  toRowLabel?: string;
-  networkFeeUsd: number;
-  privacyFeeUsd: number;
+  /** USD hero. Omitted when the flow has no price — the amount becomes the hero. */
+  fiat?: number;
+  /** Token amount under the hero, e.g. "1.5 SOL". */
+  amountLabel?: string;
+  /** Summary rows inside the card — build them with transferRows / tradeRows. */
+  rows: ConfirmRow[];
+  /** Fee rows below the card. */
+  feeRows?: ConfirmRow[];
   onConfirm: () => void;
-  signature?: string;
-  showPrivacyFee?: boolean;
   slideLabel?: string;
-  autoPending?: boolean;
-  error?: string;
   submitting?: boolean;
+  signature?: string;
+  error?: string;
+  /** Celebrate on swipe rather than on the signature — for ops that run long. */
+  optimistic?: boolean;
+  status?: ConfirmStatus;
+  successTitle?: string;
 };
+
+function Row({ label, value, sub }: ConfirmRow) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        paddingVertical: 12,
+      }}
+    >
+      <Text
+        style={[
+          sansation,
+          { fontSize: 13, color: T.inkFaint, includeFontPadding: false },
+        ]}
+      >
+        {label}
+      </Text>
+      <View style={{ alignItems: 'flex-end', flexShrink: 1, marginLeft: 12 }}>
+        <Text
+          numberOfLines={1}
+          style={[
+            sansation,
+            {
+              fontSize: 14,
+              color: T.ink,
+              fontWeight: '600',
+              textAlign: 'right',
+              includeFontPadding: false,
+            },
+          ]}
+        >
+          {value}
+        </Text>
+        {sub ? (
+          <Text
+            numberOfLines={1}
+            style={[
+              sansation,
+              {
+                fontSize: 12,
+                color: T.inkFaint,
+                marginTop: 2,
+                includeFontPadding: false,
+              },
+            ]}
+          >
+            {sub}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
 
 /** Success-footer glass button — equal-width in a row (flex on a static
  *  style: Pressable style-fns don't stretch). */
@@ -89,97 +148,25 @@ function FooterButton({
   );
 }
 
-/** One detail line: label on the left, a primary value (+ optional sub) on the
- *  right. Used for the From / Receiving address / Token rows. */
-function DetailRow({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-}) {
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        paddingVertical: 12,
-      }}
-    >
-      <Text
-        style={[
-          sansation,
-          { fontSize: 13, color: T.inkFaint, includeFontPadding: false },
-        ]}
-      >
-        {label}
-      </Text>
-      <View style={{ alignItems: 'flex-end', flexShrink: 1, marginLeft: 12 }}>
-        <Text
-          style={[
-            sansation,
-            {
-              fontSize: 14,
-              color: T.ink,
-              fontWeight: '600',
-              textAlign: 'right',
-              includeFontPadding: false,
-            },
-          ]}
-          numberOfLines={1}
-        >
-          {value}
-        </Text>
-        {sub ? (
-          <Text
-            style={[
-              sansation,
-              {
-                fontSize: 12,
-                color: T.inkFaint,
-                marginTop: 2,
-                includeFontPadding: false,
-              },
-            ]}
-            numberOfLines={1}
-          >
-            {sub}
-          </Text>
-        ) : null}
-      </View>
-    </View>
-  );
-}
-
-/** Transaction confirmation — a compact bottom sheet: title, hero amount
- *  ($ + token), the transfer details (from / receiving / token), fee breakdown,
- *  and a slide-to-confirm, followed in place by the pending / success states. */
-export function TxConfirmSheet({
+export function ConfirmSheet({
   visible,
   onClose,
   onDone,
   onNewTransfer,
-  tone,
+  tone = 'silver',
   title,
   fiat,
   amountLabel,
-  fromLabel,
-  fromAddress,
-  toLabel,
-  toAddress,
-  toRowLabel = 'Receiving address',
-  networkFeeUsd,
-  privacyFeeUsd,
+  rows,
+  feeRows = [],
   onConfirm,
-  signature,
-  showPrivacyFee = true,
   slideLabel = 'Slide to confirm',
-  autoPending = true,
-  error,
   submitting = false,
+  signature,
+  error,
+  optimistic = false,
+  status = optimistic ? 'pending' : 'confirmed',
+  successTitle,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [submitted, setSubmitted] = useState(false);
@@ -189,33 +176,24 @@ export function TxConfirmSheet({
     if (visible) setSubmitted(false);
   }, [visible]);
 
-  // A submit error rolls the optimistic pending state back to the confirm
-  // view so the error is visible and the user can retry.
+  // A submit error rolls the sheet back to the summary so it stays actionable.
   useEffect(() => {
     if (error) setSubmitted(false);
   }, [error]);
 
-  // Non-optimistic flows (e.g. simple transfers, which settle quickly on
-  // Turnkey) wait for the real signature before celebrating, so we surface
-  // the success state only once the transaction has actually executed.
+  // Non-optimistic flows wait for the real signature before celebrating.
   useEffect(() => {
-    if (!autoPending && signature) setSubmitted(true);
-  }, [autoPending, signature]);
+    if (!optimistic && signature) setSubmitted(true);
+  }, [optimistic, signature]);
 
   const handleSlide = () => {
-    if (autoPending) setSubmitted(true);
+    if (optimistic) setSubmitted(true);
     onConfirm();
   };
 
-  const rows: [string, string][] = [
-    ['Network fee', `$${networkFeeUsd.toFixed(4)}`],
-    ...(showPrivacyFee
-      ? ([['Privacy fee · 0.30%', `$${privacyFeeUsd.toFixed(2)}`]] as [
-          string,
-          string,
-        ][])
-      : []),
-  ];
+  const settled = status === 'confirmed';
+  const heading =
+    successTitle ?? (settled ? 'Transaction sent' : 'Transaction submitted');
 
   return (
     <Modal
@@ -225,8 +203,7 @@ export function TxConfirmSheet({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      {/* Backdrop + panel aligned on the receive-qr / ChoiceSheet recipe:
-          blurred dim behind, opaque Home-cards color panel. */}
+      {/* Backdrop + panel aligned on the receive-qr / ChoiceSheet recipe. */}
       <View style={{ flex: 1 }}>
         <BlurView
           intensity={40}
@@ -240,7 +217,6 @@ export function TxConfirmSheet({
             { backgroundColor: 'rgba(8,8,10,0.5)' },
           ]}
         />
-        {/* Tap the dimmed area to dismiss (disabled once submitted) */}
         <Pressable
           style={{ flex: 1 }}
           onPress={submitted ? undefined : onClose}
@@ -257,7 +233,6 @@ export function TxConfirmSheet({
             paddingBottom: insets.bottom + 20,
           }}
         >
-          {/* grab handle */}
           <View
             style={{
               alignSelf: 'center',
@@ -295,7 +270,7 @@ export function TxConfirmSheet({
                     },
                   ]}
                 >
-                  {autoPending ? 'Transaction submitted' : 'Transaction sent'}
+                  {heading}
                 </Text>
                 <Text
                   style={[
@@ -309,20 +284,35 @@ export function TxConfirmSheet({
                   ]}
                 >
                   Status:{' '}
-                  {autoPending ? (
-                    <Text style={{ color: T.gold, fontWeight: '600' }}>
-                      pending
-                    </Text>
-                  ) : (
+                  {settled ? (
                     <Text style={{ color: T.green, fontWeight: '600' }}>
                       confirmed
                     </Text>
+                  ) : (
+                    <Text style={{ color: T.gold, fontWeight: '600' }}>
+                      pending
+                    </Text>
                   )}
                 </Text>
+                {status === 'slow' ? (
+                  <Text
+                    style={[
+                      sansation,
+                      {
+                        fontSize: 12,
+                        color: T.inkFaint,
+                        marginTop: 10,
+                        textAlign: 'center',
+                        includeFontPadding: false,
+                      },
+                    ]}
+                  >
+                    This is taking a moment. Your balance will update on its
+                    own.
+                  </Text>
+                ) : null}
               </View>
 
-              {/* Solscan link — pill button recovered from the old success
-                  screen, sitting just above the Close button */}
               {signature ? (
                 <View style={{ alignItems: 'center', marginBottom: 12 }}>
                   <Pressable
@@ -341,7 +331,6 @@ export function TxConfirmSheet({
                       opacity: pressed ? 0.7 : 1,
                     })}
                   >
-                    {/* arrow as an inline glyph so it shares the text baseline */}
                     <Text
                       style={[
                         sansation,
@@ -361,10 +350,6 @@ export function TxConfirmSheet({
                 </View>
               ) : null}
 
-              {/* Footer — Make new transfer (resets the flow) beside Close
-                  (routes home), sharing the slide-to-move CTA slot. Layout
-                  flex lives on static styles — flex in a Pressable style-fn
-                  doesn't stretch. */}
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {onNewTransfer ? (
                   <FooterButton
@@ -380,7 +365,6 @@ export function TxConfirmSheet({
               entering={FadeIn.duration(220)}
               onLayout={(e) => setBodyHeight(e.nativeEvent.layout.height)}
             >
-              {/* Header: back + title */}
               <View
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
               >
@@ -403,7 +387,6 @@ export function TxConfirmSheet({
                 <View style={{ width: 26 }} />
               </View>
 
-              {/* Hero amount */}
               <View
                 style={{
                   alignItems: 'center',
@@ -412,51 +395,74 @@ export function TxConfirmSheet({
                   marginTop: 4,
                 }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                {fiat === undefined ? (
                   <Text
+                    numberOfLines={1}
                     style={[
                       sansation,
                       {
-                        fontSize: 28,
-                        fontWeight: '700',
-                        color: T.inkDim,
-                        includeFontPadding: false,
-                      },
-                    ]}
-                  >
-                    $
-                  </Text>
-                  <Text
-                    style={[
-                      sansation,
-                      {
-                        fontSize: 48,
+                        fontSize: 40,
                         fontWeight: '700',
                         color: T.ink,
-                        letterSpacing: -1.4,
+                        letterSpacing: -1.2,
                         includeFontPadding: false,
                       },
                     ]}
                   >
-                    {fiat.toFixed(2)}
+                    {amountLabel}
                   </Text>
-                </View>
-                <Text
-                  style={[
-                    sansation,
-                    {
-                      fontSize: 13,
-                      color: T.inkFaint,
-                      marginTop: 6,
-                      includeFontPadding: false,
-                    },
-                  ]}
-                >
-                  {amountLabel}
-                </Text>
+                ) : (
+                  <>
+                    <View
+                      style={{ flexDirection: 'row', alignItems: 'baseline' }}
+                    >
+                      <Text
+                        style={[
+                          sansation,
+                          {
+                            fontSize: 28,
+                            fontWeight: '700',
+                            color: T.inkDim,
+                            includeFontPadding: false,
+                          },
+                        ]}
+                      >
+                        $
+                      </Text>
+                      <Text
+                        style={[
+                          sansation,
+                          {
+                            fontSize: 48,
+                            fontWeight: '700',
+                            color: T.ink,
+                            letterSpacing: -1.4,
+                            includeFontPadding: false,
+                          },
+                        ]}
+                      >
+                        {fiat.toFixed(2)}
+                      </Text>
+                    </View>
+                    {amountLabel ? (
+                      <Text
+                        style={[
+                          sansation,
+                          {
+                            fontSize: 13,
+                            color: T.inkFaint,
+                            marginTop: 6,
+                            includeFontPadding: false,
+                          },
+                        ]}
+                      >
+                        {amountLabel}
+                      </Text>
+                    ) : null}
+                  </>
+                )}
               </View>
 
-              {/* Transfer details: From / Receiving address / Token */}
               <View
                 style={{
                   backgroundColor: 'rgba(255,255,255,0.04)',
@@ -465,57 +471,19 @@ export function TxConfirmSheet({
                   paddingVertical: 2,
                 }}
               >
-                <DetailRow label="From" value={fromLabel} sub={fromAddress} />
-                <DetailRow label={toRowLabel} value={toLabel} sub={toAddress} />
-                <DetailRow
-                  label="Token"
-                  value={amountLabel}
-                  sub={`$${fiat.toFixed(2)}`}
-                />
-              </View>
-
-              {/* Fee rows */}
-              <View style={{ paddingHorizontal: 16, marginTop: 6 }}>
-                {rows.map(([label, value]) => (
-                  <View
-                    key={label}
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      paddingVertical: 10,
-                    }}
-                  >
-                    <Text
-                      style={[
-                        sansation,
-                        {
-                          fontSize: 13,
-                          color: T.inkFaint,
-                          includeFontPadding: false,
-                        },
-                      ]}
-                    >
-                      {label}
-                    </Text>
-                    <Text
-                      style={[
-                        sansation,
-                        {
-                          fontSize: 14,
-                          color: T.ink,
-                          fontWeight: '600',
-                          includeFontPadding: false,
-                        },
-                      ]}
-                    >
-                      {value}
-                    </Text>
-                  </View>
+                {rows.map((row) => (
+                  <Row key={row.label} {...row} />
                 ))}
               </View>
 
-              {/* Slide to confirm */}
+              {feeRows.length > 0 ? (
+                <View style={{ paddingHorizontal: 16, marginTop: 6 }}>
+                  {feeRows.map((row) => (
+                    <Row key={row.label} {...row} />
+                  ))}
+                </View>
+              ) : null}
+
               <View style={{ marginTop: 18 }}>
                 {error ? (
                   <Text
