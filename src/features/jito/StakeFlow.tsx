@@ -14,7 +14,9 @@ import { feeRows, tradeRows } from '@/src/components/confirm/rows';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import {
-  maxSpendableSol,
+  FEE_HEADROOM_MESSAGE,
+  isFeeShort,
+  maxSpendable,
   NETWORK_FEE_SOL,
   SOL_DECIMALS,
   SOL_FEE_RESERVE,
@@ -77,10 +79,13 @@ export function StakeFlow({ direction }: { direction: Direction }) {
   const price = typeof solPrice === 'number' && solPrice > 0 ? solPrice : 0;
   const rate = isDeposit ? price : pool ? pool.solJitoConversion * price : 0;
 
-  // Reserve a little SOL for tx fees when maxing out a deposit.
-  const maxAsset = isDeposit
-    ? maxSpendableSol(sourceBalance, true, false, SOL_FEE_RESERVE)
-    : sourceBalance;
+  const feeShort = isFeeShort(bal?.tokens, SOL_FEE_RESERVE);
+  const maxAsset = maxSpendable({
+    balance: sourceBalance,
+    decimals: SOL_DECIMALS,
+    spendsSol: isDeposit,
+    reserve: SOL_FEE_RESERVE,
+  });
 
   const {
     setAmount,
@@ -113,8 +118,8 @@ export function StakeFlow({ direction }: { direction: Direction }) {
   const balanceLabel = `${formatBalance(sourceBalance)} ${assetSymbol}`;
 
   const close = () => router.back();
-  const insufficient = solAmount > sourceBalance;
-  const disabled = solAmount <= 0 || insufficient;
+  const insufficient = solAmount > maxAsset;
+  const disabled = solAmount <= 0 || insufficient || feeShort;
 
   const amountLabel = `${formatBalance(solAmount)} ${assetSymbol}`;
 
@@ -243,7 +248,13 @@ export function StakeFlow({ direction }: { direction: Direction }) {
         <TiledKeypadPanel
           onKey={onKey}
           tone="silver"
-          ctaLabel={insufficient ? 'Insufficient balance' : title}
+          ctaLabel={
+            feeShort
+              ? FEE_HEADROOM_MESSAGE
+              : insufficient
+                ? 'Insufficient balance'
+                : title
+          }
           onPressCta={() => setConfirmOpen(true)}
           ctaDisabled={disabled}
         />

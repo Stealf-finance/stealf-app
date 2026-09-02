@@ -3,7 +3,9 @@ import { usePostHog } from 'posthog-react-native';
 import { Text, View } from 'react-native';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import {
-  maxSpendableSol,
+  FEE_HEADROOM_MESSAGE,
+  isFeeShort,
+  maxSpendable,
   NETWORK_FEE_SOL,
   SOL_DECIMALS,
   PRIVATE_OP_SOL_FEE_RESERVE,
@@ -82,9 +84,7 @@ export function ShieldFlow({ direction }: Props) {
   const pendingOps = usePendingOps();
   const posthog = usePostHog(); // stable client; async capture() closes over it directly
 
-  const { data: publicBalance } = useBalance(
-    isShield ? (user?.bankWallet ?? null) : null,
-  );
+  const { data: publicBalance } = useBalance(user?.bankWallet ?? null);
   const { data: shielded } = useShieldedSolBalance();
   const { data: encrypted } = useEncryptedBalances();
 
@@ -121,14 +121,19 @@ export function ShieldFlow({ direction }: Props) {
       ? solPrice
       : 0;
 
-  const reserveFees = isShield && !selectionActive;
-
-  const maxSol = maxSpendableSol(
-    sourceBalance,
-    reserveFees,
-    true,
+  // Unshield spends the encrypted balance, so only a native shield eats into
+  // the SOL that pays the fees.
+  const feeShort = isFeeShort(
+    publicBalance?.tokens,
     PRIVATE_OP_SOL_FEE_RESERVE,
   );
+  const maxSol = maxSpendable({
+    balance: sourceBalance,
+    decimals,
+    spendsSol: isShield && !selectionActive,
+    reserve: PRIVATE_OP_SOL_FEE_RESERVE,
+    hasProtocolFee: true,
+  });
 
   const {
     setAmount,
@@ -164,8 +169,8 @@ export function ShieldFlow({ direction }: Props) {
 
   const close = () => router.back();
 
-  const insufficient = solAmount > sourceBalance;
-  const swipeDisabled = solAmount <= 0 || insufficient;
+  const insufficient = solAmount > maxSol;
+  const swipeDisabled = solAmount <= 0 || insufficient || feeShort;
 
   const amountLabel = `${
     solAmount === 0 ? '0' : solAmount.toFixed(6).replace(/\.?0+$/, '')
@@ -194,9 +199,7 @@ export function ShieldFlow({ direction }: Props) {
       return;
     }
 
-    const publicSol =
-      publicBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
-    if (isShield && publicSol < PRIVATE_OP_SOL_FEE_RESERVE) {
+    if (feeShort) {
       setError(INSUFFICIENT_FEE_SOL_MESSAGE);
       return;
     }
@@ -340,7 +343,13 @@ export function ShieldFlow({ direction }: Props) {
         <TiledKeypadPanel
           onKey={onKey}
           tone={uiTone}
-          ctaLabel={insufficient ? 'Insufficient balance' : title}
+          ctaLabel={
+            feeShort
+              ? FEE_HEADROOM_MESSAGE
+              : insufficient
+                ? 'Insufficient balance'
+                : title
+          }
           onPressCta={() => setConfirmOpen(true)}
           ctaDisabled={swipeDisabled}
         />

@@ -10,6 +10,12 @@ import { txPalette } from '@/src/design-system/palettes';
 import { T } from '@/src/design-system/tokens';
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
+import {
+  FEE_HEADROOM_MESSAGE,
+  isFeeShort,
+  maxSpendable,
+  SOL_FEE_RESERVE,
+} from '@/src/features/send/lib/amount';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useToast } from '@/src/components/toast/ToastContext';
@@ -82,10 +88,18 @@ export function SwapScreen() {
     wallet?.tokens?.find((t) => t.tokenSymbol === payToken.symbol)?.balance ??
     0;
 
+  const feeShort = isFeeShort(wallet?.tokens, SOL_FEE_RESERVE);
+  const maxPay = maxSpendable({
+    balance: payBalance,
+    decimals: payToken.decimals,
+    spendsSol: payToken.symbol === 'SOL',
+    reserve: SOL_FEE_RESERVE,
+  });
+
   const { setAmount, solAmount, primaryDisplay, onKey, onPressPercent } =
     useAmountInput({
       rate: 0,
-      maxSol: payBalance,
+      maxSol: maxPay,
       decimals: payToken.decimals,
     });
 
@@ -109,8 +123,8 @@ export function SwapScreen() {
   } = useSwapQuote(payToken, receiveToken, solAmount);
   const { swap, loading: swapping } = useSwapExecute();
 
-  const insufficient = solAmount > payBalance;
-  const reviewDisabled = solAmount <= 0 || insufficient;
+  const insufficient = solAmount > maxPay;
+  const reviewDisabled = solAmount <= 0 || insufficient || feeShort;
 
   const pickToken = (tk: SwapToken) => {
     const other = pickerSide === 'pay' ? receiveToken : payToken;
@@ -290,7 +304,13 @@ export function SwapScreen() {
         <TiledKeypadPanel
           onKey={onKey}
           tone="silver"
-          ctaLabel={insufficient ? 'Insufficient balance' : 'Review'}
+          ctaLabel={
+            feeShort
+              ? FEE_HEADROOM_MESSAGE
+              : insufficient
+                ? 'Insufficient balance'
+                : 'Review'
+          }
           onPressCta={() => setReviewOpen(true)}
           ctaDisabled={reviewDisabled}
         />
