@@ -6,6 +6,8 @@ export const PRIVATE_OP_SOL_FEE_RESERVE = 0.02;
 
 export const PROTOCOL_FEE_RATE = 0.003;
 
+export const NETWORK_FEE_SOL = 0.000005;
+
 export function toRawAmount(human: number, decimals: number): bigint {
   if (!Number.isFinite(human) || human < 0) {
     throw new Error(`Invalid amount: ${human}`);
