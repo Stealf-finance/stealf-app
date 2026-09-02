@@ -20,7 +20,13 @@ import { AssetSelectSheet } from '@/src/features/send/components/AssetSelectShee
 import { TiledKeypadPanel } from '@/src/features/send/components/TiledKeypadPanel';
 import { AmountCardTiles } from '@/src/features/send/components/AmountCardTiles';
 import { AssetSelectRow } from '@/src/features/send/components/AssetSelectRow';
-import { TxConfirmSheet } from '@/src/features/send/components/TxConfirmSheet';
+import { ConfirmSheet } from '@/src/components/confirm/ConfirmSheet';
+import {
+  feeRows,
+  transferRows,
+  PRIVATE_BALANCE,
+  PUBLIC_BALANCE,
+} from '@/src/components/confirm/rows';
 import { truncateAddress } from '@/src/features/send/lib/address';
 import { useAmountInput } from '@/src/features/send/hooks/useAmountInput';
 import {
@@ -340,9 +346,9 @@ export function ShieldFlow({ direction }: Props) {
         />
       </View>
 
-      {/* Confirmation — the same sheet the transfer flows use, pending and
-          success states included. */}
-      <TxConfirmSheet
+      {/* Proving runs long, so the slide confirms optimistically — the toast
+          carries the real outcome once the user leaves. */}
+      <ConfirmSheet
         visible={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onDone={close}
@@ -351,21 +357,20 @@ export function ShieldFlow({ direction }: Props) {
         slideLabel={`Slide to ${title.toLowerCase()}`}
         fiat={fiatAmount}
         amountLabel={amountLabel}
-        fromLabel={isShield ? 'Cash account' : 'Encrypted balance'}
-        fromAddress={isShield ? walletLabel : undefined}
-        toLabel={isShield ? 'Encrypted balance' : 'Cash account'}
-        toAddress={isShield ? undefined : walletLabel}
-        toRowLabel="To"
-        networkFeeUsd={networkFeeUsd}
-        privacyFeeUsd={0}
-        showPrivacyFee={false}
+        rows={transferRows({
+          from: isShield ? PUBLIC_BALANCE : PRIVATE_BALANCE,
+          fromSub: isShield ? walletLabel : undefined,
+          to: isShield ? PRIVATE_BALANCE : PUBLIC_BALANCE,
+          toSub: isShield ? undefined : walletLabel,
+          amount: amountLabel,
+          amountUsd: fiatAmount,
+        })}
+        feeRows={feeRows({ networkFeeUsd })}
         onConfirm={onConfirm}
         submitting={submitting}
         error={error ?? undefined}
         signature={txSig ?? undefined}
-        // Proving runs long, so the slide confirms optimistically — the toast
-        // carries the real outcome once the user leaves.
-        autoPending
+        optimistic
       />
 
       {/* Registration overlay only on Shield (public → encrypted). Unshield

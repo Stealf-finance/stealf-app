@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,14 +18,22 @@ import { SWAP_TOKENS, type SwapToken } from '../lib/tokens';
 import { useSwapQuote } from '../hooks/useSwapQuote';
 import { useSwapExecute } from '../hooks/useSwapExecute';
 import { TokenSelectSheet } from '@/src/design-system/primitives/TokenSelectSheet';
-import { SwapReviewSheet } from '../components/SwapReviewSheet';
+import { ConfirmSheet } from '@/src/components/confirm/ConfirmSheet';
+import { tradeRows } from '@/src/components/confirm/rows';
 
 const S = txPalette('silver');
 
 const trim = (n: number) => n.toFixed(4).replace(/\.?0+$/, '');
-const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 6 });
+const fmt = (n: number) =>
+  n.toLocaleString('en-US', { maximumFractionDigits: 6 });
 
-function TokenPill({ token, onPress }: { token: SwapToken; onPress: () => void }) {
+function TokenPill({
+  token,
+  onPress,
+}: {
+  token: SwapToken;
+  onPress: () => void;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -46,7 +54,9 @@ function TokenPill({ token, onPress }: { token: SwapToken; onPress: () => void }
         contentFit="cover"
         cachePolicy="memory-disk"
       />
-      <Text style={[sansation, { fontSize: 16, fontWeight: '600', color: T.ink }]}>
+      <Text
+        style={[sansation, { fontSize: 16, fontWeight: '600', color: T.ink }]}
+      >
         {token.symbol}
       </Text>
       <Icons.chevD size={16} color={S.inkDim} />
@@ -64,22 +74,39 @@ export function SwapScreen() {
   const [receiveToken, setReceiveToken] = useState<SwapToken>(SWAP_TOKENS[1]);
   const [pickerSide, setPickerSide] = useState<'pay' | 'receive' | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [txSig, setTxSig] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const { data: wallet } = useBalance(user?.bankWallet ?? null);
   const payBalance =
-    wallet?.tokens?.find((t) => t.tokenSymbol === payToken.symbol)?.balance ?? 0;
+    wallet?.tokens?.find((t) => t.tokenSymbol === payToken.symbol)?.balance ??
+    0;
 
-  const { setAmount, solAmount, primaryDisplay, onKey, onPressPercent } = useAmountInput({
-    rate: 0,
-    maxSol: payBalance,
-    decimals: payToken.decimals,
-  });
+  const { setAmount, solAmount, primaryDisplay, onKey, onPressPercent } =
+    useAmountInput({
+      rate: 0,
+      maxSol: payBalance,
+      decimals: payToken.decimals,
+    });
 
   useEffect(() => {
     setAmount('0');
   }, [payToken.mint, setAmount]);
 
-  const { receiveAmount, order, loading: quoting } = useSwapQuote(payToken, receiveToken, solAmount);
+  // A failure goes inline while the sheet is up; once the user has walked away
+  // only a toast can carry it.
+  const onScreen = useRef(true);
+  useEffect(() => {
+    return () => {
+      onScreen.current = false;
+    };
+  }, []);
+
+  const {
+    receiveAmount,
+    order,
+    loading: quoting,
+  } = useSwapQuote(payToken, receiveToken, solAmount);
   const { swap, loading: swapping } = useSwapExecute();
 
   const insufficient = solAmount > payBalance;
@@ -104,18 +131,18 @@ export function SwapScreen() {
   };
 
   const onConfirm = () => {
+    setError(null);
     void (async () => {
       try {
         const res = await swap(payToken, receiveToken, solAmount);
-        setReviewOpen(false);
-        router.back();
-        show({ kind: 'success', title: 'Swap sent', message: `Tx ${res.signature.slice(0, 8)}…` });
+        setTxSig(res.signature);
       } catch (err) {
-        show({
-          kind: 'error',
-          title: 'Swap failed',
-          message: err instanceof Error ? err.message : 'Trade failed',
-        });
+        const message = err instanceof Error ? err.message : 'Trade failed';
+        if (onScreen.current) {
+          setError(message);
+        } else {
+          show({ kind: 'error', title: 'Swap failed', message });
+        }
       }
     })();
   };
@@ -137,7 +164,13 @@ export function SwapScreen() {
           <Text
             style={[
               sansation,
-              { fontSize: 22, lineHeight: 28, fontWeight: '600', color: T.ink, includeFontPadding: false },
+              {
+                fontSize: 22,
+                lineHeight: 28,
+                fontWeight: '600',
+                color: T.ink,
+                includeFontPadding: false,
+              },
             ]}
           >
             Swap
@@ -149,12 +182,32 @@ export function SwapScreen() {
       <View style={{ flex: 1, justifyContent: 'center' }}>
         {/* You pay */}
         <View style={{ paddingHorizontal: 24 }}>
-          <Text style={[sansation, { fontSize: 14, color: S.inkDim, marginBottom: 8 }]}>Swap from</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <Text
+            style={[
+              sansation,
+              { fontSize: 14, color: S.inkDim, marginBottom: 8 },
+            ]}
+          >
+            Swap from
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
             <Text
               style={[
                 sansation,
-                { fontSize: 44, letterSpacing: -1, color: solAmount > 0 ? S.ink : T.inkMute, includeFontPadding: false, flexShrink: 1 },
+                {
+                  fontSize: 44,
+                  letterSpacing: -1,
+                  color: solAmount > 0 ? S.ink : T.inkMute,
+                  includeFontPadding: false,
+                  flexShrink: 1,
+                },
               ]}
               numberOfLines={1}
             >
@@ -162,15 +215,28 @@ export function SwapScreen() {
             </Text>
             <TokenPill token={payToken} onPress={() => setPickerSide('pay')} />
           </View>
-          <Pressable onPress={() => onPressPercent(1)} hitSlop={8} style={{ alignSelf: 'flex-end', marginTop: 8 }}>
+          <Pressable
+            onPress={() => onPressPercent(1)}
+            hitSlop={8}
+            style={{ alignSelf: 'flex-end', marginTop: 8 }}
+          >
             <Text style={[sansation, { fontSize: 14, color: S.inkDim }]}>
-              <Text style={{ color: S.ink, fontWeight: '600' }}>MAX</Text> {trim(payBalance)}
+              <Text style={{ color: S.ink, fontWeight: '600' }}>MAX</Text>{' '}
+              {trim(payBalance)}
             </Text>
           </Pressable>
         </View>
 
         {/* Flip */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginVertical: 20, paddingHorizontal: 24 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 16,
+            marginVertical: 20,
+            paddingHorizontal: 24,
+          }}
+        >
           <View style={{ flex: 1, height: 1, backgroundColor: S.hairline }} />
           <Pressable onPress={flip} hitSlop={10} style={{ padding: 4 }}>
             <Icons.swapV size={22} color={T.ink} />
@@ -180,18 +246,41 @@ export function SwapScreen() {
 
         {/* You receive */}
         <View style={{ paddingHorizontal: 24 }}>
-          <Text style={[sansation, { fontSize: 14, color: S.inkDim, marginBottom: 8 }]}>Swap to</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <Text
+            style={[
+              sansation,
+              { fontSize: 14, color: S.inkDim, marginBottom: 8 },
+            ]}
+          >
+            Swap to
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
             <Text
               style={[
                 sansation,
-                { fontSize: 44, letterSpacing: -1, color: receiveAmount > 0 ? S.ink : T.inkMute, includeFontPadding: false, flexShrink: 1 },
+                {
+                  fontSize: 44,
+                  letterSpacing: -1,
+                  color: receiveAmount > 0 ? S.ink : T.inkMute,
+                  includeFontPadding: false,
+                  flexShrink: 1,
+                },
               ]}
               numberOfLines={1}
             >
               {receiveAmount > 0 ? fmt(receiveAmount) : quoting ? '…' : '0'}
             </Text>
-            <TokenPill token={receiveToken} onPress={() => setPickerSide('receive')} />
+            <TokenPill
+              token={receiveToken}
+              onPress={() => setPickerSide('receive')}
+            />
           </View>
         </View>
       </View>
@@ -215,16 +304,38 @@ export function SwapScreen() {
         toRow={(t) => ({ symbol: t.symbol, name: t.name, iconUri: t.logoUri })}
         onSelect={pickToken}
       />
-      <SwapReviewSheet
-        open={reviewOpen}
+      {/* Jupiter lands the tx before /execute returns, so the signature
+          already means confirmed. */}
+      <ConfirmSheet
+        visible={reviewOpen}
         onClose={() => setReviewOpen(false)}
-        payToken={payToken}
-        receiveToken={receiveToken}
-        payAmount={solAmount}
-        receiveAmount={receiveAmount}
-        priceImpact={order?.priceImpact}
-        loading={swapping}
+        onDone={() => router.back()}
+        title="Swap"
+        slideLabel="Slide to swap"
+        amountLabel={`${fmt(solAmount)} ${payToken.symbol}`}
+        rows={[
+          ...tradeRows({
+            pay: `${fmt(solAmount)} ${payToken.symbol}`,
+            receive: `≈ ${fmt(receiveAmount)} ${receiveToken.symbol}`,
+            rate:
+              solAmount > 0
+                ? `1 ${payToken.symbol} ≈ ${fmt(receiveAmount / solAmount)} ${receiveToken.symbol}`
+                : undefined,
+          }),
+          ...(order?.priceImpact != null
+            ? [
+                {
+                  label: 'Price impact',
+                  value: `${(order.priceImpact * 100).toFixed(2)}%`,
+                },
+              ]
+            : []),
+        ]}
         onConfirm={onConfirm}
+        submitting={swapping}
+        signature={txSig ?? undefined}
+        error={error ?? undefined}
+        successTitle="Swap sent"
       />
     </CenterGlow>
   );

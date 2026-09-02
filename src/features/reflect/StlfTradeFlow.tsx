@@ -23,7 +23,8 @@ import { useBalance } from '@/src/features/bank/hooks/useBalance';
 import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
 import { useToast } from '@/src/components/toast/ToastContext';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
-import { StlfConfirmSheet } from './components/StlfConfirmSheet';
+import { ConfirmSheet } from '@/src/components/confirm/ConfirmSheet';
+import { feeRows, tradeRows } from '@/src/components/confirm/rows';
 import { useReflectYield } from './hooks/useReflectYield';
 import { useStlfSettlement } from './hooks/useStlfSettlement';
 import { stlfBaseUnits } from './lib/stlfSettlement';
@@ -133,6 +134,12 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
     typeof solPrice === 'number' && solPrice > 0
       ? NETWORK_FEE_SOL * solPrice
       : 0;
+  const confirmStatus =
+    settlement === 'settled'
+      ? 'confirmed'
+      : settlement === 'slow'
+        ? 'slow'
+        : 'pending';
 
   const onConfirm = () => {
     const amt = solAmount;
@@ -231,21 +238,27 @@ export function StlfTradeFlow({ direction }: { direction: Direction }) {
         />
       </View>
 
-      <StlfConfirmSheet
+      {/* Turnkey returns on broadcast, so settlement is what the socket
+          reports — the status line downgrades from pending to confirmed. */}
+      <ConfirmSheet
         visible={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onDone={close}
-        isBuy={isBuy}
+        title={`${title} STLF`}
+        slideLabel={`Slide to ${isBuy ? 'buy' : 'sell'}`}
         fiat={fiatAmount}
-        payLabel={payLabel}
-        receiveLabel={receiveLabel}
-        rateLabel={rateLabel}
-        networkFeeUsd={networkFeeUsd}
+        rows={tradeRows({
+          pay: payLabel,
+          receive: receiveLabel,
+          rate: rateLabel,
+        })}
+        feeRows={feeRows({ networkFeeUsd })}
         onConfirm={onConfirm}
         submitting={submitting}
         signature={txSig ?? undefined}
-        settlement={settlement}
+        status={confirmStatus}
         error={error ?? undefined}
+        successTitle={isBuy ? 'Purchase submitted' : 'Sale submitted'}
       />
     </CenterGlow>
   );

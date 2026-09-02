@@ -17,7 +17,7 @@ export type ChoiceOption = {
 };
 
 export type ChoiceSection = {
-  /** Uppercase kicker above the group (e.g. "Cash account"). */
+  /** Uppercase kicker above the group (e.g. "Public balance"). */
   label: string;
   options: ChoiceOption[];
 };

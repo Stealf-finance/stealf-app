@@ -126,7 +126,7 @@ export function BuyConfirmSheet({
           isNativeTest
             ? 'Dev test amount in SOL — unrelated to the card price'
             : order
-              ? 'From your encrypted balance'
+              ? 'From your private balance'
               : 'Estimate — the exact amount is quoted when you swipe'
         }
       />
@@ -145,7 +145,7 @@ export function BuyConfirmSheet({
       ) : (
         <>
           <Note tone="faint">
-            Paid confidentially from your encrypted balance. The amount is
+            Paid confidentially from your private balance. The amount is
             hidden on-chain.
           </Note>
           {error || blockerMessage ? (

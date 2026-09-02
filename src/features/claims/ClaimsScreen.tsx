@@ -157,7 +157,7 @@ export function ClaimsScreen() {
   const palette = txPalette(tone);
   const subtitle = isEncrypted
     ? 'Incoming to your wallet'
-    : 'Incoming to Cash account';
+    : 'Incoming to your public balance';
 
   const close = () => router.back();
 
