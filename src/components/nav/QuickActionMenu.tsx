@@ -1,11 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -22,7 +16,6 @@ import { sansation } from '@/src/design-system/typography';
 import { T } from '@/src/design-system/tokens';
 import { useSafeRouter } from '@/src/lib/useSafeRouter';
 import { useToast } from '@/src/components/toast/ToastContext';
-import { usePendingTxActive } from '@/src/components/pending-ops/pendingTxStore';
 
 const FAB_SIZE = 60;
 
@@ -58,7 +51,6 @@ export function QuickActionMenu({
   const insets = useSafeAreaInsets();
   const router = useSafeRouter();
   const { show } = useToast();
-  const txPending = usePendingTxActive();
   const [open, setOpen] = useState(false);
   const p = useSharedValue(0);
 
@@ -170,12 +162,7 @@ export function QuickActionMenu({
             end={{ x: 0.6, y: 1 }}
             style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
           >
-            {/* Spinner replaces the "+" while a transaction is in flight. */}
-            {txPending ? (
-              <ActivityIndicator size="small" color="#0a0a0a" />
-            ) : (
-              <Icons.plus size={26} strokeWidth={2.4} color="#0a0a0a" />
-            )}
+            <Icons.plus size={26} strokeWidth={2.4} color="#0a0a0a" />
           </LinearGradient>
         </Pressable>
       </Animated.View>
