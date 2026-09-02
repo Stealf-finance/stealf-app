@@ -52,7 +52,13 @@ export const UnsignedReflectTxSchema = z.object({
   signer: z.string(),
   // Cluster RPC to broadcast on. Reflect/STLF is mainnet, but the app's bundled
   // EXPO_PUBLIC_SOLANA_RPC_URL is devnet — the backend hands us the right one.
-  rpcUrl: z.string(),
+  // Validated here rather than trusted: a blank or non-http value travels all
+  // the way into Turnkey's signAndSendTransaction and comes back as
+  // "Transaction simulation failed", pointing nowhere near the misconfigured
+  // server that sent it.
+  rpcUrl: z
+    .string()
+    .refine((u) => /^https?:\/\//.test(u), 'rpcUrl must be an http(s) endpoint'),
 });
 export type UnsignedReflectTx = z.infer<typeof UnsignedReflectTxSchema>;
 
