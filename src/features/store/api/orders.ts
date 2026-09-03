@@ -71,14 +71,13 @@ type CreateStoreOrderBase = {
 
 /** Exactly one of `packageId` (fixed denomination) or `value` (ranged). */
 export type CreateStoreOrderRequest = CreateStoreOrderBase &
-  (
-    | { packageId: string; value?: never }
-    | { value: number; packageId?: never }
-  );
+  ({ packageId: string; value?: never } | { value: number; packageId?: never });
 
 export const orderQueries = {
   list: () => ['giftcards', 'orders'] as const,
   byId: (id: string) => ['giftcards', 'order', id] as const,
+  /** Keyed on the clientReference: one quote, one Bitrefill invoice. */
+  quote: (reference: string) => ['giftcards', 'quote', reference] as const,
 };
 
 export async function createOrder(
@@ -134,12 +133,16 @@ export async function revealOrderCode(
 /** A 409 on create carries the order the reference already belongs to. */
 export function orderFromConflict(error: unknown): StoreOrderSummary | null {
   if (!(error instanceof ApiError) || error.status !== 409) return null;
-  const body = z.object({ data: StoreOrderSummarySchema }).safeParse(error.data);
+  const body = z
+    .object({ data: StoreOrderSummarySchema })
+    .safeParse(error.data);
   return body.success ? body.data.data : null;
 }
 
 /** A 409 on the code route carries the current status — no second round-trip. */
-export function statusFromCodeConflict(error: unknown): StoreOrderStatus | null {
+export function statusFromCodeConflict(
+  error: unknown,
+): StoreOrderStatus | null {
   if (!(error instanceof ApiError) || error.status !== 409) return null;
   const body = z
     .object({ status: z.enum(STORE_ORDER_STATUSES) })

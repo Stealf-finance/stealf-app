@@ -1,12 +1,12 @@
 import type { StoreProduct, StoreRange } from '../api/curated';
-import { packageValue, unitPriceOf } from './format';
+import { packageValue } from './format';
 import { snapToRange } from './range';
 
 export type Denomination = {
   /** Absent for a value derived from a range — those are ordered by value. */
   packageId?: string;
+  /** Face value in the card's currency. What it costs in USDC is quoted by the order. */
   value: number;
-  unitPrice: number;
 };
 
 /** Paliers proposed for an open-amount product, which has no packages. */
@@ -22,7 +22,7 @@ function fromRange(range: StoreRange): Denomination[] {
     const value = snapToRange(raw, range);
     if (value <= 0 || seen.has(value)) continue;
     seen.add(value);
-    out.push({ value, unitPrice: value });
+    out.push({ value });
   }
   return out.sort((a, b) => a.value - b.value);
 }
@@ -38,7 +38,7 @@ export function denominations(product: StoreProduct): Denomination[] {
     const value = packageValue(pkg);
     if (value <= 0 || seen.has(value)) continue;
     seen.add(value);
-    out.push({ packageId: pkg.packageId, value, unitPrice: unitPriceOf(pkg) });
+    out.push({ packageId: pkg.packageId, value });
   }
   return out.sort((a, b) => a.value - b.value);
 }

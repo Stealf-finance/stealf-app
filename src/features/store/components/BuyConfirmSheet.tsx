@@ -7,6 +7,7 @@ import { StoreSheet } from './StoreSheet';
 import { formatMoney } from '../lib/format';
 import { shortProductName } from '../lib/productName';
 import { useStorePayment } from '../hooks/useStorePayment';
+import { orderChargeDisplay } from '../lib/orders';
 import { DEV_SOL_TEST_AMOUNT } from '../lib/payment';
 import type { Denomination } from '../lib/denominations';
 import type { StoreProduct } from '../api/curated';
@@ -100,17 +101,25 @@ export function BuyConfirmSheet({
     sending,
     signature,
     order,
+    quoting,
+    quoteFailed,
     error,
     blockerMessage,
     token,
     isNativeTest,
-  } = useStorePayment(product, amount);
+  } = useStorePayment(product, amount, open);
 
   const symbol = token?.symbol ?? 'USDC';
-  // Quoted by the backend on swipe — one create is one Bitrefill invoice.
+  // Bitrefill prices the invoice, so the exact charge only exists once the
+  // quote lands. Until then we say so rather than showing a face value the
+  // user will not be charged.
   const charged = isNativeTest
-    ? DEV_SOL_TEST_AMOUNT
-    : (order?.amountUsdc ?? amount.unitPrice);
+    ? `${DEV_SOL_TEST_AMOUNT} ${symbol}`
+    : order && token
+      ? `${orderChargeDisplay(order).toFixed(2)} ${symbol}`
+      : quoting
+        ? 'Getting your price…'
+        : '—';
 
   return (
     <StoreSheet open={open} onClose={onClose} title="Confirm your order">
@@ -121,13 +130,15 @@ export function BuyConfirmSheet({
       />
       <Row
         label="You pay"
-        value={`${charged} ${symbol}`}
+        value={charged}
         sub={
           isNativeTest
             ? 'Dev test amount in SOL — unrelated to the card price'
             : order
               ? 'From your private balance'
-              : 'Estimate — the exact amount is quoted when you swipe'
+              : quoteFailed
+                ? 'Could not reach the price — close and try again'
+                : 'Priced by the merchant, not converted by us'
         }
       />
 
@@ -145,17 +156,23 @@ export function BuyConfirmSheet({
       ) : (
         <>
           <Note tone="faint">
-            Paid confidentially from your private balance. The amount is
-            hidden on-chain.
+            Paid confidentially from your private balance. The amount is hidden
+            on-chain.
           </Note>
           {error || blockerMessage ? (
             <Note tone="error">{error ?? blockerMessage ?? ''}</Note>
           ) : null}
           <View style={{ marginTop: 20 }}>
             <SwipeToSend
-              label={sending ? 'Sending…' : 'Swipe to pay'}
-              disabled={!!blockerMessage || sending}
-              loading={sending}
+              label={
+                sending
+                  ? 'Sending…'
+                  : quoting
+                    ? 'Getting your price…'
+                    : 'Swipe to pay'
+              }
+              disabled={!!blockerMessage || sending || quoting || !order}
+              loading={sending || quoting}
               onSend={pay}
             />
           </View>

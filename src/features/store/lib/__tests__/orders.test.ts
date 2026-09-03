@@ -7,6 +7,7 @@ import {
   orderOwesRefund,
   orderTransferAmount,
   paymentRefBytes,
+  orderChargeDisplay,
 } from '../orders';
 
 describe('isOrderSettled', () => {
@@ -96,12 +97,16 @@ describe('paymentRefBytes', () => {
 
   it('round-trips back to the same hex', () => {
     const bytes = paymentRefBytes({ paymentRef: ref });
-    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(
+      '',
+    );
     expect(hex).toBe(ref);
   });
 
   it('refuses anything that is not 64 lowercase hex chars', () => {
-    expect(() => paymentRefBytes({ paymentRef: 'a3f1' })).toThrow(/64 lowercase hex/);
+    expect(() => paymentRefBytes({ paymentRef: 'a3f1' })).toThrow(
+      /64 lowercase hex/,
+    );
     expect(() => paymentRefBytes({ paymentRef: 'A3F1'.repeat(16) })).toThrow();
     expect(() => paymentRefBytes({ paymentRef: 'zz'.repeat(32) })).toThrow();
   });
@@ -109,7 +114,21 @@ describe('paymentRefBytes', () => {
 
 describe('newClientReference', () => {
   it('does not repeat', () => {
-    const seen = new Set(Array.from({ length: 200 }, () => newClientReference()));
+    const seen = new Set(
+      Array.from({ length: 200 }, () => newClientReference()),
+    );
     expect(seen.size).toBe(200);
+  });
+});
+
+describe('orderChargeDisplay', () => {
+  it('reads base units back into USDC — 8880000 is 8.88, not 8 880 000', () => {
+    expect(orderChargeDisplay({ amountRaw: '8880000' })).toBe(8.88);
+  });
+
+  it('holds USDC decimals whatever the local token metadata claims', () => {
+    // The contract says `amountRaw` is USDC base units; a token entry that
+    // disagrees is a metadata bug, and must not silently scale the display.
+    expect(orderChargeDisplay({ amountRaw: '5000000' })).toBe(5);
   });
 });

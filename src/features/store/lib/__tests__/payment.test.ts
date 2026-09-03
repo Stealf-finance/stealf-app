@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   devNativeAmountRaw,
-  estimatedAmountRaw,
+  requiredAmountRaw,
   isNativeTestToken,
   resolvePaymentBlocker,
   resolvePaymentToken,
@@ -26,7 +26,9 @@ describe('resolvePaymentToken', () => {
   });
 
   it('refuses USDT — the backend only ever credits its USDC account', () => {
-    expect(resolvePaymentToken([token('USDT', 5n), token('dUSDT', 5n)])).toBeUndefined();
+    expect(
+      resolvePaymentToken([token('USDT', 5n), token('dUSDT', 5n)]),
+    ).toBeUndefined();
   });
 
   it('returns undefined when the wallet holds no settlement token', () => {
@@ -35,18 +37,20 @@ describe('resolvePaymentToken', () => {
   });
 });
 
-describe('estimatedAmountRaw', () => {
-  it('uses the unit price, not the face value', () => {
-    const amount = { packageId: 'p', value: 50, unitPrice: 48.5 };
-    expect(estimatedAmountRaw(amount, token('USDC', 0n))).toBe(48_500_000n);
+describe('requiredAmountRaw', () => {
+  it('has nothing to gate on until the order quotes a price', () => {
+    // The catalogue carries Bitrefill's partner cost, which is neither USDC
+    // nor the user's price — only the invoice knows what is owed.
+    expect(requiredAmountRaw(token('USDC', 0n), undefined)).toBeUndefined();
   });
 
-  it('scales to the token decimals', () => {
-    const amount = { value: 25, unitPrice: 25 };
-    expect(estimatedAmountRaw(amount, token('USDC', 0n))).toBe(25_000_000n);
-    expect(
-      estimatedAmountRaw(amount, { ...token('dUSDC', 0n), decimals: 9 }),
-    ).toBe(25_000_000_000n);
+  it('gates on the quoted amount once it lands', () => {
+    expect(requiredAmountRaw(token('USDC', 0n), 8_880_000n)).toBe(8_880_000n);
+  });
+
+  it('ignores the quote on the SOL path and pays the flat dev amount', () => {
+    const sol = { ...token('SOL', 0n), decimals: 9 };
+    expect(requiredAmountRaw(sol, 8_880_000n)).toBe(devNativeAmountRaw(sol));
   });
 });
 
@@ -73,9 +77,19 @@ describe('resolvePaymentBlocker', () => {
 
   it('blocks when no settlement token is held', () => {
     expect(resolvePaymentBlocker({ ...ok, token: undefined })).toBe('token');
-    expect(resolvePaymentBlocker({ ...ok, requiredRaw: undefined })).toBe(
-      'token',
-    );
+  });
+
+  it('lets an unquoted purchase through — a £5 card is not 8887 USDC', () => {
+    // The regression: the catalogue's partner price was gating the swipe, so
+    // a GBP card read as thousands of USDC and blocked on 'balance'.
+    expect(resolvePaymentBlocker({ ...ok, requiredRaw: undefined })).toBeNull();
+    expect(
+      resolvePaymentBlocker({
+        ...ok,
+        token: token('USDC', 6_000_000n),
+        requiredRaw: undefined,
+      }),
+    ).toBeNull();
   });
 
   it('blocks on an encrypted balance one unit short', () => {
@@ -110,19 +124,22 @@ describe('the dev SOL fallback', () => {
 
   it('is ignored unless explicitly allowed', () => {
     expect(resolvePaymentToken([sol])).toBeUndefined();
-    expect(resolvePaymentToken([sol], { allowNative: true })?.symbol).toBe('SOL');
+    expect(resolvePaymentToken([sol], { allowNative: true })?.symbol).toBe(
+      'SOL',
+    );
   });
 
   it('still prefers a stablecoin when both are held', () => {
     expect(
-      resolvePaymentToken([sol, token('dUSDC', 5n)], { allowNative: true })?.symbol,
+      resolvePaymentToken([sol, token('dUSDC', 5n)], { allowNative: true })
+        ?.symbol,
     ).toBe('dUSDC');
   });
 
   it('sends a flat amount, never the card price', () => {
     const flat = devNativeAmountRaw(sol);
-    expect(estimatedAmountRaw({ value: 1000, unitPrice: 1000 }, sol)).toBe(flat);
-    expect(estimatedAmountRaw({ value: 5, unitPrice: 5 }, sol)).toBe(flat);
+    expect(requiredAmountRaw(sol, 1_000_000_000n)).toBe(flat);
+    expect(requiredAmountRaw(sol, 5_000_000n)).toBe(flat);
   });
 
   it('scales the flat amount to the token decimals', () => {

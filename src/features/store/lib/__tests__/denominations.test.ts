@@ -33,8 +33,11 @@ describe('denominations', () => {
     expect(denominations(product([0, -5, 'abc', 25]))).toHaveLength(1);
   });
 
-  it('defaults unitPrice to the face value when there is no price', () => {
-    expect(denominations(product([25]))[0].unitPrice).toBe(25);
+  it("carries the face value only — the USDC charge is the order's to quote", () => {
+    expect(denominations(product([25]))[0]).toEqual({
+      packageId: 'p25',
+      value: 25,
+    });
   });
 
   it('returns nothing for a product with neither packages nor a range', () => {

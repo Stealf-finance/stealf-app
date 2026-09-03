@@ -2,7 +2,6 @@ import {
   PRIVATE_OP_SOL_FEE_RESERVE,
   toRawAmount,
 } from '@/src/features/send/lib/amount';
-import type { Denomination } from './denominations';
 
 /** The backend credits ONE mint — its treasury USDC ETA. See STORE.md. */
 const SETTLEMENT_SYMBOLS = ['USDC', 'dUSDC'] as const;
@@ -47,14 +46,17 @@ export function devNativeAmountRaw(token: PaymentToken): bigint {
   return toRawAmount(DEV_SOL_TEST_AMOUNT, token.decimals);
 }
 
-/** Pre-flight gate only. On the stablecoin path the order quotes the truth. */
-export function estimatedAmountRaw(
-  amount: Denomination,
+/**
+ * What the swipe is gated on. The dev SOL path pays its flat amount; every
+ * other path waits for the order's quote, because the catalogue carries
+ * Bitrefill's partner cost and never the user's USDC price. See STORE.md,
+ * "Two different currencies".
+ */
+export function requiredAmountRaw(
   token: PaymentToken,
-): bigint {
-  return isNativeTestToken(token)
-    ? devNativeAmountRaw(token)
-    : toRawAmount(amount.unitPrice, token.decimals);
+  quotedRaw: bigint | undefined,
+): bigint | undefined {
+  return isNativeTestToken(token) ? devNativeAmountRaw(token) : quotedRaw;
 }
 
 export type PaymentBlocker =
@@ -74,8 +76,15 @@ export function resolvePaymentBlocker(input: {
 }): PaymentBlocker {
   if (!input.signerReady) return 'signer';
   if (!input.inStock) return 'stock';
-  if (!input.token || input.requiredRaw === undefined) return 'token';
-  if (input.token.amountRaw < input.requiredRaw) return 'balance';
+  if (!input.token) return 'token';
+  // An unquoted amount gates nothing — the order response is re-checked
+  // against the balance before anything is transferred.
+  if (
+    input.requiredRaw !== undefined &&
+    input.token.amountRaw < input.requiredRaw
+  ) {
+    return 'balance';
+  }
   if (input.publicSol < PRIVATE_OP_SOL_FEE_RESERVE) return 'fee';
   return null;
 }

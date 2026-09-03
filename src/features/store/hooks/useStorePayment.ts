@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePostHog } from 'posthog-react-native';
 import { useAuth } from '@/src/features/onboarding/context/AuthContext';
 import { useBalance } from '@/src/features/bank/hooks/useBalance';
+import { solBalanceOf } from '@/src/features/send/lib/amount';
 import { historyQueries } from '@/src/features/bank/api/history';
 import { useUmbra } from '@/src/features/umbra/hooks/useUmbra';
 import { useHasActiveSigner } from '@/src/features/umbra/hooks/useHasActiveSigner';
@@ -17,16 +18,15 @@ import {
   createOrder,
   orderFromConflict,
   orderQueries,
-  type StorePaymentInstructions,
 } from '../api/orders';
 import {
   newClientReference,
+  orderChargeDisplay,
   orderTransferAmount,
   paymentRefBytes,
 } from '../lib/orders';
 import {
-  devNativeAmountRaw,
-  estimatedAmountRaw,
+  requiredAmountRaw,
   isNativeTestToken,
   resolvePaymentBlocker,
   resolvePaymentToken,
@@ -48,7 +48,14 @@ export const BLOCKER_MESSAGE: Record<NonNullable<PaymentBlocker>, string> = {
 const RETRY_WITH_NEW_REFERENCE =
   'That order could not be reused. Swipe again to place a new one.';
 
-export function useStorePayment(product: StoreProduct, amount: Denomination) {
+/** A quote outlives the 30-minute payment window it describes, barely. */
+const QUOTE_CACHE_MS = 30 * 60 * 1000;
+
+export function useStorePayment(
+  product: StoreProduct,
+  amount: Denomination,
+  open: boolean,
+) {
   const { user, session } = useAuth();
   const wallet = user?.bankWallet ?? '';
   const sessionToken = session?.sessionToken ?? null;
@@ -61,13 +68,13 @@ export function useStorePayment(product: StoreProduct, amount: Denomination) {
 
   const [sending, setSending] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
-  const [order, setOrder] = useState<StorePaymentInstructions | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Reused on retry so a repeat never mints a second Bitrefill invoice.
-  const reference = useRef(newClientReference());
+  // Reused on retry so a repeat never mints a second Bitrefill invoice. It is
+  // state, not a ref: changing it must re-key the quote below.
+  const [reference, setReference] = useState(newClientReference);
   useEffect(() => {
-    reference.current = newClientReference();
+    setReference(newClientReference());
   }, [product.id, amount.packageId, amount.value]);
 
   // Dev builds fall back to faucet SOL: a devnet wallet has no stablecoin.
@@ -77,43 +84,104 @@ export function useStorePayment(product: StoreProduct, amount: Denomination) {
   );
 
   const isNativeTest = token ? isNativeTestToken(token) : false;
+  const publicSol = solBalanceOf(publicBalance?.tokens);
 
-  // The order quotes the real figure; this only gates the swipe.
-  const estimatedRaw = useMemo(
-    () => (token ? estimatedAmountRaw(amount, token) : undefined),
-    [token, amount],
-  );
-
-  const publicSol =
-    publicBalance?.tokens?.find((t) => t.tokenSymbol === 'SOL')?.balance ?? 0;
-
-  const blocker = resolvePaymentBlocker({
+  // Nothing is quoted for a wallet that could not pay anyway — an invoice
+  // minted here would only ever expire. The balance itself cannot gate this:
+  // it is the quote that says how much is needed.
+  const preQuoteBlocker = resolvePaymentBlocker({
     signerReady,
     inStock: product.inStock,
     token,
-    requiredRaw: estimatedRaw,
+    requiredRaw: undefined,
     publicSol,
   });
 
-  const pay = useCallback(async () => {
-    if (blocker || !token) return;
-    setError(null);
-    setSending(true);
-    try {
-      const placed = await createOrder(sessionToken, {
+  /**
+   * The quote IS the order: Bitrefill prices the invoice, so the only way to
+   * show the exact USDC charge before the swipe is to create it on open. The
+   * backend is idempotent on `clientReference`, so a retry or a remount
+   * returns the same row instead of minting a second invoice — which is what
+   * makes it safe to run this as a query. It must never refetch on its own.
+   */
+  const quoteQuery = useQuery({
+    queryKey: orderQueries.quote(reference),
+    queryFn: () =>
+      createOrder(sessionToken, {
         ...(amount.packageId
           ? { packageId: amount.packageId }
           : { value: amount.value }),
         productId: product.id,
         quantity: 1,
-        clientReference: reference.current,
-      });
-      setOrder(placed);
+        clientReference: reference,
+      }),
+    enabled: open && Boolean(sessionToken) && !preQuoteBlocker,
+    retry: false,
+    staleTime: Infinity,
+    gcTime: QUOTE_CACHE_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
 
-      // The SOL path pays a flat dev amount; no watcher credits it either way.
-      const required = isNativeTest
-        ? devNativeAmountRaw(token)
-        : orderTransferAmount(placed);
+  const order = quoteQuery.data ?? null;
+
+  // The quote is the only place the real price appears — log what Bitrefill
+  // actually charged next to the card's face value, to tell a unit bug from a
+  // pricing one.
+  useEffect(() => {
+    if (__DEV__ && order) {
+      console.log('[store/quote]', {
+        // If `displayed` is not what the sheet shows, the divisor is wrong;
+        // if it is, the price itself came in that way from Bitrefill.
+        displayed: orderChargeDisplay(order),
+        tokenDecimals: token?.decimals,
+        productId: order.productId,
+        faceValue: `${order.value ?? amount.value} ${order.currency ?? product.currency ?? '?'}`,
+        amountRaw: order.amountRaw,
+        amountUsdc: order.amountUsdc,
+        cost: order.cost,
+        costCurrency: order.costCurrency,
+        packageId: order.packageId ?? amount.packageId,
+      });
+    }
+  }, [
+    order,
+    amount.value,
+    amount.packageId,
+    product.currency,
+    token?.decimals,
+  ]);
+
+  // A conflict means the reference is spent — a fresh one re-keys the quote.
+  useEffect(() => {
+    if (quoteQuery.error && orderFromConflict(quoteQuery.error)) {
+      setReference(newClientReference());
+    }
+  }, [quoteQuery.error]);
+
+  const quotedRaw = order ? orderTransferAmount(order) : undefined;
+  const requiredRaw = useMemo(
+    () => (token ? requiredAmountRaw(token, quotedRaw) : undefined),
+    [token, quotedRaw],
+  );
+
+  const blocker = resolvePaymentBlocker({
+    signerReady,
+    inStock: product.inStock,
+    token,
+    requiredRaw,
+    publicSol,
+  });
+
+  const pay = useCallback(async () => {
+    // The quote is what is being paid — no quote, nothing to pay.
+    if (blocker || !token || !order || requiredRaw === undefined) return;
+    setError(null);
+    setSending(true);
+    try {
+      const placed = order;
+      const required = requiredRaw;
       if (token.amountRaw < required) {
         setError(BLOCKER_MESSAGE.balance);
         return;
@@ -142,12 +210,13 @@ export function useStorePayment(product: StoreProduct, amount: Denomination) {
 
       posthog?.capture('store_order_paid', {
         product_id: product.id,
-        amount_band: amountBand(placed.amountUsdc ?? amount.unitPrice),
+        // `amountUsdc` is optional on the response; `amountRaw` never is.
+        amount_band: amountBand(orderChargeDisplay(placed)),
       });
     } catch (err: any) {
       // A quoted order may still owe a refund, so its reference cannot be recycled.
       if (orderFromConflict(err)) {
-        reference.current = newClientReference();
+        setReference(newClientReference());
         setError(RETRY_WITH_NEW_REFERENCE);
         return;
       }
@@ -161,12 +230,10 @@ export function useStorePayment(product: StoreProduct, amount: Denomination) {
   }, [
     blocker,
     token,
-    isNativeTest,
+    order,
+    requiredRaw,
     sessionToken,
     product.id,
-    amount.packageId,
-    amount.value,
-    amount.unitPrice,
     umbra,
     queryClient,
     wallet,
@@ -178,6 +245,11 @@ export function useStorePayment(product: StoreProduct, amount: Denomination) {
     sending,
     signature,
     order,
+    // Also true while the balances the quote waits on are still landing.
+    quoting:
+      quoteQuery.isFetching ||
+      (open && !preQuoteBlocker && !order && !quoteQuery.error),
+    quoteFailed: Boolean(quoteQuery.error) && !quoteQuery.isFetching,
     error,
     blocker,
     blockerMessage: blocker ? BLOCKER_MESSAGE[blocker] : null,

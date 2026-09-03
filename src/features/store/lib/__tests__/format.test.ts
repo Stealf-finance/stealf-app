@@ -4,7 +4,6 @@ import {
   denominationSummary,
   formatMoney,
   packageValue,
-  unitPriceOf,
 } from '../format';
 import type { StoreProduct } from '../../api/curated';
 
@@ -54,16 +53,6 @@ describe('packageValue', () => {
 
   it('degrades to zero rather than NaN on junk', () => {
     expect(packageValue({ packageId: 'a', value: 'abc' })).toBe(0);
-  });
-});
-
-describe('unitPriceOf', () => {
-  it('prefers the partner price when Bitrefill sends one', () => {
-    expect(unitPriceOf({ packageId: 'a', value: 25, price: 24 })).toBe(24);
-  });
-
-  it('sells at face value when no price is quoted', () => {
-    expect(unitPriceOf({ packageId: 'a', value: 25 })).toBe(25);
   });
 });
 
