@@ -1,3 +1,4 @@
+import { USDC_DECIMALS } from '@/src/constants/solana';
 import type { StoreOrderStatus } from '../api/orders';
 
 /** Nothing more will happen. `failed` is absent: it still owes a refund. */
@@ -20,6 +21,16 @@ export function canRevealCode(status: StoreOrderStatus): boolean {
 /** The only correct source for the transfer amount. See STORE.md. */
 export function orderTransferAmount(order: { amountRaw: string }): bigint {
   return BigInt(order.amountRaw);
+}
+
+/**
+ * What to show the user. `amountRaw` is defined by the response contract as
+ * USDC base units, so it is read back with USDC's decimals — never with the
+ * resolved token's, which is local metadata and has been wrong before.
+ * `amountUsdc` is optional on the response; `amountRaw` never is.
+ */
+export function orderChargeDisplay(order: { amountRaw: string }): number {
+  return Number(orderTransferAmount(order)) / 10 ** USDC_DECIMALS;
 }
 
 /** Fails open: the backend still credits a payment against an expired order. */

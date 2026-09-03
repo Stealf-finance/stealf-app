@@ -23,12 +23,6 @@ export function packageValue(pkg: StorePackage): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/** What one card costs the user. Real pricing comes from Bitrefill's
- *  `price`; until then a card is sold at face value. */
-export function unitPriceOf(pkg: StorePackage): number {
-  return typeof pkg.price === 'number' ? pkg.price : packageValue(pkg);
-}
-
 /** Always a range — a list of values truncates to noise on a half-width tile. */
 export function denominationSummary(product: StoreProduct): string {
   if (product.packages.length > 0) {

@@ -113,11 +113,11 @@ receiver's `generationIndex` stays at 0.
 Arcium prices a computation in **ACU**, and the SDK bids `microLamportsPerAcu ??
 0n`. The on-chain computation definitions say what that buys:
 
-| computation | `cuAmount` | `circuitLen` |
-| ------------------------------------- | ------------- | --------- |
-| `deposit_..._into_new_shared_v18`      | 427,266,208   | 248,702   |
-| `transfer_..._to_new_shared_v18`       | 1,387,781,166 | 912,388   |
-| `transfer_..._to_existing_shared_v18`  | 1,595,534,454 | 1,019,388 |
+| computation                           | `cuAmount`    | `circuitLen` |
+| ------------------------------------- | ------------- | ------------ |
+| `deposit_..._into_new_shared_v18`     | 427,266,208   | 248,702      |
+| `transfer_..._to_new_shared_v18`      | 1,387,781,166 | 912,388      |
+| `transfer_..._to_existing_shared_v18` | 1,595,534,454 | 1,019,388    |
 
 Deposits settle in ~2s at a zero bid; transfers, at 3.2x the ACU cost, never get
 scheduled. `confidentialTransfer` therefore bids
@@ -289,6 +289,25 @@ Consequences:
   USDC whatever the currency, which was simply wrong on a EUR/GBP list. The
   backend now quotes `amountRaw` and that is what is charged; the client no
   longer converts anything.
+- **The catalogue price is not a price.** `packages[].price` is Bitrefill's
+  **partner cost in its account currency** — for a £5 card it read 8887, which
+  the sheet showed as "8887 USDC" and the pre-flight gate turned into a
+  `balance` blocker, so no GBP card could be bought. `unitPriceOf` is gone and
+  `Denomination` carries the face value only. The transfer was always sized
+  from `orderTransferAmount`, so nothing was ever over-sent.
+- **The confirm sheet quotes on open.** Bitrefill prices the invoice, so the
+  only way to show the exact charge before the swipe is to create the order
+  when the sheet opens — which is what "the invoice is created first" above
+  always meant. `useStorePayment` takes `open` and runs `createOrder` as a
+  query keyed on the `clientReference`: `staleTime: Infinity`, `retry: false`,
+  no refetch on mount/focus/reconnect, and the backend's idempotency on that
+  reference is the backstop, so a remount cannot mint a second invoice. It is
+  gated on the pre-quote blockers — a wallet with no signer, no USDC or no fee
+  SOL mints nothing. The swipe then only transfers.
+- **Read the charge from `amountRaw`, not `amountUsdc`.** `orderChargeDisplay`
+  divides the raw units the transfer uses, so what is shown and what is sent
+  cannot drift. `amountUsdc` is optional on the response; `amountRaw` is not.
+  Showing it undivided is how a 8.88 USDC charge read as "8 880 000".
 
 ## Brand images
 
