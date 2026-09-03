@@ -35,8 +35,8 @@ import { encryptedBalancesQueries } from '@/src/features/umbra/hooks/useEncrypte
 import { usePendingOps } from '@/src/components/pending-ops/PendingOpsContext';
 import { reconstructAddressFromU128Parts } from '@umbra-privacy/sdk/solana';
 import { useSolPrice } from '@/src/features/solana/hooks/useSolPrice';
-import { SOL_MINT, SOL_ICON_URI, USDC_MINT } from '@/src/constants/solana';
-import { describeClaimParts, type ClaimToken } from './lib/describeClaimLine';
+import { describeClaimParts } from './lib/describeClaimLine';
+import { claimTokenForMint } from './lib/claimToken';
 
 const GOLD_GRADIENT: [string, string] = ['#e8e8ea', '#9a9a9f'];
 // Kept for the Claim button's glow — everything else on this screen is neutral.
@@ -47,37 +47,6 @@ type Item = { ago: string; utxo: unknown };
 
 function utxoToItem(utxo: any): Item {
   return { ago: 'Encrypted', utxo };
-}
-
-// Mainnet logos reused for the devnet stablecoins so the disc renders a
-// recognizable icon (same CDN as SOL_ICON_URI).
-const USDC_LOGO_URI =
-  'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png';
-const USDT_LOGO_URI =
-  'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png';
-
-function tokenForMint(
-  mint: string | null,
-  solUsd: number | null,
-): ClaimToken | null {
-  switch (mint) {
-    case USDC_MINT:
-      return {
-        symbol: 'USDC',
-        decimals: 6,
-        usdPerUnit: 1,
-        iconUri: USDC_LOGO_URI,
-      };
-    case SOL_MINT:
-      return {
-        symbol: 'SOL',
-        decimals: 9,
-        usdPerUnit: solUsd,
-        iconUri: SOL_ICON_URI,
-      };
-    default:
-      return null;
-  }
 }
 
 function addrFromParts(low: unknown, high: unknown): string | null {
@@ -114,7 +83,7 @@ function claimPartsForNote(
   const sender =
     addrFromParts(h1?.senderAddressLow, h1?.senderAddressHigh) ??
     (typeof note?.sender === 'string' ? note.sender : null);
-  const token = tokenForMint(mint, solUsd);
+  const token = claimTokenForMint(mint, solUsd);
   const parts = describeClaimParts({
     sender,
     token,
